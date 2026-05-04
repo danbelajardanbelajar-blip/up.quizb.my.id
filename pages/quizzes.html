@@ -1,0 +1,71 @@
+<!-- QUIZZES LIST PAGE -->
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">📝 Semua Quiz</h1>
+      <p class="text-gray-500 dark:text-gray-400 mt-1" x-text="quizzes.total + ' quiz tersedia'"></p>
+    </div>
+    <!-- Filters -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <input type="text" x-model="quizzes.search" @input.debounce.400ms="loadQuizzes(true)"
+             placeholder="Cari quiz..." class="form-input w-48 py-2 text-sm" />
+      <select x-model.number="quizzes.categoryId" @change="loadQuizzes(true)" class="form-input w-40 py-2 text-sm">
+        <option value="0">Semua Kategori</option>
+        <template x-for="cat in home.categories" :key="cat.id">
+          <option :value="cat.id" x-text="cat.name"></option>
+        </template>
+      </select>
+    </div>
+  </div>
+
+  <!-- Skeleton -->
+  <div x-show="quizzes.loading" class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+    <template x-for="i in 8">
+      <div class="card p-5 space-y-3">
+        <div class="skeleton h-5 w-3/4 rounded"></div>
+        <div class="skeleton h-4 w-full rounded"></div>
+        <div class="skeleton h-4 w-2/3 rounded"></div>
+        <div class="flex gap-2 mt-3">
+          <div class="skeleton h-5 w-14 rounded-full"></div>
+          <div class="skeleton h-5 w-16 rounded-full"></div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Grid -->
+  <div x-show="!quizzes.loading" class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+    <template x-for="quiz in quizzes.list" :key="quiz.id">
+      <div class="card card-hover p-5 cursor-pointer group flex flex-col" @click="navigate('/quiz/'+quiz.id)">
+        <div class="flex items-start justify-between mb-3">
+          <span class="text-xl">📝</span>
+          <span class="badge text-xs px-2 py-0.5 rounded-full font-semibold"
+                :class="difficultyClass(quiz.difficulty)"
+                x-text="difficultyLabel(quiz.difficulty)"></span>
+        </div>
+        <h2 class="font-semibold text-gray-800 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2 flex-1 mb-2" x-text="quiz.title"></h2>
+        <p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-4" x-text="quiz.description || '—'"></p>
+        <div class="flex items-center gap-3 text-xs text-gray-400 border-t border-gray-100 dark:border-gray-800 pt-3">
+          <span>⏱ <span x-text="Math.floor(quiz.time_limit/60)"></span>m</span>
+          <span>❓ <span x-text="quiz.question_count"></span></span>
+          <span>👥 <span x-text="quiz.attempt_count||0"></span></span>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <div x-show="!quizzes.loading && quizzes.list.length===0" class="text-center py-20 text-gray-400">
+    <p class="text-5xl mb-4">🔍</p>
+    <p class="text-lg">Tidak ada quiz ditemukan</p>
+    <button @click="quizzes.search='';quizzes.categoryId=0;loadQuizzes(true)" class="mt-4 text-sm text-primary-600 hover:underline">Reset filter</button>
+  </div>
+
+  <!-- Pagination -->
+  <div x-show="!quizzes.loading && quizzes.total > 12" class="flex items-center justify-center gap-2 mt-10">
+    <button @click="quizzes.page--;loadQuizzes()" :disabled="quizzes.page<=1"
+            class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">← Prev</button>
+    <span class="text-sm text-gray-500 dark:text-gray-400 px-3" x-text="'Halaman ' + quizzes.page"></span>
+    <button @click="quizzes.page++;loadQuizzes()" :disabled="quizzes.page * 12 >= quizzes.total"
+            class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">Next →</button>
+  </div>
+</div>

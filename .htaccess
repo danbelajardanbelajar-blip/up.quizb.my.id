@@ -1,0 +1,56 @@
+# ============================================
+# QuizB — Apache .htaccess
+# SPA Hash Routing + Security Headers
+# ============================================
+
+Options -Indexes
+Options -MultiViews
+
+# ---- Rewrite Engine ----
+RewriteEngine On
+
+# Allow direct access to real files and dirs
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+# Allow api.php to handle its own routes
+RewriteCond %{REQUEST_URI} !^/api\.php
+RewriteCond %{REQUEST_URI} !^/api/
+# Send everything else to index.php (SPA shell)
+RewriteRule ^ index.php [L]
+
+# ---- Security Headers ----
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+</IfModule>
+
+# ---- Browser Caching for Assets ----
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+</IfModule>
+
+# ---- Gzip Compression ----
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css application/javascript application/json
+</IfModule>
+
+# ---- Protect sensitive files ----
+<FilesMatch "^(config|includes)/.*\.php$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+<FilesMatch "\.sql$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>

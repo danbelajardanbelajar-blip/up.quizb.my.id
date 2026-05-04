@@ -1,0 +1,220 @@
+<!-- ADMIN PANEL PAGE -->
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">⚙️ Admin Panel</h1>
+      <p class="text-gray-500 dark:text-gray-400 mt-0.5 text-sm">Kelola platform QuizB</p>
+    </div>
+    <span class="badge badge-primary">Admin</span>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex gap-1 border-b border-gray-200 dark:border-gray-800 mb-6 overflow-x-auto">
+    <button @click="loadAdminTab('stats')"    :class="admin.tab==='stats'    ? 'admin-tab active' : 'admin-tab'">📊 Statistik</button>
+    <button @click="loadAdminTab('quizzes')"  :class="admin.tab==='quizzes'  ? 'admin-tab active' : 'admin-tab'">📝 Quiz</button>
+    <button @click="loadAdminTab('categories')" :class="admin.tab==='categories' ? 'admin-tab active' : 'admin-tab'">📂 Kategori</button>
+    <button @click="loadAdminTab('users')"    :class="admin.tab==='users'    ? 'admin-tab active' : 'admin-tab'">👥 Pengguna</button>
+  </div>
+
+  <!-- Loading -->
+  <div x-show="admin.loading" class="flex items-center justify-center py-20">
+    <div class="w-8 h-8 border-3 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+  </div>
+
+  <!-- ===== STATS TAB ===== -->
+  <div x-show="!admin.loading && admin.tab==='stats' && admin.stats" class="animate-fade-in">
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+      <div class="card p-5"><p class="text-sm text-gray-500 mb-1">Total Pengguna</p><p class="text-3xl font-extrabold text-primary-600" x-text="admin.stats?.total_users?.toLocaleString()"></p></div>
+      <div class="card p-5"><p class="text-sm text-gray-500 mb-1">Total Quiz</p><p class="text-3xl font-extrabold text-gray-800 dark:text-gray-100" x-text="admin.stats?.total_quizzes"></p></div>
+      <div class="card p-5"><p class="text-sm text-gray-500 mb-1">Total Percobaan</p><p class="text-3xl font-extrabold text-gray-800 dark:text-gray-100" x-text="admin.stats?.total_attempts?.toLocaleString()"></p></div>
+      <div class="card p-5"><p class="text-sm text-gray-500 mb-1">Rata-rata Skor</p><p class="text-3xl font-extrabold text-yellow-500" x-text="admin.stats?.avg_score + '%'"></p></div>
+    </div>
+
+    <!-- Recent attempts -->
+    <div class="card overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-800 font-semibold text-gray-800 dark:text-gray-100">
+        🕐 Percobaan Terbaru
+      </div>
+      <div class="overflow-x-auto">
+        <table class="data-table">
+          <thead><tr><th>Pengguna</th><th>Quiz</th><th>Skor</th><th>Waktu</th></tr></thead>
+          <tbody>
+            <template x-for="a in admin.stats?.recent_attempts" :key="a.id">
+              <tr>
+                <td x-text="a.user_name"></td>
+                <td x-text="a.quiz_title" class="max-w-[200px] truncate"></td>
+                <td><span class="badge text-xs" :class="a.score>=60?'badge-success':'badge-danger'" x-text="a.score+'%'"></span></td>
+                <td class="text-gray-400 text-xs" x-text="formatRelative(a.completed_at)"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== QUIZZES TAB ===== -->
+  <div x-show="!admin.loading && admin.tab==='quizzes'" class="animate-fade-in">
+    <div class="flex items-center justify-between mb-4">
+      <p class="text-sm text-gray-500 dark:text-gray-400" x-text="admin.quizzesTotal + ' quiz'"></p>
+      <button @click="openAdminModal('quiz_create',{is_published:1,difficulty:'medium',time_limit:600,passing_score:60})" class="btn-primary text-sm px-4 py-2">+ Tambah Quiz</button>
+    </div>
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="data-table">
+          <thead><tr><th>Judul</th><th>Kategori</th><th>Soal</th><th>Percobaan</th><th>Status</th><th>Aksi</th></tr></thead>
+          <tbody>
+            <template x-for="q in admin.quizzes" :key="q.id">
+              <tr>
+                <td class="font-medium" x-text="q.title"></td>
+                <td x-text="q.category_name||'-'"></td>
+                <td x-text="q.question_count"></td>
+                <td x-text="q.attempt_count"></td>
+                <td>
+                  <span class="badge text-xs" :class="q.is_published?'badge-success':'badge-warning'"
+                        x-text="q.is_published ? 'Aktif' : 'Draft'"></span>
+                </td>
+                <td>
+                  <div class="flex items-center gap-2">
+                    <button @click="openAdminModal('quiz_edit', q)" class="text-xs text-blue-500 hover:underline">Edit</button>
+                    <button @click="deleteAdminItem('quiz', q.id)" class="text-xs text-red-500 hover:underline">Hapus</button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CATEGORIES TAB ===== -->
+  <div x-show="!admin.loading && admin.tab==='categories'" class="animate-fade-in">
+    <div class="flex items-center justify-between mb-4">
+      <p class="text-sm text-gray-500 dark:text-gray-400" x-text="admin.categories.length + ' kategori'"></p>
+      <button @click="openAdminModal('category_create',{})" class="btn-primary text-sm px-4 py-2">+ Tambah Kategori</button>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <template x-for="cat in admin.categories" :key="cat.id">
+        <div class="card p-4 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl" :style="'background:'+cat.color+'20'" x-text="cat.icon"></div>
+            <div>
+              <p class="font-semibold text-sm text-gray-800 dark:text-gray-100" x-text="cat.name"></p>
+              <p class="text-xs text-gray-400" x-text="cat.quiz_count + ' quiz'"></p>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button @click="openAdminModal('category_edit', cat)" class="text-xs text-blue-500 hover:underline">Edit</button>
+            <button @click="deleteAdminItem('category', cat.id)" class="text-xs text-red-500 hover:underline">Hapus</button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ===== USERS TAB ===== -->
+  <div x-show="!admin.loading && admin.tab==='users'" class="animate-fade-in">
+    <div class="flex items-center justify-between mb-4">
+      <p class="text-sm text-gray-500 dark:text-gray-400" x-text="admin.usersTotal + ' pengguna'"></p>
+    </div>
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="data-table">
+          <thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Poin</th><th>Status</th><th>Aksi</th></tr></thead>
+          <tbody>
+            <template x-for="u in admin.users" :key="u.id">
+              <tr>
+                <td class="font-medium" x-text="u.name"></td>
+                <td class="text-gray-400 text-xs" x-text="u.email"></td>
+                <td><span class="badge text-xs" :class="u.role==='admin'?'badge-primary':''" x-text="u.role"></span></td>
+                <td x-text="u.total_points?.toLocaleString()"></td>
+                <td><span class="badge text-xs" :class="u.is_active?'badge-success':'badge-danger'" x-text="u.is_active?'Aktif':'Nonaktif'"></span></td>
+                <td>
+                  <div class="flex items-center gap-2">
+                    <button @click="openAdminModal('user_edit', u)" class="text-xs text-blue-500 hover:underline">Edit</button>
+                    <button @click="deleteAdminItem('user', u.id)" class="text-xs text-red-500 hover:underline" x-show="u.id !== user?.id">Hapus</button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL ===== -->
+  <div x-show="admin.modal.show" @keydown.escape.window="closeAdminModal()" class="modal-overlay" x-transition>
+    <div class="modal-box p-6">
+      <!-- Quiz Create/Edit -->
+      <div x-show="admin.modal.type==='quiz_create'||admin.modal.type==='quiz_edit'">
+        <h2 class="font-bold text-lg text-gray-900 dark:text-white mb-5"
+            x-text="admin.modal.type==='quiz_create' ? '+ Tambah Quiz' : '✏️ Edit Quiz'"></h2>
+        <div class="space-y-4">
+          <div><label class="form-label">Judul *</label><input x-model="admin.form.title" class="form-input" placeholder="Judul quiz" /></div>
+          <div><label class="form-label">Deskripsi</label><textarea x-model="admin.form.description" class="form-input" rows="2" placeholder="Deskripsi..."></textarea></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="form-label">Difficulty</label>
+              <select x-model="admin.form.difficulty" class="form-input">
+                <option value="easy">Mudah</option><option value="medium">Sedang</option><option value="hard">Sulit</option>
+              </select>
+            </div>
+            <div><label class="form-label">Waktu (detik)</label><input type="number" x-model.number="admin.form.time_limit" class="form-input" /></div>
+            <div><label class="form-label">Min. Lulus (%)</label><input type="number" x-model.number="admin.form.passing_score" class="form-input" min="0" max="100" /></div>
+            <div><label class="form-label">Kategori ID</label><input type="number" x-model.number="admin.form.category_id" class="form-input" /></div>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="checkbox" id="is-published" x-model.number="admin.form.is_published" :checked="admin.form.is_published==1" class="w-4 h-4 accent-primary-600" />
+            <label for="is-published" class="text-sm text-gray-700 dark:text-gray-300">Publikasikan quiz</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Create/Edit -->
+      <div x-show="admin.modal.type==='category_create'||admin.modal.type==='category_edit'">
+        <h2 class="font-bold text-lg text-gray-900 dark:text-white mb-5"
+            x-text="admin.modal.type==='category_create' ? '+ Tambah Kategori' : '✏️ Edit Kategori'"></h2>
+        <div class="space-y-4">
+          <div><label class="form-label">Nama *</label><input x-model="admin.form.name" class="form-input" placeholder="Nama kategori" /></div>
+          <div><label class="form-label">Slug</label><input x-model="admin.form.slug" class="form-input" placeholder="auto-generate" /></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="form-label">Emoji Icon</label><input x-model="admin.form.icon" class="form-input" placeholder="📚" /></div>
+            <div><label class="form-label">Warna</label><input type="color" x-model="admin.form.color" class="form-input h-10 cursor-pointer" /></div>
+          </div>
+          <div><label class="form-label">Deskripsi</label><textarea x-model="admin.form.description" class="form-input" rows="2"></textarea></div>
+        </div>
+      </div>
+
+      <!-- User Edit -->
+      <div x-show="admin.modal.type==='user_edit'">
+        <h2 class="font-bold text-lg text-gray-900 dark:text-white mb-5">✏️ Edit Pengguna</h2>
+        <div class="space-y-4">
+          <div><label class="form-label">Nama</label><input x-model="admin.form.name" class="form-input" /></div>
+          <div><label class="form-label">Role</label>
+            <select x-model="admin.form.role" class="form-input">
+              <option value="user">User</option><option value="admin">Admin</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="checkbox" id="user-active" x-model.number="admin.form.is_active" class="w-4 h-4 accent-primary-600" />
+            <label for="user-active" class="text-sm text-gray-700 dark:text-gray-300">Akun aktif</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div x-show="admin.formError" class="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg text-sm text-red-600 dark:text-red-400" x-text="admin.formError"></div>
+
+      <!-- Actions -->
+      <div class="flex gap-3 mt-6">
+        <button @click="closeAdminModal()" class="flex-1 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Batal</button>
+        <button @click="saveAdminForm()" class="flex-1 btn-primary py-2" :disabled="admin.loading">
+          <span x-show="admin.loading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></span>
+          Simpan
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

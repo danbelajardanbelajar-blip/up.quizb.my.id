@@ -1,0 +1,43 @@
+<!-- REGISTER PAGE -->
+<div class="min-h-[80vh] flex items-center justify-center px-4 py-12">
+  <div class="w-full max-w-md animate-slide-up">
+    <div class="text-center mb-8">
+      <div class="w-14 h-14 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center shadow-xl mx-auto mb-4">
+        <span class="text-white font-bold text-2xl">Q</span>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Buat Akun QuizB</h1>
+      <p class="text-gray-500 dark:text-gray-400 mt-1 text-sm">Gratis selamanya 🎉</p>
+    </div>
+    <div class="card p-8">
+      <form @submit.prevent="register()" class="space-y-4">
+        <div x-show="registerForm.error" class="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
+          <span>⚠️</span><span x-text="registerForm.error"></span>
+        </div>
+        <div>
+          <label class="form-label" for="reg-name">Nama Lengkap</label>
+          <input id="reg-name" type="text" x-model="registerForm.name" class="form-input" placeholder="Nama kamu" required />
+        </div>
+        <div>
+          <label class="form-label" for="reg-email">Email</label>
+          <input id="reg-email" type="email" x-model="registerForm.email" class="form-input" placeholder="kamu@email.com" required />
+        </div>
+        <div>
+          <label class="form-label" for="reg-password">Password</label>
+          <input id="reg-password" type="password" x-model="registerForm.password" class="form-input" placeholder="Min. 6 karakter" required />
+        </div>
+        <div>
+          <label class="form-label" for="reg-confirm">Konfirmasi Password</label>
+          <input id="reg-confirm" type="password" x-model="registerForm.password_confirm" class="form-input" placeholder="Ulangi password" required />
+        </div>
+        <button type="submit" class="btn-primary w-full py-3 text-base" :disabled="registerForm.loading">
+          <span x-show="registerForm.loading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></span>
+          <span x-text="registerForm.loading ? 'Mendaftar...' : '✨ Daftar Sekarang'"></span>
+        </button>
+      </form>
+      <p class="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
+        Sudah punya akun?
+        <a href="#/login" @click.prevent="navigate('/login')" class="text-primary-600 dark:text-primary-400 font-semibold hover:underline">Masuk</a>
+      </p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,83 @@
+<!-- LEADERBOARD PAGE -->
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  <div class="text-center mb-10">
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">🏆 Leaderboard Global</h1>
+    <p class="text-gray-500 dark:text-gray-400 mt-2">Pengguna dengan poin tertinggi</p>
+  </div>
+
+  <!-- Loading Skeleton -->
+  <div x-show="leaderboard.loading" class="space-y-3">
+    <template x-for="i in 10">
+      <div class="card p-4 flex items-center gap-4">
+        <div class="skeleton w-8 h-8 rounded-full"></div>
+        <div class="skeleton w-10 h-10 rounded-full"></div>
+        <div class="flex-1 space-y-2">
+          <div class="skeleton h-4 w-32 rounded"></div>
+          <div class="skeleton h-3 w-20 rounded"></div>
+        </div>
+        <div class="skeleton h-6 w-16 rounded"></div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Top 3 Podium -->
+  <div x-show="!leaderboard.loading && leaderboard.list.length >= 3" class="flex items-end justify-center gap-4 mb-10">
+    <!-- 2nd -->
+    <div class="text-center flex-1 max-w-[120px]">
+      <div class="w-14 h-14 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white font-bold text-xl mx-auto mb-2 shadow-lg"
+           x-text="leaderboard.list[1]?.name?.charAt(0)?.toUpperCase()"></div>
+      <p class="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate" x-text="leaderboard.list[1]?.name"></p>
+      <p class="text-xs text-gray-400" x-text="leaderboard.list[1]?.total_points + ' pts'"></p>
+      <div class="bg-gray-200 dark:bg-gray-600 h-16 rounded-t-lg mt-2 flex items-center justify-center text-2xl">🥈</div>
+    </div>
+    <!-- 1st -->
+    <div class="text-center flex-1 max-w-[140px]">
+      <div class="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-white font-bold text-2xl mx-auto mb-2 shadow-xl ring-4 ring-yellow-300"
+           x-text="leaderboard.list[0]?.name?.charAt(0)?.toUpperCase()"></div>
+      <p class="text-sm font-bold text-gray-800 dark:text-gray-100 truncate" x-text="leaderboard.list[0]?.name"></p>
+      <p class="text-xs text-yellow-600 dark:text-yellow-400 font-semibold" x-text="leaderboard.list[0]?.total_points + ' pts'"></p>
+      <div class="bg-yellow-400 dark:bg-yellow-500 h-24 rounded-t-lg mt-2 flex items-center justify-center text-3xl">🥇</div>
+    </div>
+    <!-- 3rd -->
+    <div class="text-center flex-1 max-w-[120px]">
+      <div class="w-14 h-14 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-white font-bold text-xl mx-auto mb-2 shadow-lg"
+           x-text="leaderboard.list[2]?.name?.charAt(0)?.toUpperCase()"></div>
+      <p class="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate" x-text="leaderboard.list[2]?.name"></p>
+      <p class="text-xs text-gray-400" x-text="leaderboard.list[2]?.total_points + ' pts'"></p>
+      <div class="bg-amber-500 dark:bg-amber-600 h-10 rounded-t-lg mt-2 flex items-center justify-center text-xl">🥉</div>
+    </div>
+  </div>
+
+  <!-- Full List -->
+  <div x-show="!leaderboard.loading" class="card overflow-hidden">
+    <template x-for="(entry, idx) in leaderboard.list" :key="entry.id">
+      <div class="flex items-center gap-4 px-5 py-4 border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+           :class="user && entry.id === user.id ? 'bg-primary-50 dark:bg-primary-900/20' : ''">
+        <!-- Rank -->
+        <div class="w-8 text-center">
+          <span x-show="idx < 3" class="text-xl" x-text="['🥇','🥈','🥉'][idx]"></span>
+          <span x-show="idx >= 3" class="text-sm font-bold text-gray-400" x-text="idx+1"></span>
+        </div>
+        <!-- Avatar -->
+        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+             :style="'background: hsl(' + (entry.id * 37 % 360) + ',60%,55%)'">
+          <span x-text="entry.name?.charAt(0)?.toUpperCase()"></span>
+        </div>
+        <!-- Name -->
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-gray-800 dark:text-gray-100 truncate" x-text="entry.name"></p>
+          <p class="text-xs text-gray-400" x-text="entry.quizzes_taken + ' quiz dikerjakan'"></p>
+        </div>
+        <!-- Points -->
+        <div class="text-right">
+          <p class="font-bold text-primary-600 dark:text-primary-400" x-text="entry.total_points?.toLocaleString() + ' pts'"></p>
+        </div>
+      </div>
+    </template>
+
+    <div x-show="!leaderboard.loading && leaderboard.list.length === 0" class="text-center py-16 text-gray-400">
+      <p class="text-4xl mb-3">🏆</p>
+      <p>Belum ada data leaderboard</p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,84 @@
+<!-- DASHBOARD PAGE -->
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  <div class="mb-8">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+      👋 Halo, <span x-text="user?.name?.split(' ')[0]"></span>!
+    </h1>
+    <p class="text-gray-500 dark:text-gray-400 mt-1">Pantau progres belajarmu</p>
+  </div>
+
+  <!-- Skeleton -->
+  <div x-show="dashboard.loading" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+    <template x-for="i in 4">
+      <div class="card p-5 space-y-3">
+        <div class="skeleton h-4 w-24 rounded"></div>
+        <div class="skeleton h-8 w-16 rounded"></div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Stats Cards -->
+  <div x-show="!dashboard.loading" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+    <div class="card p-5">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Poin</p>
+      <p class="text-3xl font-extrabold text-primary-600 dark:text-primary-400" x-text="(dashboard.stats?.total_points||0).toLocaleString()"></p>
+    </div>
+    <div class="card p-5">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Quiz Dikerjakan</p>
+      <p class="text-3xl font-extrabold text-gray-800 dark:text-gray-100" x-text="dashboard.stats?.quizzes_taken||0"></p>
+    </div>
+    <div class="card p-5">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Rata-rata Skor</p>
+      <p class="text-3xl font-extrabold text-gray-800 dark:text-gray-100" x-text="(dashboard.stats?.avg_score||0) + '%'"></p>
+    </div>
+    <div class="card p-5">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Skor Tertinggi</p>
+      <p class="text-3xl font-extrabold text-yellow-500" x-text="(dashboard.stats?.best_score||0) + '%'"></p>
+    </div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="card p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="font-bold text-gray-900 dark:text-white">📋 Aktivitas Terbaru</h2>
+      <button @click="navigate('/history')" class="text-sm text-primary-600 dark:text-primary-400 hover:underline">Lihat semua →</button>
+    </div>
+
+    <div x-show="dashboard.loading" class="space-y-3">
+      <template x-for="i in 5">
+        <div class="flex items-center gap-4">
+          <div class="skeleton w-10 h-10 rounded-xl"></div>
+          <div class="flex-1 space-y-2">
+            <div class="skeleton h-4 w-48 rounded"></div>
+            <div class="skeleton h-3 w-24 rounded"></div>
+          </div>
+          <div class="skeleton h-6 w-12 rounded-full"></div>
+        </div>
+      </template>
+    </div>
+
+    <div x-show="!dashboard.loading" class="divide-y divide-gray-100 dark:divide-gray-800">
+      <template x-for="attempt in dashboard.recent" :key="attempt.id">
+        <div class="flex items-center gap-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 -mx-2 px-2 rounded-lg transition-colors"
+             @click="navigate('/result/'+attempt.id)">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0"
+               :class="attempt.score >= 60 ? 'bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'">
+            <span x-text="attempt.score + '%'"></span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate" x-text="attempt.quiz_title"></p>
+            <p class="text-xs text-gray-400" x-text="formatRelative(attempt.completed_at)"></p>
+          </div>
+          <span class="badge text-xs px-2 py-0.5 rounded-full flex-shrink-0"
+                :class="attempt.passed ? 'badge-success' : 'badge-danger'"
+                x-text="attempt.passed ? 'Lulus' : 'Gagal'"></span>
+        </div>
+      </template>
+      <div x-show="!dashboard.loading && dashboard.recent.length===0" class="text-center py-10 text-gray-400">
+        <p class="text-3xl mb-2">📭</p>
+        <p class="text-sm">Belum ada aktivitas</p>
+        <button @click="navigate('/quizzes')" class="mt-3 btn-primary text-sm px-4 py-1.5">Mulai Quiz</button>
+      </div>
+    </div>
+  </div>
+</div>

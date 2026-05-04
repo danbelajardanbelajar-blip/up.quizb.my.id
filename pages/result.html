@@ -1,0 +1,83 @@
+<!-- RESULT PAGE -->
+<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  <!-- Loading -->
+  <div x-show="result.loading" class="space-y-4">
+    <div class="skeleton h-10 w-1/2 mx-auto rounded-xl"></div>
+    <div class="skeleton h-48 rounded-2xl"></div>
+    <div class="skeleton h-64 rounded-2xl"></div>
+  </div>
+
+  <!-- Result -->
+  <div x-show="!result.loading && result.data" class="animate-slide-up">
+    <template x-if="result.data">
+      <div>
+        <!-- Score Card -->
+        <div class="card p-8 text-center mb-6">
+          <div class="text-5xl mb-3" x-text="scoreGrade(result.data.score).emoji"></div>
+          <h1 class="text-xl font-bold text-gray-700 dark:text-gray-200 mb-1" x-text="scoreGrade(result.data.score).label"></h1>
+          <div class="text-7xl font-extrabold my-4" :class="scoreGrade(result.data.score).color"
+               x-text="result.data.score + '%'"></div>
+          <p class="text-gray-500 dark:text-gray-400 text-sm" x-text="result.data.quiz?.title"></p>
+
+          <!-- Stats -->
+          <div class="grid grid-cols-3 gap-4 mt-6">
+            <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-3">
+              <div class="font-bold text-lg text-green-600 dark:text-green-400" x-text="result.data.correct_count"></div>
+              <div class="text-xs text-gray-500 mt-0.5">Benar</div>
+            </div>
+            <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-3">
+              <div class="font-bold text-lg text-red-500 dark:text-red-400" x-text="result.data.wrong_count"></div>
+              <div class="text-xs text-gray-500 mt-0.5">Salah</div>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+              <div class="font-bold text-lg text-gray-700 dark:text-gray-200" x-text="formatTime(result.data.time_taken||0)"></div>
+              <div class="text-xs text-gray-500 mt-0.5">Waktu</div>
+            </div>
+          </div>
+
+          <!-- Pass/Fail Badge -->
+          <div class="mt-5 inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold"
+               :class="result.data.passed ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'">
+            <span x-text="result.data.passed ? '✅ Lulus' : '❌ Tidak Lulus'"></span>
+            <span class="text-xs opacity-70" x-text="'(Min. ' + (result.data.quiz?.passing_score||60) + '%)'"></span>
+          </div>
+        </div>
+
+        <!-- Answer Review -->
+        <div class="card p-6 mb-6">
+          <h2 class="font-bold text-gray-900 dark:text-white mb-4">📋 Pembahasan Jawaban</h2>
+          <div class="space-y-4">
+            <template x-for="(q, idx) in result.data.questions" :key="q.id">
+              <div class="border border-gray-100 dark:border-gray-800 rounded-xl p-4">
+                <div class="flex items-start gap-2 mb-3">
+                  <span class="text-sm font-bold text-gray-400 flex-shrink-0" x-text="(idx+1)+'.'"></span>
+                  <p class="text-sm font-medium text-gray-800 dark:text-gray-200" x-text="q.text"></p>
+                </div>
+                <div class="space-y-2">
+                  <template x-for="opt in q.options" :key="opt.id">
+                    <div class="flex items-center gap-2 text-sm px-3 py-2 rounded-lg"
+                         :class="{
+                           'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400': opt.id === q.correct_option_id,
+                           'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400': q.user_answer === opt.id && opt.id !== q.correct_option_id,
+                           'text-gray-500 dark:text-gray-400': opt.id !== q.correct_option_id && q.user_answer !== opt.id,
+                         }">
+                      <span x-text="opt.id===q.correct_option_id ? '✅' : (q.user_answer===opt.id ? '❌' : '○')"></span>
+                      <span x-text="opt.text"></span>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button @click="navigate('/quiz/'+result.data.quiz?.id)" class="btn-secondary flex-1 justify-center py-2.5">🔄 Coba Lagi</button>
+          <button @click="navigate('/quizzes')" class="btn-primary flex-1 justify-center py-2.5">📝 Quiz Lain</button>
+          <button @click="navigate('/leaderboard')" class="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">🏆 Leaderboard</button>
+        </div>
+      </div>
+    </template>
+  </div>
+</div>

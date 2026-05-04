@@ -1,0 +1,145 @@
+<!-- QUIZ ENGINE PAGE -->
+<div x-data="QuizEngine()" x-init="loadQuiz(currentRoute.split('/').pop())"
+     @beforeunload.window="stopTimer()"
+     class="min-h-screen bg-gray-50 dark:bg-gray-950">
+
+  <!-- Loading -->
+  <div x-show="phase==='loading'" class="flex items-center justify-center min-h-screen">
+    <div class="text-center">
+      <div class="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
+      <p class="text-gray-500 dark:text-gray-400">Memuat quiz...</p>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div x-show="phase==='error'" class="flex items-center justify-center min-h-screen px-4">
+    <div class="text-center">
+      <p class="text-5xl mb-4">😕</p>
+      <p class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Gagal memuat quiz</p>
+      <p class="text-gray-400 text-sm mb-6" x-text="error"></p>
+      <button @click="navigate('/quizzes')" class="btn-primary">← Kembali</button>
+    </div>
+  </div>
+
+  <!-- Ready Screen -->
+  <div x-show="phase==='ready'" class="flex items-center justify-center min-h-screen px-4">
+    <div class="max-w-md w-full text-center animate-slide-up">
+      <div class="card p-8">
+        <div class="text-5xl mb-4">🚀</div>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white mb-2" x-text="quiz?.title"></h1>
+        <p class="text-gray-500 dark:text-gray-400 text-sm mb-6" x-text="quiz?.description"></p>
+        <div class="grid grid-cols-3 gap-3 mb-8 text-center">
+          <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+            <div class="font-bold text-lg" x-text="questions.length"></div>
+            <div class="text-xs text-gray-400">Soal</div>
+          </div>
+          <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+            <div class="font-bold text-lg" x-text="formatTime(quiz?.time_limit||600)"></div>
+            <div class="text-xs text-gray-400">Waktu</div>
+          </div>
+          <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+            <div class="font-bold text-lg" x-text="(quiz?.passing_score||60)+'%'"></div>
+            <div class="text-xs text-gray-400">Min Lulus</div>
+          </div>
+        </div>
+        <button @click="startQuiz()" class="btn-primary w-full py-3 text-base">Mulai Sekarang ▶</button>
+        <button @click="navigate('/quiz/'+quiz?.id)" class="mt-3 w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors">← Kembali</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Playing -->
+  <div x-show="phase==='playing'" class="max-w-3xl mx-auto px-4 py-6">
+    <!-- Top Bar -->
+    <div class="flex items-center justify-between mb-6">
+      <div class="text-sm font-medium text-gray-600 dark:text-gray-400">
+        Soal <span class="font-bold text-gray-900 dark:text-white" x-text="currentIndex+1"></span> / <span x-text="questions.length"></span>
+      </div>
+      <!-- Timer -->
+      <div class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-full shadow text-lg font-bold"
+           :class="timerClass">
+        ⏱ <span x-text="timerDisplay"></span>
+      </div>
+      <!-- Nav Toggle -->
+      <button @click="showNav=!showNav" class="text-sm text-primary-600 dark:text-primary-400 font-medium hover:underline">
+        📋 Navigasi
+      </button>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-bar mb-6">
+      <div class="progress-fill" :style="'width:' + progress + '%'"></div>
+    </div>
+
+    <!-- Question -->
+    <div x-show="current" class="card p-6 mb-6 animate-fade-in" :key="currentIndex">
+      <div class="flex items-start gap-3 mb-6">
+        <span class="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 flex items-center justify-center text-sm font-bold flex-shrink-0" x-text="currentIndex+1"></span>
+        <p class="text-gray-800 dark:text-gray-100 font-medium leading-relaxed" x-text="current?.text"></p>
+      </div>
+
+      <!-- Options -->
+      <div class="space-y-3">
+        <template x-for="opt in current?.options" :key="opt.id">
+          <button class="quiz-option" :class="isSelected(current?.id, opt.id) ? 'selected' : ''"
+                  @click="selectOption(current?.id, opt.id)">
+            <span class="answer-letter" x-text="opt.label || ''"></span>
+            <span x-text="opt.text"></span>
+          </button>
+        </template>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="flex items-center justify-between">
+      <button @click="prev()" :disabled="currentIndex===0"
+              class="btn-secondary px-5 py-2 disabled:opacity-40">← Sebelumnya</button>
+      <div class="flex items-center gap-3">
+        <button @click="toggleFlag(current?.id)"
+                class="px-4 py-2 rounded-lg border text-sm font-medium transition-colors"
+                :class="flagged.has(current?.id) ? 'border-yellow-400 bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400' : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:border-yellow-300'">
+          🚩 <span x-text="flagged.has(current?.id) ? 'Ditandai' : 'Tandai'"></span>
+        </button>
+        <template x-if="currentIndex < questions.length - 1">
+          <button @click="next()" class="btn-primary px-5 py-2">Selanjutnya →</button>
+        </template>
+        <template x-if="currentIndex === questions.length - 1">
+          <button @click="submit()" class="btn-primary px-5 py-2 bg-green-600 hover:bg-green-700" :disabled="loading">
+            <span x-show="loading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></span>
+            ✅ Submit
+          </button>
+        </template>
+      </div>
+    </div>
+
+    <!-- Answered counter -->
+    <p class="text-center text-xs text-gray-400 mt-4" x-text="answered + ' dari ' + questions.length + ' soal dijawab'"></p>
+  </div>
+
+  <!-- Question Navigation Drawer -->
+  <div x-show="showNav" @click.self="showNav=false"
+       class="fixed inset-0 bg-black/50 z-40 flex items-end sm:items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 w-full max-w-sm shadow-2xl animate-slide-up">
+      <h3 class="font-bold text-gray-900 dark:text-white mb-4">Navigasi Soal</h3>
+      <div class="grid grid-cols-7 gap-2 mb-4">
+        <template x-for="(q, idx) in questions" :key="q.id">
+          <button @click="goTo(idx)"
+                  class="w-9 h-9 rounded-lg text-xs font-bold transition-all"
+                  :class="{
+                    'bg-primary-500 text-white': idx===currentIndex,
+                    'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400': idx!==currentIndex && questionStatus(idx)==='answered',
+                    'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400': questionStatus(idx)==='flagged',
+                    'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400': idx!==currentIndex && questionStatus(idx)==='unanswered'
+                  }"
+                  x-text="idx+1">
+          </button>
+        </template>
+      </div>
+      <div class="flex gap-4 text-xs text-gray-500 flex-wrap">
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-green-200"></span> Dijawab</span>
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-gray-200"></span> Belum</span>
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-yellow-200"></span> Ditandai</span>
+      </div>
+    </div>
+  </div>
+</div>

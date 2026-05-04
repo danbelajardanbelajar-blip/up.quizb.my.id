@@ -1,0 +1,89 @@
+<!-- QUIZ DETAIL PAGE -->
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  <!-- Loading -->
+  <div x-show="quizDetail.loading" class="space-y-4">
+    <div class="skeleton h-8 w-2/3 rounded-xl"></div>
+    <div class="skeleton h-4 w-full rounded"></div>
+    <div class="skeleton h-4 w-3/4 rounded"></div>
+    <div class="skeleton h-48 rounded-xl mt-6"></div>
+  </div>
+
+  <!-- Content -->
+  <div x-show="!quizDetail.loading && quizDetail.quiz" class="animate-slide-up">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-sm text-gray-400 mb-6">
+      <button @click="navigate('/quizzes')" class="hover:text-primary-500 transition-colors">Quiz</button>
+      <span>/</span>
+      <span class="text-gray-600 dark:text-gray-300" x-text="quizDetail.quiz?.title"></span>
+    </nav>
+
+    <div class="card p-8">
+      <!-- Header -->
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2" x-text="quizDetail.quiz?.title"></h1>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="badge text-xs px-2 py-0.5 rounded-full font-semibold"
+                  :class="difficultyClass(quizDetail.quiz?.difficulty)"
+                  x-text="difficultyLabel(quizDetail.quiz?.difficulty)"></span>
+            <span class="badge badge-primary text-xs" x-text="quizDetail.quiz?.category_name"></span>
+          </div>
+        </div>
+        <div class="text-5xl">📝</div>
+      </div>
+
+      <p class="text-gray-600 dark:text-gray-400 mb-6" x-text="quizDetail.quiz?.description || 'Tidak ada deskripsi.'"></p>
+
+      <!-- Stats Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl mb-6">
+        <div class="text-center">
+          <div class="text-xl font-bold text-gray-800 dark:text-gray-200" x-text="quizDetail.quiz?.question_count || '?'"></div>
+          <div class="text-xs text-gray-400 mt-0.5">Soal</div>
+        </div>
+        <div class="text-center">
+          <div class="text-xl font-bold text-gray-800 dark:text-gray-200" x-text="Math.floor((quizDetail.quiz?.time_limit||600)/60) + ' mnt'"></div>
+          <div class="text-xs text-gray-400 mt-0.5">Waktu</div>
+        </div>
+        <div class="text-center">
+          <div class="text-xl font-bold text-gray-800 dark:text-gray-200" x-text="(quizDetail.quiz?.passing_score||60) + '%'"></div>
+          <div class="text-xs text-gray-400 mt-0.5">Min. Lulus</div>
+        </div>
+        <div class="text-center">
+          <div class="text-xl font-bold text-gray-800 dark:text-gray-200" x-text="quizDetail.quiz?.attempt_count || 0"></div>
+          <div class="text-xs text-gray-400 mt-0.5">Dikerjakan</div>
+        </div>
+      </div>
+
+      <!-- Rules -->
+      <div class="mb-6 p-4 border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl text-sm text-yellow-800 dark:text-yellow-300">
+        <p class="font-semibold mb-2">📋 Aturan Quiz:</p>
+        <ul class="space-y-1 list-disc list-inside text-yellow-700 dark:text-yellow-400">
+          <li>Setiap soal hanya bisa dijawab sekali</li>
+          <li>Timer akan berjalan otomatis saat quiz dimulai</li>
+          <li>Quiz otomatis tersubmit saat waktu habis</li>
+          <li x-show="quizDetail.quiz?.max_attempts > 0">Maksimal <span x-text="quizDetail.quiz?.max_attempts"></span> percobaan</li>
+        </ul>
+      </div>
+
+      <!-- Action -->
+      <template x-if="user">
+        <button @click="navigate('/play/'+quizDetail.quiz?.id)" class="btn-primary w-full py-3 text-base">
+          🚀 Mulai Quiz Sekarang
+        </button>
+      </template>
+      <template x-if="!user">
+        <div class="text-center">
+          <p class="text-gray-500 dark:text-gray-400 mb-3 text-sm">Login untuk mengerjakan quiz ini</p>
+          <button @click="navigate('/login')" class="btn-primary px-8 py-2.5">Login / Daftar</button>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Not found -->
+  <div x-show="!quizDetail.loading && !quizDetail.quiz" class="text-center py-20 text-gray-400">
+    <p class="text-5xl mb-4">😕</p>
+    <p class="text-lg">Quiz tidak ditemukan</p>
+    <button @click="navigate('/quizzes')" class="mt-4 btn-primary">← Kembali</button>
+  </div>
+</div>
