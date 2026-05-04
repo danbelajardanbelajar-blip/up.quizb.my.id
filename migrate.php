@@ -1,86 +1,125 @@
 <?php
 /**
- * migrate.php — Skrip Migrasi Server-Side
+ * migrate.php — Migrasi Server-Side
  * quic1934_quiz_lama → quic1934_upgrade
  *
  * CARA PAKAI:
- * 1. Upload file ini ke root server (up.quizb.my.id/)
- * 2. Buka di browser: https://up.quizb.my.id/migrate.php?key=RAHASIA123
- * 3. Tunggu selesai (bisa 1-5 menit tergantung ukuran data)
- * 4. Hapus file ini setelah selesai!
- *
- * KEAMANAN: Ganti SECRET_KEY di bawah sebelum upload!
+ * 1. Edit SECRET_KEY dan DB_OLD di bawah
+ * 2. Upload/pull ke server
+ * 3. Buka: https://up.quizb.my.id/migrate.php?key=ISI_SECRET_KEY_MU
+ * 4. Tunggu sampai selesai, lalu HAPUS file ini!
  */
 
-define('SECRET_KEY', 'RAHASIA123');   // ← GANTI INI sebelum upload!
-define('DB_OLD',  'quic1934_quiz_lama');
-define('DB_NEW',  'quic1934_upgrade');
-define('DB_HOST', 'localhost');
-define('DB_USER', 'quic1934_q');      // ← Ganti dengan user MySQL kamu
-define('DB_PASS', '');                 // ← Ganti dengan password MySQL kamu
+// -------------------------------------------------------
+// KONFIGURASI — Edit bagian ini sebelum dijalankan
+// -------------------------------------------------------
+define('SECRET_KEY', 'QuizB2025Migrate');   // ← Ganti, gunakan saat buka URL
+define('DB_OLD', 'quic1934_quiz_lama');      // ← nama DB lama (sudah ada di server)
 
+// Kredensial diambil otomatis dari config/db.php yang sudah ada di server
+// Pastikan file config/db.php sudah ada dan sudah dikonfigurasi!
 // -------------------------------------------------------
-// Security check
-// -------------------------------------------------------
+
+// Security check pertama kali — sebelum apapun
 if (($_GET['key'] ?? '') !== SECRET_KEY) {
     http_response_code(403);
-    die('<h1>403 Forbidden</h1><p>Akses ditolak. Tambahkan ?key=SECRET_KEY di URL.</p>');
+    echo '<!DOCTYPE html><html><head><title>403</title></head><body>';
+    echo '<h1>403 Forbidden</h1>';
+    echo '<p>Tambahkan <code>?key=SECRET_KEY</code> di URL.</p>';
+    echo '</body></html>';
+    exit;
 }
 
-// -------------------------------------------------------
-// Setup
-// -------------------------------------------------------
-set_time_limit(0);
-ini_set('memory_limit', '512M');
+// Load config dari file yang sudah ada
+$configFile = __DIR__ . '/config/db.php';
+if (!file_exists($configFile)) {
+    die('<h1>Error</h1><p>File <code>config/db.php</code> tidak ditemukan. Pastikan sudah dikonfigurasi.</p>');
+}
+require_once $configFile;
+
+// Ambil kredensial dari konstanta yang sudah didefinisikan di db.php
+$dbHost = DB_HOST;
+$dbUser = DB_USER;
+$dbPass = DB_PASS;
+$dbNew  = DB_NAME; // ini seharusnya quic1934_upgrade
+$dbOld  = DB_OLD;
+
+// Setup PHP
+set_time_limit(300);
+ini_set('memory_limit', '256M');
+error_reporting(E_ALL);
+ini_set('display_errors', '0'); // matikan error display, kita tangani sendiri
+
+// Start output
 header('Content-Type: text/html; charset=utf-8');
-ob_implicit_flush(true);
-ob_end_flush();
+?>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>QuizB Migration Tool</title>
+<style>
+  * { box-sizing: border-box; }
+  body { max-width: 860px; margin: 30px auto; padding: 20px; font-family: 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; }
+  h2 { color: #4f46e5; margin-bottom: 4px; }
+  .sub { color: #64748b; margin-bottom: 20px; font-size: 14px; }
+  .box { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; margin: 12px 0; }
+  .box.ok   { border-color: #86efac; background: #f0fdf4; }
+  .box.err  { border-color: #fca5a5; background: #fef2f2; }
+  .box.warn { border-color: #fcd34d; background: #fffbeb; }
+  .log { font-family: monospace; font-size: 13px; line-height: 1.8; }
+  .ok-t  { color: #16a34a; } .err-t  { color: #dc2626; }
+  .warn-t { color: #d97706; } .head-t { color: #4f46e5; font-weight: bold; }
+  .stat { display: inline-block; background: #ede9fe; color: #4f46e5; padding: 3px 10px; border-radius: 999px; margin: 2px; font-size: 13px; font-family: monospace; }
+  hr { border: none; border-top: 1px solid #e2e8f0; margin: 10px 0; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 8px; font-size: 12px; overflow-x: auto; }
+</style>
+</head>
+<body>
+<h2>🚀 QuizB Migration Tool</h2>
+<p class="sub">Migrasi data dari <code><?= htmlspecialchars($dbOld) ?></code> → <code><?= htmlspecialchars($dbNew) ?></code></p>
+<div class="box log">
+<?php
+flush();
 
-function out(string $msg, string $type = 'info'): void {
-    $colors = ['info' => '#333', 'ok' => '#16a34a', 'error' => '#dc2626', 'warn' => '#d97706', 'head' => '#4f46e5'];
-    $color  = $colors[$type] ?? '#333';
-    echo "<p style='margin:2px 0;color:{$color};font-family:monospace'>{$msg}</p>";
+function out(string $msg, string $type = ''): void {
+    $cls = $type ? " class='{$type}-t'" : '';
+    echo "<div{$cls}>{$msg}</div>\n";
     flush();
 }
 
-function hr(): void {
-    echo "<hr style='border-color:#e5e7eb;margin:8px 0'>";
-    flush();
-}
-
-echo "<!DOCTYPE html><html><head><meta charset='utf-8'>
-<title>QuizB Migration</title>
-<style>body{max-width:900px;margin:20px auto;padding:20px;font-family:sans-serif;background:#f9fafb}
-h2{color:#4f46e5} .box{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:12px 0}
-.stat{display:inline-block;background:#ede9fe;color:#4f46e5;padding:4px 12px;border-radius:999px;margin:3px;font-size:14px}
-</style></head><body>";
-
-echo "<h2>🚀 Migrasi QuizB: {$_ENV['HOSTNAME'] ?? 'server'}</h2>";
-echo "<div class='box'><b>DB Lama:</b> " . DB_OLD . " &nbsp;→&nbsp; <b>DB Baru:</b> " . DB_NEW . "</div>";
+function outhr(): void { echo "<hr>"; flush(); }
 
 // -------------------------------------------------------
-// Koneksi ke DB baru (aktif)
+// Koneksi PDO — pakai user yang sama, akses 2 DB via prefix
 // -------------------------------------------------------
 try {
     $pdo = new PDO(
-        "mysql:host=" . DB_HOST . ";dbname=" . DB_NEW . ";charset=utf8mb4",
-        DB_USER, DB_PASS,
+        "mysql:host={$dbHost};dbname={$dbNew};charset=utf8mb4",
+        $dbUser,
+        $dbPass,
         [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4, FOREIGN_KEY_CHECKS=0, SQL_MODE=''",
+            PDO::ATTR_EMULATE_PREPARES   => true,
         ]
     );
-    out("✅ Koneksi ke <b>" . DB_NEW . "</b> berhasil", 'ok');
+    $pdo->exec("SET NAMES utf8mb4");
+    $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
+    $pdo->exec("SET SQL_MODE = ''");
+    out("✅ Koneksi ke <b>{$dbNew}</b> berhasil", 'ok');
 } catch (Exception $e) {
-    out("❌ Koneksi gagal: " . $e->getMessage(), 'error');
-    die("</body></html>");
+    out("❌ Koneksi GAGAL: " . htmlspecialchars($e->getMessage()), 'err');
+    echo "</div></body></html>"; exit;
 }
 
 // -------------------------------------------------------
-// Helper: count
+// Cek akses ke DB lama
 // -------------------------------------------------------
-function count_table(PDO $pdo, string $db, string $table): int {
+outhr();
+out("<b>📊 Cek akses ke DB lama ({$dbOld})</b>", 'head');
+
+function countTable(PDO $pdo, string $db, string $table): int {
     try {
         return (int)$pdo->query("SELECT COUNT(*) FROM `{$db}`.`{$table}`")->fetchColumn();
     } catch (Exception $e) {
@@ -88,289 +127,252 @@ function count_table(PDO $pdo, string $db, string $table): int {
     }
 }
 
-// -------------------------------------------------------
-// STEP 0: Tampilkan jumlah data di kedua DB
-// -------------------------------------------------------
-hr();
-out("<b>📊 Data di DB lama (" . DB_OLD . "):</b>", 'head');
-
-$oldCounts = [
-    'themes'      => count_table($pdo, DB_OLD, 'themes'),
-    'subthemes'   => count_table($pdo, DB_OLD, 'subthemes'),
-    'quiz_titles' => count_table($pdo, DB_OLD, 'quiz_titles'),
-    'questions'   => count_table($pdo, DB_OLD, 'questions'),
-    'choices'     => count_table($pdo, DB_OLD, 'choices'),
-];
-
-foreach ($oldCounts as $t => $c) {
-    if ($c < 0) out("  ⚠️  {$t}: tidak bisa diakses (cek privilege)", 'warn');
-    else        echo "<span class='stat'>{$t}: <b>{$c}</b></span>";
+$checks = ['themes', 'subthemes', 'quiz_titles', 'questions', 'choices'];
+$canAccess = true;
+foreach ($checks as $t) {
+    $n = countTable($pdo, $dbOld, $t);
+    if ($n < 0) {
+        out("  ❌ Tidak bisa akses `{$dbOld}`.`{$t}` — user MySQL perlu privilege", 'err');
+        $canAccess = false;
+    } else {
+        out("  ✅ {$t}: <b>{$n}</b> rows");
+    }
 }
-echo "<br>";
 
-if ($oldCounts['questions'] < 0) {
-    out("❌ User MySQL tidak punya akses ke DB lama. Tambahkan privilege dulu:", 'error');
-    out("GRANT ALL ON `" . DB_OLD . "`.* TO '" . DB_USER . "'@'localhost'; FLUSH PRIVILEGES;", 'error');
-    die("</body></html>");
+if (!$canAccess) {
+    out("", '');
+    out("🔧 Solusi: Di cPanel → MySQL Databases, tambahkan user <b>{$dbUser}</b> ke database <b>{$dbOld}</b> dengan ALL PRIVILEGES.", 'warn');
+    echo "</div></body></html>"; exit;
 }
 
 // -------------------------------------------------------
-// STEP 1: Bersihkan data lama di DB baru
+// STEP 1: Bersihkan data lama
 // -------------------------------------------------------
-hr();
-out("<b>🗑️  STEP 1: Bersihkan data lama di DB baru</b>", 'head');
+outhr();
+out("<b>🗑️  STEP 1: Bersihkan data lama di {$dbNew}</b>", 'head');
 
-$pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
-$tables = ['assignment_submissions','attempt_answers','attempts','options','questions','quizzes','categories'];
-foreach ($tables as $t) {
-    $pdo->exec("DELETE FROM `" . DB_NEW . "`.`{$t}`");
-    $pdo->exec("ALTER TABLE `" . DB_NEW . "`.`{$t}` AUTO_INCREMENT = 1");
-    out("  Cleared: {$t}");
+$order = ['assignment_submissions','attempt_answers','attempts','options','questions','quizzes','categories'];
+foreach ($order as $t) {
+    try {
+        $pdo->exec("DELETE FROM `{$dbNew}`.`{$t}`");
+        $pdo->exec("ALTER TABLE `{$dbNew}`.`{$t}` AUTO_INCREMENT = 1");
+        out("  Cleared: {$t}");
+    } catch (Exception $e) {
+        out("  ⚠️ {$t}: " . htmlspecialchars($e->getMessage()), 'warn');
+    }
 }
 out("✅ Data lama dibersihkan", 'ok');
+flush();
 
 // -------------------------------------------------------
-// STEP 2: Import categories dari subthemes
+// STEP 2: Categories
 // -------------------------------------------------------
-hr();
+outhr();
 out("<b>📁 STEP 2: Import Categories dari subthemes</b>", 'head');
 
-$inserted = $pdo->exec("
-    INSERT INTO `" . DB_NEW . "`.`categories`
-        (`id`, `name`, `slug`, `description`, `icon`, `color`, `quiz_count`, `created_at`)
-    SELECT
-        s.id,
-        s.name,
-        LOWER(REGEXP_REPLACE(REGEXP_REPLACE(REGEXP_REPLACE(s.name,'[^a-zA-Z0-9 ]',''),' +','-'),'-+','-')),
-        CONCAT('Kategori: ', s.name, ' (', t.name, ')'),
-        CASE t.id
-            WHEN 4  THEN '🕌' WHEN 2  THEN '🔬' WHEN 3  THEN '📜'
-            WHEN 5  THEN '🌍' WHEN 45 THEN '🗣️' ELSE '📚'
-        END,
-        CASE t.id
-            WHEN 4  THEN '#10b981' WHEN 2  THEN '#06b6d4' WHEN 3  THEN '#f59e0b'
-            WHEN 5  THEN '#6366f1' WHEN 45 THEN '#8b5cf6' ELSE '#6366f1'
-        END,
-        0,
-        s.created_at
-    FROM `" . DB_OLD . "`.`subthemes` s
-    JOIN `" . DB_OLD . "`.`themes` t ON s.theme_id = t.id
-    WHERE s.deleted_at IS NULL
-    ORDER BY s.id
-");
-out("✅ Categories diimport: <b>{$inserted}</b> kategori", 'ok');
+try {
+    $n = $pdo->exec("
+        INSERT INTO `{$dbNew}`.`categories`
+            (`id`,`name`,`slug`,`description`,`icon`,`color`,`quiz_count`,`created_at`)
+        SELECT
+            s.id, s.name,
+            LOWER(REGEXP_REPLACE(REGEXP_REPLACE(REGEXP_REPLACE(s.name,'[^a-zA-Z0-9 ]',''),' +','-'),'-+','-')),
+            CONCAT('Kategori: ',s.name,' (',t.name,')'),
+            CASE t.id WHEN 4 THEN '🕌' WHEN 2 THEN '🔬' WHEN 3 THEN '📜' WHEN 5 THEN '🌍' WHEN 45 THEN '🗣️' ELSE '📚' END,
+            CASE t.id WHEN 4 THEN '#10b981' WHEN 2 THEN '#06b6d4' WHEN 3 THEN '#f59e0b' WHEN 5 THEN '#6366f1' WHEN 45 THEN '#8b5cf6' ELSE '#6366f1' END,
+            0, s.created_at
+        FROM `{$dbOld}`.`subthemes` s
+        JOIN `{$dbOld}`.`themes` t ON s.theme_id = t.id
+        WHERE s.deleted_at IS NULL
+        ORDER BY s.id
+    ");
+    out("✅ Categories: <b>{$n}</b> kategori diimport", 'ok');
+} catch (Exception $e) {
+    out("❌ Categories gagal: " . htmlspecialchars($e->getMessage()), 'err');
+}
+flush();
 
 // -------------------------------------------------------
-// STEP 3: Import quizzes dari quiz_titles
+// STEP 3: Quizzes
 // -------------------------------------------------------
-hr();
+outhr();
 out("<b>📋 STEP 3: Import Quizzes dari quiz_titles</b>", 'head');
 
-$inserted = $pdo->exec("
-    INSERT INTO `" . DB_NEW . "`.`quizzes`
-        (`id`, `category_id`, `title`, `slug`, `description`,
-         `duration`, `time_limit`, `difficulty`,
-         `total_questions`, `total_attempts`, `passing_score`,
-         `max_attempts`, `is_published`, `created_by`, `created_at`)
-    SELECT
-        qt.id,
-        qt.subtheme_id,
-        qt.title,
-        CONCAT(
-            LOWER(REGEXP_REPLACE(REGEXP_REPLACE(REGEXP_REPLACE(qt.title,'[^a-zA-Z0-9 ]',''),' +','-'),'-+','-')),
-            '-', qt.id
-        ),
-        CONCAT('Paket soal: ', qt.title),
-        600, 600, 'medium', 0, 0, 60, 0, 1, 1,
-        qt.created_at
-    FROM `" . DB_OLD . "`.`quiz_titles` qt
-    WHERE qt.deleted_at IS NULL
-      AND qt.subtheme_id IN (SELECT id FROM `" . DB_NEW . "`.`categories`)
-    ORDER BY qt.id
-");
-out("✅ Quizzes diimport: <b>{$inserted}</b> paket soal", 'ok');
+try {
+    $n = $pdo->exec("
+        INSERT INTO `{$dbNew}`.`quizzes`
+            (`id`,`category_id`,`title`,`slug`,`description`,
+             `duration`,`time_limit`,`difficulty`,
+             `total_questions`,`total_attempts`,`passing_score`,
+             `max_attempts`,`is_published`,`created_by`,`created_at`)
+        SELECT
+            qt.id, qt.subtheme_id, qt.title,
+            CONCAT(LOWER(REGEXP_REPLACE(REGEXP_REPLACE(REGEXP_REPLACE(qt.title,'[^a-zA-Z0-9 ]',''),' +','-'),'-+','-')),'-',qt.id),
+            CONCAT('Paket soal: ',qt.title),
+            600, 600, 'medium', 0, 0, 60, 0, 1, 1, qt.created_at
+        FROM `{$dbOld}`.`quiz_titles` qt
+        WHERE qt.deleted_at IS NULL
+          AND qt.subtheme_id IN (SELECT id FROM `{$dbNew}`.`categories`)
+        ORDER BY qt.id
+    ");
+    out("✅ Quizzes: <b>{$n}</b> paket soal diimport", 'ok');
+} catch (Exception $e) {
+    out("❌ Quizzes gagal: " . htmlspecialchars($e->getMessage()), 'err');
+}
+flush();
 
 // -------------------------------------------------------
-// STEP 4: Import questions — batch per quiz_id
+// STEP 4: Questions — batch per 100 quiz sekaligus
 // -------------------------------------------------------
-hr();
-out("<b>❓ STEP 4: Import Questions (batch per quiz)</b>", 'head');
+outhr();
+out("<b>❓ STEP 4: Import Questions (batch per 100 quiz)</b>", 'head');
 
-// Ambil semua quiz_id yang ada di DB baru
-$quizIds = $pdo->query("SELECT id FROM `" . DB_NEW . "`.`quizzes` ORDER BY id")->fetchAll(PDO::FETCH_COLUMN);
+$quizIds = $pdo->query("SELECT id FROM `{$dbNew}`.`quizzes` ORDER BY id")->fetchAll(PDO::FETCH_COLUMN);
 out("  Total quizzes: " . count($quizIds));
 
-$totalQ    = 0;
-$batchSize = 50; // proses 50 quiz sekaligus
+$totalQ  = 0;
+$chunks  = array_chunk($quizIds, 100);
 
-$chunks = array_chunk($quizIds, $batchSize);
 foreach ($chunks as $i => $chunk) {
-    $placeholders = implode(',', array_fill(0, count($chunk), '?'));
-    $n = $pdo->prepare("
-        INSERT INTO `" . DB_NEW . "`.`questions`
-            (`id`, `quiz_id`, `question_text`, `type`, `points`, `order_num`, `explanation`)
-        SELECT
-            q.id,
-            q.title_id,
-            q.text,
-            'multiple',
-            10,
-            q.id,
-            q.explanation
-        FROM `" . DB_OLD . "`.`questions` q
-        WHERE q.title_id IN ({$placeholders})
-        ORDER BY q.title_id, q.id
-    ")->execute($chunk);
-    // hitung rows inserted
-    $count = (int)$pdo->query("SELECT ROW_COUNT()")->fetchColumn();
-    $totalQ += $count;
-    out("  Batch " . ($i+1) . "/" . count($chunks) . ": +{$count} soal (total: {$totalQ})");
+    $ph = implode(',', $chunk); // aman karena sudah int dari DB
+    try {
+        $n = $pdo->exec("
+            INSERT INTO `{$dbNew}`.`questions`
+                (`id`,`quiz_id`,`question_text`,`type`,`points`,`order_num`,`explanation`)
+            SELECT q.id, q.title_id, q.text, 'multiple', 10, q.id, q.explanation
+            FROM `{$dbOld}`.`questions` q
+            WHERE q.title_id IN ({$ph})
+            ORDER BY q.title_id, q.id
+        ");
+        $totalQ += $n;
+        out("  Batch " . ($i+1) . "/" . count($chunks) . ": +{$n} soal (akumulasi: {$totalQ})");
+    } catch (Exception $e) {
+        out("  ❌ Batch " . ($i+1) . " gagal: " . htmlspecialchars($e->getMessage()), 'err');
+    }
+    flush();
 }
-out("✅ Questions diimport: <b>{$totalQ}</b> soal", 'ok');
+out("✅ Questions total: <b>{$totalQ}</b> soal", 'ok');
+flush();
 
 // -------------------------------------------------------
-// STEP 5: Import options (choices) — batch per quiz
+// STEP 5: Options — batch per 100 quiz
 // -------------------------------------------------------
-hr();
-out("<b>🔘 STEP 5: Import Options (batch per quiz)</b>", 'head');
+outhr();
+out("<b>🔘 STEP 5: Import Options (batch per 100 quiz)</b>", 'head');
 
-$totalO    = 0;
-$quizIds2  = $pdo->query("SELECT id FROM `" . DB_NEW . "`.`quizzes` ORDER BY id")->fetchAll(PDO::FETCH_COLUMN);
-$chunks2   = array_chunk($quizIds2, $batchSize);
+$totalO = 0;
+$quizIds2 = $pdo->query("SELECT id FROM `{$dbNew}`.`quizzes` ORDER BY id")->fetchAll(PDO::FETCH_COLUMN);
+$chunks2  = array_chunk($quizIds2, 100);
 
 foreach ($chunks2 as $i => $chunk) {
-    $placeholders = implode(',', array_fill(0, count($chunk), '?'));
-    
-    // Ambil question_ids dari quiz batch ini
-    $stmt = $pdo->prepare("SELECT id FROM `" . DB_NEW . "`.`questions` WHERE quiz_id IN ({$placeholders}) ORDER BY id");
-    $stmt->execute($chunk);
-    $questionIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    
-    if (empty($questionIds)) continue;
-    
-    $qPlaceholders = implode(',', array_fill(0, count($questionIds), '?'));
-    
-    // Insert options dengan ROW_NUMBER untuk order_num
-    $pdo->prepare("
-        INSERT INTO `" . DB_NEW . "`.`options`
-            (`id`, `question_id`, `option_text`, `is_correct`, `order_num`)
-        SELECT
-            c.id,
-            c.question_id,
-            c.text,
-            c.is_correct,
-            ROW_NUMBER() OVER (PARTITION BY c.question_id ORDER BY c.id) AS order_num
-        FROM `" . DB_OLD . "`.`choices` c
-        WHERE c.question_id IN ({$qPlaceholders})
-        ORDER BY c.question_id, c.id
-    ")->execute($questionIds);
-    
-    $count = (int)$pdo->query("SELECT ROW_COUNT()")->fetchColumn();
-    $totalO += $count;
-    out("  Batch " . ($i+1) . "/" . count($chunks2) . ": +{$count} opsi (total: {$totalO})");
+    $ph = implode(',', $chunk);
+
+    // Ambil question_ids dari chunk ini
+    $qids = $pdo->query("SELECT id FROM `{$dbNew}`.`questions` WHERE quiz_id IN ({$ph}) ORDER BY id")
+                ->fetchAll(PDO::FETCH_COLUMN);
+    if (empty($qids)) continue;
+
+    $qph = implode(',', $qids);
+
+    try {
+        // Gunakan variabel user-level untuk kompatibilitas MariaDB 10.x
+        $pdo->exec("SET @rn=0, @prev=0");
+        $n = $pdo->exec("
+            INSERT INTO `{$dbNew}`.`options`
+                (`id`,`question_id`,`option_text`,`is_correct`,`order_num`)
+            SELECT c.id, c.question_id, c.text, c.is_correct,
+                   @rn := IF(@prev = c.question_id, @rn+1, 1),
+                   @prev := c.question_id
+            FROM `{$dbOld}`.`choices` c
+            WHERE c.question_id IN ({$qph})
+            ORDER BY c.question_id, c.id
+        ");
+        $totalO += $n;
+        out("  Batch " . ($i+1) . "/" . count($chunks2) . ": +{$n} opsi (akumulasi: {$totalO})");
+    } catch (Exception $e) {
+        out("  ❌ Batch " . ($i+1) . " gagal: " . htmlspecialchars($e->getMessage()), 'err');
+    }
+    flush();
 }
-out("✅ Options diimport: <b>{$totalO}</b> pilihan", 'ok');
+out("✅ Options total: <b>{$totalO}</b> pilihan", 'ok');
+flush();
 
 // -------------------------------------------------------
-// STEP 6: Update total_questions per quiz
+// STEP 6 & 7: Update counts
 // -------------------------------------------------------
-hr();
-out("<b>🔢 STEP 6: Update total_questions</b>", 'head');
-$pdo->exec("
-    UPDATE `" . DB_NEW . "`.`quizzes` q
-    SET q.total_questions = (
-        SELECT COUNT(*) FROM `" . DB_NEW . "`.`questions` WHERE quiz_id = q.id
-    )
-");
-out("✅ total_questions diupdate", 'ok');
+outhr();
+out("<b>🔢 STEP 6-7: Update total_questions &amp; quiz_count</b>", 'head');
+$pdo->exec("UPDATE `{$dbNew}`.`quizzes` q SET q.total_questions=(SELECT COUNT(*) FROM `{$dbNew}`.`questions` WHERE quiz_id=q.id)");
+out("  ✅ total_questions diupdate");
+$pdo->exec("UPDATE `{$dbNew}`.`categories` c SET c.quiz_count=(SELECT COUNT(*) FROM `{$dbNew}`.`quizzes` WHERE category_id=c.id AND total_questions>0)");
+out("  ✅ quiz_count diupdate");
+flush();
 
 // -------------------------------------------------------
-// STEP 7: Update quiz_count per category
+// STEP 8: Rapikan order_num
 // -------------------------------------------------------
-$pdo->exec("
-    UPDATE `" . DB_NEW . "`.`categories` c
-    SET c.quiz_count = (
-        SELECT COUNT(*) FROM `" . DB_NEW . "`.`quizzes` WHERE category_id = c.id AND total_questions > 0
-    )
-");
-out("✅ quiz_count diupdate", 'ok');
-
-// -------------------------------------------------------
-// STEP 8: Rapikan order_num questions
-// -------------------------------------------------------
-hr();
+outhr();
 out("<b>🔢 STEP 8: Rapikan order_num questions</b>", 'head');
-$pdo->exec("
-    UPDATE `" . DB_NEW . "`.`questions` q
-    JOIN (
-        SELECT id,
-               ROW_NUMBER() OVER (PARTITION BY quiz_id ORDER BY id) AS rn
-        FROM `" . DB_NEW . "`.`questions`
-    ) ranked ON q.id = ranked.id
-    SET q.order_num = ranked.rn
-");
-out("✅ order_num dirapikan", 'ok');
+try {
+    $pdo->exec("SET @pq=0, @o=0");
+    $pdo->exec("
+        UPDATE `{$dbNew}`.`questions` q
+        JOIN (
+            SELECT id,
+                   @o := IF(@pq=quiz_id,@o+1,1) AS rn,
+                   @pq := quiz_id AS _d
+            FROM `{$dbNew}`.`questions` ORDER BY quiz_id, id
+        ) ranked ON q.id=ranked.id
+        SET q.order_num=ranked.rn
+    ");
+    out("  ✅ order_num dirapikan");
+} catch (Exception $e) {
+    out("  ⚠️ order_num: " . htmlspecialchars($e->getMessage()), 'warn');
+}
+flush();
 
 // -------------------------------------------------------
-// STEP 9: Hapus quizzes tanpa soal
+// STEP 9: Hapus quiz kosong
 // -------------------------------------------------------
-hr();
-out("<b>🧹 STEP 9: Hapus quizzes kosong</b>", 'head');
-$deleted = $pdo->exec("DELETE FROM `" . DB_NEW . "`.`quizzes` WHERE total_questions = 0");
-out("  Dihapus: {$deleted} quiz kosong", $deleted > 0 ? 'warn' : 'ok');
+$deleted = $pdo->exec("DELETE FROM `{$dbNew}`.`quizzes` WHERE total_questions=0");
+out("  🧹 Quiz kosong dihapus: {$deleted}");
+$pdo->exec("UPDATE `{$dbNew}`.`categories` c SET c.quiz_count=(SELECT COUNT(*) FROM `{$dbNew}`.`quizzes` WHERE category_id=c.id)");
+$pdo->exec("SET FOREIGN_KEY_CHECKS=1");
+flush();
 
 // -------------------------------------------------------
-// STEP 10: Update quiz_count setelah hapus quiz kosong
+// Ringkasan akhir
 // -------------------------------------------------------
-$pdo->exec("
-    UPDATE `" . DB_NEW . "`.`categories` c
-    SET c.quiz_count = (
-        SELECT COUNT(*) FROM `" . DB_NEW . "`.`quizzes` WHERE category_id = c.id
-    )
-");
-$pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
-
-// -------------------------------------------------------
-// Summary
-// -------------------------------------------------------
-hr();
-echo "<div class='box'>";
-out("<b>📊 RINGKASAN HASIL MIGRASI</b>", 'head');
-
-$newCounts = [
-    'categories' => count_table($pdo, DB_NEW, 'categories'),
-    'quizzes'    => count_table($pdo, DB_NEW, 'quizzes'),
-    'questions'  => count_table($pdo, DB_NEW, 'questions'),
-    'options'    => count_table($pdo, DB_NEW, 'options'),
-];
-
-foreach ($newCounts as $t => $c) {
+outhr();
+out("<b>📊 RINGKASAN MIGRASI</b>", 'head');
+$finals = ['categories','quizzes','questions','options'];
+foreach ($finals as $t) {
+    $c = countTable($pdo, $dbNew, $t);
     echo "<span class='stat'>{$t}: <b>{$c}</b></span>";
 }
 echo "<br><br>";
 
 // Distribusi pilihan per soal
 $dist = $pdo->query("
-    SELECT pilihan_count, COUNT(*) AS jumlah_soal
-    FROM (SELECT question_id, COUNT(*) AS pilihan_count FROM `" . DB_NEW . "`.`options` GROUP BY question_id) sub
+    SELECT pilihan_count, COUNT(*) AS soal
+    FROM (SELECT question_id, COUNT(*) AS pilihan_count FROM `{$dbNew}`.`options` GROUP BY question_id) s
     GROUP BY pilihan_count ORDER BY pilihan_count
 ")->fetchAll();
 
-out("Distribusi pilihan per soal:", 'head');
+out("Distribusi pilihan per soal:");
 foreach ($dist as $d) {
-    out("  {$d['pilihan_count']} pilihan → {$d['jumlah_soal']} soal");
+    out("&nbsp;&nbsp;{$d['pilihan_count']} pilihan → <b>{$d['soal']}</b> soal");
 }
+?>
+</div>
 
-echo "</div>";
-
-echo "<div class='box' style='background:#fef2f2;border-color:#fecaca'>";
-echo "<b style='color:#dc2626'>⚠️ PENTING: Hapus file ini setelah selesai!</b><br>";
-echo "File <code>migrate.php</code> adalah celah keamanan jika dibiarkan. Hapus via cPanel File Manager setelah migrasi selesai.";
-echo "</div>";
-
-echo "<div class='box' style='background:#f0fdf4;border-color:#bbf7d0'>";
-echo "<b style='color:#16a34a'>✅ Migrasi selesai!</b><br>";
-echo "Buka <a href='https://up.quizb.my.id' target='_blank'>https://up.quizb.my.id</a> dan cek apakah soal sudah muncul.";
-echo "</div>";
-
-echo "</body></html>";
+<div class="box warn">
+    <b>⚠️ PENTING — Hapus file ini sekarang!</b><br>
+    File <code>migrate.php</code> adalah celah keamanan. Hapus via <b>cPanel → File Manager</b> setelah migrasi selesai.
+</div>
+<div class="box ok">
+    <b>✅ Migrasi selesai!</b><br>
+    Buka <a href="https://up.quizb.my.id" target="_blank">https://up.quizb.my.id</a> dan coba buka salah satu quiz — soal seharusnya sudah muncul.
+</div>
+</body>
+</html>
