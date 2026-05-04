@@ -39,6 +39,21 @@ function requireAdmin(): array {
     return $user;
 }
 
+function requirePengajar(): array {
+    $user = requireAuth();
+    if (!in_array($user['role'], ['pengajar', 'admin'])) {
+        http_response_code(403);
+        die(json_encode(['error' => 'Hanya pengajar yang dapat mengakses fitur ini', 'code' => 403]));
+    }
+    return $user;
+}
+
+function isPengajar(): bool {
+    startSecureSession();
+    return !empty($_SESSION['user_id']) &&
+           in_array($_SESSION['user_role'] ?? '', ['pengajar', 'admin']);
+}
+
 function isLoggedIn(): bool {
     startSecureSession();
     return !empty($_SESSION['user_id']);

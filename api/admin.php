@@ -223,7 +223,8 @@ function admin_user_update(): void {
         jsonError('Tidak bisa mengubah role diri sendiri');
     }
 
-    $role     = in_array($body['role'] ?? $existing['role'], ['user','admin']) ? $body['role'] : $existing['role'];
+    $role     = in_array($body['role'] ?? $existing['role'], ['user','admin','pengajar','pelajar'])
+                 ? ($body['role'] ?? $existing['role']) : $existing['role'];
     $isActive = isset($body['is_active']) ? (int)$body['is_active'] : (int)$existing['is_active'];
     $name     = sanitizeString($body['name'] ?? $existing['name']);
 
@@ -253,14 +254,19 @@ function admin_stats(): void {
     $pdo = DB::conn();
 
     $stats = [
-        'total_users'    => (int)DB::one("SELECT COUNT(*) FROM users")['COUNT(*)'],
-        'total_quizzes'  => (int)DB::one("SELECT COUNT(*) FROM quizzes")['COUNT(*)'],
-        'total_attempts' => (int)DB::one("SELECT COUNT(*) FROM attempts")['COUNT(*)'],
-        'total_questions'=> (int)DB::one("SELECT COUNT(*) FROM questions")['COUNT(*)'],
+        'total_users'       => (int)DB::one("SELECT COUNT(*) FROM users")['COUNT(*)'],
+        'total_quizzes'     => (int)DB::one("SELECT COUNT(*) FROM quizzes")['COUNT(*)'],
+        'total_attempts'    => (int)DB::one("SELECT COUNT(*) FROM attempts")['COUNT(*)'],
+        'total_questions'   => (int)DB::one("SELECT COUNT(*) FROM questions")['COUNT(*)'],
+        'total_categories'  => (int)DB::one("SELECT COUNT(*) FROM categories")['COUNT(*)'],
+        'total_classes'     => (int)(DB::one("SELECT COUNT(*) FROM classes") ? DB::one("SELECT COUNT(*) FROM classes")['COUNT(*)'] : 0),
+        'total_assignments' => (int)(DB::one("SELECT COUNT(*) FROM assignments") ? DB::one("SELECT COUNT(*) FROM assignments")['COUNT(*)'] : 0),
         'published_quizzes' => (int)DB::one("SELECT COUNT(*) FROM quizzes WHERE is_published=1")['COUNT(*)'],
-        'active_users'   => (int)DB::one("SELECT COUNT(*) FROM users WHERE is_active=1")['COUNT(*)'],
-        'avg_score'      => round((float)(DB::one("SELECT AVG(score) FROM attempts WHERE completed_at IS NOT NULL")['AVG(score)'] ?? 0), 1),
-        'recent_attempts'=> DB::all(
+        'active_users'      => (int)DB::one("SELECT COUNT(*) FROM users WHERE is_active=1")['COUNT(*)'],
+        'pengajar_count'    => (int)DB::one("SELECT COUNT(*) FROM users WHERE role='pengajar'")['COUNT(*)'],
+        'pelajar_count'     => (int)DB::one("SELECT COUNT(*) FROM users WHERE role IN ('pelajar','user')")['COUNT(*)'],
+        'avg_score'         => round((float)(DB::one("SELECT AVG(score) FROM attempts WHERE completed_at IS NOT NULL")['AVG(score)'] ?? 0), 1),
+        'recent_attempts'   => DB::all(
             "SELECT a.id, u.name AS user_name, q.title AS quiz_title, a.score, a.completed_at
              FROM attempts a
              JOIN users u ON a.user_id = u.id
@@ -272,6 +278,9 @@ function admin_stats(): void {
             "SELECT q.id, q.title, COUNT(a.id) AS attempt_count, AVG(a.score) AS avg_score
              FROM quizzes q LEFT JOIN attempts a ON q.id = a.quiz_id
              GROUP BY q.id ORDER BY attempt_count DESC LIMIT 5"
+        ),
+        'users_by_role' => DB::all(
+            "SELECT role, COUNT(*) AS count FROM users GROUP BY role ORDER BY count DESC"
         ),
     ];
 

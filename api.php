@@ -53,6 +53,8 @@ $routes = [
     'leaderboard' => __DIR__ . '/api/leaderboard.php',
     'search'      => __DIR__ . '/api/search.php',
     'admin'       => __DIR__ . '/api/admin.php',
+    'class'       => __DIR__ . '/api/class.php',
+    'assignment'  => __DIR__ . '/api/assignment.php',
 ];
 
 if (!isset($routes[$ns])) {

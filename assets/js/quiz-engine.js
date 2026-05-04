@@ -1,5 +1,6 @@
 // ============================================
 // assets/js/quiz-engine.js — Alpine Component
+// v2.0: Support 2-5 pilihan jawaban dinamis
 // ============================================
 
 function QuizEngine() {
@@ -18,10 +19,15 @@ function QuizEngine() {
     showNav: false,
     loading: false,
     error: null,
+    assignmentId: null,  // jika dimainkan dari tugas
 
     // Computed
     get current() { return this.questions[this.currentIndex] || null; },
-    get progress() { return this.questions.length ? Math.round((Object.keys(this.answers).length / this.questions.length) * 100) : 0; },
+    get progress() {
+      return this.questions.length
+        ? Math.round((Object.keys(this.answers).length / this.questions.length) * 100)
+        : 0;
+    },
     get answered() { return Object.keys(this.answers).length; },
     get timerClass() {
       if (this.timeLeft > 60)  return 'timer-ok';
@@ -30,17 +36,28 @@ function QuizEngine() {
     },
     get timerDisplay() { return formatTime(this.timeLeft); },
 
-    // Load quiz
-    async loadQuiz(quizId) {
+    // ---- Option label helpers (A, B, C, D, E) ----
+    optionLabel(index) {
+      return ['A', 'B', 'C', 'D', 'E'][index] || String.fromCharCode(65 + index);
+    },
+
+    // Hitung jumlah opsi pada soal saat ini
+    get currentOptionCount() {
+      return this.current?.options?.length || 0;
+    },
+
+    // ---- Load quiz ----
+    async loadQuiz(quizId, assignmentId = null) {
       this.phase = 'loading';
       this.error = null;
+      this.assignmentId = assignmentId;
       try {
-        const data = await api.get('quiz.detail', { id: quizId });
-        this.quiz = data.quiz;
+        const data = await api.get('quiz.questions', { id: quizId });
+        this.quiz      = data.quiz;
         this.questions = data.questions;
-        this.timeLeft = this.quiz.time_limit || 600;
-        this.answers = {};
-        this.flagged = new Set();
+        this.timeLeft  = this.quiz.time_limit || this.quiz.duration || 600;
+        this.answers   = {};
+        this.flagged   = new Set();
         this.currentIndex = 0;
         this.phase = 'ready';
       } catch (e) {
@@ -49,13 +66,13 @@ function QuizEngine() {
       }
     },
 
-    // Start quiz
+    // ---- Start quiz ----
     startQuiz() {
       this.phase = 'playing';
       this.startTimer();
     },
 
-    // Timer
+    // ---- Timer ----
     startTimer() {
       clearInterval(this.timerInterval);
       this.timerInterval = setInterval(() => {
@@ -72,17 +89,17 @@ function QuizEngine() {
       clearInterval(this.timerInterval);
     },
 
-    // Select answer
+    // ---- Select answer ----
     selectOption(questionId, optionId) {
       if (this.phase !== 'playing') return;
       this.answers[questionId] = optionId;
-      // Auto-advance after short delay
+      // Auto-advance setelah short delay jika bukan soal terakhir
       if (this.currentIndex < this.questions.length - 1) {
         setTimeout(() => {
-          if (this.answers[questionId] === optionId) { // still selected
+          if (this.answers[questionId] === optionId) {
             this.next();
           }
-        }, 600);
+        }, 500);
       }
     },
 
@@ -90,7 +107,7 @@ function QuizEngine() {
       return this.answers[questionId] === optionId;
     },
 
-    // Navigation
+    // ---- Navigation ----
     next() {
       if (this.currentIndex < this.questions.length - 1) this.currentIndex++;
     },
@@ -105,18 +122,27 @@ function QuizEngine() {
     toggleFlag(qId) {
       if (this.flagged.has(qId)) this.flagged.delete(qId);
       else this.flagged.add(qId);
-      this.flagged = new Set(this.flagged); // trigger reactivity
+      this.flagged = new Set(this.flagged);
     },
 
     questionStatus(index) {
       const q = this.questions[index];
       if (!q) return 'unanswered';
       if (this.flagged.has(q.id)) return 'flagged';
-      if (this.answers[q.id]) return 'answered';
+      if (this.answers[q.id])     return 'answered';
       return 'unanswered';
     },
 
-    // Submit
+    questionStatusClass(index) {
+      const status = this.questionStatus(index);
+      return {
+        'unanswered': 'bg-gray-200 dark:bg-gray-700 text-gray-600',
+        'answered':   'bg-indigo-500 text-white',
+        'flagged':    'bg-yellow-400 text-white',
+      }[status] || '';
+    },
+
+    // ---- Submit ----
     async autoSubmit() {
       this.stopTimer();
       await this.submitAnswers();
@@ -135,18 +161,31 @@ function QuizEngine() {
     async submitAnswers() {
       this.loading = true;
       try {
+        const timeTaken = (this.quiz.time_limit || this.quiz.duration || 600) - this.timeLeft;
         const payload = {
           quiz_id: this.quiz.id,
           answers: Object.entries(this.answers).map(([question_id, option_id]) => ({
             question_id: parseInt(question_id),
-            option_id: parseInt(option_id),
+            option_id:   parseInt(option_id),
           })),
-          time_taken: (this.quiz.time_limit || 600) - this.timeLeft,
+          time_taken: timeTaken,
         };
         const result = await api.post('attempt.submit', payload);
-        this.result = result;
-        this.phase = 'submitted';
-        // Navigate to result page
+        this.result  = result;
+        this.phase   = 'submitted';
+
+        // Jika dari tugas: auto-submit ke assignment
+        if (this.assignmentId && result.attempt_id) {
+          try {
+            await api.post('assignment.submit', {
+              assignment_id: parseInt(this.assignmentId),
+              attempt_id:    result.attempt_id,
+            });
+          } catch (_) {
+            // Submit tugas gagal: tidak block navigasi
+          }
+        }
+
         window.location.hash = `#/result/${result.attempt_id}`;
       } catch (e) {
         alert('Gagal submit: ' + e.message);
@@ -154,16 +193,15 @@ function QuizEngine() {
       }
     },
 
-    // Review mode (post-submit, from result page)
+    // ---- Review mode (post-submit, from result page) ----
     async loadReview(attemptId) {
       this.phase = 'loading';
       try {
         const data = await api.get('attempt.result', { id: attemptId });
-        this.result = data;
-        this.quiz = data.quiz;
+        this.result    = data;
+        this.quiz      = data.quiz;
         this.questions = data.questions || [];
-        // Reconstruct answers from result
-        this.answers = {};
+        this.answers   = {};
         if (data.answers) {
           data.answers.forEach(a => {
             this.answers[a.question_id] = a.selected_option_id;
@@ -177,17 +215,29 @@ function QuizEngine() {
       }
     },
 
+    // ---- Option styling (dinamis 2-5 pilihan) ----
     optionClass(question, optionId) {
       if (this.phase === 'playing') {
-        return this.answers[question.id] === optionId ? 'selected' : '';
+        return this.answers[question.id] === optionId
+          ? 'option-selected'
+          : 'option-default';
       }
       if (this.phase === 'reviewing') {
-        const isCorrect = optionId === question.correct_option_id;
+        const isCorrect  = optionId === question.correct_option_id;
         const isSelected = this.answers[question.id] === optionId;
-        if (isCorrect) return 'correct';
-        if (isSelected && !isCorrect) return 'incorrect';
+        if (isCorrect)              return 'option-correct';
+        if (isSelected && !isCorrect) return 'option-incorrect';
+        return 'option-review-default';
       }
-      return '';
+      return 'option-default';
+    },
+
+    // ---- Score display helper ----
+    scoreGrade(score) {
+      if (score >= 90) return { label: 'Sempurna!', emoji: '🏆', cls: 'text-yellow-500' };
+      if (score >= 75) return { label: 'Bagus!',    emoji: '⭐', cls: 'text-green-500'  };
+      if (score >= 60) return { label: 'Lulus',     emoji: '✅', cls: 'text-blue-500'   };
+      return { label: 'Perlu Belajar Lagi', emoji: '📚', cls: 'text-red-500' };
     },
 
     destroy() {
