@@ -17,15 +17,19 @@
 
 SET FOREIGN_KEY_CHECKS = 0;
 SET SQL_MODE = '';
-SET @OLD_DB = 'quic1934_quiz_lama';
 
 -- ============================================================
 -- STEP 1: Bersihkan data seed default agar tidak bentrok
+-- Gunakan DELETE FROM (bukan TRUNCATE) agar FK tidak masalah di phpMyAdmin
+-- Urutan: tabel anak dulu, baru tabel induk
 -- ============================================================
-TRUNCATE TABLE `options`;
-TRUNCATE TABLE `questions`;
-TRUNCATE TABLE `quizzes`;
-TRUNCATE TABLE `categories`;
+DELETE FROM `assignment_submissions`;
+DELETE FROM `attempt_answers`;
+DELETE FROM `attempts`;
+DELETE FROM `options`;
+DELETE FROM `questions`;
+DELETE FROM `quizzes`;
+DELETE FROM `categories`;
 
 -- Reset auto_increment
 ALTER TABLE `categories`  AUTO_INCREMENT = 1;
