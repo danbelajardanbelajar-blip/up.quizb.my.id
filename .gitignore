@@ -1,0 +1,68 @@
+# ============================================
+# QuizB — .gitignore
+# ============================================
+
+# ---- Konfigurasi sensitif (JANGAN push ke Git!) ----
+config/db.php
+config/*.env
+.env
+.env.*
+
+# ---- File database (jangan expose ke publik) ----
+database.sql
+
+# ---- Log files ----
+*.log
+logs/
+error_log
+php_errors.log
+
+# ---- OS files ----
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ---- Editor / IDE ----
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+*.bak
+*.orig
+
+# ---- Upload folder (user content) ----
+uploads/
+storage/
+tmp/
+temp/
+
+# ---- Node (jika ada tooling) ----
+node_modules/
+npm-debug.log*
+yarn-error.log
+package-lock.json
+
+# ---- Composer ----
+vendor/
+composer.lock
+
+# ---- Cache ----
+cache/
+.cache/
+*.cache
+
+# ---- Build artifacts ----
+dist/
+build/
+*.min.js.map
+*.min.css.map
