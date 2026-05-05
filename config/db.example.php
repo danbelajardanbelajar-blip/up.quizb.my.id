@@ -59,4 +59,14 @@ class DB {
         $stmt->execute($params);
         return $stmt->rowCount();
     }
+
+    // Alias untuk INSERT/UPDATE/DELETE (lebih eksplisit)
+    public static function execute(string $sql, array $params = []): int {
+        return self::run($sql, $params);
+    }
+
+    // Ambil last inserted ID
+    public static function lastId(): string|false {
+        return self::conn()->lastInsertId();
+    }
 }

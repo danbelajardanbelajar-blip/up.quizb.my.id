@@ -181,14 +181,17 @@ function QuizEngine() {
               assignment_id: parseInt(this.assignmentId),
               attempt_id:    result.attempt_id,
             });
-          } catch (_) {
-            // Submit tugas gagal: tidak block navigasi
-          }
+          } catch (_) {}
         }
 
         window.location.hash = `#/result/${result.attempt_id}`;
       } catch (e) {
-        alert('Gagal submit: ' + e.message);
+        // Jika 401 (belum pernah submit sebelumnya dan session habis), coba lagi — backend akan buat anon user
+        if (e.message && e.message.includes('401')) {
+          alert('Sesi berakhir. Silakan refresh halaman dan coba lagi.');
+        } else {
+          alert('Gagal submit: ' + e.message);
+        }
         this.loading = false;
       }
     },

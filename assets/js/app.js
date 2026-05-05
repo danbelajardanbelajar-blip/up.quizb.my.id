@@ -94,12 +94,12 @@ function QuizBApp() {
     },
 
     onRouteChange(route, params) {
-      // Guard protected routes
+      // Guard protected routes (dashboard & history tetap perlu login)
       const protected_routes = ['/dashboard', '/history'];
       const admin_routes     = ['/admin'];
 
       if (protected_routes.some(r => route.startsWith(r)) && !this.user) {
-        this.showToast('Silakan login terlebih dahulu', 'warning', '⚠️');
+        this.showToast('Silakan login untuk melihat dashboard', 'warning', '⚠️');
         return this.navigate('/login');
       }
       if (admin_routes.some(r => route.startsWith(r)) && this.user?.role !== 'admin') {

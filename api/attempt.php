@@ -5,7 +5,9 @@
 
 function attempt_submit(): void {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
-    $user = requireAuth();
+
+    // Siapapun bisa submit — login atau anonim
+    $user = getCurrentUserOrAnon();
     $body = getBody();
 
     $quizId    = (int)($body['quiz_id']   ?? 0);
@@ -18,7 +20,20 @@ function attempt_submit(): void {
     $quiz = DB::one('SELECT id, total_questions FROM quizzes WHERE id = ? AND is_published = 1', [$quizId]);
     if (!$quiz) jsonError('Quiz tidak ditemukan', 404);
 
-    // Get questions with correct answers
+    // Ubah format answers: [{question_id, option_id}] → map
+    $answerMap = [];
+    if (is_array($answers) && isset($answers[0]['question_id'])) {
+        // Format array of objects dari quiz-engine.js
+        foreach ($answers as $a) {
+            $answerMap[(int)$a['question_id']] = (int)($a['option_id'] ?? 0);
+        }
+    } else {
+        // Format associative {question_id: option_id}
+        foreach ($answers as $qid => $oid) {
+            $answerMap[(int)$qid] = (int)$oid;
+        }
+    }
+
     $questions = DB::all(
         'SELECT q.id, q.points FROM questions q WHERE q.quiz_id = ?',
         [$quizId]
@@ -44,8 +59,8 @@ function attempt_submit(): void {
 
     foreach ($questions as $q) {
         $totalPoints += $q['points'];
-        $selectedOptionId = (int)($answers[$q['id']] ?? 0);
-        $isCorrect = ($selectedOptionId > 0 && $correctMap[$q['id']] === $selectedOptionId) ? 1 : 0;
+        $selectedOptionId = $answerMap[$q['id']] ?? 0;
+        $isCorrect = ($selectedOptionId > 0 && ($correctMap[$q['id']] ?? -1) === $selectedOptionId) ? 1 : 0;
         if ($isCorrect) {
             $earnedPoints += $q['points'];
             $correctCount++;
@@ -62,6 +77,11 @@ function attempt_submit(): void {
     );
     $attemptId = (int)DB::lastId();
 
+    // Simpan attempt_id di session untuk akses result tanpa login
+    startSecureSession();
+    if (!isset($_SESSION['my_attempts'])) $_SESSION['my_attempts'] = [];
+    $_SESSION['my_attempts'][$attemptId] = $user['id'];
+
     // Bulk insert answers
     foreach ($answerRows as [$qid, $oid, $correct]) {
         DB::execute(
@@ -70,41 +90,55 @@ function attempt_submit(): void {
         );
     }
 
-    // Update user stats
-    DB::execute(
-        'UPDATE users SET total_points = total_points + ?, quizzes_taken = quizzes_taken + 1 WHERE id = ?',
-        [$score, $user['id']]
-    );
+    // Update user stats (untuk user aktif saja, bukan anonim)
+    if (!($user['is_anon'] ?? false)) {
+        DB::execute(
+            'UPDATE users SET total_points = total_points + ?, quizzes_taken = quizzes_taken + 1 WHERE id = ?',
+            [$score, $user['id']]
+        );
+    }
 
     // Update quiz attempts count
     DB::execute('UPDATE quizzes SET total_attempts = total_attempts + 1 WHERE id = ?', [$quizId]);
 
     jsonSuccess([
-        'attempt_id'    => $attemptId,
-        'score'         => $score,
-        'correct_count' => $correctCount,
-        'total_questions'=> count($questions),
-        'total_points'  => $totalPoints,
-        'earned_points' => $earnedPoints,
-        'time_taken'    => $timeTaken,
+        'attempt_id'      => $attemptId,
+        'score'           => $score,
+        'correct_count'   => $correctCount,
+        'total_questions' => count($questions),
+        'total_points'    => $totalPoints,
+        'earned_points'   => $earnedPoints,
+        'time_taken'      => $timeTaken,
+        'user_name'       => $user['name'],
+        'is_anon'         => $user['is_anon'] ?? false,
     ], 'Quiz berhasil diselesaikan');
 }
 
 function attempt_result(): void {
-    $user      = requireAuth();
     $attemptId = (int)($_GET['id'] ?? 0);
     if (!$attemptId) jsonError('Attempt ID diperlukan');
 
+    // Cek akses: bisa via session (user login atau anonim yang baru submit)
+    startSecureSession();
+    $sessionUserId = $_SESSION['user_id'] ?? null;
+    $myAttempts    = $_SESSION['my_attempts'] ?? [];
+
     $attempt = DB::one(
-        "SELECT a.*, q.title AS quiz_title, q.total_questions
+        "SELECT a.*, q.title AS quiz_title, q.total_questions, u.name AS player_name
          FROM attempts a
          INNER JOIN quizzes q ON q.id = a.quiz_id
-         WHERE a.id = ? AND a.user_id = ?",
-        [$attemptId, $user['id']]
+         INNER JOIN users u ON u.id = a.user_id
+         WHERE a.id = ?",
+        [$attemptId]
     );
     if (!$attempt) jsonError('Hasil tidak ditemukan', 404);
 
-    // Get answers with question + correct option
+    // Cek otorisasi: punya attempt ini?
+    $canView = false;
+    if ($sessionUserId && (int)$attempt['user_id'] === (int)$sessionUserId) $canView = true;
+    if (isset($myAttempts[$attemptId])) $canView = true; // anonim yg baru submit
+    if (!$canView) jsonError('Akses ditolak', 403);
+
     $answers = DB::all(
         "SELECT aa.question_id, aa.option_id AS selected_option_id, aa.is_correct,
                 q.question_text, q.explanation,
