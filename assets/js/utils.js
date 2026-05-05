@@ -10,7 +10,7 @@ const api = {
 
   async _getToken() {
     if (!this._csrfToken) {
-      const r = await fetch(`${API_BASE}?action=auth.me`);
+      const r = await fetch(`${API_BASE}?action=auth.csrf`);
       const h = r.headers.get('X-CSRF-Token');
       if (h) this._csrfToken = h;
     }

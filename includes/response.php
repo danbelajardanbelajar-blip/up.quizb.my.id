@@ -7,6 +7,11 @@ function jsonResponse(mixed $data, int $code = 200): never {
     http_response_code($code);
     header('Content-Type: application/json; charset=utf-8');
     header('X-Content-Type-Options: nosniff');
+    
+    // Send CSRF token in response header for client to pick up
+    $token = generateCsrfToken();
+    header('X-CSRF-Token: ' . $token);
+    
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
