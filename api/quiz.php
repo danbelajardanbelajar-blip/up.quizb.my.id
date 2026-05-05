@@ -100,6 +100,13 @@ function quiz_questions(): void {
         }
         unset($opt);
         $q['options'] = $opts;
+
+        // Tambahkan correct_option_id untuk debugging
+        $correctOpt = DB::one(
+            'SELECT id FROM options WHERE question_id = ? AND is_correct = 1 LIMIT 1',
+            [$q['id']]
+        );
+        $q['correct_option_id'] = $correctOpt ? $correctOpt['id'] : null;
     }
     unset($q);
 
