@@ -175,12 +175,14 @@ function QuizBApp() {
     async loadHome() {
       this.home.loading = true;
       try {
-        const [cats, featured] = await Promise.all([
+        // category.list → jsonSuccess → data.data = array langsung
+        // quiz.list     → jsonPaginated → data.data = array quiz, data.meta = pagination
+        const [cats, quizData] = await Promise.all([
           api.get('category.list'),
-          api.get('quiz.list', { featured: 1, limit: 6 }),
+          api.getFull('quiz.list', { limit: 6 }),
         ]);
-        this.home.categories = cats;
-        this.home.featured   = featured.quizzes || [];
+        this.home.categories = Array.isArray(cats) ? cats : [];
+        this.home.featured   = Array.isArray(quizData.data) ? quizData.data : [];
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
@@ -209,9 +211,11 @@ function QuizBApp() {
           ...(this.quizzes.categoryId ? { category: this.quizzes.categoryId } : {}),
           ...(this.quizzes.search     ? { search: this.quizzes.search }       : {}),
         };
-        const data = await api.get('quiz.list', params);
-        this.quizzes.list  = data.quizzes || [];
-        this.quizzes.total = data.total   || 0;
+        // jsonPaginated → { success, data: [...], meta: { total, page, ... } }
+        // api.getFull mengembalikan seluruh response JSON, bukan hanya .data
+        const resp = await api.getFull('quiz.list', params);
+        this.quizzes.list  = Array.isArray(resp.data) ? resp.data : [];
+        this.quizzes.total = resp.meta?.total || 0;
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
@@ -222,9 +226,10 @@ function QuizBApp() {
     async loadQuizDetail(id) {
       this.quizDetail.loading = true; this.quizDetail.quiz = null;
       try {
-        const data = await api.get('quiz.detail', { id });
-        this.quizDetail.quiz = data.quiz;
-        this.pageTitle = data.quiz.title + ' — QuizB';
+        // quiz.get → jsonSuccess(quiz_object) → data.data = quiz object langsung
+        const quiz = await api.get('quiz.get', { id });
+        this.quizDetail.quiz = quiz;
+        this.pageTitle = (quiz?.title || 'Quiz') + ' — QuizB';
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {

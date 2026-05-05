@@ -23,8 +23,19 @@ const api = {
     const ct = r.headers.get('X-CSRF-Token');
     if (ct) this._csrfToken = ct;
     const data = await r.json();
-    if (!r.ok) throw new Error(data.message || 'Request failed');
+    if (!r.ok) throw new Error(data.message || data.error || 'Request failed');
     return data.data;
+  },
+
+  // Kembalikan seluruh response (untuk endpoint paginated yang butuh .meta)
+  async getFull(action, params = {}) {
+    const qs = new URLSearchParams({ action, ...params });
+    const r = await fetch(`${API_BASE}?${qs}`);
+    const ct = r.headers.get('X-CSRF-Token');
+    if (ct) this._csrfToken = ct;
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.message || data.error || 'Request failed');
+    return data; // { success, data: [...], meta: {...} }
   },
 
   async post(action, body = {}) {
