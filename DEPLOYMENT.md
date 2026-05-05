@@ -71,7 +71,7 @@ Buka browser → `https://yourdomain.com`
 
 Cek:
 - [ ] Halaman home tampil
-- [ ] Login admin: `admin@quizb.com` / `admin123`
+- [ ] Login admin: `admin@quizb.my.id` / `admin123`
 - [ ] Quiz bisa dimulai
 - [ ] Submit quiz berhasil
 
@@ -81,7 +81,7 @@ Cek:
 
 | Role  | Email                  | Password  |
 |-------|------------------------|-----------|
-| Admin | admin@quizb.com        | admin123  |
+| Admin | admin@quizb.my.id      | admin123  |
 | User  | budi@example.com       | user123   |
 | User  | sari@example.com       | user123   |
 
