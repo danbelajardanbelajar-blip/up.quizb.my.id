@@ -45,9 +45,10 @@ function attempt_submit(): void {
         [$quizId]
     );
 
+    // Cast ke int: PDO mengembalikan string, perbandingan === dengan int akan selalu false
     $correctMap = [];
     foreach ($correctOptions as $co) {
-        $correctMap[$co['question_id']] = $co['option_id'];
+        $correctMap[(int)$co['question_id']] = (int)$co['option_id'];
     }
 
     $totalPoints  = 0;
@@ -57,16 +58,19 @@ function attempt_submit(): void {
     $answerRows   = [];
 
     foreach ($questions as $q) {
-        $totalPoints += $q['points'];
-        $selectedOptionId = $answerMap[$q['id']] ?? 0;
-        $isCorrect = ($selectedOptionId > 0 && ($correctMap[$q['id']] ?? -1) === $selectedOptionId) ? 1 : 0;
+        $pts          = (int)($q['points'] ?: 1); // fallback 1 jika points = 0 atau NULL
+        $totalPoints += $pts;
+        $qId              = (int)$q['id'];
+        $selectedOptionId = (int)($answerMap[$qId] ?? 0);
+        $correctOptionId  = (int)($correctMap[$qId] ?? -1);
+        $isCorrect = ($selectedOptionId > 0 && $correctOptionId === $selectedOptionId) ? 1 : 0;
         if ($isCorrect) {
-            $earnedPoints += $q['points'];
+            $earnedPoints += $pts;
             $correctCount++;
         } elseif ($selectedOptionId > 0) {
             $wrongCount++;
         }
-        $answerRows[] = [$q['id'], $selectedOptionId ?: null, $isCorrect];
+        $answerRows[] = [$qId, $selectedOptionId ?: null, $isCorrect];
     }
 
     $score        = $totalPoints > 0 ? (int)round(($earnedPoints / $totalPoints) * 100) : 0;
