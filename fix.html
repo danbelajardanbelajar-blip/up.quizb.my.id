@@ -10,7 +10,7 @@
     <script>
         async function fixAnswers() {
             try {
-                const response = await fetch('/api.php?action=fix.correct_answers', {
+                const response = await fetch('/api.php?action=admin.fix_correct_answers', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

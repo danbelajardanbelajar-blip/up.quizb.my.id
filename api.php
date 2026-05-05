@@ -34,7 +34,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 if (in_array($method, ['POST', 'PUT', 'DELETE'])) {
     // Allow action=auth.login and auth.register without CSRF (first-time)
     $action = $_GET['action'] ?? '';
-    if (!in_array($action, ['auth.login', 'auth.register', 'auth.logout']) && !str_starts_with($action, 'fix.')) {
+    if (!in_array($action, ['auth.login', 'auth.register', 'auth.logout'])) {
         validateCsrfToken();
     }
 }
@@ -56,7 +56,6 @@ $routes = [
     'admin'       => __DIR__ . '/api/admin.php',
     'class'       => __DIR__ . '/api/class.php',
     'assignment'  => __DIR__ . '/api/assignment.php',
-    'fix'         => __DIR__ . '/api/fix.php',
 ];
 
 if (!isset($routes[$ns])) {
