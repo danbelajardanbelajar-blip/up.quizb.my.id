@@ -52,7 +52,9 @@ function QuizEngine() {
       this.error = null;
       this.assignmentId = assignmentId;
       try {
-        const data = await api.get('quiz.questions', { id: quizId });
+        const params = { id: quizId };
+        if (assignmentId) params.assignment_id = assignmentId;
+        const data = await api.get('quiz.questions', params);
         this.quiz      = data.quiz;
         this.questions = data.questions;
         this.timeLeft  = this.quiz.time_limit || this.quiz.duration || 600;

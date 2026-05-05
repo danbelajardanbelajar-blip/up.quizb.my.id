@@ -85,11 +85,31 @@ function auth_me(): void {
     if (!$user) jsonError('Tidak login', 401);
 
     $data = DB::one(
-        'SELECT id, name, email, role, avatar, total_points, quizzes_taken, created_at FROM users WHERE id = ?',
+        'SELECT id, name, email, role, avatar, total_points, quizzes_taken, quiz_questions_limit, created_at FROM users WHERE id = ?',
         [$user['id']]
     );
+    $data['quiz_questions_limit'] = (int)($data['quiz_questions_limit'] ?? 10);
     $data['csrf'] = generateCsrfToken();
     jsonSuccess($data);
+}
+
+function auth_update_settings(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $user = requireAuth();
+
+    $body  = getBody();
+    $limit = isset($body['quiz_questions_limit']) ? (int)$body['quiz_questions_limit'] : null;
+
+    if ($limit === null) jsonError('Data pengaturan tidak lengkap');
+    if ($limit < 1 || $limit > 100) jsonError('Jumlah soal harus antara 1 dan 100');
+
+    DB::conn()->prepare('UPDATE users SET quiz_questions_limit = ?, updated_at = NOW() WHERE id = ?')
+        ->execute([$limit, $user['id']]);
+
+    jsonSuccess([
+        'quiz_questions_limit' => $limit,
+        'message'              => 'Pengaturan berhasil disimpan',
+    ]);
 }
 
 function auth_csrf(): void {

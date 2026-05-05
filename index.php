@@ -112,6 +112,7 @@
                 <a href="#/dashboard" @click.prevent="navigate('/dashboard');open=false" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📊 Dashboard</a>
                 <a href="#/profile" @click.prevent="navigate('/profile');open=false" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">👤 Profil</a>
                 <a href="#/history" @click.prevent="navigate('/history');open=false" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📋 Histori</a>
+                <a href="#/settings" @click.prevent="navigate('/settings');open=false" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">⚙️ Pengaturan</a>
                 <template x-if="user && user.role === 'admin'">
                   <a href="#/admin" @click.prevent="navigate('/admin');open=false" class="flex items-center gap-2 px-4 py-2 text-sm text-purple-600 dark:text-purple-400 hover:bg-gray-50 dark:hover:bg-gray-700">⚙️ Admin Panel</a>
                 </template>
@@ -203,6 +204,11 @@
     <!-- PROFILE PAGE -->
     <div x-show="currentRoute === '/profile'" x-transition:enter="animate-fade-in">
       <?php include 'pages/profile.html'; ?>
+    </div>
+
+    <!-- SETTINGS PAGE -->
+    <div x-show="currentRoute === '/settings'" x-transition:enter="animate-fade-in">
+      <?php include 'pages/settings.html'; ?>
     </div>
 
     <!-- CLASSROOM LIST PAGE -->

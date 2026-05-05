@@ -72,7 +72,8 @@ function quiz_get(): void {
 }
 
 function quiz_questions(): void {
-    $quizId = (int)($_GET['id'] ?? 0);
+    $quizId       = (int)($_GET['id']            ?? 0);
+    $assignmentId = (int)($_GET['assignment_id'] ?? 0);
     if (!$quizId) jsonError('Quiz ID diperlukan');
 
     $quiz = DB::one(
@@ -82,14 +83,49 @@ function quiz_questions(): void {
     );
     if (!$quiz) jsonError('Quiz tidak ditemukan', 404);
 
-    $questions = DB::all(
+    // ---- Tentukan batas jumlah soal ----
+    // Prioritas: 1) assignment.max_questions  2) user.quiz_questions_limit  3) default 10
+    $limit = null;
+
+    if ($assignmentId > 0) {
+        $assignment = DB::one(
+            'SELECT max_questions FROM assignments WHERE id = ? AND quiz_id = ? AND is_active = 1',
+            [$assignmentId, $quizId]
+        );
+        if ($assignment && $assignment['max_questions'] !== null) {
+            $limit = (int)$assignment['max_questions'];
+        }
+    }
+
+    if ($limit === null) {
+        $currentUser = getCurrentUser();
+        if ($currentUser) {
+            $userRow = DB::one('SELECT quiz_questions_limit FROM users WHERE id = ?', [$currentUser['id']]);
+            $limit   = (int)($userRow['quiz_questions_limit'] ?? 10);
+        } else {
+            $limit = 10; // default global untuk tamu
+        }
+    }
+
+    // Pastikan limit valid
+    if ($limit < 1) $limit = 10;
+
+    // ---- Ambil semua soal, acak, potong sesuai limit ----
+    $allQuestions = DB::all(
         'SELECT id, question_text, type, points, order_num
          FROM questions WHERE quiz_id = ? ORDER BY order_num',
         [$quizId]
     );
 
+    if (count($allQuestions) > $limit) {
+        shuffle($allQuestions);
+        $allQuestions = array_slice($allQuestions, 0, $limit);
+        // Urutkan kembali berdasarkan order_num asli agar urutan logis
+        usort($allQuestions, fn($a, $b) => (int)$a['order_num'] - (int)$b['order_num']);
+    }
+
     $labels = ['A','B','C','D','E','F'];
-    foreach ($questions as &$q) {
+    foreach ($allQuestions as &$q) {
         $opts = DB::all(
             'SELECT id, option_text, order_num FROM options WHERE question_id = ? ORDER BY order_num',
             [$q['id']]
@@ -110,7 +146,7 @@ function quiz_questions(): void {
     }
     unset($q);
 
-    jsonSuccess(['quiz' => $quiz, 'questions' => $questions]);
+    jsonSuccess(['quiz' => $quiz, 'questions' => $allQuestions]);
 }
 
 function quiz_featured(): void {

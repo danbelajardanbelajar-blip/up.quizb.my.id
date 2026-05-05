@@ -58,8 +58,8 @@ function QuizBApp() {
       assignments: [],
       isTeacher:   false,
       // Create assignment modal
-      assignModal: { show: false },
-      assignForm:  { title: '', quiz_id: '', mode: 'bebas', deadline: '' },
+      assignModal: { show: false, editId: null },
+      assignForm:  { title: '', quiz_id: '', mode: 'bebas', deadline: '', max_questions: '' },
       assignError: '',
       assignLoading: false,
       // Quiz list for assignment dropdown
@@ -88,6 +88,9 @@ function QuizBApp() {
     loginForm:    { email: '', password: '', loading: false, error: '' },
     registerForm: { name: '', email: '', password: '', password_confirm: '', loading: false, error: '' },
 
+    // Settings
+    settings: { limit: 10, loading: false, saving: false, error: '', success: '' },
+
     // ---- Lifecycle ----
     async init() {
       // Dark mode
@@ -102,6 +105,10 @@ function QuizBApp() {
 
       // Load current user
       await this.loadUser();
+      // Sync settings state dengan data user
+      if (this.user) {
+        this.settings.limit = this.user.quiz_questions_limit || 10;
+      }
 
       // Re-check protected route guards after user is loaded.
       // We only re-run guard logic — NOT the full data loaders — so that
@@ -111,7 +118,7 @@ function QuizBApp() {
 
     // Lightweight guard re-check (used after async loadUser).
     _guardRoute(route) {
-      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile'];
+      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings'];
       const admin_routes     = ['/admin'];
       if (protected_routes.some(r => route.startsWith(r)) && !this.user) {
         this.showToast('Silakan login untuk mengakses halaman ini', 'warning', '⚠️');
@@ -143,6 +150,7 @@ function QuizBApp() {
         'dashboard':   '/dashboard',
         'history':     '/history',
         'profile':     '/profile',
+        'settings':    '/settings',
         'login':       '/login',
         'register':    '/register',
         'admin':       '/admin',
@@ -162,7 +170,7 @@ function QuizBApp() {
 
     onRouteChange(route, params) {
       // Guard protected routes
-      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile'];
+      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings'];
       const admin_routes     = ['/admin'];
 
       if (protected_routes.some(r => route.startsWith(r)) && !this.user) {
@@ -184,6 +192,7 @@ function QuizBApp() {
       if (route === '/dashboard')          this.loadDashboard();
       if (route === '/history')            this.loadHistory();
       if (route === '/profile')            this.loadDashboard(); // reuse dashboard stats
+      if (route === '/settings')           this.loadSettings();
       if (route.startsWith('/result/'))    this.loadResult(params[0]);
       if (route.startsWith('/admin'))      this.loadAdminTab(this.admin.tab);
       if (route === '/classroom')          this.loadClassroom();
@@ -196,11 +205,14 @@ function QuizBApp() {
         const data = await api.get('auth.me');
         // API me returns flat user object with csrf field
         this.user = data ? {
-          id:    data.id,
-          name:  data.name,
-          email: data.email,
-          role:  data.role,
+          id:                   data.id,
+          name:                 data.name,
+          email:                data.email,
+          role:                 data.role,
+          quiz_questions_limit: data.quiz_questions_limit || 10,
         } : null;
+        // Sync settings state
+        if (this.user) this.settings.limit = this.user.quiz_questions_limit;
         // Simpan CSRF token dari respons auth.me agar POST langsung valid
         if (data?.csrf) api.setToken(data.csrf);
       } catch {
@@ -506,8 +518,47 @@ function QuizBApp() {
       }
     },
 
-    async openAssignModal() {
-      this.classroom.assignForm  = { title: '', quiz_id: '', mode: 'bebas', deadline: '' };
+    openEditAssignModal(assign) {
+      this.classroom.assignModal.editId = assign.id;
+      this.classroom.assignForm = {
+        title:         assign.title,
+        quiz_id:       assign.quiz_id,
+        mode:          assign.mode,
+        deadline:      assign.deadline ? assign.deadline.replace(' ', 'T').substring(0, 16) : '',
+        max_questions: assign.max_questions || '',
+      };
+      this.classroom.assignError = '';
+      this.classroom.assignModal.show = true;
+    },
+
+    async updateAssignment(classId) {
+      const f  = this.classroom.assignForm;
+      const id = this.classroom.assignModal.editId;
+      if (!f.title || f.title.length < 3) { this.classroom.assignError = 'Judul tugas minimal 3 karakter'; return; }
+      this.classroom.assignLoading = true;
+      this.classroom.assignError   = '';
+      try {
+        const maxQ = f.max_questions !== '' && f.max_questions !== null
+          ? parseInt(f.max_questions) : null;
+        await api.put('assignment.update', id, {
+          title:         f.title,
+          mode:          f.mode,
+          deadline:      f.deadline || null,
+          max_questions: maxQ,
+        });
+        this.classroom.assignModal.show = false;
+        this.showToast('Tugas berhasil diperbarui!', 'success', '✅');
+        await this.loadClassroomDetail(classId);
+      } catch (e) {
+        this.classroom.assignError = e.message;
+      } finally {
+        this.classroom.assignLoading = false;
+      }
+    },
+
+    async openAssignModal(existingAssign = null) {
+      this.classroom.assignModal.editId = null;
+      this.classroom.assignForm  = { title: '', quiz_id: '', mode: 'bebas', deadline: '', max_questions: '' };
       this.classroom.assignError = '';
       this.classroom.assignModal.show = true;
       // Load quiz list for dropdown if not already loaded
@@ -531,12 +582,15 @@ function QuizBApp() {
       this.classroom.assignLoading = true;
       this.classroom.assignError   = '';
       try {
+        const maxQ = f.max_questions !== '' && f.max_questions !== null
+          ? parseInt(f.max_questions) : null;
         await api.post('assignment.create', {
-          class_id:  parseInt(classId),
-          quiz_id:   parseInt(f.quiz_id),
-          title:     f.title,
-          mode:      f.mode,
-          deadline:  f.deadline || null,
+          class_id:      parseInt(classId),
+          quiz_id:       parseInt(f.quiz_id),
+          title:         f.title,
+          mode:          f.mode,
+          deadline:      f.deadline || null,
+          max_questions: maxQ,
         });
         this.classroom.assignModal.show = false;
         this.showToast('Tugas berhasil dibuat!', 'success', '✅');
@@ -545,6 +599,36 @@ function QuizBApp() {
         this.classroom.assignError = e.message;
       } finally {
         this.classroom.assignLoading = false;
+      }
+    },
+
+    // ---- Settings ----
+    async loadSettings() {
+      if (!this.user) return;
+      this.settings.limit   = this.user.quiz_questions_limit || 10;
+      this.settings.error   = '';
+      this.settings.success = '';
+    },
+
+    async saveSettings(limit) {
+      const val = parseInt(limit);
+      if (!val || val < 1 || val > 100) {
+        this.settings.error = 'Jumlah soal harus antara 1 dan 100';
+        return;
+      }
+      this.settings.saving  = true;
+      this.settings.error   = '';
+      this.settings.success = '';
+      try {
+        await api.post('auth.update_settings', { quiz_questions_limit: val });
+        this.settings.limit = val;
+        if (this.user) this.user.quiz_questions_limit = val;
+        this.settings.success = 'Pengaturan berhasil disimpan!';
+        this.showToast('Pengaturan disimpan', 'success', '✅');
+      } catch (e) {
+        this.settings.error = e.message;
+      } finally {
+        this.settings.saving = false;
       }
     },
 
