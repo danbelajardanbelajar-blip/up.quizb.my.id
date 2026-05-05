@@ -104,6 +104,9 @@ function attempt_submit(): void {
     // Update quiz attempts count
     DB::execute('UPDATE quizzes SET total_attempts = total_attempts + 1 WHERE id = ?', [$quizId]);
 
+    // Update difficulty otomatis berdasarkan performa quiz
+    updateQuizDifficultyFromStats($quizId);
+
     jsonSuccess([
         'attempt_id'      => $attemptId,
         'score'           => $score,
@@ -117,6 +120,33 @@ function attempt_submit(): void {
         'user_name'       => $user['name'],
         'is_anon'         => $user['is_anon'] ?? false,
     ], 'Quiz berhasil diselesaikan');
+}
+
+function updateQuizDifficultyFromStats(int $quizId): void {
+    $stats = DB::one(
+        'SELECT COUNT(*) AS attempts, COALESCE(AVG(score), 0) AS avg_score
+         FROM attempts
+         WHERE quiz_id = ?',
+        [$quizId]
+    );
+
+    if (!$stats || (int)$stats['attempts'] < 5) {
+        return; // Belum cukup data untuk menentukan difficulty otomatis
+    }
+
+    $avgScore = (float)$stats['avg_score'];
+    if ($avgScore >= 80) {
+        $newDifficulty = 'easy';
+    } elseif ($avgScore <= 50) {
+        $newDifficulty = 'hard';
+    } else {
+        $newDifficulty = 'medium';
+    }
+
+    DB::execute(
+        'UPDATE quizzes SET difficulty = ? WHERE id = ? AND difficulty <> ?',
+        [$newDifficulty, $quizId, $newDifficulty]
+    );
 }
 
 function attempt_result(): void {
