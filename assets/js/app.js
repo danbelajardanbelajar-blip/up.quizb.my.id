@@ -174,13 +174,15 @@ function QuizBApp() {
     async loadUser() {
       try {
         const data = await api.get('auth.me');
-        // API me returns flat user object
+        // API me returns flat user object with csrf field
         this.user = data ? {
           id:    data.id,
           name:  data.name,
           email: data.email,
           role:  data.role,
         } : null;
+        // Simpan CSRF token dari respons auth.me agar POST langsung valid
+        if (data?.csrf) api.setToken(data.csrf);
       } catch {
         this.user = null;
       }

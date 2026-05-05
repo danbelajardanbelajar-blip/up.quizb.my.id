@@ -8,18 +8,30 @@ const API_BASE = 'api.php';
 const api = {
   _csrfToken: null,
 
+  // Ambil CSRF token: prioritaskan cache, lalu fetch dari server
   async _getToken() {
-    if (!this._csrfToken) {
-      const r = await fetch(`${API_BASE}?action=auth.csrf`);
-      const h = r.headers.get('X-CSRF-Token');
-      if (h) this._csrfToken = h;
-    }
+    if (this._csrfToken) return this._csrfToken;
+    try {
+      const r = await fetch(`${API_BASE}?action=auth.csrf`, { credentials: 'same-origin' });
+      // Baca dari header (butuh Access-Control-Expose-Headers)
+      const fromHeader = r.headers.get('X-CSRF-Token');
+      if (fromHeader) { this._csrfToken = fromHeader; return this._csrfToken; }
+      // Fallback: baca dari JSON body { data: { token: '...' } }
+      const json = await r.json();
+      const fromBody = json?.data?.token || json?.token || null;
+      if (fromBody) this._csrfToken = fromBody;
+    } catch (_) {}
     return this._csrfToken;
+  },
+
+  // Simpan token dari luar (misal setelah login/me)
+  setToken(token) {
+    if (token) this._csrfToken = token;
   },
 
   async get(action, params = {}) {
     const qs = new URLSearchParams({ action, ...params });
-    const r = await fetch(`${API_BASE}?${qs}`);
+    const r = await fetch(`${API_BASE}?${qs}`, { credentials: 'same-origin' });
     const ct = r.headers.get('X-CSRF-Token');
     if (ct) this._csrfToken = ct;
     const data = await r.json();
@@ -30,7 +42,7 @@ const api = {
   // Kembalikan seluruh response (untuk endpoint paginated yang butuh .meta)
   async getFull(action, params = {}) {
     const qs = new URLSearchParams({ action, ...params });
-    const r = await fetch(`${API_BASE}?${qs}`);
+    const r = await fetch(`${API_BASE}?${qs}`, { credentials: 'same-origin' });
     const ct = r.headers.get('X-CSRF-Token');
     if (ct) this._csrfToken = ct;
     const data = await r.json();
