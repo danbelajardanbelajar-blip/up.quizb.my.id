@@ -34,7 +34,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 if (in_array($method, ['POST', 'PUT', 'DELETE'])) {
     // Allow action=auth.login and auth.register without CSRF (first-time)
     $action = $_GET['action'] ?? '';
-    if (!in_array($action, ['auth.login', 'auth.register', 'auth.logout'])) {
+    if (!in_array($action, ['auth.login', 'auth.register', 'auth.logout', 'fix.correct_answers'])) {
         validateCsrfToken();
     }
 }
