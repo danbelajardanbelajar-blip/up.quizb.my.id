@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fix Correct Answers</title>
+</head>
+<body>
+    <h1>Fixing Correct Answers...</h1>
+    <div id="result"></div>
+
+    <script>
+        async function fixAnswers() {
+            try {
+                const response = await fetch('/api.php?action=fix.correct_answers', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({})
+                });
+                const result = await response.json();
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+            } catch (error) {
+                document.getElementById('result').innerHTML = '<p>Error: ' + error.message + '</p>';
+            }
+        }
+
+        fixAnswers();
+    </script>
+</body>
+</html>
