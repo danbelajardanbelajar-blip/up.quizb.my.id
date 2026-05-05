@@ -159,6 +159,7 @@ function QuizBApp() {
       if (route === '/categories')         this.loadCategories();
       if (route === '/quizzes')            this.loadQuizzes();
       if (route.startsWith('/quiz/'))      this.loadQuizDetail(params[0]);
+      if (route.startsWith('/play/'))      return; // Quiz engine handles its own load via x-init
       if (route === '/leaderboard')        this.loadLeaderboard();
       if (route === '/dashboard')          this.loadDashboard();
       if (route === '/history')            this.loadHistory();
