@@ -151,5 +151,9 @@ const store = {
 // ---- Debounce ----
 function debounce(fn, ms = 300) {
   let t;
-  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+  return function(...args) {
+    const context = this;
+    clearTimeout(t);
+    t = setTimeout(() => fn.apply(context, args), ms);
+  };
 }
