@@ -1,5 +1,6 @@
 <!-- QUIZ ENGINE PAGE -->
-<div x-data="QuizEngine()" x-init="loadQuiz(currentRoute.split('/').pop())"
+<div x-data="QuizEngine()"
+     x-init="loadQuiz(window.location.hash.split('/').pop())"
      @beforeunload.window="stopTimer()"
      class="min-h-screen bg-gray-50 dark:bg-gray-950">
 
@@ -75,7 +76,7 @@
     <div x-show="current" class="card p-6 mb-6 animate-fade-in" :key="currentIndex">
       <div class="flex items-start gap-3 mb-6">
         <span class="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 flex items-center justify-center text-sm font-bold flex-shrink-0" x-text="currentIndex+1"></span>
-        <p class="text-gray-800 dark:text-gray-100 font-medium leading-relaxed" x-text="current?.text"></p>
+        <p class="text-gray-800 dark:text-gray-100 font-medium leading-relaxed" x-text="current?.question_text"></p>
       </div>
 
       <!-- Options -->
@@ -84,7 +85,7 @@
           <button class="quiz-option" :class="isSelected(current?.id, opt.id) ? 'selected' : ''"
                   @click="selectOption(current?.id, opt.id)">
             <span class="answer-letter" x-text="opt.label || ''"></span>
-            <span x-text="opt.text"></span>
+            <span x-text="opt.option_text"></span>
           </button>
         </template>
       </div>

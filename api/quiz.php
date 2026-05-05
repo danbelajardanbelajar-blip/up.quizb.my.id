@@ -72,19 +72,31 @@ function quiz_questions(): void {
     $quizId = (int)($_GET['id'] ?? 0);
     if (!$quizId) jsonError('Quiz ID diperlukan');
 
-    $quiz = DB::one('SELECT id, title, duration, total_questions FROM quizzes WHERE id = ? AND is_published = 1', [$quizId]);
+    $quiz = DB::one(
+        'SELECT id, title, description, duration, time_limit, total_questions, passing_score
+         FROM quizzes WHERE id = ? AND is_published = 1',
+        [$quizId]
+    );
     if (!$quiz) jsonError('Quiz tidak ditemukan', 404);
 
     $questions = DB::all(
-        'SELECT id, question_text, type, points, order_num FROM questions WHERE quiz_id = ? ORDER BY order_num',
+        'SELECT id, question_text, type, points, order_num
+         FROM questions WHERE quiz_id = ? ORDER BY order_num',
         [$quizId]
     );
 
+    $labels = ['A','B','C','D','E','F'];
     foreach ($questions as &$q) {
-        $q['options'] = DB::all(
+        $opts = DB::all(
             'SELECT id, option_text, order_num FROM options WHERE question_id = ? ORDER BY order_num',
             [$q['id']]
         );
+        // Tambahkan label A/B/C/D/E per opsi
+        foreach ($opts as $i => &$opt) {
+            $opt['label'] = $labels[$i] ?? chr(65 + $i);
+        }
+        unset($opt);
+        $q['options'] = $opts;
     }
     unset($q);
 
