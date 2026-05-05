@@ -45,8 +45,8 @@ $dbNew  = DB_NAME; // ini seharusnya quic1934_upgrade
 $dbOld  = DB_OLD;
 
 // Setup PHP
-set_time_limit(300);
-ini_set('memory_limit', '256M');
+set_time_limit(600);
+ini_set('memory_limit', '512M');
 error_reporting(E_ALL);
 ini_set('display_errors', '0'); // matikan error display, kita tangani sendiri
 
@@ -104,10 +104,14 @@ try {
             PDO::ATTR_EMULATE_PREPARES   => true,
         ]
     );
-    $pdo->exec("SET NAMES utf8mb4");
+    $pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
+    $pdo->exec("SET character_set_connection = utf8mb4");
+    $pdo->exec("SET character_set_results = utf8mb4");
     $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
     $pdo->exec("SET SQL_MODE = ''");
-    out("✅ Koneksi ke <b>{$dbNew}</b> berhasil", 'ok');
+    // Pastikan DB lama juga dibaca dengan encoding benar
+    $pdo->exec("SET character_set_client = utf8mb4");
+    out("✅ Koneksi ke <b>{$dbNew}</b> berhasil (utf8mb4)", 'ok');
 } catch (Exception $e) {
     out("❌ Koneksi GAGAL: " . htmlspecialchars($e->getMessage()), 'err');
     echo "</div></body></html>"; exit;
@@ -275,17 +279,21 @@ foreach ($chunks2 as $i => $chunk) {
     $qph = implode(',', $qids);
 
     try {
-        // Gunakan variabel user-level untuk kompatibilitas MariaDB 10.x
-        $pdo->exec("SET @rn=0, @prev=0");
+        // Subquery wrap agar SELECT hanya return 5 kolom yang dibutuhkan INSERT
+        // @rn/@prev dipakai di dalam subquery, tidak ikut ke luar
         $n = $pdo->exec("
             INSERT INTO `{$dbNew}`.`options`
                 (`id`,`question_id`,`option_text`,`is_correct`,`order_num`)
-            SELECT c.id, c.question_id, c.text, c.is_correct,
-                   @rn := IF(@prev = c.question_id, @rn+1, 1),
-                   @prev := c.question_id
-            FROM `{$dbOld}`.`choices` c
-            WHERE c.question_id IN ({$qph})
-            ORDER BY c.question_id, c.id
+            SELECT sub.id, sub.question_id, sub.option_text, sub.is_correct, sub.order_num
+            FROM (
+                SELECT c.id, c.question_id, c.text AS option_text, c.is_correct,
+                       @rn := IF(@prev = c.question_id, @rn+1, 1) AS order_num,
+                       @prev := c.question_id
+                FROM `{$dbOld}`.`choices` c,
+                     (SELECT @rn:=0, @prev:=0) AS init
+                WHERE c.question_id IN ({$qph})
+                ORDER BY c.question_id, c.id
+            ) sub
         ");
         $totalO += $n;
         out("  Batch " . ($i+1) . "/" . count($chunks2) . ": +{$n} opsi (akumulasi: {$totalO})");
