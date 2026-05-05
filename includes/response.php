@@ -16,13 +16,16 @@ function jsonResponse(mixed $data, int $code = 200): never {
     exit;
 }
 
-function jsonSuccess(mixed $data = null, string|int $message = 'OK'): never {
-    // Allow callers to pass HTTP code as 2nd arg (e.g. jsonSuccess($data, 201))
+function jsonSuccess(mixed $data = null, string|int $message = 'OK', ?int $code = null): never {
+    // Backward-compat: jsonSuccess($data, 201) → HTTP 201, generic message
     if (is_int($message)) {
-        http_response_code($message);
-        jsonResponse(['success' => true, 'message' => 'OK', 'data' => $data], $message);
+        $code    = $message;
+        $message = 'OK';
     }
-    jsonResponse(['success' => true, 'message' => $message, 'data' => $data]);
+    // Jika $code tidak diberikan, hormati http_response_code() yang sudah di-set caller
+    // (mis. http_response_code(201); jsonSuccess($data, 'created'))
+    $finalCode = $code ?? (http_response_code() ?: 200);
+    jsonResponse(['success' => true, 'message' => $message, 'data' => $data], $finalCode);
 }
 
 function jsonError(string $message, int $code = 400): never {

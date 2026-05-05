@@ -9,7 +9,7 @@ function admin_quiz_list(): void {
     requireAdmin();
     [$page, $limit, $offset] = getPaginationParams();
 
-    $total = DB::one("SELECT COUNT(*) FROM quizzes")['COUNT(*)'];
+    $total = (int)(DB::one("SELECT COUNT(*) AS cnt FROM quizzes")['cnt'] ?? 0);
     $quizzes = DB::all(
         "SELECT q.*, c.name AS category_name,
                 u.name AS creator_name,
@@ -209,7 +209,7 @@ function admin_user_list(): void {
     requireAdmin();
     [$page, $limit, $offset] = getPaginationParams();
 
-    $total = DB::one("SELECT COUNT(*) FROM users")['COUNT(*)'];
+    $total = (int)(DB::one("SELECT COUNT(*) AS cnt FROM users")['cnt'] ?? 0);
     $users = DB::all(
         "SELECT id, name, email, role, total_points, quizzes_taken, is_active, created_at
          FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?",
@@ -263,19 +263,31 @@ function admin_stats(): void {
     requireAdmin();
     $pdo = DB::conn();
 
+    // Helper untuk SELECT COUNT(*) dengan alias konsisten
+    $count = function (string $sql, array $params = []): int {
+        try {
+            $row = DB::one($sql, $params);
+            return (int)($row['cnt'] ?? 0);
+        } catch (\Throwable $e) {
+            return 0;
+        }
+    };
+
+    $avgRow = DB::one("SELECT AVG(score) AS avg_score FROM attempts WHERE completed_at IS NOT NULL");
+
     $stats = [
-        'total_users'       => (int)DB::one("SELECT COUNT(*) FROM users")['COUNT(*)'],
-        'total_quizzes'     => (int)DB::one("SELECT COUNT(*) FROM quizzes")['COUNT(*)'],
-        'total_attempts'    => (int)DB::one("SELECT COUNT(*) FROM attempts")['COUNT(*)'],
-        'total_questions'   => (int)DB::one("SELECT COUNT(*) FROM questions")['COUNT(*)'],
-        'total_categories'  => (int)DB::one("SELECT COUNT(*) FROM categories")['COUNT(*)'],
-        'total_classes'     => (int)(DB::one("SELECT COUNT(*) FROM classes") ? DB::one("SELECT COUNT(*) FROM classes")['COUNT(*)'] : 0),
-        'total_assignments' => (int)(DB::one("SELECT COUNT(*) FROM assignments") ? DB::one("SELECT COUNT(*) FROM assignments")['COUNT(*)'] : 0),
-        'published_quizzes' => (int)DB::one("SELECT COUNT(*) FROM quizzes WHERE is_published=1")['COUNT(*)'],
-        'active_users'      => (int)DB::one("SELECT COUNT(*) FROM users WHERE is_active=1")['COUNT(*)'],
-        'pengajar_count'    => (int)DB::one("SELECT COUNT(*) FROM users WHERE role='pengajar'")['COUNT(*)'],
-        'pelajar_count'     => (int)DB::one("SELECT COUNT(*) FROM users WHERE role IN ('pelajar','user')")['COUNT(*)'],
-        'avg_score'         => round((float)(DB::one("SELECT AVG(score) FROM attempts WHERE completed_at IS NOT NULL")['AVG(score)'] ?? 0), 1),
+        'total_users'       => $count("SELECT COUNT(*) AS cnt FROM users"),
+        'total_quizzes'     => $count("SELECT COUNT(*) AS cnt FROM quizzes"),
+        'total_attempts'    => $count("SELECT COUNT(*) AS cnt FROM attempts"),
+        'total_questions'   => $count("SELECT COUNT(*) AS cnt FROM questions"),
+        'total_categories'  => $count("SELECT COUNT(*) AS cnt FROM categories"),
+        'total_classes'     => $count("SELECT COUNT(*) AS cnt FROM classes"),
+        'total_assignments' => $count("SELECT COUNT(*) AS cnt FROM assignments"),
+        'published_quizzes' => $count("SELECT COUNT(*) AS cnt FROM quizzes WHERE is_published=1"),
+        'active_users'      => $count("SELECT COUNT(*) AS cnt FROM users WHERE is_active=1"),
+        'pengajar_count'    => $count("SELECT COUNT(*) AS cnt FROM users WHERE role='pengajar'"),
+        'pelajar_count'     => $count("SELECT COUNT(*) AS cnt FROM users WHERE role IN ('pelajar','user')"),
+        'avg_score'         => round((float)($avgRow['avg_score'] ?? 0), 1),
         'recent_attempts'   => DB::all(
             "SELECT a.id, u.name AS user_name, q.title AS quiz_title, a.score, a.completed_at
              FROM attempts a

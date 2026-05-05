@@ -87,6 +87,15 @@
         </table>
       </div>
     </div>
+    <!-- Pagination quizzes -->
+    <div x-show="admin.quizzesTotal > 15" class="flex items-center justify-center gap-2 mt-5">
+      <button @click="admin.quizzesPage--; loadAdminTab('quizzes')" :disabled="admin.quizzesPage<=1"
+              class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">← Prev</button>
+      <span class="text-sm text-gray-500 dark:text-gray-400 px-3"
+            x-text="'Halaman ' + admin.quizzesPage + ' dari ' + Math.max(1, Math.ceil(admin.quizzesTotal/15))"></span>
+      <button @click="admin.quizzesPage++; loadAdminTab('quizzes')" :disabled="admin.quizzesPage*15 >= admin.quizzesTotal"
+              class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">Next →</button>
+    </div>
   </div>
 
   <!-- ===== CATEGORIES TAB ===== -->
@@ -142,6 +151,15 @@
           </tbody>
         </table>
       </div>
+    </div>
+    <!-- Pagination users -->
+    <div x-show="admin.usersTotal > 15" class="flex items-center justify-center gap-2 mt-5">
+      <button @click="admin.usersPage--; loadAdminTab('users')" :disabled="admin.usersPage<=1"
+              class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">← Prev</button>
+      <span class="text-sm text-gray-500 dark:text-gray-400 px-3"
+            x-text="'Halaman ' + admin.usersPage + ' dari ' + Math.max(1, Math.ceil(admin.usersTotal/15))"></span>
+      <button @click="admin.usersPage++; loadAdminTab('users')" :disabled="admin.usersPage*15 >= admin.usersTotal"
+              class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">Next →</button>
     </div>
   </div>
 
@@ -202,7 +220,10 @@
           <div><label class="form-label">Nama</label><input x-model="admin.form.name" class="form-input" /></div>
           <div><label class="form-label">Role</label>
             <select x-model="admin.form.role" class="form-input">
-              <option value="user">User</option><option value="admin">Admin</option>
+              <option value="user">User</option>
+              <option value="pelajar">Pelajar</option>
+              <option value="pengajar">Pengajar</option>
+              <option value="admin">Admin</option>
             </select>
           </div>
           <div class="flex items-center gap-2">
@@ -267,9 +288,9 @@
     <!-- Quiz picker -->
     <div class="mb-6">
       <label class="form-label">Pilih Quiz untuk Kelola Soal</label>
-      <select @change="admin.questionsQuizId && loadAdminQuestions(admin.questionsQuizId, admin.quizzes.find(q=>q.id==admin.questionsQuizId)?.title || '')" x-model.number="admin.questionsQuizId" class="form-input max-w-md">
+      <select @change="admin.questionsQuizId && loadAdminQuestions(admin.questionsQuizId, admin.quizPicker.find(q=>q.id==admin.questionsQuizId)?.title || '')" x-model.number="admin.questionsQuizId" class="form-input max-w-md">
         <option value="">-- Pilih Quiz --</option>
-        <template x-for="q in admin.quizzes" :key="q.id">
+        <template x-for="q in admin.quizPicker" :key="q.id">
           <option :value="q.id" x-text="q.title"></option>
         </template>
       </select>

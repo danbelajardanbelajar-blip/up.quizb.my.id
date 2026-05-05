@@ -7,7 +7,7 @@ function QuizBApp() {
   return {
     // ---- State ----
     currentRoute: '/',
-    routeParams: {},
+    routeParams: [],
     user: null,
     darkMode: store.get('darkMode', false),
     mobileMenu: false,
@@ -75,6 +75,9 @@ function QuizBApp() {
       users:   [],   usersTotal: 0,   usersPage: 1,
       categories: [],
       questions: [], questionsQuizId: null, questionsQuizTitle: '',
+      // Daftar quiz khusus untuk dropdown di tab Soal — agar tidak menimpa
+      // pagination admin.quizzes pada tab Quiz.
+      quizPicker: [],
       loading: false,
       modal: { show: false, type: '', data: {} },
       form: {},
@@ -100,8 +103,24 @@ function QuizBApp() {
       // Load current user
       await this.loadUser();
 
-      // Re-trigger route after user loaded (for protected route guards)
-      this.onRouteChange(this.currentRoute, []);
+      // Re-check protected route guards after user is loaded.
+      // We only re-run guard logic — NOT the full data loaders — so that
+      // params (e.g. /quiz/5) loaded above are not overwritten with undefined.
+      this._guardRoute(this.currentRoute);
+    },
+
+    // Lightweight guard re-check (used after async loadUser).
+    _guardRoute(route) {
+      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile'];
+      const admin_routes     = ['/admin'];
+      if (protected_routes.some(r => route.startsWith(r)) && !this.user) {
+        this.showToast('Silakan login untuk mengakses halaman ini', 'warning', '⚠️');
+        return this.navigate('/login');
+      }
+      if (admin_routes.some(r => route.startsWith(r)) && this.user?.role !== 'admin') {
+        this.showToast('Akses ditolak', 'error', '🚫');
+        return this.navigate('/');
+      }
     },
 
     // ---- Router ----
@@ -132,6 +151,7 @@ function QuizBApp() {
 
       const route = routeMap[base] || (path === '/' ? '/' : '/404');
       this.currentRoute = route;
+      this.routeParams  = rest;
       window.scrollTo({ top: 0, behavior: 'smooth' });
       this.onRouteChange(route, rest);
     },
@@ -267,6 +287,16 @@ function QuizBApp() {
     async loadQuizzes(reset = false) {
       if (reset) { this.quizzes.page = 1; this.quizzes.list = []; }
       this.quizzes.loading = true;
+
+      // Pastikan dropdown kategori terisi meskipun user langsung membuka /quizzes
+      // (tanpa lewat homepage). Kalau home.categories belum dimuat, fetch sekali.
+      if (!this.home.categories || this.home.categories.length === 0) {
+        try {
+          const cats = await api.get('category.list');
+          this.home.categories = Array.isArray(cats) ? cats : [];
+        } catch (_) { /* non-fatal */ }
+      }
+
       try {
         const params = {
           page: this.quizzes.page,
@@ -551,10 +581,11 @@ function QuizBApp() {
         } else if (tab === 'categories') {
           this.admin.categories = await api.get('admin.category_list');
         } else if (tab === 'questions') {
-          // questions tab: show quiz picker first
-          if (!this.admin.quizzes.length) {
+          // questions tab: load full quiz list ke variabel terpisah supaya
+          // pagination tab Quiz tidak ikut tertimpa.
+          if (!this.admin.quizPicker.length) {
             const data = await api.get('admin.quiz_list', { limit: 50 });
-            this.admin.quizzes = data.quizzes || [];
+            this.admin.quizPicker = data.quizzes || [];
           }
           if (this.admin.questionsQuizId) {
             this.admin.questions = await api.get('question.list', { quiz_id: this.admin.questionsQuizId });

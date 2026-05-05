@@ -1,14 +1,17 @@
 <!-- QUIZ ENGINE PAGE -->
 <div x-data="QuizEngine()"
-     x-init="(function() {
-       const hash = window.location.hash;
-       const match = hash.match(/\/play\/(\d+)/);
-       const quizId = match ? match[1] : null;
-       const assignMatch = hash.match(/[?&]assign=(\d+)/);
-       const assignId = assignMatch ? assignMatch[1] : null;
-       if (quizId) loadQuiz(quizId, assignId);
-       else { phase = 'error'; error = 'Quiz ID tidak ditemukan di URL'; }
-     })()"
+     x-init="
+       (() => {
+         const hash = window.location.hash || '';
+         const [pathPart, queryPart] = hash.split('?');
+         const m = pathPart.match(/\/play\/(\d+)/);
+         const quizId = m ? m[1] : null;
+         const am = (queryPart || '').match(/(?:^|&)assign=(\d+)/);
+         const assignId = am ? am[1] : null;
+         if (quizId) { loadQuiz(quizId, assignId); }
+         else { phase = 'error'; error = 'Quiz ID tidak ditemukan di URL'; }
+       })()
+     "
      @beforeunload.window="stopTimer()"
      class="min-h-screen bg-gray-50 dark:bg-gray-950">
 

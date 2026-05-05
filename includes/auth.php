@@ -20,22 +20,29 @@ function startSecureSession(): void {
 function requireAuth(): array {
     startSecureSession();
     if (empty($_SESSION['user_id'])) {
+        // Pakai jsonError jika sudah di-load (api routes), fallback ke die() untuk
+        // kasus edge (mis. include langsung di luar API context).
+        if (function_exists('jsonError')) {
+            jsonError('Silakan login untuk mengakses fitur ini', 401);
+        }
         http_response_code(401);
         header('Content-Type: application/json; charset=utf-8');
         die(json_encode(['success' => false, 'error' => 'Unauthorized', 'message' => 'Silakan login untuk mengakses fitur ini', 'code' => 401]));
     }
     return [
         'id'   => (int) $_SESSION['user_id'],
-        'name' => $_SESSION['user_name'],
-        'role' => $_SESSION['user_role'],
+        'name' => $_SESSION['user_name']  ?? '',
+        'role' => $_SESSION['user_role']  ?? 'user',
     ];
 }
 
 function requireAdmin(): array {
     $user = requireAuth();
     if ($user['role'] !== 'admin') {
+        if (function_exists('jsonError')) jsonError('Forbidden — admin only', 403);
         http_response_code(403);
-        die(json_encode(['error' => 'Forbidden', 'code' => 403]));
+        header('Content-Type: application/json; charset=utf-8');
+        die(json_encode(['success' => false, 'error' => 'Forbidden', 'message' => 'Forbidden — admin only', 'code' => 403]));
     }
     return $user;
 }
@@ -43,8 +50,10 @@ function requireAdmin(): array {
 function requirePengajar(): array {
     $user = requireAuth();
     if (!in_array($user['role'], ['pengajar', 'admin'])) {
+        if (function_exists('jsonError')) jsonError('Hanya pengajar yang dapat mengakses fitur ini', 403);
         http_response_code(403);
-        die(json_encode(['error' => 'Hanya pengajar yang dapat mengakses fitur ini', 'code' => 403]));
+        header('Content-Type: application/json; charset=utf-8');
+        die(json_encode(['success' => false, 'error' => 'Forbidden', 'message' => 'Hanya pengajar yang dapat mengakses fitur ini', 'code' => 403]));
     }
     return $user;
 }

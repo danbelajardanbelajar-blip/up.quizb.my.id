@@ -17,8 +17,7 @@ function generateJoinCode(int $length = 6): string {
 function requirePengajarOrAdmin(): array {
     $user = requireAuth();
     if (!in_array($user['role'], ['pengajar', 'admin'])) {
-        http_response_code(403);
-        die(json_encode(['success' => false, 'message' => 'Hanya pengajar yang dapat melakukan aksi ini']));
+        jsonError('Hanya pengajar yang dapat melakukan aksi ini', 403);
     }
     return $user;
 }
@@ -247,6 +246,13 @@ function class_kick(): void {
     if ((int)$class['teacher_id'] !== $user['id'] && $user['role'] !== 'admin') {
         jsonError('Anda bukan pemilik kelas ini', 403);
     }
+
+    // Pastikan target memang anggota agar pesan sukses tidak menyesatkan
+    $member = DB::one(
+        "SELECT id FROM class_members WHERE class_id = ? AND user_id = ?",
+        [$classId, $targetId]
+    );
+    if (!$member) jsonError('Anggota tidak ditemukan di kelas ini', 404);
 
     DB::conn()->prepare(
         "DELETE FROM class_members WHERE class_id = ? AND user_id = ?"
