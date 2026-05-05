@@ -201,11 +201,25 @@ function attempt_result(): void {
     );
 
     // Ambil semua opsi per soal untuk tampilan review
+    // PENTING: cast ke tipe yang benar agar JSON tidak mengirim string "0"/"1"
+    // Di JavaScript, string "0" adalah TRUTHY sehingga semua opsi akan tampil sebagai ✅
     foreach ($answers as &$row) {
+        // Cast is_correct jawaban (dari attempt_answers) ke bool
+        $row['is_correct']        = (bool)$row['is_correct'];
+        // Cast ID ke int agar opt.id === selected_option_id bekerja di JS
+        $row['selected_option_id'] = $row['selected_option_id'] !== null ? (int)$row['selected_option_id'] : null;
+        $row['correct_option_id']  = $row['correct_option_id']  !== null ? (int)$row['correct_option_id']  : null;
+
         $row['options'] = DB::all(
             "SELECT id, option_text, is_correct, order_num FROM options WHERE question_id = ? ORDER BY order_num",
             [$row['question_id']]
         );
+        // Cast setiap opsi: is_correct ke bool, id ke int
+        foreach ($row['options'] as &$opt) {
+            $opt['id']         = (int)$opt['id'];
+            $opt['is_correct'] = (bool)$opt['is_correct'];
+        }
+        unset($opt);
     }
     unset($row);
 
