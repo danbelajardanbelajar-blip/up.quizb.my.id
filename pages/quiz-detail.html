@@ -65,18 +65,15 @@
         </ul>
       </div>
 
-      <!-- Action -->
-      <template x-if="user">
-        <button @click="navigate('/play/'+quizDetail.quiz?.id)" class="btn-primary w-full py-3 text-base">
-          🚀 Mulai Quiz Sekarang
-        </button>
-      </template>
-      <template x-if="!user">
-        <div class="text-center">
-          <p class="text-gray-500 dark:text-gray-400 mb-3 text-sm">Login untuk mengerjakan quiz ini</p>
-          <button @click="navigate('/login')" class="btn-primary px-8 py-2.5">Login / Daftar</button>
-        </div>
-      </template>
+      <!-- Action — semua orang bisa mulai, login atau tidak -->
+      <button @click="navigate('/play/'+quizDetail.quiz?.id)" class="btn-primary w-full py-3 text-base">
+        🚀 Mulai Quiz Sekarang
+      </button>
+      <!-- Info untuk tamu -->
+      <p x-show="!user" class="text-center text-xs text-gray-400 dark:text-gray-500 mt-3">
+        Bermain sebagai tamu — hasil disimpan dengan nama anonim.
+        <button @click="navigate('/login')" class="text-primary-500 hover:underline ml-1">Login</button> untuk menyimpan progres.
+      </p>
     </div>
   </div>
 
