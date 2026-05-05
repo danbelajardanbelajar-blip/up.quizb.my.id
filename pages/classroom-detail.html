@@ -1,0 +1,233 @@
+<!-- CLASSROOM DETAIL PAGE -->
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+  <!-- Loading -->
+  <div x-show="classroom.detailLoading" class="space-y-6">
+    <div class="flex items-center gap-4">
+      <div class="skeleton w-16 h-16 rounded-2xl"></div>
+      <div class="space-y-2 flex-1">
+        <div class="skeleton h-7 w-1/3 rounded"></div>
+        <div class="skeleton h-4 w-1/2 rounded"></div>
+      </div>
+    </div>
+    <div class="grid sm:grid-cols-3 gap-4">
+      <template x-for="i in 3"><div class="skeleton h-24 rounded-xl"></div></template>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div x-show="!classroom.detailLoading && classroom.detail" class="animate-fade-in">
+    <template x-if="classroom.detail">
+      <div>
+
+        <!-- Breadcrumb -->
+        <nav class="flex items-center gap-2 text-sm text-gray-400 mb-6">
+          <button @click="navigate('/classroom')" class="hover:text-primary-500 transition-colors">🏫 Kelas Saya</button>
+          <span>/</span>
+          <span class="text-gray-700 dark:text-gray-300 font-medium" x-text="classroom.detail.name"></span>
+        </nav>
+
+        <!-- Header -->
+        <div class="card p-6 mb-6">
+          <div class="flex items-start justify-between flex-wrap gap-4">
+            <div class="flex items-center gap-4">
+              <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-bold text-2xl shadow-lg">
+                <span x-text="classroom.detail.name.charAt(0).toUpperCase()"></span>
+              </div>
+              <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white" x-text="classroom.detail.name"></h1>
+                <p class="text-gray-500 dark:text-gray-400 mt-0.5" x-text="classroom.detail.description || 'Tidak ada deskripsi'"></p>
+                <div class="flex items-center gap-3 mt-2 text-sm text-gray-400">
+                  <span>Pengajar: <span class="font-medium text-gray-600 dark:text-gray-300" x-text="classroom.detail.teacher_name"></span></span>
+                  <span x-show="classroom.isTeacher" class="px-2 py-0.5 bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 rounded-full text-xs font-semibold">Anda Pengajar</span>
+                </div>
+              </div>
+            </div>
+            <!-- Join Code (for teacher) -->
+            <div x-show="classroom.isTeacher" class="flex flex-col items-end gap-2">
+              <div class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-xl text-center">
+                <div class="text-xs text-gray-400 mb-1">Kode Join Kelas</div>
+                <div class="font-mono font-bold text-xl text-primary-600 dark:text-primary-400 tracking-widest" x-text="classroom.detail.join_code"></div>
+              </div>
+              <p class="text-xs text-gray-400">Bagikan kode ini ke siswa</p>
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div class="grid grid-cols-3 gap-4 mt-6 pt-5 border-t border-gray-100 dark:border-gray-800">
+            <div class="text-center">
+              <div class="text-2xl font-bold text-gray-800 dark:text-gray-100" x-text="classroom.members.length"></div>
+              <div class="text-xs text-gray-400 mt-0.5">Anggota</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-gray-800 dark:text-gray-100" x-text="classroom.assignments.length"></div>
+              <div class="text-xs text-gray-400 mt-0.5">Tugas</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-gray-800 dark:text-gray-100">
+                <span :class="classroom.detail.is_active ? 'text-green-500' : 'text-gray-400'" x-text="classroom.detail.is_active ? '✓' : '✗'"></span>
+              </div>
+              <div class="text-xs text-gray-400 mt-0.5" x-text="classroom.detail.is_active ? 'Aktif' : 'Nonaktif'"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="grid lg:grid-cols-5 gap-6">
+
+          <!-- Left: Assignments (3/5) -->
+          <div class="lg:col-span-3 space-y-4">
+            <div class="flex items-center justify-between">
+              <h2 class="font-bold text-lg text-gray-900 dark:text-white">📋 Tugas</h2>
+              <button x-show="classroom.isTeacher" @click="openAssignModal()"
+                      class="btn-primary text-sm px-4 py-2">+ Buat Tugas</button>
+            </div>
+
+            <!-- Loading skeleton -->
+            <div x-show="classroom.detailLoading" class="space-y-3">
+              <template x-for="i in 3"><div class="skeleton h-20 rounded-xl"></div></template>
+            </div>
+
+            <!-- Assignment list -->
+            <div x-show="!classroom.detailLoading && classroom.assignments.length > 0" class="space-y-3">
+              <template x-for="assign in classroom.assignments" :key="assign.id">
+                <div class="card p-4">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 mb-1">
+                        <span class="font-semibold text-gray-800 dark:text-gray-100 truncate" x-text="assign.title"></span>
+                        <span class="badge text-xs px-2 py-0.5 rounded-full"
+                              :class="assign.mode === 'exam' ? 'badge-danger' : assign.mode === 'instant' ? 'badge-warning' : 'badge-primary'"
+                              x-text="{ bebas: 'Bebas', instant: 'Instan', end: 'Akhir', exam: 'Ujian' }[assign.mode] || assign.mode"></span>
+                      </div>
+                      <p class="text-sm text-gray-500 dark:text-gray-400">
+                        📝 <span x-text="assign.quiz_title"></span>
+                        • <span x-text="assign.total_questions"></span> soal
+                      </p>
+                      <div class="flex items-center gap-3 text-xs text-gray-400 mt-1">
+                        <span x-show="assign.deadline">⏰ Deadline: <span x-text="formatDate(assign.deadline)"></span></span>
+                        <span x-show="classroom.isTeacher">👥 <span x-text="assign.submission_count || 0"></span> dikumpulkan</span>
+                      </div>
+                    </div>
+                    <div class="flex gap-2 flex-shrink-0">
+                      <!-- For students: play button -->
+                      <template x-if="!classroom.isTeacher">
+                        <button @click="navigate('/play/' + assign.quiz_id + '?assign=' + assign.id)"
+                                class="btn-primary text-xs px-3 py-1.5">Kerjakan</button>
+                      </template>
+                      <!-- For teachers: delete button -->
+                      <template x-if="classroom.isTeacher">
+                        <button @click="deleteAssignment(assign.id, classroom.detail.id)"
+                                class="text-xs text-red-500 hover:underline px-2 py-1.5">Hapus</button>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- Empty assignments -->
+            <div x-show="!classroom.detailLoading && classroom.assignments.length === 0"
+                 class="card p-8 text-center text-gray-400">
+              <p class="text-4xl mb-3">📋</p>
+              <p class="text-sm">Belum ada tugas</p>
+              <template x-if="classroom.isTeacher">
+                <button @click="openAssignModal()" class="mt-3 btn-primary text-sm px-4 py-2">+ Buat Tugas Pertama</button>
+              </template>
+            </div>
+          </div>
+
+          <!-- Right: Members (2/5) -->
+          <div class="lg:col-span-2">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="font-bold text-lg text-gray-900 dark:text-white">👥 Anggota</h2>
+              <span class="text-sm text-gray-400" x-text="classroom.members.length + ' orang'"></span>
+            </div>
+
+            <div class="card overflow-hidden">
+              <template x-for="member in classroom.members" :key="member.id">
+                <div class="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                  <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                       :style="'background: hsl(' + (member.id * 37 % 360) + ',60%,55%)'">
+                    <span x-text="member.name.charAt(0).toUpperCase()"></span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate" x-text="member.name"></p>
+                    <p class="text-xs text-gray-400 truncate" x-text="member.email"></p>
+                  </div>
+                  <!-- Kick button (teacher only) -->
+                  <template x-if="classroom.isTeacher">
+                    <button @click="kickMember(classroom.detail.id, member.id)"
+                            class="text-xs text-red-400 hover:text-red-600 transition-colors flex-shrink-0"
+                            title="Keluarkan dari kelas">✕</button>
+                  </template>
+                </div>
+              </template>
+
+              <div x-show="classroom.members.length === 0" class="text-center py-8 text-gray-400">
+                <p class="text-2xl mb-2">👤</p>
+                <p class="text-sm">Belum ada anggota</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Not found -->
+  <div x-show="!classroom.detailLoading && !classroom.detail" class="text-center py-20 text-gray-400">
+    <p class="text-5xl mb-4">😕</p>
+    <p class="text-lg">Kelas tidak ditemukan</p>
+    <button @click="navigate('/classroom')" class="mt-4 btn-primary">← Kembali ke Kelas</button>
+  </div>
+
+  <!-- === CREATE ASSIGNMENT MODAL === -->
+  <div x-show="classroom.assignModal.show" @keydown.escape.window="classroom.assignModal.show=false"
+       class="modal-overlay" x-transition>
+    <div class="modal-box p-6">
+      <h2 class="font-bold text-lg text-gray-900 dark:text-white mb-5">📋 Buat Tugas Baru</h2>
+      <div class="space-y-4">
+        <div>
+          <label class="form-label">Judul Tugas *</label>
+          <input x-model="classroom.assignForm.title" class="form-input" placeholder="Cth: Latihan Soal Bab 3" />
+        </div>
+        <div>
+          <label class="form-label">Pilih Paket Soal (Quiz) *</label>
+          <div x-show="classroom.quizListLoading" class="skeleton h-10 rounded-lg"></div>
+          <select x-show="!classroom.quizListLoading" x-model="classroom.assignForm.quiz_id" class="form-input">
+            <option value="">-- Pilih Quiz --</option>
+            <template x-for="q in classroom.quizListForAssign" :key="q.id">
+              <option :value="q.id" x-text="q.title + ' (' + q.question_count + ' soal)'"></option>
+            </template>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="form-label">Mode</label>
+            <select x-model="classroom.assignForm.mode" class="form-input">
+              <option value="bebas">Bebas (review setelah selesai)</option>
+              <option value="instant">Instan (langsung tahu benar/salah)</option>
+              <option value="end">Akhir (lihat semua di akhir)</option>
+              <option value="exam">Ujian (tidak bisa lihat jawaban)</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Deadline (opsional)</label>
+            <input type="datetime-local" x-model="classroom.assignForm.deadline" class="form-input" />
+          </div>
+        </div>
+      </div>
+      <div x-show="classroom.assignError" class="mt-3 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-sm text-red-600 dark:text-red-400" x-text="classroom.assignError"></div>
+      <div class="flex gap-3 mt-6">
+        <button @click="classroom.assignModal.show=false" class="flex-1 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Batal</button>
+        <button @click="createAssignment(classroom.detail?.id)" class="flex-1 btn-primary py-2" :disabled="classroom.assignLoading">
+          <span x-show="classroom.assignLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></span>
+          Buat Tugas
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

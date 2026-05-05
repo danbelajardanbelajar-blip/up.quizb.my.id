@@ -7,6 +7,13 @@
     <div class="skeleton h-64 rounded-2xl"></div>
   </div>
 
+  <!-- Error / no data -->
+  <div x-show="!result.loading && !result.data" class="text-center py-20 text-gray-400">
+    <p class="text-5xl mb-4">😕</p>
+    <p class="text-lg">Hasil tidak ditemukan</p>
+    <button @click="navigate('/quizzes')" class="mt-4 btn-primary">← Ke Daftar Quiz</button>
+  </div>
+
   <!-- Result -->
   <div x-show="!result.loading && result.data" class="animate-slide-up">
     <template x-if="result.data">
@@ -17,16 +24,18 @@
           <h1 class="text-xl font-bold text-gray-700 dark:text-gray-200 mb-1" x-text="scoreGrade(result.data.score).label"></h1>
           <div class="text-7xl font-extrabold my-4" :class="scoreGrade(result.data.score).color"
                x-text="result.data.score + '%'"></div>
-          <p class="text-gray-500 dark:text-gray-400 text-sm" x-text="result.data.quiz?.title"></p>
+          <p class="text-gray-500 dark:text-gray-400 text-sm" x-text="result.data.quiz_title || result.data.quiz?.title"></p>
+          <p class="text-xs text-gray-400 mt-1" x-text="'Dimainkan oleh: ' + (result.data.player_name || 'Kamu')"></p>
 
           <!-- Stats -->
           <div class="grid grid-cols-3 gap-4 mt-6">
             <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-3">
-              <div class="font-bold text-lg text-green-600 dark:text-green-400" x-text="result.data.correct_count"></div>
+              <div class="font-bold text-lg text-green-600 dark:text-green-400" x-text="result.data.correct_count || 0"></div>
               <div class="text-xs text-gray-500 mt-0.5">Benar</div>
             </div>
             <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-3">
-              <div class="font-bold text-lg text-red-500 dark:text-red-400" x-text="result.data.wrong_count"></div>
+              <div class="font-bold text-lg text-red-500 dark:text-red-400"
+                   x-text="(result.data.wrong_count ?? (result.data.total_questions - result.data.correct_count)) || 0"></div>
               <div class="text-xs text-gray-500 mt-0.5">Salah</div>
             </div>
             <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
@@ -39,33 +48,56 @@
           <div class="mt-5 inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold"
                :class="result.data.passed ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'">
             <span x-text="result.data.passed ? '✅ Lulus' : '❌ Tidak Lulus'"></span>
-            <span class="text-xs opacity-70" x-text="'(Min. ' + (result.data.quiz?.passing_score||60) + '%)'"></span>
+            <span class="text-xs opacity-70" x-text="'(Min. ' + (result.data.passing_score||result.data.quiz?.passing_score||60) + '%)'"></span>
           </div>
         </div>
 
         <!-- Answer Review -->
-        <div class="card p-6 mb-6">
+        <div class="card p-6 mb-6" x-show="result.data.answers && result.data.answers.length > 0">
           <h2 class="font-bold text-gray-900 dark:text-white mb-4">📋 Pembahasan Jawaban</h2>
           <div class="space-y-4">
-            <template x-for="(q, idx) in result.data.questions" :key="q.id">
+            <template x-for="(a, idx) in result.data.answers" :key="a.question_id">
               <div class="border border-gray-100 dark:border-gray-800 rounded-xl p-4">
+                <!-- Soal -->
                 <div class="flex items-start gap-2 mb-3">
                   <span class="text-sm font-bold text-gray-400 flex-shrink-0" x-text="(idx+1)+'.'"></span>
-                  <p class="text-sm font-medium text-gray-800 dark:text-gray-200" x-text="q.text"></p>
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200" x-text="a.question_text"></p>
+                    <!-- Benar/Salah badge -->
+                    <span class="inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-semibold"
+                          :class="a.is_correct ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'"
+                          x-text="a.is_correct ? '✅ Benar' : '❌ Salah'"></span>
+                  </div>
                 </div>
-                <div class="space-y-2">
-                  <template x-for="opt in q.options" :key="opt.id">
+
+                <!-- Opsi jawaban -->
+                <div class="space-y-2 mt-2" x-show="a.options && a.options.length > 0">
+                  <template x-for="opt in a.options" :key="opt.id">
                     <div class="flex items-center gap-2 text-sm px-3 py-2 rounded-lg"
                          :class="{
-                           'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400': opt.id === q.correct_option_id,
-                           'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400': q.user_answer === opt.id && opt.id !== q.correct_option_id,
-                           'text-gray-500 dark:text-gray-400': opt.id !== q.correct_option_id && q.user_answer !== opt.id,
+                           'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 font-medium': opt.is_correct,
+                           'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400': (opt.id === a.selected_option_id) && !opt.is_correct,
+                           'text-gray-500 dark:text-gray-400': !opt.is_correct && (opt.id !== a.selected_option_id),
                          }">
-                      <span x-text="opt.id===q.correct_option_id ? '✅' : (q.user_answer===opt.id ? '❌' : '○')"></span>
-                      <span x-text="opt.text"></span>
+                      <span x-text="opt.is_correct ? '✅' : (opt.id === a.selected_option_id ? '❌' : '○')"></span>
+                      <span x-text="opt.option_text"></span>
                     </div>
                   </template>
                 </div>
+
+                <!-- Fallback jika tidak ada opsi: tampilkan jawaban teks -->
+                <div x-show="!a.options || a.options.length === 0" class="mt-2 text-sm">
+                  <p class="text-gray-500 dark:text-gray-400">
+                    Jawaban kamu: <span class="font-medium" x-text="a.selected_answer || '(tidak dijawab)'"></span>
+                  </p>
+                  <p class="text-green-600 dark:text-green-400">
+                    Jawaban benar: <span class="font-medium" x-text="a.correct_answer"></span>
+                  </p>
+                </div>
+
+                <!-- Penjelasan -->
+                <p x-show="a.explanation" class="mt-3 text-xs text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg px-3 py-2 italic"
+                   x-text="'💡 ' + a.explanation"></p>
               </div>
             </template>
           </div>
@@ -73,7 +105,7 @@
 
         <!-- Actions -->
         <div class="flex flex-col sm:flex-row gap-3">
-          <button @click="navigate('/quiz/'+result.data.quiz?.id)" class="btn-secondary flex-1 justify-center py-2.5">🔄 Coba Lagi</button>
+          <button @click="navigate('/quiz/'+(result.data.quiz_id||result.data.quiz?.id))" class="btn-secondary flex-1 justify-center py-2.5">🔄 Coba Lagi</button>
           <button @click="navigate('/quizzes')" class="btn-primary flex-1 justify-center py-2.5">📝 Quiz Lain</button>
           <button @click="navigate('/leaderboard')" class="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">🏆 Leaderboard</button>
         </div>

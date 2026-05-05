@@ -19,6 +19,7 @@ function validateCsrfToken(): void {
 
     if (empty($token) || !hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
         http_response_code(403);
-        die(json_encode(['error' => 'Invalid CSRF token', 'code' => 403]));
+        header('Content-Type: application/json; charset=utf-8');
+        die(json_encode(['success' => false, 'error' => 'CSRF token tidak valid', 'message' => 'Sesi tidak valid, silakan refresh halaman', 'code' => 403]));
     }
 }

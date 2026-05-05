@@ -1,5 +1,6 @@
 // ============================================
 // assets/js/app.js — Main Alpine.js App
+// v2.1: Fix auth mapping, classroom state, quiz search
 // ============================================
 
 function QuizBApp() {
@@ -14,12 +15,19 @@ function QuizBApp() {
     toast: { show: false, message: '', type: 'success', icon: '✅' },
     _toastTimer: null,
 
-    navItems: [
-      { href: '/',            label: '🏠 Beranda'     },
-      { href: '/categories',  label: '📂 Kategori'    },
-      { href: '/quizzes',     label: '📝 Semua Kuis'  },
-      { href: '/leaderboard', label: '🏆 Leaderboard' },
-    ],
+    // Nav items — dinamis di getter, tapi definisikan base dulu
+    get navItems() {
+      const base = [
+        { href: '/',            label: '🏠 Beranda'     },
+        { href: '/categories',  label: '📂 Kategori'    },
+        { href: '/quizzes',     label: '📝 Semua Kuis'  },
+        { href: '/leaderboard', label: '🏆 Leaderboard' },
+      ];
+      if (this.user) {
+        base.push({ href: '/classroom', label: '🏫 Kelas' });
+      }
+      return base;
+    },
 
     // ---- Page Data ----
     home:        { featured: [], categories: [], loading: true, stats: { total_questions: 0, total_quizzes: 0, total_categories: 0, total_users: 0 } },
@@ -27,17 +35,46 @@ function QuizBApp() {
     quizzes:     { list: [], loading: true, total: 0, page: 1, categoryId: 0, search: '' },
     quizDetail:  { quiz: null, loading: true },
     leaderboard: { list: [], loading: true },
-    dashboard:   { stats: null, recent: [], loading: true },
+    dashboard:   { stats: null, userInfo: null, recent: [], loading: true },
     history:     { list: [], loading: true, total: 0, page: 1 },
     result:      { data: null, loading: true },
+
+    // ---- Classroom State ----
+    classroom: {
+      list:         [],
+      loading:      true,
+      detail:       null,
+      detailLoading: true,
+      joinModal:    { show: false },
+      createModal:  { show: false },
+      joinCode:     '',
+      joinError:    '',
+      joinLoading:  false,
+      createForm:   { name: '', description: '' },
+      createError:  '',
+      createLoading: false,
+      // Detail page state
+      members:     [],
+      assignments: [],
+      isTeacher:   false,
+      // Create assignment modal
+      assignModal: { show: false },
+      assignForm:  { title: '', quiz_id: '', mode: 'bebas', deadline: '' },
+      assignError: '',
+      assignLoading: false,
+      // Quiz list for assignment dropdown
+      quizListForAssign: [],
+      quizListLoading: false,
+    },
 
     // Admin state
     admin: {
       tab: 'stats',
       stats: null,
       quizzes: [], quizzesTotal: 0, quizzesPage: 1,
-      users: [],   usersTotal: 0,   usersPage: 1,
+      users:   [],   usersTotal: 0,   usersPage: 1,
       categories: [],
+      questions: [], questionsQuizId: null, questionsQuizTitle: '',
       loading: false,
       modal: { show: false, type: '', data: {} },
       form: {},
@@ -62,25 +99,35 @@ function QuizBApp() {
 
       // Load current user
       await this.loadUser();
+
+      // Re-trigger route after user loaded (for protected route guards)
+      this.onRouteChange(this.currentRoute, []);
     },
 
     // ---- Router ----
     handleRoute(hash) {
-      const path = hash.replace(/^#/, '') || '/';
-      const [base, ...rest] = path.split('/').filter(Boolean);
+      // Strip query string from hash for routing (e.g. #/play/5?assign=3 → /play/5)
+      const hashClean = hash.replace(/^#/, '').split('?')[0] || '/';
+      const path = hashClean;
+      const segments = path.split('/').filter(Boolean);
+      const base = segments[0] || '';
+      const rest = segments.slice(1);
+
       const routeMap = {
         '':            '/',
         'categories':  '/categories',
         'quizzes':     '/quizzes',
-        'quiz':        '/quiz/' + (rest[0] || ''),
-        'play':        '/play/' + (rest[0] || ''),
-        'result':      '/result/' + (rest[0] || ''),
+        'quiz':        '/quiz/'        + (rest[0] || ''),
+        'play':        '/play/'        + (rest[0] || ''),
+        'result':      '/result/'      + (rest[0] || ''),
         'leaderboard': '/leaderboard',
         'dashboard':   '/dashboard',
         'history':     '/history',
+        'profile':     '/profile',
         'login':       '/login',
         'register':    '/register',
         'admin':       '/admin',
+        'classroom':   rest[0] ? '/classroom/' + rest[0] : '/classroom',
       };
 
       const route = routeMap[base] || (path === '/' ? '/' : '/404');
@@ -94,12 +141,12 @@ function QuizBApp() {
     },
 
     onRouteChange(route, params) {
-      // Guard protected routes (dashboard & history tetap perlu login)
-      const protected_routes = ['/dashboard', '/history'];
+      // Guard protected routes
+      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile'];
       const admin_routes     = ['/admin'];
 
       if (protected_routes.some(r => route.startsWith(r)) && !this.user) {
-        this.showToast('Silakan login untuk melihat dashboard', 'warning', '⚠️');
+        this.showToast('Silakan login untuk mengakses halaman ini', 'warning', '⚠️');
         return this.navigate('/login');
       }
       if (admin_routes.some(r => route.startsWith(r)) && this.user?.role !== 'admin') {
@@ -108,21 +155,31 @@ function QuizBApp() {
       }
 
       // Load data per route
-      if (route === '/')            this.loadHome();
-      if (route === '/categories')  this.loadCategories();
-      if (route === '/quizzes')     this.loadQuizzes();
-      if (route.startsWith('/quiz/')) this.loadQuizDetail(params[0]);
-      if (route === '/leaderboard') this.loadLeaderboard();
-      if (route === '/dashboard')   this.loadDashboard();
-      if (route === '/history')     this.loadHistory();
-      if (route.startsWith('/result/')) this.loadResult(params[0]);
-      if (route.startsWith('/admin'))   this.loadAdminTab(this.admin.tab);
+      if (route === '/')                   this.loadHome();
+      if (route === '/categories')         this.loadCategories();
+      if (route === '/quizzes')            this.loadQuizzes();
+      if (route.startsWith('/quiz/'))      this.loadQuizDetail(params[0]);
+      if (route === '/leaderboard')        this.loadLeaderboard();
+      if (route === '/dashboard')          this.loadDashboard();
+      if (route === '/history')            this.loadHistory();
+      if (route === '/profile')            this.loadDashboard(); // reuse dashboard stats
+      if (route.startsWith('/result/'))    this.loadResult(params[0]);
+      if (route.startsWith('/admin'))      this.loadAdminTab(this.admin.tab);
+      if (route === '/classroom')          this.loadClassroom();
+      if (route.startsWith('/classroom/') && params[0]) this.loadClassroomDetail(params[0]);
     },
 
     // ---- Auth ----
     async loadUser() {
       try {
-        this.user = await api.get('auth.me');
+        const data = await api.get('auth.me');
+        // API me returns flat user object
+        this.user = data ? {
+          id:    data.id,
+          name:  data.name,
+          email: data.email,
+          role:  data.role,
+        } : null;
       } catch {
         this.user = null;
       }
@@ -133,8 +190,9 @@ function QuizBApp() {
       if (!f.email || !f.password) { f.error = 'Email dan password wajib diisi'; return; }
       f.loading = true; f.error = '';
       try {
+        // API auth.login returns flat: { id, name, email, role, csrf_token }
         const data = await api.post('auth.login', { email: f.email, password: f.password });
-        this.user = data.user;
+        this.user = { id: data.id, name: data.name, email: data.email, role: data.role };
         api._csrfToken = data.csrf_token || null;
         this.showToast(`Selamat datang, ${this.user.name}!`, 'success', '👋');
         this.navigate('/dashboard');
@@ -152,8 +210,10 @@ function QuizBApp() {
       if (f.password.length < 6)               { f.error = 'Password minimal 6 karakter'; return; }
       f.loading = true; f.error = '';
       try {
+        // API auth.register returns flat: { id, name, email, role, csrf_token }
         const data = await api.post('auth.register', { name: f.name, email: f.email, password: f.password });
-        this.user = data.user;
+        this.user = { id: data.id, name: data.name, email: data.email, role: data.role };
+        api._csrfToken = data.csrf_token || null;
         this.showToast('Registrasi berhasil!', 'success', '🎉');
         this.navigate('/dashboard');
       } catch (e) {
@@ -175,9 +235,6 @@ function QuizBApp() {
     async loadHome() {
       this.home.loading = true;
       try {
-        // category.list → jsonSuccess → data.data = array langsung
-        // quiz.list     → jsonPaginated → data.data = array quiz, data.meta = pagination
-        // quiz.stats    → jsonSuccess   → data.data = { total_questions, total_quizzes, ... }
         const [cats, quizData, stats] = await Promise.all([
           api.get('category.list'),
           api.getFull('quiz.list', { limit: 6 }),
@@ -214,8 +271,6 @@ function QuizBApp() {
           ...(this.quizzes.categoryId ? { category: this.quizzes.categoryId } : {}),
           ...(this.quizzes.search     ? { search: this.quizzes.search }       : {}),
         };
-        // jsonPaginated → { success, data: [...], meta: { total, page, ... } }
-        // api.getFull mengembalikan seluruh response JSON, bukan hanya .data
         const resp = await api.getFull('quiz.list', params);
         this.quizzes.list  = Array.isArray(resp.data) ? resp.data : [];
         this.quizzes.total = resp.meta?.total || 0;
@@ -229,7 +284,6 @@ function QuizBApp() {
     async loadQuizDetail(id) {
       this.quizDetail.loading = true; this.quizDetail.quiz = null;
       try {
-        // quiz.get → jsonSuccess(quiz_object) → data.data = quiz object langsung
         const quiz = await api.get('quiz.get', { id });
         this.quizDetail.quiz = quiz;
         this.pageTitle = (quiz?.title || 'Quiz') + ' — QuizB';
@@ -243,7 +297,8 @@ function QuizBApp() {
     async loadLeaderboard() {
       this.leaderboard.loading = true;
       try {
-        this.leaderboard.list = await api.get('leaderboard.global');
+        const resp = await api.getFull('leaderboard.global', { limit: 50 });
+        this.leaderboard.list = Array.isArray(resp.data) ? resp.data : [];
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
@@ -254,9 +309,11 @@ function QuizBApp() {
     async loadDashboard() {
       this.dashboard.loading = true;
       try {
+        // API attempt.dashboard returns { user, stats, recent }
         const data = await api.get('attempt.dashboard');
-        this.dashboard.stats  = data.stats;
-        this.dashboard.recent = data.recent || [];
+        this.dashboard.userInfo = data.user   || null;
+        this.dashboard.stats    = data.stats  || null;
+        this.dashboard.recent   = data.recent || [];
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
@@ -268,9 +325,9 @@ function QuizBApp() {
       if (reset) { this.history.page = 1; this.history.list = []; }
       this.history.loading = true;
       try {
-        const data = await api.get('attempt.history', { page: this.history.page, limit: 10 });
-        this.history.list  = data.attempts || [];
-        this.history.total = data.total    || 0;
+        const resp = await api.getFull('attempt.history', { page: this.history.page, limit: 10 });
+        this.history.list  = Array.isArray(resp.data) ? resp.data : [];
+        this.history.total = resp.meta?.total || 0;
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
@@ -279,13 +336,169 @@ function QuizBApp() {
     },
 
     async loadResult(attemptId) {
-      this.result.loading = true; this.result.data = null;
+      this.result.loading = true;
+      this.result.data = null;
       try {
-        this.result.data = await api.get('attempt.result', { id: attemptId });
+        const resp = await api.get('attempt.result', { id: attemptId });
+        // API returns { attempt: {...}, answers: [...] }
+        this.result.data = {
+          ...resp.attempt,
+          answers: resp.answers || [],
+          quiz: {
+            id:            resp.attempt.quiz_id,
+            title:         resp.attempt.quiz_title,
+            passing_score: resp.attempt.passing_score,
+            time_limit:    resp.attempt.time_limit,
+            category_name: resp.attempt.category_name,
+          },
+        };
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
         this.result.loading = false;
+      }
+    },
+
+    // ---- Classroom ----
+    async loadClassroom() {
+      this.classroom.loading = true;
+      this.classroom.list = [];
+      try {
+        const data = await api.get('class.list');
+        this.classroom.list = Array.isArray(data) ? data : [];
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        this.classroom.loading = false;
+      }
+    },
+
+    async loadClassroomDetail(classId) {
+      this.classroom.detailLoading = true;
+      this.classroom.detail = null;
+      this.classroom.members = [];
+      this.classroom.assignments = [];
+      try {
+        const data = await api.get('class.get', { id: classId });
+        this.classroom.detail      = data.class;
+        this.classroom.members     = data.members || [];
+        this.classroom.assignments = data.assignments || [];
+        this.classroom.isTeacher   = data.is_teacher || false;
+        this.pageTitle = (data.class?.name || 'Kelas') + ' — QuizB';
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        this.classroom.detailLoading = false;
+      }
+    },
+
+    openJoinClassModal() {
+      this.classroom.joinCode  = '';
+      this.classroom.joinError = '';
+      this.classroom.joinModal.show = true;
+    },
+
+    openCreateClassModal() {
+      this.classroom.createForm  = { name: '', description: '' };
+      this.classroom.createError = '';
+      this.classroom.createModal.show = true;
+    },
+
+    async joinClass() {
+      const code = this.classroom.joinCode.trim().toUpperCase();
+      if (!code) { this.classroom.joinError = 'Masukkan kode kelas'; return; }
+      this.classroom.joinLoading = true;
+      this.classroom.joinError   = '';
+      try {
+        const data = await api.post('class.join', { join_code: code });
+        this.classroom.joinModal.show = false;
+        this.showToast('Berhasil bergabung ke kelas!', 'success', '🎉');
+        await this.loadClassroom();
+      } catch (e) {
+        this.classroom.joinError = e.message;
+      } finally {
+        this.classroom.joinLoading = false;
+      }
+    },
+
+    async createClass() {
+      const f = this.classroom.createForm;
+      if (!f.name || f.name.length < 3) { this.classroom.createError = 'Nama kelas minimal 3 karakter'; return; }
+      this.classroom.createLoading = true;
+      this.classroom.createError   = '';
+      try {
+        await api.post('class.create', { name: f.name, description: f.description });
+        this.classroom.createModal.show = false;
+        this.showToast('Kelas berhasil dibuat!', 'success', '🎉');
+        await this.loadClassroom();
+      } catch (e) {
+        this.classroom.createError = e.message;
+      } finally {
+        this.classroom.createLoading = false;
+      }
+    },
+
+    async kickMember(classId, userId) {
+      if (!confirm('Keluarkan anggota ini dari kelas?')) return;
+      try {
+        await api.delete('class.kick', classId, { user_id: userId });
+        this.showToast('Anggota dikeluarkan', 'success', '✅');
+        await this.loadClassroomDetail(classId);
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      }
+    },
+
+    async openAssignModal() {
+      this.classroom.assignForm  = { title: '', quiz_id: '', mode: 'bebas', deadline: '' };
+      this.classroom.assignError = '';
+      this.classroom.assignModal.show = true;
+      // Load quiz list for dropdown if not already loaded
+      if (!this.classroom.quizListForAssign.length) {
+        this.classroom.quizListLoading = true;
+        try {
+          const resp = await api.getFull('quiz.list', { limit: 50 });
+          this.classroom.quizListForAssign = Array.isArray(resp.data) ? resp.data : [];
+        } catch (e) {
+          this.classroom.quizListForAssign = [];
+        } finally {
+          this.classroom.quizListLoading = false;
+        }
+      }
+    },
+
+    async createAssignment(classId) {
+      const f = this.classroom.assignForm;
+      if (!f.title || f.title.length < 3) { this.classroom.assignError = 'Judul tugas minimal 3 karakter'; return; }
+      if (!f.quiz_id) { this.classroom.assignError = 'Pilih paket soal'; return; }
+      this.classroom.assignLoading = true;
+      this.classroom.assignError   = '';
+      try {
+        await api.post('assignment.create', {
+          class_id:  parseInt(classId),
+          quiz_id:   parseInt(f.quiz_id),
+          title:     f.title,
+          mode:      f.mode,
+          deadline:  f.deadline || null,
+        });
+        this.classroom.assignModal.show = false;
+        this.showToast('Tugas berhasil dibuat!', 'success', '✅');
+        await this.loadClassroomDetail(classId);
+      } catch (e) {
+        this.classroom.assignError = e.message;
+      } finally {
+        this.classroom.assignLoading = false;
+      }
+    },
+
+    async deleteAssignment(assignId, classId) {
+      if (!confirm('Hapus tugas ini?')) return;
+      try {
+        await api.delete('assignment.delete', assignId);
+        this.showToast('Tugas dihapus', 'success', '🗑️');
+        await this.loadClassroomDetail(classId);
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
       }
     },
 
@@ -300,13 +513,39 @@ function QuizBApp() {
           const data = await api.get('admin.quiz_list', { page: this.admin.quizzesPage, limit: 15 });
           this.admin.quizzes      = data.quizzes || [];
           this.admin.quizzesTotal = data.total   || 0;
+          // Also load categories for quiz form dropdown
+          if (!this.admin.categories.length) {
+            this.admin.categories = await api.get('admin.category_list');
+          }
         } else if (tab === 'users') {
           const data = await api.get('admin.user_list', { page: this.admin.usersPage, limit: 15 });
           this.admin.users      = data.users  || [];
           this.admin.usersTotal = data.total  || 0;
         } else if (tab === 'categories') {
           this.admin.categories = await api.get('admin.category_list');
+        } else if (tab === 'questions') {
+          // questions tab: show quiz picker first
+          if (!this.admin.quizzes.length) {
+            const data = await api.get('admin.quiz_list', { limit: 50 });
+            this.admin.quizzes = data.quizzes || [];
+          }
+          if (this.admin.questionsQuizId) {
+            this.admin.questions = await api.get('question.list', { quiz_id: this.admin.questionsQuizId });
+          }
         }
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        this.admin.loading = false;
+      }
+    },
+
+    async loadAdminQuestions(quizId, quizTitle) {
+      this.admin.questionsQuizId    = quizId;
+      this.admin.questionsQuizTitle = quizTitle;
+      this.admin.loading = true;
+      try {
+        this.admin.questions = await api.get('question.list', { quiz_id: quizId });
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
@@ -327,7 +566,7 @@ function QuizBApp() {
     },
 
     async saveAdminForm() {
-      const { type, data } = this.admin.modal;
+      const { type } = this.admin.modal;
       const f = this.admin.form;
       this.admin.loading = true;
       try {
@@ -346,9 +585,19 @@ function QuizBApp() {
         } else if (type === 'user_edit') {
           await api.put('admin.user_update', f.id, f);
           this.showToast('User berhasil diperbarui', 'success', '✅');
+        } else if (type === 'question_create') {
+          await api.post('question.create', f);
+          this.showToast('Soal berhasil ditambahkan', 'success', '✅');
+          await this.loadAdminQuestions(this.admin.questionsQuizId, this.admin.questionsQuizTitle);
+        } else if (type === 'question_edit') {
+          await api.post('question.update', f);
+          this.showToast('Soal berhasil diperbarui', 'success', '✅');
+          await this.loadAdminQuestions(this.admin.questionsQuizId, this.admin.questionsQuizTitle);
         }
         this.closeAdminModal();
-        await this.loadAdminTab(this.admin.tab);
+        if (type !== 'question_create' && type !== 'question_edit') {
+          await this.loadAdminTab(this.admin.tab);
+        }
       } catch (e) {
         this.admin.formError = e.message;
       } finally {
@@ -362,11 +611,54 @@ function QuizBApp() {
         if (type === 'quiz')     await api.delete('admin.quiz_delete', id);
         if (type === 'category') await api.delete('admin.category_delete', id);
         if (type === 'user')     await api.delete('admin.user_delete', id);
+        if (type === 'question') {
+          await api.post('question.delete', { id });
+          this.showToast('Soal berhasil dihapus', 'success', '🗑️');
+          await this.loadAdminQuestions(this.admin.questionsQuizId, this.admin.questionsQuizTitle);
+          return;
+        }
         this.showToast('Berhasil dihapus', 'success', '🗑️');
         await this.loadAdminTab(this.admin.tab);
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       }
+    },
+
+    // Helper to build question form with blank options
+    buildQuestionForm(quizId) {
+      return {
+        quiz_id: quizId,
+        question_text: '',
+        type: 'multiple',
+        points: 10,
+        explanation: '',
+        options: [
+          { option_text: '', is_correct: true },
+          { option_text: '', is_correct: false },
+          { option_text: '', is_correct: false },
+          { option_text: '', is_correct: false },
+        ],
+      };
+    },
+
+    addOption() {
+      if (this.admin.form.options && this.admin.form.options.length < 5) {
+        this.admin.form.options = [...this.admin.form.options, { option_text: '', is_correct: false }];
+      }
+    },
+
+    removeOption(index) {
+      if (this.admin.form.options && this.admin.form.options.length > 2) {
+        this.admin.form.options = this.admin.form.options.filter((_, i) => i !== index);
+      }
+    },
+
+    setCorrectOption(index) {
+      if (!this.admin.form.options) return;
+      this.admin.form.options = this.admin.form.options.map((o, i) => ({
+        ...o,
+        is_correct: i === index,
+      }));
     },
 
     // ---- Search ----

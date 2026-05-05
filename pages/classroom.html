@@ -1,0 +1,147 @@
+<!-- CLASSROOM PAGE -->
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">🏫 Kelas Saya</h1>
+      <p class="text-gray-500 dark:text-gray-400 mt-1">
+        <span x-show="user?.role === 'pengajar' || user?.role === 'admin'">Kelola kelas yang Anda ajar</span>
+        <span x-show="user?.role !== 'pengajar' && user?.role !== 'admin'">Kelas yang Anda ikuti</span>
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <!-- Join class button (pelajar) -->
+      <template x-if="user?.role !== 'pengajar' && user?.role !== 'admin'">
+        <button @click="openJoinClassModal()" class="btn-secondary text-sm px-4 py-2">
+          🔑 Gabung Kelas
+        </button>
+      </template>
+      <!-- Create class button (pengajar/admin) -->
+      <template x-if="user?.role === 'pengajar' || user?.role === 'admin'">
+        <button @click="openCreateClassModal()" class="btn-primary text-sm px-4 py-2">
+          + Buat Kelas
+        </button>
+      </template>
+    </div>
+  </div>
+
+  <!-- Loading Skeleton -->
+  <div x-show="classroom.loading" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <template x-for="i in 6">
+      <div class="card p-6 space-y-3">
+        <div class="skeleton h-6 w-2/3 rounded"></div>
+        <div class="skeleton h-4 w-full rounded"></div>
+        <div class="skeleton h-4 w-1/2 rounded"></div>
+        <div class="flex gap-2 mt-4">
+          <div class="skeleton h-8 w-20 rounded-lg"></div>
+          <div class="skeleton h-8 w-24 rounded-lg"></div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Class Grid -->
+  <div x-show="!classroom.loading" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <template x-for="cls in classroom.list" :key="cls.id">
+      <div class="card card-hover p-6 cursor-pointer group flex flex-col"
+           @click="navigate('/classroom/' + cls.id)">
+        <!-- Header -->
+        <div class="flex items-start justify-between mb-3">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+            <span x-text="cls.name.charAt(0).toUpperCase()"></span>
+          </div>
+          <span class="badge text-xs" :class="cls.is_active ? 'badge-success' : 'badge-warning'"
+                x-text="cls.is_active ? 'Aktif' : 'Nonaktif'"></span>
+        </div>
+
+        <!-- Name & Desc -->
+        <h2 class="font-bold text-gray-800 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors mb-1 line-clamp-1" x-text="cls.name"></h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-4 flex-1" x-text="cls.description || 'Tidak ada deskripsi'"></p>
+
+        <!-- Stats -->
+        <div class="flex items-center gap-4 text-xs text-gray-400 border-t border-gray-100 dark:border-gray-800 pt-3">
+          <span>👥 <span x-text="cls.member_count || 0"></span> anggota</span>
+          <span>📋 <span x-text="cls.assignment_count || 0"></span> tugas</span>
+          <!-- For students: pending assignments -->
+          <span x-show="cls.pending_assignments > 0" class="badge badge-warning text-xs">
+            <span x-text="cls.pending_assignments"></span> belum dikerjakan
+          </span>
+        </div>
+
+        <!-- Join code (for teachers) -->
+        <div x-show="user?.role === 'pengajar' || user?.role === 'admin'"
+             class="mt-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-xs text-center">
+          Kode Join: <span class="font-mono font-bold text-primary-600 dark:text-primary-400" x-text="cls.join_code"></span>
+        </div>
+
+        <!-- Teacher info (for students) -->
+        <div x-show="user?.role !== 'pengajar' && user?.role !== 'admin'" class="mt-3 text-xs text-gray-400">
+          Pengajar: <span class="font-medium text-gray-600 dark:text-gray-300" x-text="cls.teacher_name"></span>
+        </div>
+      </div>
+    </template>
+
+    <!-- Empty state -->
+    <div x-show="!classroom.loading && classroom.list.length === 0" class="col-span-3 text-center py-20 text-gray-400">
+      <p class="text-5xl mb-4">🏫</p>
+      <p class="text-lg mb-2">Belum ada kelas</p>
+      <p class="text-sm mb-6">
+        <span x-show="user?.role === 'pengajar' || user?.role === 'admin'">Buat kelas pertama Anda!</span>
+        <span x-show="user?.role !== 'pengajar' && user?.role !== 'admin'">Gabung ke kelas dengan kode yang diberikan pengajar.</span>
+      </p>
+      <template x-if="user?.role === 'pengajar' || user?.role === 'admin'">
+        <button @click="openCreateClassModal()" class="btn-primary">+ Buat Kelas</button>
+      </template>
+      <template x-if="user?.role !== 'pengajar' && user?.role !== 'admin'">
+        <button @click="openJoinClassModal()" class="btn-primary">🔑 Gabung Kelas</button>
+      </template>
+    </div>
+  </div>
+
+  <!-- === JOIN CLASS MODAL === -->
+  <div x-show="classroom.joinModal.show" @keydown.escape.window="classroom.joinModal.show=false"
+       class="modal-overlay" x-transition>
+    <div class="modal-box p-6 max-w-sm">
+      <h2 class="font-bold text-lg text-gray-900 dark:text-white mb-1">🔑 Gabung Kelas</h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Masukkan kode kelas yang diberikan oleh pengajar.</p>
+      <input type="text" x-model="classroom.joinCode"
+             class="form-input text-center text-xl font-mono tracking-widest uppercase mb-4"
+             placeholder="ABCD12" maxlength="8"
+             @input="classroom.joinCode = $event.target.value.toUpperCase()" />
+      <div x-show="classroom.joinError" class="mb-3 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-sm text-red-600 dark:text-red-400" x-text="classroom.joinError"></div>
+      <div class="flex gap-3">
+        <button @click="classroom.joinModal.show=false" class="flex-1 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Batal</button>
+        <button @click="joinClass()" class="flex-1 btn-primary py-2" :disabled="classroom.joinLoading">
+          <span x-show="classroom.joinLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></span>
+          Gabung
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- === CREATE CLASS MODAL === -->
+  <div x-show="classroom.createModal.show" @keydown.escape.window="classroom.createModal.show=false"
+       class="modal-overlay" x-transition>
+    <div class="modal-box p-6">
+      <h2 class="font-bold text-lg text-gray-900 dark:text-white mb-5">🏫 Buat Kelas Baru</h2>
+      <div class="space-y-4">
+        <div>
+          <label class="form-label">Nama Kelas *</label>
+          <input x-model="classroom.createForm.name" class="form-input" placeholder="Contoh: Matematika 10A" />
+        </div>
+        <div>
+          <label class="form-label">Deskripsi</label>
+          <textarea x-model="classroom.createForm.description" class="form-input" rows="2" placeholder="Deskripsi singkat..."></textarea>
+        </div>
+      </div>
+      <div x-show="classroom.createError" class="mt-3 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-sm text-red-600 dark:text-red-400" x-text="classroom.createError"></div>
+      <div class="flex gap-3 mt-6">
+        <button @click="classroom.createModal.show=false" class="flex-1 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Batal</button>
+        <button @click="createClass()" class="flex-1 btn-primary py-2" :disabled="classroom.createLoading">
+          <span x-show="classroom.createLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></span>
+          Buat Kelas
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

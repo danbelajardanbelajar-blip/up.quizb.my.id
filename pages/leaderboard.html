@@ -27,7 +27,7 @@
       <div class="w-14 h-14 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white font-bold text-xl mx-auto mb-2 shadow-lg"
            x-text="leaderboard.list[1]?.name?.charAt(0)?.toUpperCase()"></div>
       <p class="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate" x-text="leaderboard.list[1]?.name"></p>
-      <p class="text-xs text-gray-400" x-text="leaderboard.list[1]?.total_points + ' pts'"></p>
+      <p class="text-xs text-gray-400" x-text="(leaderboard.list[1]?.total_score || 0) + ' pts'"></p>
       <div class="bg-gray-200 dark:bg-gray-600 h-16 rounded-t-lg mt-2 flex items-center justify-center text-2xl">🥈</div>
     </div>
     <!-- 1st -->
@@ -35,7 +35,7 @@
       <div class="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-white font-bold text-2xl mx-auto mb-2 shadow-xl ring-4 ring-yellow-300"
            x-text="leaderboard.list[0]?.name?.charAt(0)?.toUpperCase()"></div>
       <p class="text-sm font-bold text-gray-800 dark:text-gray-100 truncate" x-text="leaderboard.list[0]?.name"></p>
-      <p class="text-xs text-yellow-600 dark:text-yellow-400 font-semibold" x-text="leaderboard.list[0]?.total_points + ' pts'"></p>
+      <p class="text-xs text-yellow-600 dark:text-yellow-400 font-semibold" x-text="(leaderboard.list[0]?.total_score || 0) + ' pts'"></p>
       <div class="bg-yellow-400 dark:bg-yellow-500 h-24 rounded-t-lg mt-2 flex items-center justify-center text-3xl">🥇</div>
     </div>
     <!-- 3rd -->
@@ -43,7 +43,7 @@
       <div class="w-14 h-14 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-white font-bold text-xl mx-auto mb-2 shadow-lg"
            x-text="leaderboard.list[2]?.name?.charAt(0)?.toUpperCase()"></div>
       <p class="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate" x-text="leaderboard.list[2]?.name"></p>
-      <p class="text-xs text-gray-400" x-text="leaderboard.list[2]?.total_points + ' pts'"></p>
+      <p class="text-xs text-gray-400" x-text="(leaderboard.list[2]?.total_score || 0) + ' pts'"></p>
       <div class="bg-amber-500 dark:bg-amber-600 h-10 rounded-t-lg mt-2 flex items-center justify-center text-xl">🥉</div>
     </div>
   </div>
@@ -66,11 +66,11 @@
         <!-- Name -->
         <div class="flex-1 min-w-0">
           <p class="font-semibold text-gray-800 dark:text-gray-100 truncate" x-text="entry.name"></p>
-          <p class="text-xs text-gray-400" x-text="entry.quizzes_taken + ' quiz dikerjakan'"></p>
+          <p class="text-xs text-gray-400" x-text="entry.total_attempts + ' percobaan'"></p>
         </div>
         <!-- Points -->
         <div class="text-right">
-          <p class="font-bold text-primary-600 dark:text-primary-400" x-text="entry.total_points?.toLocaleString() + ' pts'"></p>
+          <p class="font-bold text-primary-600 dark:text-primary-400" x-text="(entry.total_score || 0).toLocaleString() + ' pts'"></p>
         </div>
       </div>
     </template>

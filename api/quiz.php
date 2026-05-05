@@ -7,6 +7,7 @@ function quiz_list(): void {
     [$page, $limit, $offset] = getPaginationParams();
     $category = (int)($_GET['category'] ?? 0);
     $diff     = sanitizeString($_GET['difficulty'] ?? '');
+    $search   = sanitizeString($_GET['search'] ?? '');
 
     $where  = ['q.is_published = 1'];
     $params = [];
@@ -19,6 +20,11 @@ function quiz_list(): void {
         $where[]  = 'q.difficulty = ?';
         $params[] = $diff;
     }
+    if ($search !== '') {
+        $where[]  = '(q.title LIKE ? OR q.description LIKE ?)';
+        $params[] = '%' . $search . '%';
+        $params[] = '%' . $search . '%';
+    }
 
     $whereStr = 'WHERE ' . implode(' AND ', $where);
 
@@ -28,8 +34,9 @@ function quiz_list(): void {
     )['cnt'];
 
     $quizzes = DB::all(
-        "SELECT q.id, q.title, q.slug, q.description, q.duration, q.difficulty,
-                q.total_questions, q.total_attempts,
+        "SELECT q.id, q.title, q.slug, q.description, q.time_limit, q.duration, q.difficulty,
+                q.total_questions, q.total_questions AS question_count,
+                q.total_attempts, q.total_attempts AS attempt_count,
                 c.name AS category_name, c.icon AS category_icon, c.color AS category_color
          FROM quizzes q
          INNER JOIN categories c ON c.id = q.category_id
@@ -46,20 +53,16 @@ function quiz_get(): void {
     $id   = (int)($_GET['id']   ?? 0);
     $slug = sanitizeString($_GET['slug'] ?? '');
 
+    $baseSelect = "SELECT q.*,
+                q.total_questions AS question_count,
+                q.total_attempts  AS attempt_count,
+                c.name AS category_name, c.icon AS category_icon, c.color AS category_color
+         FROM quizzes q INNER JOIN categories c ON c.id = q.category_id";
+
     if ($id > 0) {
-        $quiz = DB::one(
-            "SELECT q.*, c.name AS category_name, c.icon AS category_icon, c.color AS category_color
-             FROM quizzes q INNER JOIN categories c ON c.id = q.category_id
-             WHERE q.id = ? AND q.is_published = 1",
-            [$id]
-        );
+        $quiz = DB::one("$baseSelect WHERE q.id = ? AND q.is_published = 1", [$id]);
     } elseif ($slug) {
-        $quiz = DB::one(
-            "SELECT q.*, c.name AS category_name, c.icon AS category_icon, c.color AS category_color
-             FROM quizzes q INNER JOIN categories c ON c.id = q.category_id
-             WHERE q.slug = ? AND q.is_published = 1",
-            [$slug]
-        );
+        $quiz = DB::one("$baseSelect WHERE q.slug = ? AND q.is_published = 1", [$slug]);
     } else {
         jsonError('ID atau slug diperlukan');
     }
@@ -105,8 +108,9 @@ function quiz_questions(): void {
 
 function quiz_featured(): void {
     $quizzes = DB::all(
-        "SELECT q.id, q.title, q.slug, q.description, q.duration, q.difficulty,
-                q.total_questions, q.total_attempts,
+        "SELECT q.id, q.title, q.slug, q.description, q.time_limit, q.duration, q.difficulty,
+                q.total_questions, q.total_questions AS question_count,
+                q.total_attempts, q.total_attempts AS attempt_count,
                 c.name AS category_name, c.icon AS category_icon, c.color AS category_color
          FROM quizzes q
          INNER JOIN categories c ON c.id = q.category_id

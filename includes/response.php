@@ -11,12 +11,18 @@ function jsonResponse(mixed $data, int $code = 200): never {
     exit;
 }
 
-function jsonSuccess(mixed $data = null, string $message = 'OK'): never {
+function jsonSuccess(mixed $data = null, string|int $message = 'OK'): never {
+    // Allow callers to pass HTTP code as 2nd arg (e.g. jsonSuccess($data, 201))
+    if (is_int($message)) {
+        http_response_code($message);
+        jsonResponse(['success' => true, 'message' => 'OK', 'data' => $data], $message);
+    }
     jsonResponse(['success' => true, 'message' => $message, 'data' => $data]);
 }
 
 function jsonError(string $message, int $code = 400): never {
-    jsonResponse(['success' => false, 'error' => $message, 'code' => $code], $code);
+    // Include both 'error' and 'message' keys for JS compatibility
+    jsonResponse(['success' => false, 'error' => $message, 'message' => $message, 'code' => $code], $code);
 }
 
 function jsonPaginated(array $data, int $total, int $page, int $limit): never {
@@ -39,6 +45,11 @@ function sanitizeString(string $value): string {
 function getBody(): array {
     $raw = file_get_contents('php://input');
     return json_decode($raw, true) ?? [];
+}
+
+// Alias — beberapa handler menggunakan nama ini
+function getJsonBody(): array {
+    return getBody();
 }
 
 function getPaginationParams(): array {

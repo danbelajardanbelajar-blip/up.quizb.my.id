@@ -66,15 +66,21 @@ const api = {
     return data.data;
   },
 
-  async delete(action, id) {
+  async delete(action, id, body = null) {
     const token = await this._getToken();
-    const r = await fetch(`${API_BASE}?action=${action}&id=${id}`, {
+    const url = id ? `${API_BASE}?action=${action}&id=${id}` : `${API_BASE}?action=${action}`;
+    const opts = {
       method: 'DELETE',
       headers: { 'X-CSRF-Token': token || '' },
       credentials: 'same-origin',
-    });
+    };
+    if (body) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
+    const r = await fetch(url, opts);
     const data = await r.json();
-    if (!r.ok) throw new Error(data.message || 'Request failed');
+    if (!r.ok) throw new Error(data.message || data.error || 'Request failed');
     return data.data;
   },
 };

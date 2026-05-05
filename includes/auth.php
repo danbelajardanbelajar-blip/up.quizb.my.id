@@ -21,7 +21,8 @@ function requireAuth(): array {
     startSecureSession();
     if (empty($_SESSION['user_id'])) {
         http_response_code(401);
-        die(json_encode(['error' => 'Unauthorized', 'code' => 401]));
+        header('Content-Type: application/json; charset=utf-8');
+        die(json_encode(['success' => false, 'error' => 'Unauthorized', 'message' => 'Silakan login untuk mengakses fitur ini', 'code' => 401]));
     }
     return [
         'id'   => (int) $_SESSION['user_id'],

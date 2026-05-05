@@ -1,0 +1,146 @@
+<!-- PROFILE PAGE -->
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10" x-data="{
+  editing: false,
+  profileForm: { name: '', password: '', password_new: '', password_confirm: '' },
+  profileLoading: false,
+  profileError: '',
+  profileSuccess: '',
+  async saveProfile() {
+    const f = this.profileForm;
+    if (!f.name || f.name.length < 2) { this.profileError = 'Nama minimal 2 karakter'; return; }
+    if (f.password_new && f.password_new !== f.password_confirm) { this.profileError = 'Password baru tidak cocok'; return; }
+    if (f.password_new && f.password_new.length < 6) { this.profileError = 'Password baru minimal 6 karakter'; return; }
+    this.profileLoading = true; this.profileError = ''; this.profileSuccess = '';
+    try {
+      const body = { name: f.name };
+      if (f.password && f.password_new) {
+        body.password = f.password;
+        body.password_new = f.password_new;
+      }
+      await api.post('auth.update_profile', body);
+      this.$dispatch('profile-updated', { name: f.name });
+      user.name = f.name;
+      this.profileSuccess = 'Profil berhasil diperbarui!';
+      this.editing = false;
+    } catch(e) {
+      this.profileError = e.message;
+    } finally {
+      this.profileLoading = false;
+    }
+  },
+  initForm() {
+    this.profileForm.name = user?.name || '';
+    this.profileForm.password = '';
+    this.profileForm.password_new = '';
+    this.profileForm.password_confirm = '';
+  }
+}">
+
+  <div class="mb-8">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">👤 Profil Saya</h1>
+    <p class="text-gray-500 dark:text-gray-400 mt-1">Kelola informasi akun kamu</p>
+  </div>
+
+  <!-- Profile Card -->
+  <div class="card p-6 mb-6">
+    <div class="flex items-center gap-5 mb-6">
+      <!-- Avatar -->
+      <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-400 to-primary-700 flex items-center justify-center text-white font-bold text-3xl shadow-xl"
+           x-text="user?.name?.charAt(0)?.toUpperCase()"></div>
+      <div>
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white" x-text="user?.name"></h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400" x-text="user?.email"></p>
+        <span class="mt-1 inline-block badge text-xs"
+              :class="user?.role === 'admin' ? 'badge-primary' : user?.role === 'pengajar' ? 'badge-warning' : 'badge-success'"
+              x-text="{ admin: '⚙️ Admin', pengajar: '👨‍🏫 Pengajar', user: '🎓 Pelajar' }[user?.role] || user?.role"></span>
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="grid grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+      <div class="text-center">
+        <div class="text-2xl font-bold text-primary-600 dark:text-primary-400" x-text="(dashboard.stats?.total_points || 0).toLocaleString()"></div>
+        <div class="text-xs text-gray-400 mt-0.5">Total Poin</div>
+      </div>
+      <div class="text-center">
+        <div class="text-2xl font-bold text-gray-800 dark:text-gray-100" x-text="dashboard.stats?.quizzes_taken || 0"></div>
+        <div class="text-xs text-gray-400 mt-0.5">Quiz Selesai</div>
+      </div>
+      <div class="text-center">
+        <div class="text-2xl font-bold text-gray-800 dark:text-gray-100" x-text="(dashboard.stats?.avg_score || 0) + '%'"></div>
+        <div class="text-xs text-gray-400 mt-0.5">Rata-rata Skor</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Profile -->
+  <div class="card p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="font-bold text-gray-900 dark:text-white">✏️ Edit Profil</h2>
+      <button @click="editing=!editing; if(editing) initForm()" class="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
+              x-text="editing ? 'Batal' : 'Edit'"></button>
+    </div>
+
+    <!-- View Mode -->
+    <div x-show="!editing" class="space-y-3">
+      <div class="flex items-center gap-3 py-2 border-b border-gray-100 dark:border-gray-800">
+        <span class="text-sm font-medium text-gray-400 w-24">Nama</span>
+        <span class="text-sm text-gray-800 dark:text-gray-100 font-medium" x-text="user?.name"></span>
+      </div>
+      <div class="flex items-center gap-3 py-2 border-b border-gray-100 dark:border-gray-800">
+        <span class="text-sm font-medium text-gray-400 w-24">Email</span>
+        <span class="text-sm text-gray-800 dark:text-gray-100" x-text="user?.email"></span>
+      </div>
+      <div class="flex items-center gap-3 py-2">
+        <span class="text-sm font-medium text-gray-400 w-24">Password</span>
+        <span class="text-sm text-gray-400">••••••••</span>
+      </div>
+    </div>
+
+    <!-- Edit Mode -->
+    <div x-show="editing" class="space-y-4">
+      <div x-show="profileSuccess" class="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-600 dark:text-green-400" x-text="profileSuccess"></div>
+      <div x-show="profileError" class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400" x-text="profileError"></div>
+
+      <div>
+        <label class="form-label">Nama Lengkap</label>
+        <input type="text" x-model="profileForm.name" class="form-input" placeholder="Nama kamu" />
+      </div>
+
+      <hr class="border-gray-100 dark:border-gray-800 my-4" />
+      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Ganti Password (kosongkan jika tidak ingin ganti)</p>
+
+      <div>
+        <label class="form-label">Password Saat Ini</label>
+        <input type="password" x-model="profileForm.password" class="form-input" placeholder="Password lama" />
+      </div>
+      <div>
+        <label class="form-label">Password Baru</label>
+        <input type="password" x-model="profileForm.password_new" class="form-input" placeholder="Min. 6 karakter" />
+      </div>
+      <div>
+        <label class="form-label">Konfirmasi Password Baru</label>
+        <input type="password" x-model="profileForm.password_confirm" class="form-input" placeholder="Ulangi password baru" />
+      </div>
+
+      <div class="flex gap-3 pt-2">
+        <button @click="editing=false" class="flex-1 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Batal</button>
+        <button @click="saveProfile()" class="flex-1 btn-primary py-2" :disabled="profileLoading">
+          <span x-show="profileLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></span>
+          Simpan Perubahan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Danger Zone -->
+  <div class="card p-6 mt-6 border-red-200 dark:border-red-900/50">
+    <h2 class="font-bold text-red-600 dark:text-red-400 mb-3">⚠️ Zona Bahaya</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Tindakan di bawah ini tidak dapat dibatalkan.</p>
+    <button @click="if(confirm('Yakin ingin logout dari semua perangkat?')) logout()"
+            class="btn-danger text-sm px-4 py-2">
+      🚪 Logout & Hapus Session
+    </button>
+  </div>
+
+</div>

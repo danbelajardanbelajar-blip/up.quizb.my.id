@@ -1,6 +1,14 @@
 <!-- QUIZ ENGINE PAGE -->
 <div x-data="QuizEngine()"
-     x-init="loadQuiz(window.location.hash.split('/').pop())"
+     x-init="(function() {
+       const hash = window.location.hash;
+       const match = hash.match(/\/play\/(\d+)/);
+       const quizId = match ? match[1] : null;
+       const assignMatch = hash.match(/[?&]assign=(\d+)/);
+       const assignId = assignMatch ? assignMatch[1] : null;
+       if (quizId) loadQuiz(quizId, assignId);
+       else { phase = 'error'; error = 'Quiz ID tidak ditemukan di URL'; }
+     })()"
      @beforeunload.window="stopTimer()"
      class="min-h-screen bg-gray-50 dark:bg-gray-950">
 

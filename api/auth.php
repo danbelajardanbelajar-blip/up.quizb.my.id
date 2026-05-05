@@ -33,11 +33,11 @@ function auth_login(): void {
     loginUser($user);
 
     jsonSuccess([
-        'id'     => (int)$user['id'],
-        'name'   => $user['name'],
-        'email'  => $user['email'],
-        'role'   => $user['role'],
-        'csrf'   => generateCsrfToken(),
+        'id'         => (int)$user['id'],
+        'name'       => $user['name'],
+        'email'      => $user['email'],
+        'role'       => $user['role'],
+        'csrf_token' => generateCsrfToken(),
     ], 'Login berhasil');
 }
 
@@ -67,11 +67,11 @@ function auth_register(): void {
     loginUser($user);
 
     jsonSuccess([
-        'id'    => (int)$user['id'],
-        'name'  => $user['name'],
-        'email' => $user['email'],
-        'role'  => $user['role'],
-        'csrf'  => generateCsrfToken(),
+        'id'         => (int)$user['id'],
+        'name'       => $user['name'],
+        'email'      => $user['email'],
+        'role'       => $user['role'],
+        'csrf_token' => generateCsrfToken(),
     ], 'Registrasi berhasil');
 }
 
@@ -94,4 +94,40 @@ function auth_me(): void {
 
 function auth_csrf(): void {
     jsonSuccess(['token' => generateCsrfToken()]);
+}
+
+function auth_update_profile(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $user = requireAuth();
+
+    $body     = getBody();
+    $name     = sanitizeString($body['name'] ?? '');
+    $password = $body['password']     ?? '';
+    $newPass  = $body['password_new'] ?? '';
+
+    if (!$name || strlen($name) < 2) jsonError('Nama minimal 2 karakter');
+
+    $existing = DB::one('SELECT * FROM users WHERE id = ?', [$user['id']]);
+    if (!$existing) jsonError('User tidak ditemukan', 404);
+
+    // Update name
+    DB::conn()->prepare('UPDATE users SET name = ?, updated_at = NOW() WHERE id = ?')
+        ->execute([$name, $user['id']]);
+
+    // Update session name
+    $_SESSION['user_name'] = $name;
+
+    // Optionally change password
+    if ($newPass) {
+        if (strlen($newPass) < 6) jsonError('Password baru minimal 6 karakter');
+        if (!$password) jsonError('Masukkan password saat ini untuk menggantinya');
+        if (!password_verify($password, $existing['password_hash'])) {
+            jsonError('Password saat ini salah', 401);
+        }
+        $hash = password_hash($newPass, PASSWORD_BCRYPT, ['cost' => 12]);
+        DB::conn()->prepare('UPDATE users SET password_hash = ? WHERE id = ?')
+            ->execute([$hash, $user['id']]);
+    }
+
+    jsonSuccess(['name' => $name, 'message' => 'Profil berhasil diperbarui']);
 }

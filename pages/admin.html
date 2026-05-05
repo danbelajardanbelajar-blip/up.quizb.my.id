@@ -10,10 +10,11 @@
 
   <!-- Tabs -->
   <div class="flex gap-1 border-b border-gray-200 dark:border-gray-800 mb-6 overflow-x-auto">
-    <button @click="loadAdminTab('stats')"    :class="admin.tab==='stats'    ? 'admin-tab active' : 'admin-tab'">📊 Statistik</button>
-    <button @click="loadAdminTab('quizzes')"  :class="admin.tab==='quizzes'  ? 'admin-tab active' : 'admin-tab'">📝 Quiz</button>
+    <button @click="loadAdminTab('stats')"     :class="admin.tab==='stats'     ? 'admin-tab active' : 'admin-tab'">📊 Statistik</button>
+    <button @click="loadAdminTab('quizzes')"   :class="admin.tab==='quizzes'   ? 'admin-tab active' : 'admin-tab'">📝 Quiz</button>
     <button @click="loadAdminTab('categories')" :class="admin.tab==='categories' ? 'admin-tab active' : 'admin-tab'">📂 Kategori</button>
-    <button @click="loadAdminTab('users')"    :class="admin.tab==='users'    ? 'admin-tab active' : 'admin-tab'">👥 Pengguna</button>
+    <button @click="loadAdminTab('users')"     :class="admin.tab==='users'     ? 'admin-tab active' : 'admin-tab'">👥 Pengguna</button>
+    <button @click="loadAdminTab('questions')" :class="admin.tab==='questions' ? 'admin-tab active' : 'admin-tab'">❓ Soal</button>
   </div>
 
   <!-- Loading -->
@@ -162,7 +163,15 @@
             </div>
             <div><label class="form-label">Waktu (detik)</label><input type="number" x-model.number="admin.form.time_limit" class="form-input" /></div>
             <div><label class="form-label">Min. Lulus (%)</label><input type="number" x-model.number="admin.form.passing_score" class="form-input" min="0" max="100" /></div>
-            <div><label class="form-label">Kategori ID</label><input type="number" x-model.number="admin.form.category_id" class="form-input" /></div>
+            <div>
+              <label class="form-label">Kategori *</label>
+              <select x-model.number="admin.form.category_id" class="form-input">
+                <option value="">-- Pilih Kategori --</option>
+                <template x-for="cat in admin.categories" :key="cat.id">
+                  <option :value="cat.id" x-text="cat.name"></option>
+                </template>
+              </select>
+            </div>
           </div>
           <div class="flex items-center gap-2">
             <input type="checkbox" id="is-published" x-model.number="admin.form.is_published" :checked="admin.form.is_published==1" class="w-4 h-4 accent-primary-600" />
@@ -203,6 +212,42 @@
         </div>
       </div>
 
+      <!-- Question Create/Edit -->
+      <div x-show="admin.modal.type==='question_create'||admin.modal.type==='question_edit'">
+        <h2 class="font-bold text-lg text-gray-900 dark:text-white mb-5"
+            x-text="admin.modal.type==='question_create' ? '+ Tambah Soal' : '✏️ Edit Soal'"></h2>
+        <div class="space-y-4">
+          <div><label class="form-label">Teks Soal *</label><textarea x-model="admin.form.question_text" class="form-input" rows="3" placeholder="Tulis pertanyaan..."></textarea></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="form-label">Tipe</label>
+              <select x-model="admin.form.type" class="form-input">
+                <option value="multiple">Pilihan Ganda</option>
+              </select>
+            </div>
+            <div><label class="form-label">Poin</label><input type="number" x-model.number="admin.form.points" class="form-input" min="1" max="100" /></div>
+          </div>
+          <div>
+            <label class="form-label">Opsi Jawaban</label>
+            <div class="space-y-2" x-show="admin.form.options">
+              <template x-for="(opt, idx) in admin.form.options" :key="idx">
+                <div class="flex items-center gap-2">
+                  <button type="button" @click="setCorrectOption(idx)"
+                          class="w-6 h-6 rounded-full border-2 flex-shrink-0 transition-colors"
+                          :class="opt.is_correct ? 'bg-green-500 border-green-500' : 'border-gray-300 dark:border-gray-600'"
+                          :title="opt.is_correct ? 'Jawaban benar' : 'Klik untuk jadikan jawaban benar'">
+                    <span x-show="opt.is_correct" class="text-white text-xs">✓</span>
+                  </button>
+                  <input type="text" x-model="opt.option_text" class="form-input flex-1 py-2" :placeholder="'Opsi ' + String.fromCharCode(65+idx)" />
+                  <button type="button" @click="removeOption(idx)" class="text-red-400 hover:text-red-600 text-xs" x-show="admin.form.options.length > 2">✕</button>
+                </div>
+              </template>
+            </div>
+            <button type="button" @click="addOption()" class="mt-2 text-xs text-primary-600 dark:text-primary-400 hover:underline" x-show="admin.form.options && admin.form.options.length < 5">+ Tambah Opsi</button>
+          </div>
+          <div><label class="form-label">Penjelasan (opsional)</label><textarea x-model="admin.form.explanation" class="form-input" rows="2" placeholder="Penjelasan jawaban benar..."></textarea></div>
+        </div>
+      </div>
+
       <!-- Error -->
       <div x-show="admin.formError" class="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg text-sm text-red-600 dark:text-red-400" x-text="admin.formError"></div>
 
@@ -214,6 +259,70 @@
           Simpan
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- ===== QUESTIONS TAB ===== -->
+  <div x-show="!admin.loading && admin.tab==='questions'" class="animate-fade-in">
+    <!-- Quiz picker -->
+    <div class="mb-6">
+      <label class="form-label">Pilih Quiz untuk Kelola Soal</label>
+      <select @change="admin.questionsQuizId && loadAdminQuestions(admin.questionsQuizId, admin.quizzes.find(q=>q.id==admin.questionsQuizId)?.title || '')" x-model.number="admin.questionsQuizId" class="form-input max-w-md">
+        <option value="">-- Pilih Quiz --</option>
+        <template x-for="q in admin.quizzes" :key="q.id">
+          <option :value="q.id" x-text="q.title"></option>
+        </template>
+      </select>
+    </div>
+
+    <!-- Questions list -->
+    <div x-show="admin.questionsQuizId">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold text-gray-800 dark:text-gray-100">
+          Soal untuk: <span class="text-primary-600" x-text="admin.questionsQuizTitle"></span>
+          <span class="text-gray-400 text-sm ml-2" x-text="'(' + admin.questions.length + ' soal)'"></span>
+        </h2>
+        <button @click="admin.form = buildQuestionForm(admin.questionsQuizId); openAdminModal('question_create')" class="btn-primary text-sm px-4 py-2">+ Tambah Soal</button>
+      </div>
+
+      <div class="space-y-3">
+        <template x-for="(q, idx) in admin.questions" :key="q.id">
+          <div class="card p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="w-7 h-7 rounded-lg bg-primary-100 dark:bg-primary-900/40 text-primary-600 text-xs font-bold flex items-center justify-center flex-shrink-0" x-text="idx+1"></span>
+                  <p class="text-sm font-medium text-gray-800 dark:text-gray-100 line-clamp-2" x-text="q.question_text"></p>
+                </div>
+                <div class="ml-9 space-y-1">
+                  <template x-for="opt in q.options" :key="opt.id">
+                    <div class="flex items-center gap-1.5 text-xs">
+                      <span :class="opt.is_correct ? 'text-green-500' : 'text-gray-400'" x-text="opt.is_correct ? '✅' : '○'"></span>
+                      <span :class="opt.is_correct ? 'text-green-600 dark:text-green-400 font-medium' : 'text-gray-500 dark:text-gray-400'" x-text="opt.option_text"></span>
+                    </div>
+                  </template>
+                </div>
+                <p x-show="q.explanation" class="ml-9 mt-2 text-xs text-gray-400 italic" x-text="'💡 ' + q.explanation"></p>
+              </div>
+              <div class="flex gap-2 flex-shrink-0">
+                <button @click="openAdminModal('question_edit', {...q, options: q.options.map(o=>({...o}))})" class="text-xs text-blue-500 hover:underline">Edit</button>
+                <button @click="deleteAdminItem('question', q.id)" class="text-xs text-red-500 hover:underline">Hapus</button>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <div x-show="admin.questions.length === 0 && admin.questionsQuizId" class="text-center py-12 text-gray-400">
+          <p class="text-4xl mb-3">❓</p>
+          <p>Quiz ini belum memiliki soal</p>
+          <button @click="admin.form = buildQuestionForm(admin.questionsQuizId); openAdminModal('question_create')" class="mt-3 btn-primary text-sm px-4 py-2">+ Tambah Soal Pertama</button>
+        </div>
+      </div>
+    </div>
+
+    <div x-show="!admin.questionsQuizId" class="text-center py-16 text-gray-400">
+      <p class="text-4xl mb-3">❓</p>
+      <p>Pilih quiz di atas untuk melihat dan mengelola soal-soalnya</p>
     </div>
   </div>
 

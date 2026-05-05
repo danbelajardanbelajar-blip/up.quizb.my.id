@@ -49,14 +49,23 @@ function admin_quiz_create(): void {
     if (!in_array($difficulty, ['easy','medium','hard'])) jsonError('Difficulty tidak valid');
     if ($categoryId <= 0) jsonError('Pilih kategori');
 
+    $slug = preg_replace('/[^a-z0-9]+/', '-', strtolower($title));
+    $slug = trim($slug, '-');
+    // Pastikan slug unik
+    $slugBase  = $slug;
+    $slugCount = 1;
+    while (DB::one("SELECT id FROM quizzes WHERE slug = ?", [$slug])) {
+        $slug = $slugBase . '-' . $slugCount++;
+    }
+
     $pdo = DB::conn();
     $stmt = $pdo->prepare(
-        "INSERT INTO quizzes (title, description, category_id, difficulty, time_limit,
+        "INSERT INTO quizzes (title, slug, description, category_id, difficulty, time_limit,
                               passing_score, is_published, max_attempts, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     $stmt->execute([
-        $title, $description, $categoryId, $difficulty, $timeLimit,
+        $title, $slug, $description, $categoryId, $difficulty, $timeLimit,
         $passingScore, $isPublished, $maxAttempts, $_SESSION['user_id']
     ]);
     $newId = $pdo->lastInsertId();
@@ -65,7 +74,8 @@ function admin_quiz_create(): void {
     $pdo->prepare("UPDATE categories SET quiz_count = quiz_count + 1 WHERE id = ?")->execute([$categoryId]);
 
     $quiz = DB::one("SELECT q.*, c.name AS category_name FROM quizzes q LEFT JOIN categories c ON q.category_id = c.id WHERE q.id = ?", [$newId]);
-    jsonSuccess($quiz, 201);
+    http_response_code(201);
+    jsonSuccess($quiz, 'Quiz berhasil dibuat');
 }
 
 function admin_quiz_update(): void {
