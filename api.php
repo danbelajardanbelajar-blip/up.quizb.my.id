@@ -56,6 +56,7 @@ $routes = [
     'admin'       => __DIR__ . '/api/admin.php',
     'class'       => __DIR__ . '/api/class.php',
     'assignment'  => __DIR__ . '/api/assignment.php',
+    'fix'         => __DIR__ . '/api/fix.php',
 ];
 
 if (!isset($routes[$ns])) {
