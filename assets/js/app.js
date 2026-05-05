@@ -96,8 +96,11 @@ function QuizBApp() {
       // Dark mode
       this.applyDark();
 
+      // Save the original intended hash BEFORE any redirect may change it.
+      const initialHash = window.location.hash || '#/';
+
       // Hash routing
-      this.handleRoute(window.location.hash || '#/');
+      this.handleRoute(initialHash);
       window.addEventListener('hashchange', () => this.handleRoute(window.location.hash));
 
       // Search events
@@ -107,7 +110,18 @@ function QuizBApp() {
       await this.loadUser();
       // Sync settings state dengan data user
       if (this.user) {
-        this.settings.limit = this.user.quiz_questions_limit || 10;
+        this.settings.limit            = this.user.quiz_questions_limit || 10;
+        this.settings.shuffleQuestions = this.user.shuffle_questions    ?? true;
+        this.settings.shuffleOptions   = this.user.shuffle_options      ?? true;
+      }
+
+      // After loadUser: if the user IS authenticated and the original route was
+      // a protected page (but we were bounced to /login because user hadn't loaded
+      // yet), navigate back to the intended destination now.
+      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings'];
+      const intendedPath = (initialHash.replace(/^#/, '').split('?')[0]) || '/';
+      if (this.user && protected_routes.some(r => intendedPath.startsWith(r))) {
+        return this.handleRoute(initialHash);
       }
 
       // Re-check protected route guards after user is loaded.
@@ -813,6 +827,38 @@ function QuizBApp() {
       if (!this.admin.form.options) return;
       this.admin.form.options = this.admin.form.options.map((o, i) => ({
         ...o,
+        is_correct: i === index,
+      }));
+    },
+
+    // ---- Search ----
+    onSearch: debounce(async function(q) {
+      if (!q || q.length < 2) return;
+      this.quizzes.search = q;
+      this.quizzes.page = 1;
+      this.navigate('/quizzes');
+      await this.loadQuizzes(true);
+    }, 300),
+
+    // ---- Dark Mode ----
+    toggleDark() {
+      this.darkMode = !this.darkMode;
+      store.set('darkMode', this.darkMode);
+      this.applyDark();
+    },
+    applyDark() {
+      document.documentElement.classList.toggle('dark', this.darkMode);
+    },
+
+    // ---- Toast ----
+    showToast(message, type = 'success', icon = '✅') {
+      clearTimeout(this._toastTimer);
+      this.toast = { show: true, message, type, icon };
+      this._toastTimer = setTimeout(() => { this.toast.show = false; }, 3500);
+    },
+  };
+}
+ ...o,
         is_correct: i === index,
       }));
     },
