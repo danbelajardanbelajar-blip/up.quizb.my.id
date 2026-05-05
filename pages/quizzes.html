@@ -5,7 +5,7 @@
       <h1 class="text-3xl font-bold text-gray-900 dark:text-white">📝 Semua Quiz</h1>
       <p class="text-gray-500 dark:text-gray-400 mt-1" x-text="quizzes.total + ' quiz tersedia'"></p>
     </div>
-    <!-- Filters -->
+    <!-- Search + Category Filter -->
     <div class="flex items-center gap-2 flex-wrap">
       <input type="text" x-model="quizzes.search" @input.debounce.400ms="loadQuizzes(true)"
              placeholder="Cari quiz..." class="form-input w-48 py-2 text-sm" />
@@ -16,6 +16,25 @@
         </template>
       </select>
     </div>
+  </div>
+
+  <!-- Difficulty Filter Tabs -->
+  <div class="flex items-center gap-2 mb-6 flex-wrap">
+    <span class="text-sm text-gray-500 dark:text-gray-400 font-medium mr-1">Tingkat:</span>
+    <template x-for="d in [{v:'',l:'Semua'},{v:'easy',l:'😊 Mudah'},{v:'medium',l:'😐 Sedang'},{v:'hard',l:'😤 Sulit'}]" :key="d.v">
+      <button @click="quizzes.difficulty=d.v; loadQuizzes(true)"
+              class="px-3 py-1.5 rounded-full text-xs font-semibold transition-all border"
+              :class="(quizzes.difficulty||'')===(d.v)
+                ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-primary-400 hover:text-primary-600'"
+              x-text="d.l"></button>
+    </template>
+    <!-- Reset all -->
+    <button x-show="quizzes.search || quizzes.categoryId || quizzes.difficulty"
+            @click="quizzes.search=''; quizzes.categoryId=0; quizzes.difficulty=''; loadQuizzes(true)"
+            class="px-3 py-1.5 rounded-full text-xs font-medium text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 transition-all">
+      ✕ Reset Filter
+    </button>
   </div>
 
   <!-- Skeleton -->
@@ -49,22 +68,26 @@
           <span>⏱ <span x-text="Math.floor(quiz.time_limit/60)"></span>m</span>
           <span>❓ <span x-text="quiz.question_count"></span></span>
           <span>👥 <span x-text="quiz.attempt_count||0"></span></span>
+          <span class="ml-auto text-xs text-primary-500 font-medium group-hover:underline">Mulai →</span>
         </div>
       </div>
     </template>
   </div>
 
+  <!-- Empty State -->
   <div x-show="!quizzes.loading && quizzes.list.length===0" class="text-center py-20 text-gray-400">
     <p class="text-5xl mb-4">🔍</p>
     <p class="text-lg">Tidak ada quiz ditemukan</p>
-    <button @click="quizzes.search='';quizzes.categoryId=0;loadQuizzes(true)" class="mt-4 text-sm text-primary-600 hover:underline">Reset filter</button>
+    <button @click="quizzes.search='';quizzes.categoryId=0;quizzes.difficulty='';loadQuizzes(true)"
+            class="mt-4 text-sm text-primary-600 hover:underline">Reset filter</button>
   </div>
 
   <!-- Pagination -->
   <div x-show="!quizzes.loading && quizzes.total > 12" class="flex items-center justify-center gap-2 mt-10">
     <button @click="quizzes.page--;loadQuizzes()" :disabled="quizzes.page<=1"
             class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">← Prev</button>
-    <span class="text-sm text-gray-500 dark:text-gray-400 px-3" x-text="'Halaman ' + quizzes.page"></span>
+    <span class="text-sm text-gray-500 dark:text-gray-400 px-3"
+          x-text="'Halaman ' + quizzes.page + ' dari ' + Math.max(1, Math.ceil(quizzes.total/12))"></span>
     <button @click="quizzes.page++;loadQuizzes()" :disabled="quizzes.page * 12 >= quizzes.total"
             class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">Next →</button>
   </div>

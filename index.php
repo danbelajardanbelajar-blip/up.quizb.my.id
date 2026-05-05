@@ -164,9 +164,11 @@
     </div>
 
     <!-- QUIZ ENGINE PAGE -->
-    <div x-if="currentRoute.startsWith('/play/')" x-transition:enter="animate-fade-in">
-      <?php include 'pages/quiz-engine.html'; ?>
-    </div>
+    <template x-if="currentRoute.startsWith('/play/')">
+      <div x-transition:enter="animate-fade-in">
+        <?php include 'pages/quiz-engine.html'; ?>
+      </div>
+    </template>
 
     <!-- RESULT PAGE -->
     <div x-show="currentRoute.startsWith('/result/')" x-transition:enter="animate-fade-in">

@@ -32,12 +32,12 @@ function QuizBApp() {
     // ---- Page Data ----
     home:        { featured: [], categories: [], loading: true, stats: { total_questions: 0, total_quizzes: 0, total_categories: 0, total_users: 0 } },
     categories:  { list: [], loading: true },
-    quizzes:     { list: [], loading: true, total: 0, page: 1, categoryId: 0, search: '' },
+    quizzes:     { list: [], loading: true, total: 0, page: 1, categoryId: 0, search: '', difficulty: '' },
     quizDetail:  { quiz: null, loading: true },
     leaderboard: { list: [], loading: true },
     dashboard:   { stats: null, userInfo: null, recent: [], loading: true },
     history:     { list: [], loading: true, total: 0, page: 1 },
-    result:      { data: null, loading: true },
+    result:      { data: null, loading: true, assignId: null, assignSubmitted: false, assignSubmitting: false, assignError: '' },
 
     // ---- Classroom State ----
     classroom: {
@@ -268,8 +268,9 @@ function QuizBApp() {
         const params = {
           page: this.quizzes.page,
           limit: 12,
-          ...(this.quizzes.categoryId ? { category: this.quizzes.categoryId } : {}),
-          ...(this.quizzes.search     ? { search: this.quizzes.search }       : {}),
+          ...(this.quizzes.categoryId                   ? { category:   this.quizzes.categoryId }   : {}),
+          ...(this.quizzes.search                       ? { search:     this.quizzes.search }         : {}),
+          ...(this.quizzes.difficulty                   ? { difficulty: this.quizzes.difficulty }     : {}),
         };
         const resp = await api.getFull('quiz.list', params);
         this.quizzes.list  = Array.isArray(resp.data) ? resp.data : [];
@@ -338,6 +339,11 @@ function QuizBApp() {
     async loadResult(attemptId) {
       this.result.loading = true;
       this.result.data = null;
+      this.result.assignSubmitted = false;
+      this.result.assignError = '';
+      // Baca assignId dari URL hash jika ada
+      const hashMatch = window.location.hash.match(/[?&]assign=(\d+)/);
+      this.result.assignId = hashMatch ? hashMatch[1] : null;
       try {
         const resp = await api.get('attempt.result', { id: attemptId });
         // API returns { attempt: {...}, answers: [...] }
@@ -356,6 +362,24 @@ function QuizBApp() {
         this.showToast(e.message, 'error', '❌');
       } finally {
         this.result.loading = false;
+      }
+    },
+
+    async submitToAssignment(assignmentId, attemptId) {
+      this.result.assignSubmitting = true;
+      this.result.assignError = '';
+      try {
+        await api.post('assignment.submit', {
+          assignment_id: parseInt(assignmentId),
+          attempt_id:    parseInt(attemptId),
+        });
+        this.result.assignSubmitted = true;
+        this.showToast('Tugas berhasil dikumpulkan! 🎉', 'success', '✅');
+      } catch (e) {
+        this.result.assignError = e.message;
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        this.result.assignSubmitting = false;
       }
     },
 
