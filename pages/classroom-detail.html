@@ -106,9 +106,17 @@
                         <span x-show="assign.max_questions" class="font-medium text-primary-600 dark:text-primary-400" x-text="assign.max_questions + ' soal (diatur guru)'"></span>
                         <span x-show="!assign.max_questions" x-text="assign.total_questions + ' soal (bank soal)'"></span>
                       </p>
-                      <div class="flex items-center gap-3 text-xs text-gray-400 mt-1">
-                        <span x-show="assign.deadline">⏰ Deadline: <span x-text="formatDate(assign.deadline)"></span></span>
+                      <div class="flex flex-wrap items-center gap-2 text-xs text-gray-400 mt-1">
+                        <span x-show="assign.deadline">⏰ <span x-text="formatDate(assign.deadline)"></span></span>
                         <span x-show="classroom.isTeacher">👥 <span x-text="assign.submission_count || 0"></span> dikumpulkan</span>
+                        <template x-if="assign.shuffle_questions !== null">
+                          <span :class="assign.shuffle_questions ? 'text-green-500' : 'text-gray-400'"
+                                x-text="assign.shuffle_questions ? '🔀 soal acak' : '↕ soal berurutan'"></span>
+                        </template>
+                        <template x-if="assign.shuffle_options !== null">
+                          <span :class="assign.shuffle_options ? 'text-green-500' : 'text-gray-400'"
+                                x-text="assign.shuffle_options ? '🔀 jawaban acak' : '↕ jawaban berurutan'"></span>
+                        </template>
                       </div>
                     </div>
                     <div class="flex gap-2 flex-shrink-0">
@@ -240,9 +248,83 @@
             </button>
           </div>
           <p class="text-xs text-gray-400 mt-1.5">
-            <span class="text-primary-500 font-medium">Kosongkan</span> → ikuti setting masing-masing pelajar. &nbsp;
+            <span class="text-primary-500 font-medium">Kosongkan</span> → ikuti setting pelajar. &nbsp;
             <span class="text-primary-500 font-medium">Isi angka</span> → paksa semua pelajar mengerjakan soal sebanyak ini.
           </p>
+        </div>
+
+        <!-- Shuffle Settings -->
+        <div class="border border-gray-100 dark:border-gray-800 rounded-xl p-4 space-y-4">
+          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Pengaturan Acak</p>
+          <p class="text-xs text-gray-400 -mt-2">
+            <span class="text-primary-500 font-medium">Kosongkan / Ikuti pelajar</span> → pakai setting personal pelajar. &nbsp;
+            <span class="font-medium text-green-600">Aktif / Nonaktif</span> → paksa untuk semua pelajar di tugas ini.
+          </p>
+
+          <!-- Acak Urutan Soal -->
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1">
+              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">🔀 Acak Urutan Soal</p>
+              <p class="text-xs text-gray-400 mt-0.5">Tampilkan soal dalam urutan acak setiap sesi.</p>
+            </div>
+            <!-- 3-state: null = ikuti user, true = paksa acak, false = paksa berurutan -->
+            <div class="flex flex-col items-end gap-1">
+              <button type="button"
+                      @click="classroom.assignForm.shuffle_questions =
+                        classroom.assignForm.shuffle_questions === null ? true :
+                        classroom.assignForm.shuffle_questions === true  ? false : null"
+                      class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200"
+                      :class="classroom.assignForm.shuffle_questions === true  ? 'bg-green-500' :
+                              classroom.assignForm.shuffle_questions === false ? 'bg-red-400' :
+                              'bg-gray-300 dark:bg-gray-600'">
+                <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200"
+                      :class="classroom.assignForm.shuffle_questions === true  ? 'translate-x-5' :
+                              classroom.assignForm.shuffle_questions === false ? 'translate-x-0' :
+                              'translate-x-2.5'">
+                </span>
+              </button>
+              <span class="text-xs"
+                    :class="classroom.assignForm.shuffle_questions === true  ? 'text-green-600 dark:text-green-400' :
+                            classroom.assignForm.shuffle_questions === false ? 'text-red-500' :
+                            'text-gray-400'"
+                    x-text="classroom.assignForm.shuffle_questions === true  ? '✓ Paksa acak' :
+                             classroom.assignForm.shuffle_questions === false ? '✗ Paksa berurutan' :
+                             '— Ikuti pelajar'">
+              </span>
+            </div>
+          </div>
+
+          <!-- Acak Pilihan Jawaban -->
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1">
+              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">🔀 Acak Pilihan Jawaban</p>
+              <p class="text-xs text-gray-400 mt-0.5">Acak urutan A/B/C/D untuk setiap soal.</p>
+            </div>
+            <div class="flex flex-col items-end gap-1">
+              <button type="button"
+                      @click="classroom.assignForm.shuffle_options =
+                        classroom.assignForm.shuffle_options === null ? true :
+                        classroom.assignForm.shuffle_options === true  ? false : null"
+                      class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200"
+                      :class="classroom.assignForm.shuffle_options === true  ? 'bg-green-500' :
+                              classroom.assignForm.shuffle_options === false ? 'bg-red-400' :
+                              'bg-gray-300 dark:bg-gray-600'">
+                <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200"
+                      :class="classroom.assignForm.shuffle_options === true  ? 'translate-x-5' :
+                              classroom.assignForm.shuffle_options === false ? 'translate-x-0' :
+                              'translate-x-2.5'">
+                </span>
+              </button>
+              <span class="text-xs"
+                    :class="classroom.assignForm.shuffle_options === true  ? 'text-green-600 dark:text-green-400' :
+                            classroom.assignForm.shuffle_options === false ? 'text-red-500' :
+                            'text-gray-400'"
+                    x-text="classroom.assignForm.shuffle_options === true  ? '✓ Paksa acak' :
+                             classroom.assignForm.shuffle_options === false ? '✗ Paksa berurutan' :
+                             '— Ikuti pelajar'">
+              </span>
+            </div>
+          </div>
         </div>
       </div>
       <div x-show="classroom.assignError" class="mt-3 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-sm text-red-600 dark:text-red-400" x-text="classroom.assignError"></div>

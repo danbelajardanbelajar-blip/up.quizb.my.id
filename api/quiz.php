@@ -83,61 +83,84 @@ function quiz_questions(): void {
     );
     if (!$quiz) jsonError('Quiz tidak ditemukan', 404);
 
-    // ---- Tentukan batas jumlah soal ----
-    // Prioritas: 1) assignment.max_questions  2) user.quiz_questions_limit  3) default 10
-    $limit = null;
+    // ---- Ambil pengaturan dari assignment atau user ----
+    // Prioritas: 1) assignment  2) user setting  3) default
+    $limit           = null;
+    $shuffleQuestions = null;   // null = belum ditentukan
+    $shuffleOptions   = null;
 
     if ($assignmentId > 0) {
         $assignment = DB::one(
-            'SELECT max_questions FROM assignments WHERE id = ? AND quiz_id = ? AND is_active = 1',
+            'SELECT max_questions, shuffle_questions, shuffle_options
+             FROM assignments WHERE id = ? AND quiz_id = ? AND is_active = 1',
             [$assignmentId, $quizId]
         );
-        if ($assignment && $assignment['max_questions'] !== null) {
-            $limit = (int)$assignment['max_questions'];
+        if ($assignment) {
+            if ($assignment['max_questions'] !== null)   $limit           = (int)$assignment['max_questions'];
+            if ($assignment['shuffle_questions'] !== null) $shuffleQuestions = (bool)(int)$assignment['shuffle_questions'];
+            if ($assignment['shuffle_options']   !== null) $shuffleOptions   = (bool)(int)$assignment['shuffle_options'];
         }
     }
 
-    if ($limit === null) {
-        $currentUser = getCurrentUser();
-        if ($currentUser) {
-            $userRow = DB::one('SELECT quiz_questions_limit FROM users WHERE id = ?', [$currentUser['id']]);
-            $limit   = (int)($userRow['quiz_questions_limit'] ?? 10);
-        } else {
-            $limit = 10; // default global untuk tamu
-        }
+    // Isi dari user jika masih null
+    $currentUser = getCurrentUser();
+    if ($currentUser) {
+        $userRow = DB::one(
+            'SELECT quiz_questions_limit, shuffle_questions, shuffle_options FROM users WHERE id = ?',
+            [$currentUser['id']]
+        );
+        if ($limit           === null) $limit           = (int)($userRow['quiz_questions_limit'] ?? 10);
+        if ($shuffleQuestions === null) $shuffleQuestions = (bool)(int)($userRow['shuffle_questions'] ?? 1);
+        if ($shuffleOptions   === null) $shuffleOptions   = (bool)(int)($userRow['shuffle_options']   ?? 1);
+    } else {
+        // Tamu: pakai default
+        if ($limit           === null) $limit           = 10;
+        if ($shuffleQuestions === null) $shuffleQuestions = true;
+        if ($shuffleOptions   === null) $shuffleOptions   = true;
     }
 
-    // Pastikan limit valid
     if ($limit < 1) $limit = 10;
 
-    // ---- Ambil semua soal, acak, potong sesuai limit ----
+    // ---- Ambil semua soal ----
     $allQuestions = DB::all(
         'SELECT id, question_text, type, points, order_num
          FROM questions WHERE quiz_id = ? ORDER BY order_num',
         [$quizId]
     );
 
-    if (count($allQuestions) > $limit) {
+    // ---- Acak urutan soal (jika aktif) lalu potong sesuai limit ----
+    if ($shuffleQuestions) {
         shuffle($allQuestions);
+    }
+    if (count($allQuestions) > $limit) {
         $allQuestions = array_slice($allQuestions, 0, $limit);
-        // Urutkan kembali berdasarkan order_num asli agar urutan logis
+    }
+    // Jika tidak diacak, kembalikan ke urutan order_num asli
+    if (!$shuffleQuestions) {
         usort($allQuestions, fn($a, $b) => (int)$a['order_num'] - (int)$b['order_num']);
     }
 
+    // ---- Muat opsi untuk setiap soal ----
     $labels = ['A','B','C','D','E','F'];
     foreach ($allQuestions as &$q) {
         $opts = DB::all(
             'SELECT id, option_text, order_num FROM options WHERE question_id = ? ORDER BY order_num',
             [$q['id']]
         );
-        // Tambahkan label A/B/C/D/E per opsi
+
+        // Acak urutan pilihan jawaban (jika aktif)
+        if ($shuffleOptions) {
+            shuffle($opts);
+        }
+
+        // Pasang label A/B/C/D/... setelah (mungkin) diacak
         foreach ($opts as $i => &$opt) {
             $opt['label'] = $labels[$i] ?? chr(65 + $i);
         }
         unset($opt);
         $q['options'] = $opts;
 
-        // Tambahkan correct_option_id untuk debugging
+        // correct_option_id tetap statis (tidak berubah oleh shuffle)
         $correctOpt = DB::one(
             'SELECT id FROM options WHERE question_id = ? AND is_correct = 1 LIMIT 1',
             [$q['id']]

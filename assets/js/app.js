@@ -59,7 +59,7 @@ function QuizBApp() {
       isTeacher:   false,
       // Create assignment modal
       assignModal: { show: false, editId: null },
-      assignForm:  { title: '', quiz_id: '', mode: 'bebas', deadline: '', max_questions: '' },
+      assignForm:  { title: '', quiz_id: '', mode: 'bebas', deadline: '', max_questions: '', shuffle_questions: null, shuffle_options: null },
       assignError: '',
       assignLoading: false,
       // Quiz list for assignment dropdown
@@ -89,7 +89,7 @@ function QuizBApp() {
     registerForm: { name: '', email: '', password: '', password_confirm: '', loading: false, error: '' },
 
     // Settings
-    settings: { limit: 10, loading: false, saving: false, error: '', success: '' },
+    settings: { limit: 10, shuffleQuestions: true, shuffleOptions: true, loading: false, saving: false, error: '', success: '' },
 
     // ---- Lifecycle ----
     async init() {
@@ -210,9 +210,15 @@ function QuizBApp() {
           email:                data.email,
           role:                 data.role,
           quiz_questions_limit: data.quiz_questions_limit || 10,
+          shuffle_questions:    data.shuffle_questions    ?? true,
+          shuffle_options:      data.shuffle_options      ?? true,
         } : null;
         // Sync settings state
-        if (this.user) this.settings.limit = this.user.quiz_questions_limit;
+        if (this.user) {
+          this.settings.limit            = this.user.quiz_questions_limit;
+          this.settings.shuffleQuestions = this.user.shuffle_questions;
+          this.settings.shuffleOptions   = this.user.shuffle_options;
+        }
         // Simpan CSRF token dari respons auth.me agar POST langsung valid
         if (data?.csrf) api.setToken(data.csrf);
       } catch {
@@ -521,11 +527,13 @@ function QuizBApp() {
     openEditAssignModal(assign) {
       this.classroom.assignModal.editId = assign.id;
       this.classroom.assignForm = {
-        title:         assign.title,
-        quiz_id:       assign.quiz_id,
-        mode:          assign.mode,
-        deadline:      assign.deadline ? assign.deadline.replace(' ', 'T').substring(0, 16) : '',
-        max_questions: assign.max_questions || '',
+        title:             assign.title,
+        quiz_id:           assign.quiz_id,
+        mode:              assign.mode,
+        deadline:          assign.deadline ? assign.deadline.replace(' ', 'T').substring(0, 16) : '',
+        max_questions:     assign.max_questions != null ? assign.max_questions : '',
+        shuffle_questions: assign.shuffle_questions, // null | 0 | 1
+        shuffle_options:   assign.shuffle_options,
       };
       this.classroom.assignError = '';
       this.classroom.assignModal.show = true;
@@ -538,13 +546,16 @@ function QuizBApp() {
       this.classroom.assignLoading = true;
       this.classroom.assignError   = '';
       try {
-        const maxQ = f.max_questions !== '' && f.max_questions !== null
-          ? parseInt(f.max_questions) : null;
+        const maxQ     = f.max_questions !== '' && f.max_questions != null ? parseInt(f.max_questions) : null;
+        const shuffleQ  = f.shuffle_questions; // null | 0 | 1
+        const shuffleO  = f.shuffle_options;
         await api.put('assignment.update', id, {
-          title:         f.title,
-          mode:          f.mode,
-          deadline:      f.deadline || null,
-          max_questions: maxQ,
+          title:            f.title,
+          mode:             f.mode,
+          deadline:         f.deadline || null,
+          max_questions:    maxQ,
+          shuffle_questions: shuffleQ,
+          shuffle_options:   shuffleO,
         });
         this.classroom.assignModal.show = false;
         this.showToast('Tugas berhasil diperbarui!', 'success', '✅');
@@ -558,7 +569,7 @@ function QuizBApp() {
 
     async openAssignModal(existingAssign = null) {
       this.classroom.assignModal.editId = null;
-      this.classroom.assignForm  = { title: '', quiz_id: '', mode: 'bebas', deadline: '', max_questions: '' };
+      this.classroom.assignForm  = { title: '', quiz_id: '', mode: 'bebas', deadline: '', max_questions: '', shuffle_questions: null, shuffle_options: null };
       this.classroom.assignError = '';
       this.classroom.assignModal.show = true;
       // Load quiz list for dropdown if not already loaded
@@ -582,15 +593,18 @@ function QuizBApp() {
       this.classroom.assignLoading = true;
       this.classroom.assignError   = '';
       try {
-        const maxQ = f.max_questions !== '' && f.max_questions !== null
-          ? parseInt(f.max_questions) : null;
+        const maxQ    = f.max_questions !== '' && f.max_questions != null ? parseInt(f.max_questions) : null;
+        const shuffleQ = f.shuffle_questions; // null = ikuti user setting
+        const shuffleO = f.shuffle_options;
         await api.post('assignment.create', {
-          class_id:      parseInt(classId),
-          quiz_id:       parseInt(f.quiz_id),
-          title:         f.title,
-          mode:          f.mode,
-          deadline:      f.deadline || null,
-          max_questions: maxQ,
+          class_id:         parseInt(classId),
+          quiz_id:          parseInt(f.quiz_id),
+          title:            f.title,
+          mode:             f.mode,
+          deadline:         f.deadline || null,
+          max_questions:    maxQ,
+          ...(shuffleQ !== null ? { shuffle_questions: shuffleQ } : {}),
+          ...(shuffleO !== null ? { shuffle_options:   shuffleO } : {}),
         });
         this.classroom.assignModal.show = false;
         this.showToast('Tugas berhasil dibuat!', 'success', '✅');

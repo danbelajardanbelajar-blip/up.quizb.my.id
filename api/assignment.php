@@ -15,15 +15,19 @@ function assignment_create(): void {
     }
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
 
-    $body           = getJsonBody();
-    $classId        = (int)($body['class_id']          ?? 0);
-    $quizId         = (int)($body['quiz_id']           ?? 0);
-    $title          = sanitizeString($body['title']    ?? '');
-    $mode           = sanitizeString($body['mode']     ?? 'bebas');
-    $deadline       = $body['deadline']                ?? null;
-    $maxQuestions   = isset($body['max_questions'])   ? (int)$body['max_questions']   : null;
-    $timerPerQ      = isset($body['timer_per_question']) ? (int)$body['timer_per_question'] : null;
-    $durationMins   = isset($body['duration_minutes']) ? (int)$body['duration_minutes'] : null;
+    $body             = getJsonBody();
+    $classId          = (int)($body['class_id']             ?? 0);
+    $quizId           = (int)($body['quiz_id']              ?? 0);
+    $title            = sanitizeString($body['title']       ?? '');
+    $mode             = sanitizeString($body['mode']        ?? 'bebas');
+    $deadline         = $body['deadline']                   ?? null;
+    $maxQuestions     = isset($body['max_questions'])       ? (int)$body['max_questions']        : null;
+    $timerPerQ        = isset($body['timer_per_question'])  ? (int)$body['timer_per_question']   : null;
+    $durationMins     = isset($body['duration_minutes'])    ? (int)$body['duration_minutes']     : null;
+    $shuffleQuestions = array_key_exists('shuffle_questions', $body)
+                        ? (int)(bool)$body['shuffle_questions'] : null;
+    $shuffleOptions   = array_key_exists('shuffle_options', $body)
+                        ? (int)(bool)$body['shuffle_options']   : null;
 
     if ($classId <= 0) jsonError('Pilih kelas');
     if ($quizId  <= 0) jsonError('Pilih paket soal');
@@ -44,14 +48,18 @@ function assignment_create(): void {
     $pdo = DB::conn();
     $pdo->prepare(
         "INSERT INTO assignments
-         (class_id, quiz_id, teacher_id, title, mode, deadline, max_questions, timer_per_question, duration_minutes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+         (class_id, quiz_id, teacher_id, title, mode, deadline,
+          max_questions, timer_per_question, duration_minutes,
+          shuffle_questions, shuffle_options)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )->execute([
         $classId, $quizId, $user['id'], $title, $mode,
         $deadline ?: null,
         $maxQuestions,
         $timerPerQ,
         $durationMins,
+        $shuffleQuestions,
+        $shuffleOptions,
     ]);
     $newId = $pdo->lastInsertId();
 
@@ -191,16 +199,27 @@ function assignment_update(): void {
     $title        = sanitizeString($body['title'] ?? $assignment['title']);
     $mode         = sanitizeString($body['mode']  ?? $assignment['mode']);
     $deadline     = $body['deadline']    ?? $assignment['deadline'];
-    $isActive     = isset($body['is_active']) ? (int)$body['is_active'] : (int)$assignment['is_active'];
-    $maxQ         = isset($body['max_questions'])     ? (int)$body['max_questions']     : $assignment['max_questions'];
-    $timerQ       = isset($body['timer_per_question'])? (int)$body['timer_per_question']: $assignment['timer_per_question'];
-    $durMins      = isset($body['duration_minutes'])  ? (int)$body['duration_minutes']  : $assignment['duration_minutes'];
+    $isActive     = isset($body['is_active'])          ? (int)$body['is_active']           : (int)$assignment['is_active'];
+    $maxQ         = isset($body['max_questions'])       ? (int)$body['max_questions']       : $assignment['max_questions'];
+    $timerQ       = isset($body['timer_per_question'])  ? (int)$body['timer_per_question']  : $assignment['timer_per_question'];
+    $durMins      = isset($body['duration_minutes'])    ? (int)$body['duration_minutes']    : $assignment['duration_minutes'];
+    // shuffle: jika key ada di body → pakai nilai baru; jika tidak ada → pertahankan lama (termasuk NULL)
+    $shuffleQ     = array_key_exists('shuffle_questions', $body)
+                    ? (strlen((string)$body['shuffle_questions']) ? (int)(bool)$body['shuffle_questions'] : null)
+                    : $assignment['shuffle_questions'];
+    $shuffleO     = array_key_exists('shuffle_options', $body)
+                    ? (strlen((string)$body['shuffle_options'])   ? (int)(bool)$body['shuffle_options']   : null)
+                    : $assignment['shuffle_options'];
 
     DB::conn()->prepare(
         "UPDATE assignments SET title=?, mode=?, deadline=?, is_active=?,
-                max_questions=?, timer_per_question=?, duration_minutes=?
+                max_questions=?, timer_per_question=?, duration_minutes=?,
+                shuffle_questions=?, shuffle_options=?
          WHERE id=?"
-    )->execute([$title, $mode, $deadline ?: null, $isActive, $maxQ, $timerQ, $durMins, $id]);
+    )->execute([$title, $mode, $deadline ?: null, $isActive,
+                $maxQ, $timerQ, $durMins,
+                $shuffleQ, $shuffleO,
+                $id]);
 
     jsonSuccess(DB::one("SELECT * FROM assignments WHERE id = ?", [$id]));
 }

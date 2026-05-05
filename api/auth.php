@@ -85,10 +85,14 @@ function auth_me(): void {
     if (!$user) jsonError('Tidak login', 401);
 
     $data = DB::one(
-        'SELECT id, name, email, role, avatar, total_points, quizzes_taken, quiz_questions_limit, created_at FROM users WHERE id = ?',
+        'SELECT id, name, email, role, avatar, total_points, quizzes_taken,
+                quiz_questions_limit, shuffle_questions, shuffle_options, created_at
+         FROM users WHERE id = ?',
         [$user['id']]
     );
     $data['quiz_questions_limit'] = (int)($data['quiz_questions_limit'] ?? 10);
+    $data['shuffle_questions']    = (bool)(int)($data['shuffle_questions'] ?? 1);
+    $data['shuffle_options']      = (bool)(int)($data['shuffle_options']   ?? 1);
     $data['csrf'] = generateCsrfToken();
     jsonSuccess($data);
 }
@@ -98,16 +102,33 @@ function auth_update_settings(): void {
     $user = requireAuth();
 
     $body  = getBody();
-    $limit = isset($body['quiz_questions_limit']) ? (int)$body['quiz_questions_limit'] : null;
+    $limit            = isset($body['quiz_questions_limit']) ? (int)$body['quiz_questions_limit'] : null;
+    $shuffleQuestions = isset($body['shuffle_questions'])    ? (int)(bool)$body['shuffle_questions'] : null;
+    $shuffleOptions   = isset($body['shuffle_options'])      ? (int)(bool)$body['shuffle_options']   : null;
 
-    if ($limit === null) jsonError('Data pengaturan tidak lengkap');
-    if ($limit < 1 || $limit > 100) jsonError('Jumlah soal harus antara 1 dan 100');
+    if ($limit === null && $shuffleQuestions === null && $shuffleOptions === null) {
+        jsonError('Tidak ada data pengaturan yang dikirim');
+    }
+    if ($limit !== null && ($limit < 1 || $limit > 100)) {
+        jsonError('Jumlah soal harus antara 1 dan 100');
+    }
 
-    DB::conn()->prepare('UPDATE users SET quiz_questions_limit = ?, updated_at = NOW() WHERE id = ?')
-        ->execute([$limit, $user['id']]);
+    // Bangun SET clause secara dinamis
+    $sets   = [];
+    $params = [];
+    if ($limit !== null)            { $sets[] = 'quiz_questions_limit = ?'; $params[] = $limit; }
+    if ($shuffleQuestions !== null) { $sets[] = 'shuffle_questions = ?';    $params[] = $shuffleQuestions; }
+    if ($shuffleOptions   !== null) { $sets[] = 'shuffle_options = ?';      $params[] = $shuffleOptions; }
+    $sets[]   = 'updated_at = NOW()';
+    $params[] = $user['id'];
+
+    DB::conn()->prepare('UPDATE users SET ' . implode(', ', $sets) . ' WHERE id = ?')
+        ->execute($params);
 
     jsonSuccess([
         'quiz_questions_limit' => $limit,
+        'shuffle_questions'    => $shuffleQuestions !== null ? (bool)$shuffleQuestions : null,
+        'shuffle_options'      => $shuffleOptions   !== null ? (bool)$shuffleOptions   : null,
         'message'              => 'Pengaturan berhasil disimpan',
     ]);
 }
