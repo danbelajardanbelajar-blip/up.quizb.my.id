@@ -22,7 +22,7 @@ function QuizBApp() {
     ],
 
     // ---- Page Data ----
-    home:        { featured: [], categories: [], loading: true },
+    home:        { featured: [], categories: [], loading: true, stats: { total_questions: 0, total_quizzes: 0, total_categories: 0, total_users: 0 } },
     categories:  { list: [], loading: true },
     quizzes:     { list: [], loading: true, total: 0, page: 1, categoryId: 0, search: '' },
     quizDetail:  { quiz: null, loading: true },
@@ -177,12 +177,15 @@ function QuizBApp() {
       try {
         // category.list → jsonSuccess → data.data = array langsung
         // quiz.list     → jsonPaginated → data.data = array quiz, data.meta = pagination
-        const [cats, quizData] = await Promise.all([
+        // quiz.stats    → jsonSuccess   → data.data = { total_questions, total_quizzes, ... }
+        const [cats, quizData, stats] = await Promise.all([
           api.get('category.list'),
           api.getFull('quiz.list', { limit: 6 }),
+          api.get('quiz.stats'),
         ]);
         this.home.categories = Array.isArray(cats) ? cats : [];
         this.home.featured   = Array.isArray(quizData.data) ? quizData.data : [];
+        this.home.stats      = stats || {};
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {

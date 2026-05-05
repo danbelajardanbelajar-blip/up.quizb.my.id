@@ -104,3 +104,17 @@ function quiz_featured(): void {
     );
     jsonSuccess($quizzes);
 }
+
+function quiz_stats(): void {
+    $totalQuestions  = (int) DB::one("SELECT COUNT(*) AS n FROM questions")['n'];
+    $totalQuizzes    = (int) DB::one("SELECT COUNT(*) AS n FROM quizzes WHERE is_published = 1")['n'];
+    $totalCategories = (int) DB::one("SELECT COUNT(*) AS n FROM categories WHERE quiz_count > 0")['n'];
+    $totalUsers      = (int) DB::one("SELECT COUNT(*) AS n FROM users WHERE is_active = 1")['n'];
+
+    jsonSuccess([
+        'total_questions'  => $totalQuestions,
+        'total_quizzes'    => $totalQuizzes,
+        'total_categories' => $totalCategories,
+        'total_users'      => $totalUsers,
+    ]);
+}

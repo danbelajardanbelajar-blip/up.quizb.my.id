@@ -27,19 +27,24 @@
           📂 Jelajahi Kategori
         </button>
       </div>
-      <!-- Stats -->
+      <!-- Stats — data dari database -->
       <div class="mt-16 grid grid-cols-3 gap-6 max-w-lg mx-auto">
         <div class="glass py-4 px-2 text-center">
-          <div class="text-2xl font-bold">500+</div>
+          <div class="text-2xl font-bold"
+               x-text="home.stats.total_questions >= 1000
+                 ? Math.floor(home.stats.total_questions/1000) + 'K+'
+                 : (home.stats.total_questions || '...') + '+'">...</div>
           <div class="text-xs text-gray-400 mt-1">Soal Aktif</div>
         </div>
         <div class="glass py-4 px-2 text-center">
-          <div class="text-2xl font-bold">50+</div>
+          <div class="text-2xl font-bold"
+               x-text="home.stats.total_quizzes ? home.stats.total_quizzes + '+' : '...'">...</div>
           <div class="text-xs text-gray-400 mt-1">Quiz Tersedia</div>
         </div>
         <div class="glass py-4 px-2 text-center">
-          <div class="text-2xl font-bold">1K+</div>
-          <div class="text-xs text-gray-400 mt-1">Pengguna</div>
+          <div class="text-2xl font-bold"
+               x-text="home.stats.total_categories ? home.stats.total_categories + '+' : '...'">...</div>
+          <div class="text-xs text-gray-400 mt-1">Kategori</div>
         </div>
       </div>
     </div>
