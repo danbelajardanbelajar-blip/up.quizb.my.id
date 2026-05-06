@@ -62,6 +62,76 @@
       </div>
     </div>
 
+    <!-- ===== RIWAYAT TANTANGAN DITERIMA ===== -->
+    <div class="mb-8" x-show="challenge.received.length > 0">
+      <h2 class="text-base font-semibold text-gray-700 dark:text-gray-300 mb-3">📋 Riwayat Tantangan Diterima</h2>
+
+      <div class="space-y-3">
+        <template x-for="c in challenge.received" :key="'r'+c.id">
+          <div class="card p-5"
+               :class="c.status === 'playing' ? 'border-l-4 border-blue-400' : ''">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="w-7 h-7 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xs font-bold flex-shrink-0"
+                        x-text="c.challenger_name.charAt(0).toUpperCase()"></span>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white truncate" x-text="c.challenger_name"></p>
+                  <span class="text-xs text-gray-400">menantangmu</span>
+                </div>
+                <p class="text-sm font-medium text-primary-600 dark:text-primary-400 mb-1" x-text="'🎯 ' + c.quiz_title"></p>
+                <div class="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
+                  <span x-show="c.message" class="italic" x-text="'\"' + c.message + '\"'"></span>
+                  <span x-text="new Date(c.created_at).toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric'})"></span>
+                </div>
+                <!-- Skor hasil jika selesai -->
+                <div x-show="c.status === 'completed'" class="mt-1.5 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                  <span x-show="c.my_score !== null" x-text="'Skormu: ' + c.my_score"></span>
+                  <span x-show="c.challenger_score !== null" x-text="'Skor penantang: ' + c.challenger_score"></span>
+                </div>
+              </div>
+              <div class="flex flex-col items-end gap-2 flex-shrink-0">
+                <!-- Badge status -->
+                <span x-show="c.status === 'playing'"
+                      class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
+                  🎮 Berlangsung
+                </span>
+                <span x-show="c.status === 'declined'"
+                      class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400">
+                  ❌ Ditolak
+                </span>
+                <span x-show="c.status === 'expired'"
+                      class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                  ⌛ Kedaluwarsa
+                </span>
+                <template x-if="c.status === 'completed'">
+                  <div>
+                    <span x-show="c.winner_id && c.winner_id == user?.id"
+                          class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
+                      🏆 Kamu Menang!
+                    </span>
+                    <span x-show="c.winner_id && c.winner_id != user?.id"
+                          class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400"
+                          x-text="'😔 ' + c.winner_name + ' Menang'">
+                    </span>
+                    <span x-show="!c.winner_id"
+                          class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                      🤝 Seri
+                    </span>
+                  </div>
+                </template>
+                <!-- Tombol lanjut main jika masih playing -->
+                <button x-show="c.status === 'playing'"
+                        @click="navigate('/play/' + c.quiz_id + '?mode=challenge&cid=' + c.id)"
+                        class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                  ▶ Lanjut Main
+                </button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
     <!-- ===== TANTANGAN KELUAR ===== -->
     <div>
       <h2 class="text-base font-semibold text-gray-700 dark:text-gray-300 mb-3">📤 Tantangan Terkirim</h2>

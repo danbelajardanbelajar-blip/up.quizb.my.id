@@ -98,7 +98,7 @@ function QuizBApp() {
 
     // Challenge
     challenge: {
-      incoming: [], outgoing: [], loading: false, pendingCount: 0,
+      incoming: [], received: [], outgoing: [], loading: false, pendingCount: 0,
       pollInterval: null,
     },
 
@@ -928,8 +928,9 @@ function QuizBApp() {
       this.challenge.loading = true;
       try {
         const data = await api.get('challenge.list');
-        this.challenge.incoming     = data.incoming     || [];
-        this.challenge.outgoing     = data.outgoing     || [];
+        this.challenge.incoming     = data.incoming      || [];
+        this.challenge.received     = data.received      || [];
+        this.challenge.outgoing     = data.outgoing      || [];
         this.challenge.pendingCount = data.pending_count || 0;
       } catch (_) {
         // silently fail (polling — jangan ganggu UX)

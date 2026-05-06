@@ -50,6 +50,7 @@ function challenge_create(): void {
 function challenge_list(): void {
     $user = requireAuth();
 
+    // Tantangan masuk yang masih menunggu jawaban (bisa diterima/ditolak)
     $incoming = DB::all(
         "SELECT c.id, c.quiz_id, c.message, c.created_at, c.expires_at,
                 q.title AS quiz_title, q.total_questions, q.time_limit,
@@ -59,6 +60,26 @@ function challenge_list(): void {
          INNER JOIN users  u ON u.id = c.challenger_id
          WHERE c.challenged_id = ? AND c.status = 'pending' AND c.expires_at > NOW()
          ORDER BY c.created_at DESC",
+        [$user['id']]
+    );
+
+    // Semua riwayat tantangan yang pernah diterima user ini (semua status)
+    $received = DB::all(
+        "SELECT c.id, c.quiz_id, c.status, c.message, c.created_at, c.expires_at,
+                q.title AS quiz_title, q.total_questions, q.time_limit,
+                u.name AS challenger_name, u.id AS challenger_id,
+                w.name AS winner_name, w.id AS winner_id,
+                a.score AS my_score, a.time_taken AS my_time,
+                a2.score AS challenger_score, a2.time_taken AS challenger_time
+         FROM challenges c
+         INNER JOIN quizzes q  ON q.id  = c.quiz_id
+         INNER JOIN users   u  ON u.id  = c.challenger_id
+         LEFT JOIN  users   w  ON w.id  = c.winner_id
+         LEFT JOIN  attempts a  ON a.id  = c.challenged_attempt_id
+         LEFT JOIN  attempts a2 ON a2.id = c.challenger_attempt_id
+         WHERE c.challenged_id = ? AND c.status != 'pending'
+         ORDER BY c.created_at DESC
+         LIMIT 20",
         [$user['id']]
     );
 
@@ -79,6 +100,7 @@ function challenge_list(): void {
 
     jsonSuccess([
         'incoming'      => $incoming,
+        'received'      => $received,
         'outgoing'      => $outgoing,
         'pending_count' => count($incoming),
     ]);
