@@ -248,8 +248,12 @@ function QuizEngine() {
         }
 
         // Navigasi ke result, sertakan challenge ID jika ada
+        // Build result URL — sertakan mode & challenge ID sebagai query params
         let resultHash = `#/result/${result.attempt_id}`;
-        if (this.challengeId) resultHash += `?cid=${this.challengeId}`;
+        const qp = [];
+        if (this.mode && this.mode !== 'exam') qp.push(`mode=${this.mode}`);
+        if (this.challengeId) qp.push(`cid=${this.challengeId}`);
+        if (qp.length) resultHash += '?' + qp.join('&');
         window.location.hash = resultHash;
 
       } catch (e) {
@@ -305,12 +309,4 @@ function QuizEngine() {
     scoreGrade(score) {
       if (score >= 90) return { label: 'Sempurna!', emoji: '🏆', cls: 'text-yellow-500' };
       if (score >= 75) return { label: 'Bagus!',    emoji: '⭐', cls: 'text-green-500'  };
-      if (score >= 60) return { label: 'Lulus',     emoji: '✅', cls: 'text-blue-500'   };
-      return { label: 'Perlu Belajar Lagi', emoji: '📚', cls: 'text-red-500' };
-    },
-
-    destroy() {
-      this.stopTimer();
-    },
-  };
-}
+   

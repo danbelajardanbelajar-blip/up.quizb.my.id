@@ -53,10 +53,15 @@
         </div>
 
         <!-- Answer Review -->
-        <div class="card p-6 mb-6" x-show="result.data.answers && result.data.answers.length > 0">
-          <h2 class="font-bold text-gray-900 dark:text-white mb-4">📋 Pembahasan Jawaban</h2>
+        <div class="card p-6 mb-6" x-show="result.data.answers && (result.mode === 'instant' ? result.data.answers.some(a => a.selected_option_id != null || a.selected_answer) : result.data.answers.length > 0)">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-bold text-gray-900 dark:text-white">📋 Pembahasan Jawaban</h2>
+            <span x-show="result.mode === 'instant'" class="text-xs text-orange-500 dark:text-orange-400 font-medium bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded-lg">
+              ⚡ Soal yang dikerjakan saja
+            </span>
+          </div>
           <div class="space-y-4">
-            <template x-for="(a, idx) in result.data.answers" :key="a.question_id">
+            <template x-for="(a, idx) in (result.mode === 'instant' ? result.data.answers.filter(a => a.selected_option_id != null || a.selected_answer) : result.data.answers)" :key="a.question_id">
               <div class="border border-gray-100 dark:border-gray-800 rounded-xl p-4">
                 <div class="flex items-start gap-2 mb-3">
                   <span class="text-sm font-bold text-gray-400 flex-shrink-0" x-text="(idx+1)+'.'"></span>

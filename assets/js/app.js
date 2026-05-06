@@ -39,7 +39,7 @@ function QuizBApp() {
     leaderboard: { list: [], loading: true },
     dashboard:   { stats: null, userInfo: null, recent: [], loading: true },
     history:     { list: [], loading: true, total: 0, page: 1 },
-    result:      { data: null, loading: true, assignId: null, assignSubmitted: false, assignSubmitting: false, assignError: '', challengeId: null, challengeData: null },
+    result:      { data: null, loading: true, assignId: null, assignSubmitted: false, assignSubmitting: false, assignError: '', challengeId: null, challengeData: null, mode: null },
 
     // ---- Classroom State ----
     classroom: {
@@ -433,6 +433,8 @@ function QuizBApp() {
       const cidMatch = window.location.hash.match(/[?&]cid=(\d+)/);
       this.result.challengeId = cidMatch ? cidMatch[1] : null;
       this.result.challengeData = null;
+      const modeMatch = window.location.hash.match(/[?&]mode=([a-z]+)/);
+      this.result.mode = modeMatch ? modeMatch[1] : null;
       try {
         const resp = await api.get('attempt.result', { id: attemptId });
         // API returns { attempt: {...}, answers: [...] }
