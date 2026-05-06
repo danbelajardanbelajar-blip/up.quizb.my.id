@@ -372,3 +372,113 @@ function admin_stats(): void {
 
     jsonSuccess($stats);
 }
+
+// ============================================
+// GROUP (RUMPUN) ENDPOINTS
+// ============================================
+
+function admin_group_list(): void {
+    requireAdmin();
+    $groups = DB::all(
+        "SELECT g.id, g.name, g.icon, g.color, g.description, g.order_num,
+                COUNT(c.id) AS category_count
+         FROM category_groups g
+         LEFT JOIN categories c ON c.group_id = g.id
+         GROUP BY g.id
+         ORDER BY g.order_num, g.id"
+    );
+    foreach ($groups as &$g) {
+        $g['id']             = (int)$g['id'];
+        $g['order_num']      = (int)$g['order_num'];
+        $g['category_count'] = (int)$g['category_count'];
+        $g['categories']     = DB::all(
+            "SELECT id, name, icon, color FROM categories WHERE group_id = ? ORDER BY name",
+            [$g['id']]
+        );
+        foreach ($g['categories'] as &$c) { $c['id'] = (int)$c['id']; }
+        unset($c);
+    }
+    unset($g);
+
+    $allCategories = DB::all(
+        "SELECT id, name, icon, color, COALESCE(group_id, 0) AS group_id
+         FROM categories ORDER BY name"
+    );
+    foreach ($allCategories as &$c) {
+        $c['id']       = (int)$c['id'];
+        $c['group_id'] = (int)$c['group_id'];
+    }
+    unset($c);
+
+    jsonSuccess(['groups' => $groups, 'all_categories' => $allCategories]);
+}
+
+function admin_group_create(): void {
+    requireAdmin();
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $body     = getJsonBody();
+    $name     = sanitizeString($body['name']        ?? '');
+    $icon     = sanitizeString($body['icon']        ?? '📚');
+    $color    = sanitizeString($body['color']       ?? '#6366f1');
+    $desc     = sanitizeString($body['description'] ?? '');
+    $orderNum = (int)($body['order_num']            ?? 0);
+    if (strlen($name) < 2) jsonError('Nama rumpun minimal 2 karakter');
+    DB::execute(
+        "INSERT INTO category_groups (name, icon, color, description, order_num) VALUES (?,?,?,?,?)",
+        [$name, $icon, $color, $desc, $orderNum]
+    );
+    $id = (int)DB::lastId();
+    jsonSuccess(DB::one("SELECT * FROM category_groups WHERE id = ?", [$id]), 201);
+}
+
+function admin_group_update(): void {
+    requireAdmin();
+    $id = (int)($_GET['id'] ?? 0);
+    if ($_SERVER['REQUEST_METHOD'] !== 'PUT') jsonError('Method not allowed', 405);
+    if ($id <= 0) jsonError('ID tidak valid');
+    $body     = getJsonBody();
+    $name     = sanitizeString($body['name']        ?? '');
+    $icon     = sanitizeString($body['icon']        ?? '📚');
+    $color    = sanitizeString($body['color']       ?? '#6366f1');
+    $desc     = sanitizeString($body['description'] ?? '');
+    $orderNum = (int)($body['order_num']            ?? 0);
+    if (strlen($name) < 2) jsonError('Nama rumpun minimal 2 karakter');
+    DB::execute(
+        "UPDATE category_groups SET name=?, icon=?, color=?, description=?, order_num=? WHERE id=?",
+        [$name, $icon, $color, $desc, $orderNum, $id]
+    );
+    jsonSuccess(DB::one("SELECT * FROM category_groups WHERE id = ?", [$id]));
+}
+
+function admin_group_delete(): void {
+    requireAdmin();
+    $id = (int)($_GET['id'] ?? 0);
+    if ($_SERVER['REQUEST_METHOD'] !== 'DELETE') jsonError('Method not allowed', 405);
+    if ($id <= 0) jsonError('ID tidak valid');
+    DB::execute("UPDATE categories SET group_id = NULL WHERE group_id = ?", [$id]);
+    DB::execute("DELETE FROM category_groups WHERE id = ?", [$id]);
+    jsonSuccess(['message' => 'Rumpun berhasil dihapus']);
+}
+
+function admin_group_assign(): void {
+    requireAdmin();
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $body        = getJsonBody();
+    $groupId     = (int)($body['group_id']    ?? 0);
+    $categoryIds = array_map('intval', $body['category_ids'] ?? []);
+    if ($groupId <= 0) jsonError('group_id tidak valid');
+    if (!DB::one("SELECT id FROM category_groups WHERE id = ?", [$groupId])) {
+        jsonError('Rumpun tidak ditemukan', 404);
+    }
+    // Lepas semua kategori dari rumpun ini dulu
+    DB::execute("UPDATE categories SET group_id = NULL WHERE group_id = ?", [$groupId]);
+    // Assign yang baru
+    if (!empty($categoryIds)) {
+        $placeholders = implode(',', array_fill(0, count($categoryIds), '?'));
+        DB::execute(
+            "UPDATE categories SET group_id = ? WHERE id IN ($placeholders)",
+            array_merge([$groupId], $categoryIds)
+        );
+    }
+    jsonSuccess(['message' => 'Kategori berhasil diperbarui', 'assigned' => count($categoryIds)]);
+}

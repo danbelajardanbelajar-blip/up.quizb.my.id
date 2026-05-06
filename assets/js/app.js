@@ -30,7 +30,7 @@ function QuizBApp() {
     },
 
     // ---- Page Data ----
-    home:        { featured: [], categories: [], loading: true, stats: { total_questions: 0, total_quizzes: 0, total_categories: 0, total_users: 0 } },
+    home:        { featured: [], categories: [], groups: [], loading: true, stats: { total_questions: 0, total_quizzes: 0, total_categories: 0, total_users: 0 } },
     categories:  { list: [], loading: true },
     quizzes:     { list: [], loading: true, total: 0, page: 1, categoryId: 0, search: '', difficulty: '' },
     quizDetail:  { quiz: null, loading: true },
@@ -78,6 +78,9 @@ function QuizBApp() {
       // Daftar quiz khusus untuk dropdown di tab Soal — agar tidak menimpa
       // pagination admin.quizzes pada tab Quiz.
       quizPicker: [],
+      groups: [],
+      allCategories: [],
+      groupAssign: { show: false, group: null, selected: [] },
       loading: false,
       modal: { show: false, type: '', data: {} },
       form: {},
@@ -290,14 +293,16 @@ function QuizBApp() {
     async loadHome() {
       this.home.loading = true;
       try {
-        const [cats, quizData, stats] = await Promise.all([
+        const [cats, quizData, stats, groups] = await Promise.all([
           api.get('category.list'),
           api.getFull('quiz.list', { limit: 6 }),
           api.get('quiz.stats'),
+          api.get('category_group.list'),
         ]);
-        this.home.categories = Array.isArray(cats) ? cats : [];
+        this.home.categories = Array.isArray(cats)    ? cats    : [];
         this.home.featured   = Array.isArray(quizData.data) ? quizData.data : [];
-        this.home.stats      = stats || {};
+        this.home.stats      = stats  || {};
+        this.home.groups     = Array.isArray(groups)  ? groups  : [];
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
@@ -702,6 +707,10 @@ function QuizBApp() {
           if (this.admin.questionsQuizId) {
             this.admin.questions = await api.get('question.list', { quiz_id: this.admin.questionsQuizId });
           }
+        } else if (tab === 'groups') {
+          const data = await api.get('admin.group_list');
+          this.admin.groups        = data.groups         || [];
+          this.admin.allCategories = data.all_categories || [];
         }
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
@@ -740,7 +749,13 @@ function QuizBApp() {
       const f = this.admin.form;
       this.admin.loading = true;
       try {
-        if (type === 'quiz_create') {
+        if (type === 'group_create') {
+          await api.post('admin.group_create', f);
+          this.showToast('Rumpun berhasil dibuat', 'success', '✅');
+        } else if (type === 'group_edit') {
+          await api.put('admin.group_update', f.id, f);
+          this.showToast('Rumpun berhasil diperbarui', 'success', '✅');
+        } else if (type === 'quiz_create') {
           await api.post('admin.quiz_create', f);
           this.showToast('Quiz berhasil dibuat', 'success', '✅');
         } else if (type === 'quiz_edit') {
@@ -778,6 +793,7 @@ function QuizBApp() {
     async deleteAdminItem(type, id) {
       if (!confirm('Yakin ingin menghapus item ini?')) return;
       try {
+        if (type === 'group')    await api.delete('admin.group_delete', id);
         if (type === 'quiz')     await api.delete('admin.quiz_delete', id);
         if (type === 'category') await api.delete('admin.category_delete', id);
         if (type === 'user')     await api.delete('admin.user_delete', id);
@@ -791,6 +807,44 @@ function QuizBApp() {
         await this.loadAdminTab(this.admin.tab);
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
+      }
+    },
+
+    // ---- Group (Rumpun) assign modal ----
+    openGroupAssignModal(group) {
+      const assignedIds = (group.categories || []).map(c => c.id);
+      this.admin.groupAssign = {
+        show:     true,
+        group:    group,
+        selected: [...assignedIds],
+      };
+    },
+
+    toggleGroupCategory(catId) {
+      const idx = this.admin.groupAssign.selected.indexOf(catId);
+      if (idx === -1) {
+        this.admin.groupAssign.selected.push(catId);
+      } else {
+        this.admin.groupAssign.selected.splice(idx, 1);
+      }
+    },
+
+    async saveGroupAssign() {
+      const { group, selected } = this.admin.groupAssign;
+      if (!group) return;
+      this.admin.loading = true;
+      try {
+        await api.post('admin.group_assign', {
+          group_id:     group.id,
+          category_ids: selected,
+        });
+        this.admin.groupAssign.show = false;
+        this.showToast('Kategori berhasil diperbarui', 'success', '✅');
+        await this.loadAdminTab('groups');
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        this.admin.loading = false;
       }
     },
 
