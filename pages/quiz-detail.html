@@ -51,9 +51,6 @@
        },
        startWithMode(quizId) {
          if (this.selectedMode === 'challenge') {
-           if (!$store?.user && !window.Alpine?.store?.('user')) {
-             // cek user dari parent scope
-           }
            this.challengeModal.show = true;
            this.challengeModal.sent = false;
            this.challengeModal.selectedUser = null;
@@ -294,3 +291,4 @@
   </div>
 
 </div>
+                                                                                                                           
