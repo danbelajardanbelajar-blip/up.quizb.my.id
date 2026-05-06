@@ -57,6 +57,7 @@ $routes = [
     'admin'       => __DIR__ . '/api/admin.php',
     'class'       => __DIR__ . '/api/class.php',
     'assignment'  => __DIR__ . '/api/assignment.php',
+    'challenge'   => __DIR__ . '/api/challenge.php',
 ];
 
 if (!isset($routes[$ns])) {
@@ -76,5 +77,3 @@ $funcName = $ns . '_' . ($fn ?: 'index');
 if (function_exists($funcName)) {
     call_user_func($funcName);
 } else {
-    jsonError("Action '$action' not found", 404);
-}

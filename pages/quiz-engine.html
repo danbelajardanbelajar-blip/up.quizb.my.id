@@ -4,11 +4,15 @@
        (() => {
          const hash = window.location.hash || '';
          const [pathPart, queryPart] = hash.split('?');
-         const m = pathPart.match(/\/play\/(\d+)/);
+         const m   = pathPart.match(/\/play\/(\d+)/);
          const quizId = m ? m[1] : null;
-         const am = (queryPart || '').match(/(?:^|&)assign=(\d+)/);
+         const am  = (queryPart || '').match(/(?:^|&)assign=(\d+)/);
          const assignId = am ? am[1] : null;
-         if (quizId) { loadQuiz(quizId, assignId); }
+         const mm  = (queryPart || '').match(/(?:^|&)mode=([a-z]+)/);
+         const mode = mm ? mm[1] : 'exam';
+         const cm  = (queryPart || '').match(/(?:^|&)cid=(\d+)/);
+         const challengeId = cm ? cm[1] : null;
+         if (quizId) { loadQuiz(quizId, assignId, mode, challengeId); }
          else { phase = 'error'; error = 'Quiz ID tidak ditemukan di URL'; }
        })()
      "
@@ -37,10 +41,11 @@
   <div x-show="phase==='ready'" class="flex items-center justify-center min-h-screen px-4">
     <div class="max-w-md w-full text-center animate-slide-up">
       <div class="card p-8">
-        <div class="text-5xl mb-4">🚀</div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold mb-4"
+             :class="modeBadgeClass" x-text="modeLabel"></div>
         <h1 class="text-xl font-bold text-gray-900 dark:text-white mb-2" x-text="quiz?.title"></h1>
-        <p class="text-gray-500 dark:text-gray-400 text-sm mb-6" x-text="quiz?.description"></p>
-        <div class="grid grid-cols-3 gap-3 mb-8 text-center">
+        <p class="text-gray-500 dark:text-gray-400 text-sm mb-5" x-text="quiz?.description"></p>
+        <div class="grid grid-cols-3 gap-3 mb-5 text-center">
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
             <div class="font-bold text-lg" x-text="questions.length"></div>
             <div class="text-xs text-gray-400">Soal</div>
@@ -54,6 +59,29 @@
             <div class="text-xs text-gray-400">Min Lulus</div>
           </div>
         </div>
+        <!-- Mode rules -->
+        <div class="text-left text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-xl p-4 mb-6 space-y-1">
+          <template x-if="mode==='instant'">
+            <div><p class="font-semibold text-orange-600 dark:text-orange-400 mb-1">⚡ Instant Review</p>
+              <p>• Jawab salah → langsung ke halaman hasil</p>
+              <p>• Tidak bisa kembali ke soal sebelumnya</p></div>
+          </template>
+          <template x-if="mode==='end'">
+            <div><p class="font-semibold text-green-600 dark:text-green-400 mb-1">📖 End Review</p>
+              <p>• Kerjakan semua soal hingga selesai</p>
+              <p>• Tidak bisa kembali ke soal sebelumnya</p></div>
+          </template>
+          <template x-if="mode==='exam'">
+            <div><p class="font-semibold text-blue-600 dark:text-blue-400 mb-1">🎯 Mode Ujian</p>
+              <p>• Bisa kembali ke soal sebelumnya</p>
+              <p>• Tandai soal untuk ditinjau ulang</p></div>
+          </template>
+          <template x-if="mode==='challenge'">
+            <div><p class="font-semibold text-purple-600 dark:text-purple-400 mb-1">⚔️ Mode Tantangan</p>
+              <p>• Skor tertinggi menang; seri → waktu lebih cepat</p>
+              <p>• Bisa kembali ke soal sebelumnya</p></div>
+          </template>
+        </div>
         <button @click="startQuiz()" class="btn-primary w-full py-3 text-base">Mulai Sekarang ▶</button>
         <button @click="navigate('/quiz/'+quiz?.id)" class="mt-3 w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors">← Kembali</button>
       </div>
@@ -63,19 +91,24 @@
   <!-- Playing -->
   <div x-show="phase==='playing'" class="max-w-3xl mx-auto px-4 py-6">
     <!-- Top Bar -->
-    <div class="flex items-center justify-between mb-6">
-      <div class="text-sm font-medium text-gray-600 dark:text-gray-400">
-        Soal <span class="font-bold text-gray-900 dark:text-white" x-text="currentIndex+1"></span> / <span x-text="questions.length"></span>
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <span class="text-sm font-medium text-gray-600 dark:text-gray-400">
+          Soal <span class="font-bold text-gray-900 dark:text-white" x-text="currentIndex+1"></span>/<span x-text="questions.length"></span>
+        </span>
+        <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+              :class="modeBadgeClass" x-text="modeLabel"></span>
       </div>
-      <!-- Timer -->
       <div class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-full shadow text-lg font-bold"
            :class="timerClass">
         ⏱ <span x-text="timerDisplay"></span>
       </div>
-      <!-- Nav Toggle -->
-      <button @click="showNav=!showNav" class="text-sm text-primary-600 dark:text-primary-400 font-medium hover:underline">
-        📋 Navigasi
-      </button>
+      <template x-if="!isReviewMode">
+        <button @click="showNav=!showNav" class="text-sm text-primary-600 dark:text-primary-400 font-medium hover:underline">
+          📋 Navigasi
+        </button>
+      </template>
+      <template x-if="isReviewMode"><span class="w-20"></span></template>
     </div>
 
     <!-- Progress -->
@@ -89,8 +122,6 @@
         <span class="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 flex items-center justify-center text-sm font-bold flex-shrink-0" x-text="currentIndex+1"></span>
         <p class="text-gray-800 dark:text-gray-100 font-medium leading-relaxed" x-text="current?.question_text"></p>
       </div>
-
-      <!-- Options -->
       <div class="space-y-3">
         <template x-for="opt in current?.options" :key="opt.id">
           <button class="quiz-option" :class="isSelected(current?.id, opt.id) ? 'selected' : ''"
@@ -104,54 +135,66 @@
 
     <!-- Controls -->
     <div class="flex items-center justify-between">
-      <button @click="prev()" :disabled="currentIndex===0"
-              class="btn-secondary px-5 py-2 disabled:opacity-40">← Sebelumnya</button>
+      <template x-if="!isReviewMode">
+        <button @click="prev()" :disabled="currentIndex===0"
+                class="btn-secondary px-5 py-2 disabled:opacity-40">← Sebelumnya</button>
+      </template>
+      <template x-if="isReviewMode"><span></span></template>
+
       <div class="flex items-center gap-3">
-        <button @click="toggleFlag(current?.id)"
-                class="px-4 py-2 rounded-lg border text-sm font-medium transition-colors"
-                :class="flagged.has(current?.id) ? 'border-yellow-400 bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400' : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:border-yellow-300'">
-          🚩 <span x-text="flagged.has(current?.id) ? 'Ditandai' : 'Tandai'"></span>
-        </button>
-        <template x-if="currentIndex < questions.length - 1">
+        <template x-if="!isReviewMode">
+          <button @click="toggleFlag(current?.id)"
+                  class="px-4 py-2 rounded-lg border text-sm font-medium transition-colors"
+                  :class="flagged.has(current?.id) ? 'border-yellow-400 bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400' : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:border-yellow-300'">
+            🚩 <span x-text="flagged.has(current?.id) ? 'Ditandai' : 'Tandai'"></span>
+          </button>
+        </template>
+        <template x-if="!isReviewMode && currentIndex < questions.length - 1">
           <button @click="next()" class="btn-primary px-5 py-2">Selanjutnya →</button>
         </template>
-        <template x-if="currentIndex === questions.length - 1">
+        <template x-if="!isReviewMode && currentIndex === questions.length - 1">
           <button @click="submit()" class="btn-primary px-5 py-2 bg-green-600 hover:bg-green-700" :disabled="loading">
             <span x-show="loading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></span>
             ✅ Submit
           </button>
         </template>
+        <template x-if="isReviewMode && loading">
+          <div class="flex items-center gap-2 text-sm text-gray-500">
+            <span class="w-4 h-4 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin inline-block"></span>
+            Menyimpan...
+          </div>
+        </template>
       </div>
     </div>
-
-    <!-- Answered counter -->
     <p class="text-center text-xs text-gray-400 mt-4" x-text="answered + ' dari ' + questions.length + ' soal dijawab'"></p>
   </div>
 
-  <!-- Question Navigation Drawer -->
-  <div x-show="showNav" @click.self="showNav=false"
-       class="fixed inset-0 bg-black/50 z-40 flex items-end sm:items-center justify-center p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 w-full max-w-sm shadow-2xl animate-slide-up">
-      <h3 class="font-bold text-gray-900 dark:text-white mb-4">Navigasi Soal</h3>
-      <div class="grid grid-cols-7 gap-2 mb-4">
-        <template x-for="(q, idx) in questions" :key="q.id">
-          <button @click="goTo(idx)"
-                  class="w-9 h-9 rounded-lg text-xs font-bold transition-all"
-                  :class="{
-                    'bg-primary-500 text-white': idx===currentIndex,
-                    'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400': idx!==currentIndex && questionStatus(idx)==='answered',
-                    'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400': questionStatus(idx)==='flagged',
-                    'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400': idx!==currentIndex && questionStatus(idx)==='unanswered'
-                  }"
-                  x-text="idx+1">
-          </button>
-        </template>
-      </div>
-      <div class="flex gap-4 text-xs text-gray-500 flex-wrap">
-        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-green-200"></span> Dijawab</span>
-        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-gray-200"></span> Belum</span>
-        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-yellow-200"></span> Ditandai</span>
+  <!-- Question Navigation Drawer — hanya exam/challenge -->
+  <template x-if="!isReviewMode">
+    <div x-show="showNav" @click.self="showNav=false"
+         class="fixed inset-0 bg-black/50 z-40 flex items-end sm:items-center justify-center p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 w-full max-w-sm shadow-2xl animate-slide-up">
+        <h3 class="font-bold text-gray-900 dark:text-white mb-4">Navigasi Soal</h3>
+        <div class="grid grid-cols-7 gap-2 mb-4">
+          <template x-for="(q, idx) in questions" :key="q.id">
+            <button @click="goTo(idx)"
+                    class="w-9 h-9 rounded-lg text-xs font-bold transition-all"
+                    :class="{
+                      'bg-primary-500 text-white': idx===currentIndex,
+                      'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400': idx!==currentIndex && questionStatus(idx)==='answered',
+                      'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400': questionStatus(idx)==='flagged',
+                      'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400': idx!==currentIndex && questionStatus(idx)==='unanswered'
+                    }"
+                    x-text="idx+1">
+            </button>
+          </template>
+        </div>
+        <div class="flex gap-4 text-xs text-gray-500 flex-wrap">
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-green-200"></span> Dijawab</span>
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-gray-200"></span> Belum</span>
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-yellow-200"></span> Ditandai</span>
+        </div>
       </div>
     </div>
-  </div>
+  </template>
 </div>

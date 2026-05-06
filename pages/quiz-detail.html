@@ -1,5 +1,71 @@
 <!-- QUIZ DETAIL PAGE -->
-<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10"
+     x-data="{
+       selectedMode: 'exam',
+       challengeModal: {
+         show: false,
+         searchQ: '',
+         results: [],
+         searching: false,
+         selectedUser: null,
+         message: '',
+         sending: false,
+         sent: false,
+         error: '',
+         challengeId: null,
+       },
+       async searchUsers(q) {
+         if (q.length < 2) { this.challengeModal.results = []; return; }
+         this.challengeModal.searching = true;
+         try {
+           const data = await api.get('challenge.search_users', { q });
+           this.challengeModal.results = Array.isArray(data) ? data : [];
+         } catch(e) {
+           this.challengeModal.results = [];
+         } finally {
+           this.challengeModal.searching = false;
+         }
+       },
+       selectChallengeUser(u) {
+         this.challengeModal.selectedUser = u;
+         this.challengeModal.results = [];
+         this.challengeModal.searchQ = u.name;
+       },
+       async sendChallenge(quizId) {
+         if (!this.challengeModal.selectedUser) return;
+         this.challengeModal.sending = true;
+         this.challengeModal.error = '';
+         try {
+           const data = await api.post('challenge.create', {
+             quiz_id: parseInt(quizId),
+             challenged_id: this.challengeModal.selectedUser.id,
+             message: this.challengeModal.message,
+           });
+           this.challengeModal.sent = true;
+           this.challengeModal.challengeId = data.challenge_id;
+         } catch(e) {
+           this.challengeModal.error = e.message;
+         } finally {
+           this.challengeModal.sending = false;
+         }
+       },
+       startWithMode(quizId) {
+         if (this.selectedMode === 'challenge') {
+           if (!$store?.user && !window.Alpine?.store?.('user')) {
+             // cek user dari parent scope
+           }
+           this.challengeModal.show = true;
+           this.challengeModal.sent = false;
+           this.challengeModal.selectedUser = null;
+           this.challengeModal.searchQ = '';
+           this.challengeModal.message = '';
+           this.challengeModal.error = '';
+           return;
+         }
+         navigate('/play/' + quizId + '?mode=' + this.selectedMode);
+       },
+     }">
+
   <!-- Loading -->
   <div x-show="quizDetail.loading" class="space-y-4">
     <div class="skeleton h-8 w-2/3 rounded-xl"></div>
@@ -54,25 +120,74 @@
         </div>
       </div>
 
-      <!-- Rules -->
-      <div class="mb-6 p-4 border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl text-sm text-yellow-800 dark:text-yellow-300">
-        <p class="font-semibold mb-2">📋 Aturan Quiz:</p>
-        <ul class="space-y-1 list-disc list-inside text-yellow-700 dark:text-yellow-400">
-          <li>Setiap soal hanya bisa dijawab sekali</li>
-          <li>Timer akan berjalan otomatis saat quiz dimulai</li>
-          <li>Quiz otomatis tersubmit saat waktu habis</li>
-          <li x-show="quizDetail.quiz?.max_attempts > 0">Maksimal <span x-text="quizDetail.quiz?.max_attempts"></span> percobaan</li>
-        </ul>
+      <!-- ===== MODE SELECTION ===== -->
+      <div class="mb-6">
+        <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">🎮 Pilih Mode Bermain</p>
+        <div class="grid grid-cols-2 gap-3">
+
+          <!-- Instant Review -->
+          <button @click="selectedMode = 'instant'"
+                  class="relative flex flex-col items-start gap-1.5 p-4 rounded-xl border-2 text-left transition-all"
+                  :class="selectedMode === 'instant'
+                    ? 'border-orange-400 bg-orange-50 dark:bg-orange-900/20'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-orange-300 dark:hover:border-orange-700'">
+            <span x-show="selectedMode === 'instant'" class="absolute top-2 right-2 text-orange-500 text-sm">✔</span>
+            <span class="text-2xl">⚡</span>
+            <p class="text-sm font-bold text-gray-900 dark:text-white">Instant Review</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Jawab salah → langsung selesai. Uji pemahaman per soal.</p>
+          </button>
+
+          <!-- End Review -->
+          <button @click="selectedMode = 'end'"
+                  class="relative flex flex-col items-start gap-1.5 p-4 rounded-xl border-2 text-left transition-all"
+                  :class="selectedMode === 'end'
+                    ? 'border-green-400 bg-green-50 dark:bg-green-900/20'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-700'">
+            <span x-show="selectedMode === 'end'" class="absolute top-2 right-2 text-green-500 text-sm">✔</span>
+            <span class="text-2xl">📖</span>
+            <p class="text-sm font-bold text-gray-900 dark:text-white">End Review</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Kerjakan semua soal, hasil tampil di akhir. Tidak bisa kembali.</p>
+          </button>
+
+          <!-- Exam -->
+          <button @click="selectedMode = 'exam'"
+                  class="relative flex flex-col items-start gap-1.5 p-4 rounded-xl border-2 text-left transition-all"
+                  :class="selectedMode === 'exam'
+                    ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700'">
+            <span x-show="selectedMode === 'exam'" class="absolute top-2 right-2 text-blue-500 text-sm">✔</span>
+            <span class="text-2xl">🎯</span>
+            <p class="text-sm font-bold text-gray-900 dark:text-white">Mode Ujian</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Kerjakan bebas, bisa kembali & tandai soal. Mode standar.</p>
+          </button>
+
+          <!-- Challenge -->
+          <button @click="selectedMode = 'challenge'"
+                  :disabled="!user"
+                  class="relative flex flex-col items-start gap-1.5 p-4 rounded-xl border-2 text-left transition-all"
+                  :class="selectedMode === 'challenge'
+                    ? 'border-purple-400 bg-purple-50 dark:bg-purple-900/20'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700 disabled:opacity-50 disabled:cursor-not-allowed'">
+            <span x-show="selectedMode === 'challenge'" class="absolute top-2 right-2 text-purple-500 text-sm">✔</span>
+            <span class="text-2xl">⚔️</span>
+            <p class="text-sm font-bold text-gray-900 dark:text-white">Tantang Teman</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              <span x-show="user">Duel skor & kecepatan dengan teman. Perlu login.</span>
+              <span x-show="!user" class="text-orange-500">Login untuk tantang teman</span>
+            </p>
+          </button>
+
+        </div>
       </div>
 
-      <!-- Action — semua orang bisa mulai, login atau tidak -->
-      <button @click="navigate('/play/'+quizDetail.quiz?.id)" class="btn-primary w-full py-3 text-base">
-        🚀 Mulai Quiz Sekarang
+      <!-- Mulai Button -->
+      <button @click="startWithMode(quizDetail.quiz?.id)" class="btn-primary w-full py-3 text-base">
+        <span x-text="selectedMode === 'challenge' ? '⚔️ Pilih Lawan & Mulai' : '🚀 Mulai Sekarang'"></span>
       </button>
-      <!-- Info untuk tamu -->
+
       <p x-show="!user" class="text-center text-xs text-gray-400 dark:text-gray-500 mt-3">
         Bermain sebagai tamu — hasil disimpan dengan nama anonim.
-        <button @click="navigate('/login')" class="text-primary-500 hover:underline ml-1">Login</button> untuk menyimpan progres.
+        <button @click="navigate('/login')" class="text-primary-500 hover:underline ml-1">Login</button> untuk menyimpan progres & tantang teman.
       </p>
     </div>
   </div>
@@ -83,4 +198,99 @@
     <p class="text-lg">Quiz tidak ditemukan</p>
     <button @click="navigate('/quizzes')" class="mt-4 btn-primary">← Kembali</button>
   </div>
+
+  <!-- ===== CHALLENGE MODAL ===== -->
+  <div x-show="challengeModal.show" @click.self="challengeModal.show=false"
+       class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+       style="display:none">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md animate-slide-up">
+      <div class="p-6">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white">⚔️ Tantang Teman</h2>
+          <button @click="challengeModal.show=false" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        </div>
+
+        <!-- Sent success -->
+        <template x-if="challengeModal.sent">
+          <div class="text-center py-6">
+            <p class="text-4xl mb-3">🎉</p>
+            <p class="font-bold text-gray-900 dark:text-white mb-1">Tantangan Terkirim!</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4" x-text="'Menunggu ' + (challengeModal.selectedUser?.name || 'lawan') + ' menerima tantangan.'"></p>
+            <p class="text-xs text-gray-400 mb-6">Kamu bisa mengerjakan quiz sekarang. Hasil akan dibandingkan ketika lawan selesai.</p>
+            <div class="flex gap-3">
+              <button @click="challengeModal.show=false" class="btn-secondary flex-1 py-2 text-sm">Nanti</button>
+              <button @click="navigate('/play/' + quizDetail.quiz?.id + '?mode=challenge&cid=' + challengeModal.challengeId); challengeModal.show=false"
+                      class="btn-primary flex-1 py-2 text-sm">Mulai Sekarang →</button>
+            </div>
+          </div>
+        </template>
+
+        <!-- Form -->
+        <template x-if="!challengeModal.sent">
+          <div class="space-y-4">
+            <!-- Search user -->
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Cari teman berdasarkan nama atau email</label>
+              <div class="relative">
+                <input type="text" x-model="challengeModal.searchQ"
+                       @input.debounce.300ms="searchUsers(challengeModal.searchQ)"
+                       placeholder="Ketik nama atau email..."
+                       class="input w-full pr-8" />
+                <span x-show="challengeModal.searching" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin"></span>
+              </div>
+              <!-- Search results -->
+              <div x-show="challengeModal.results.length > 0"
+                   class="mt-1 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-900 shadow-lg">
+                <template x-for="u in challengeModal.results" :key="u.id">
+                  <button @click="selectChallengeUser(u)"
+                          class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 text-left transition-colors">
+                    <span class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 flex items-center justify-center text-sm font-bold flex-shrink-0"
+                          x-text="u.name.charAt(0).toUpperCase()"></span>
+                    <div>
+                      <p class="text-sm font-medium text-gray-900 dark:text-white" x-text="u.name"></p>
+                      <p class="text-xs text-gray-400" x-text="u.email"></p>
+                    </div>
+                  </button>
+                </template>
+              </div>
+            </div>
+
+            <!-- Selected user -->
+            <div x-show="challengeModal.selectedUser" class="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+              <span class="w-9 h-9 rounded-full bg-purple-200 dark:bg-purple-800 text-purple-700 dark:text-purple-300 flex items-center justify-center text-sm font-bold flex-shrink-0"
+                    x-text="challengeModal.selectedUser?.name?.charAt(0).toUpperCase()"></span>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-gray-900 dark:text-white" x-text="challengeModal.selectedUser?.name"></p>
+                <p class="text-xs text-gray-400" x-text="challengeModal.selectedUser?.email"></p>
+              </div>
+              <button @click="challengeModal.selectedUser=null; challengeModal.searchQ=''" class="text-gray-400 hover:text-red-500 text-lg leading-none">&times;</button>
+            </div>
+
+            <!-- Message -->
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Pesan (opsional)</label>
+              <input type="text" x-model="challengeModal.message"
+                     placeholder="Ayo kita adu kemampuan! 🔥"
+                     class="input w-full" maxlength="100" />
+            </div>
+
+            <!-- Error -->
+            <p x-show="challengeModal.error" class="text-sm text-red-500" x-text="challengeModal.error"></p>
+
+            <!-- Actions -->
+            <div class="flex gap-3 pt-1">
+              <button @click="challengeModal.show=false" class="btn-secondary flex-1 py-2.5 text-sm">Batal</button>
+              <button @click="sendChallenge(quizDetail.quiz?.id)"
+                      :disabled="!challengeModal.selectedUser || challengeModal.sending"
+                      class="btn-primary flex-1 py-2.5 text-sm disabled:opacity-50">
+                <span x-show="challengeModal.sending" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-1"></span>
+                <span x-text="challengeModal.sending ? 'Mengirim...' : '⚔️ Kirim Tantangan'"></span>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
 </div>

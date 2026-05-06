@@ -25,6 +25,8 @@ function QuizBApp() {
       ];
       if (this.user) {
         base.push({ href: '/classroom', label: '🏫 Kelas' });
+        const badge = this.challenge.pendingCount > 0 ? ' (' + this.challenge.pendingCount + ')' : '';
+        base.push({ href: '/challenges', label: '⚔️ Tantangan' + badge });
       }
       return base;
     },
@@ -37,7 +39,7 @@ function QuizBApp() {
     leaderboard: { list: [], loading: true },
     dashboard:   { stats: null, userInfo: null, recent: [], loading: true },
     history:     { list: [], loading: true, total: 0, page: 1 },
-    result:      { data: null, loading: true, assignId: null, assignSubmitted: false, assignSubmitting: false, assignError: '' },
+    result:      { data: null, loading: true, assignId: null, assignSubmitted: false, assignSubmitting: false, assignError: '', challengeId: null, challengeData: null },
 
     // ---- Classroom State ----
     classroom: {
@@ -94,6 +96,12 @@ function QuizBApp() {
     // Settings
     settings: { limit: 10, shuffleQuestions: true, shuffleOptions: true, loading: false, saving: false, error: '', success: '' },
 
+    // Challenge
+    challenge: {
+      incoming: [], outgoing: [], loading: false, pendingCount: 0,
+      pollInterval: null,
+    },
+
     // ---- Lifecycle ----
     async init() {
       // Dark mode
@@ -118,10 +126,16 @@ function QuizBApp() {
         this.settings.shuffleOptions   = this.user.shuffle_options      ?? true;
       }
 
+      // Start challenge notification polling for logged-in users
+      if (this.user) {
+        this.loadChallenges();
+        this.challenge.pollInterval = setInterval(() => this.loadChallenges(), 20000);
+      }
+
       // After loadUser: if the user IS authenticated and the original route was
       // a protected page (but we were bounced to /login because user hadn't loaded
       // yet), navigate back to the intended destination now.
-      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings'];
+      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges'];
       const intendedPath = (initialHash.replace(/^#/, '').split('?')[0]) || '/';
       if (this.user && protected_routes.some(r => intendedPath.startsWith(r))) {
         return this.handleRoute(initialHash);
@@ -135,7 +149,7 @@ function QuizBApp() {
 
     // Lightweight guard re-check (used after async loadUser).
     _guardRoute(route) {
-      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings'];
+      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges'];
       const admin_routes     = ['/admin'];
       if (protected_routes.some(r => route.startsWith(r)) && !this.user) {
         this.showToast('Silakan login untuk mengakses halaman ini', 'warning', '⚠️');
@@ -172,6 +186,7 @@ function QuizBApp() {
         'register':    '/register',
         'admin':       '/admin',
         'classroom':   rest[0] ? '/classroom/' + rest[0] : '/classroom',
+        'challenges':  '/challenges',
       };
 
       const route = routeMap[base] || (path === '/' ? '/' : '/404');
@@ -187,7 +202,7 @@ function QuizBApp() {
 
     onRouteChange(route, params) {
       // Guard protected routes
-      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings'];
+      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges'];
       const admin_routes     = ['/admin'];
 
       if (protected_routes.some(r => route.startsWith(r)) && !this.user) {
@@ -214,6 +229,7 @@ function QuizBApp() {
       if (route.startsWith('/admin'))      this.loadAdminTab(this.admin.tab);
       if (route === '/classroom')          this.loadClassroom();
       if (route.startsWith('/classroom/') && params[0]) this.loadClassroomDetail(params[0]);
+      if (route === '/challenges')         this.loadChallenges();
     },
 
     // ---- Auth ----
@@ -411,9 +427,12 @@ function QuizBApp() {
       this.result.data = null;
       this.result.assignSubmitted = false;
       this.result.assignError = '';
-      // Baca assignId dari URL hash jika ada
+      // Baca assignId dan challengeId dari URL hash jika ada
       const hashMatch = window.location.hash.match(/[?&]assign=(\d+)/);
       this.result.assignId = hashMatch ? hashMatch[1] : null;
+      const cidMatch = window.location.hash.match(/[?&]cid=(\d+)/);
+      this.result.challengeId = cidMatch ? cidMatch[1] : null;
+      this.result.challengeData = null;
       try {
         const resp = await api.get('attempt.result', { id: attemptId });
         // API returns { attempt: {...}, answers: [...] }
@@ -428,6 +447,12 @@ function QuizBApp() {
             category_name: resp.attempt.category_name,
           },
         };
+        // Load challenge status jika ada challengeId
+        if (this.result.challengeId) {
+          try {
+            this.result.challengeData = await api.get('challenge.status', { id: this.result.challengeId });
+          } catch (_) {}
+        }
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
@@ -883,6 +908,42 @@ function QuizBApp() {
         ...o,
         is_correct: i === index,
       }));
+    },
+
+    // ---- Challenge ----
+    async loadChallenges() {
+      if (!this.user) return;
+      this.challenge.loading = true;
+      try {
+        const data = await api.get('challenge.list');
+        this.challenge.incoming     = data.incoming     || [];
+        this.challenge.outgoing     = data.outgoing     || [];
+        this.challenge.pendingCount = data.pending_count || 0;
+      } catch (_) {
+        // silently fail (polling — jangan ganggu UX)
+      } finally {
+        this.challenge.loading = false;
+      }
+    },
+
+    async acceptChallenge(challengeId, quizId) {
+      try {
+        await api.post('challenge.accept', { challenge_id: parseInt(challengeId) });
+        this.showToast('Tantangan diterima! Mulai bermain.', 'success', '⚔️');
+        this.navigate('/play/' + quizId + '?mode=challenge&cid=' + challengeId);
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      }
+    },
+
+    async declineChallenge(challengeId) {
+      try {
+        await api.post('challenge.decline', { challenge_id: parseInt(challengeId) });
+        this.showToast('Tantangan ditolak.', 'info', '🚫');
+        await this.loadChallenges();
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      }
     },
 
     // ---- Search ----

@@ -1,6 +1,6 @@
 // ============================================
 // assets/js/quiz-engine.js — Alpine Component
-// v2.0: Support 2-5 pilihan jawaban dinamis
+// v3.0: Mode support (exam | instant | end | challenge)
 // ============================================
 
 function QuizEngine() {
@@ -19,7 +19,9 @@ function QuizEngine() {
     showNav: false,
     loading: false,
     error: null,
-    assignmentId: null,  // jika dimainkan dari tugas
+    assignmentId: null,   // jika dimainkan dari tugas
+    mode: 'exam',         // exam | instant | end | challenge
+    challengeId: null,    // untuk mode challenge
 
     // Computed
     get current() { return this.questions[this.currentIndex] || null; },
@@ -36,21 +38,36 @@ function QuizEngine() {
     },
     get timerDisplay() { return formatTime(this.timeLeft); },
 
+    // Mode helpers
+    get isReviewMode() { return this.mode === 'instant' || this.mode === 'end'; },
+    get modeLabel() {
+      return { exam: '🎯 Mode Ujian', instant: '⚡ Instant Review', end: '📖 End Review', challenge: '⚔️ Tantangan' }[this.mode] || '';
+    },
+    get modeBadgeClass() {
+      return {
+        exam:      'bg-blue-100   text-blue-700   dark:bg-blue-900/40   dark:text-blue-300',
+        instant:   'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+        end:       'bg-green-100  text-green-700  dark:bg-green-900/40  dark:text-green-300',
+        challenge: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+      }[this.mode] || '';
+    },
+
     // ---- Option label helpers (A, B, C, D, E) ----
     optionLabel(index) {
       return ['A', 'B', 'C', 'D', 'E'][index] || String.fromCharCode(65 + index);
     },
 
-    // Hitung jumlah opsi pada soal saat ini
     get currentOptionCount() {
       return this.current?.options?.length || 0;
     },
 
     // ---- Load quiz ----
-    async loadQuiz(quizId, assignmentId = null) {
+    async loadQuiz(quizId, assignmentId = null, mode = 'exam', challengeId = null) {
       this.phase = 'loading';
       this.error = null;
       this.assignmentId = assignmentId;
+      this.mode         = mode || 'exam';
+      this.challengeId  = challengeId ? parseInt(challengeId) : null;
       try {
         const params = { id: quizId };
         if (assignmentId) params.assignment_id = assignmentId;
@@ -95,12 +112,42 @@ function QuizEngine() {
     selectOption(questionId, optionId) {
       if (this.phase !== 'playing') return;
       this.answers[questionId] = optionId;
-      // Auto-advance setelah short delay jika bukan soal terakhir
+
+      // ---- INSTANT REVIEW ----
+      if (this.mode === 'instant') {
+        const q = this.questions.find(q => q.id === questionId);
+        const isWrong = q && q.correct_option_id && q.correct_option_id !== optionId;
+        if (isWrong) {
+          // Jawaban salah → langsung submit (game over)
+          this.stopTimer();
+          setTimeout(() => this.submitAnswers(), 350);
+          return;
+        }
+        // Jawaban benar → lanjut ke soal berikutnya
+        if (this.currentIndex < this.questions.length - 1) {
+          setTimeout(() => { if (this.answers[questionId] === optionId) this.next(); }, 450);
+        } else {
+          // Soal terakhir dan benar → submit
+          setTimeout(() => this.submitAnswers(), 450);
+        }
+        return;
+      }
+
+      // ---- END REVIEW ----
+      if (this.mode === 'end') {
+        if (this.currentIndex < this.questions.length - 1) {
+          setTimeout(() => { if (this.answers[questionId] === optionId) this.next(); }, 450);
+        } else {
+          // Soal terakhir → auto-submit
+          setTimeout(() => this.submitAnswers(), 450);
+        }
+        return;
+      }
+
+      // ---- EXAM / CHALLENGE ---- auto-advance jika bukan soal terakhir
       if (this.currentIndex < this.questions.length - 1) {
         setTimeout(() => {
-          if (this.answers[questionId] === optionId) {
-            this.next();
-          }
+          if (this.answers[questionId] === optionId) this.next();
         }, 500);
       }
     },
@@ -109,19 +156,22 @@ function QuizEngine() {
       return this.answers[questionId] === optionId;
     },
 
-    // ---- Navigation ----
+    // ---- Navigation (hanya exam/challenge) ----
     next() {
       if (this.currentIndex < this.questions.length - 1) this.currentIndex++;
     },
     prev() {
+      if (this.isReviewMode) return; // tidak boleh kembali di review mode
       if (this.currentIndex > 0) this.currentIndex--;
     },
     goTo(index) {
+      if (this.isReviewMode) return;
       this.currentIndex = index;
       this.showNav = false;
     },
 
     toggleFlag(qId) {
+      if (this.isReviewMode) return;
       if (this.flagged.has(qId)) this.flagged.delete(qId);
       else this.flagged.add(qId);
       this.flagged = new Set(this.flagged);
@@ -166,7 +216,6 @@ function QuizEngine() {
         const timeTaken = (this.quiz.time_limit || this.quiz.duration || 600) - this.timeLeft;
         const payload = {
           quiz_id:      this.quiz.id,
-          // Kirim ID soal yang ditampilkan agar server hanya menskor soal tersebut
           question_ids: this.questions.map(q => q.id),
           answers: Object.entries(this.answers).map(([question_id, option_id]) => ({
             question_id: parseInt(question_id),
@@ -188,9 +237,22 @@ function QuizEngine() {
           } catch (_) {}
         }
 
-        window.location.hash = `#/result/${result.attempt_id}`;
+        // Jika dari challenge: submit hasil ke challenge
+        if (this.challengeId && result.attempt_id) {
+          try {
+            await api.post('challenge.submit', {
+              challenge_id: this.challengeId,
+              attempt_id:   result.attempt_id,
+            });
+          } catch (_) {}
+        }
+
+        // Navigasi ke result, sertakan challenge ID jika ada
+        let resultHash = `#/result/${result.attempt_id}`;
+        if (this.challengeId) resultHash += `?cid=${this.challengeId}`;
+        window.location.hash = resultHash;
+
       } catch (e) {
-        // Jika 401 (belum pernah submit sebelumnya dan session habis), coba lagi — backend akan buat anon user
         if (e.message && e.message.includes('401')) {
           alert('Sesi berakhir. Silakan refresh halaman dan coba lagi.');
         } else {
@@ -222,7 +284,7 @@ function QuizEngine() {
       }
     },
 
-    // ---- Option styling (dinamis 2-5 pilihan) ----
+    // ---- Option styling ----
     optionClass(question, optionId) {
       if (this.phase === 'playing') {
         return this.answers[question.id] === optionId

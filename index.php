@@ -221,6 +221,11 @@
       <?php include 'pages/classroom-detail.html'; ?>
     </div>
 
+    <!-- CHALLENGES PAGE -->
+    <div x-show="currentRoute === '/challenges'" x-transition:enter="animate-fade-in">
+      <?php include 'pages/challenges.html'; ?>
+    </div>
+
     <!-- ADMIN PAGE -->
     <div x-show="currentRoute.startsWith('/admin')" x-transition:enter="animate-fade-in">
       <?php include 'pages/admin.html'; ?>
@@ -259,9 +264,4 @@
   <!-- Alpine.js CDN -->
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-  <!-- App Scripts -->
-  <script src="assets/js/utils.js"></script>
-  <script src="assets/js/quiz-engine.js"></script>
-  <script src="assets/js/app.js"></script>
-</body>
-</html>
+  
