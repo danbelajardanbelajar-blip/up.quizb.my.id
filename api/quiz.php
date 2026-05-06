@@ -85,15 +85,13 @@ function quiz_questions(): void {
 
     // ---- Ambil pengaturan dari assignment atau user ----
     // Prioritas: 1) assignment  2) user setting  3) default
-    $limit            = null;
+    $limit           = null;
     $shuffleQuestions = null;   // null = belum ditentukan
     $shuffleOptions   = null;
-    $timerPerQ        = null;   // null = belum ditentukan (detik per soal)
-    $examDurMins      = null;   // null = belum ditentukan (menit total exam)
 
     if ($assignmentId > 0) {
         $assignment = DB::one(
-            'SELECT max_questions, shuffle_questions, shuffle_options, timer_per_question, duration_minutes
+            'SELECT max_questions, shuffle_questions, shuffle_options
              FROM assignments WHERE id = ? AND quiz_id = ? AND is_active = 1',
             [$assignmentId, $quizId]
         );
@@ -101,8 +99,6 @@ function quiz_questions(): void {
             if ($assignment['max_questions'] !== null)   $limit           = (int)$assignment['max_questions'];
             if ($assignment['shuffle_questions'] !== null) $shuffleQuestions = (bool)(int)$assignment['shuffle_questions'];
             if ($assignment['shuffle_options']   !== null) $shuffleOptions   = (bool)(int)$assignment['shuffle_options'];
-            if ($assignment['timer_per_question'] !== null) $timerPerQ        = (int)$assignment['timer_per_question'];
-            if ($assignment['duration_minutes']   !== null) $examDurMins      = (int)$assignment['duration_minutes'];
         }
     }
 
@@ -110,21 +106,17 @@ function quiz_questions(): void {
     $currentUser = getCurrentUser();
     if ($currentUser) {
         $userRow = DB::one(
-            'SELECT quiz_questions_limit, shuffle_questions, shuffle_options, timer_per_question, exam_duration_minutes FROM users WHERE id = ?',
+            'SELECT quiz_questions_limit, shuffle_questions, shuffle_options FROM users WHERE id = ?',
             [$currentUser['id']]
         );
         if ($limit           === null) $limit           = (int)($userRow['quiz_questions_limit'] ?? 10);
         if ($shuffleQuestions === null) $shuffleQuestions = (bool)(int)($userRow['shuffle_questions'] ?? 1);
         if ($shuffleOptions   === null) $shuffleOptions   = (bool)(int)($userRow['shuffle_options']   ?? 1);
-        if ($timerPerQ        === null) $timerPerQ        = (int)($userRow['timer_per_question']    ?? 20);
-        if ($examDurMins      === null && isset($userRow['exam_duration_minutes']) && $userRow['exam_duration_minutes'] !== null)
-            $examDurMins = (int)$userRow['exam_duration_minutes'];
     } else {
         // Tamu: pakai default
         if ($limit           === null) $limit           = 10;
         if ($shuffleQuestions === null) $shuffleQuestions = true;
         if ($shuffleOptions   === null) $shuffleOptions   = true;
-        if ($timerPerQ        === null) $timerPerQ        = 20;
     }
 
     if ($limit < 1) $limit = 10;
@@ -176,14 +168,6 @@ function quiz_questions(): void {
         $q['correct_option_id'] = $correctOpt ? $correctOpt['id'] : null;
     }
     unset($q);
-
-    // Hitung exam_duration: assignment/user override → fallback ke quiz.time_limit
-    $examDurSeconds = $examDurMins !== null
-        ? $examDurMins * 60
-        : ((int)($quiz['time_limit'] ?? $quiz['duration'] ?? 600));
-
-    $quiz['timer_per_question'] = $timerPerQ;   // detik per soal (instant/end)
-    $quiz['exam_duration']      = $examDurSeconds; // detik total (exam)
 
     jsonSuccess(['quiz' => $quiz, 'questions' => $allQuestions]);
 }
