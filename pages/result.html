@@ -138,4 +138,68 @@
                       <p class="font-bold text-red-500 text-lg" x-text="(result.challengeData.is_challenger ? result.challengeData.challenged_name : result.challengeData.challenger_name) + ' Menang'"></p>
                     </div>
                   </template>
-                  <template x-if="!res
+                  <template x-if="!result.challengeData.winner_id">
+                    <div>
+                      <p class="text-4xl mb-1">🤝</p>
+                      <p class="font-bold text-gray-600 dark:text-gray-300 text-lg">Seri!</p>
+                    </div>
+                  </template>
+                </div>
+                <!-- Scoreboard -->
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="bg-white dark:bg-gray-900 rounded-xl p-3 text-center border"
+                       :class="result.challengeData.is_challenger ? 'border-primary-300' : 'border-gray-200 dark:border-gray-700'">
+                    <p class="text-xs font-semibold text-gray-500 mb-1" x-text="result.challengeData.challenger_name"></p>
+                    <p class="text-2xl font-extrabold text-primary-600 dark:text-primary-400" x-text="(result.challengeData.challenger_score ?? '?') + '%'"></p>
+                    <p class="text-xs text-gray-400 mt-0.5" x-text="result.challengeData.challenger_time ? formatTime(result.challengeData.challenger_time) : '-'"></p>
+                  </div>
+                  <div class="bg-white dark:bg-gray-900 rounded-xl p-3 text-center border"
+                       :class="!result.challengeData.is_challenger ? 'border-primary-300' : 'border-gray-200 dark:border-gray-700'">
+                    <p class="text-xs font-semibold text-gray-500 mb-1" x-text="result.challengeData.challenged_name"></p>
+                    <p class="text-2xl font-extrabold text-primary-600 dark:text-primary-400" x-text="(result.challengeData.challenged_score ?? '?') + '%'"></p>
+                    <p class="text-xs text-gray-400 mt-0.5" x-text="result.challengeData.challenged_time ? formatTime(result.challengeData.challenged_time) : '-'"></p>
+                  </div>
+                </div>
+              </div>
+            </template>
+            <button @click="navigate('/challenges')" class="mt-4 w-full py-2 text-xs text-purple-600 dark:text-purple-400 hover:underline">
+              Lihat semua tantangan →
+            </button>
+          </div>
+        </template>
+
+        <!-- Kumpulkan ke Tugas (hanya muncul jika dari assignment) -->
+        <div x-show="result.assignId" class="card p-5 mb-4 border-2 border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/20">
+          <div class="flex items-center gap-3 mb-3">
+            <span class="text-2xl">📋</span>
+            <div>
+              <h3 class="font-bold text-gray-900 dark:text-white text-sm">Kumpulkan ke Tugas</h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Klik tombol di bawah untuk mengumpulkan hasil quiz ini sebagai jawaban tugas.</p>
+            </div>
+          </div>
+          <!-- Sudah dikumpulkan -->
+          <div x-show="result.assignSubmitted" class="flex items-center gap-2 text-green-600 dark:text-green-400 font-semibold text-sm">
+            <span>✅</span> Tugas berhasil dikumpulkan!
+          </div>
+          <!-- Error -->
+          <div x-show="result.assignError && !result.assignSubmitted" class="text-red-500 text-sm mb-2" x-text="result.assignError"></div>
+          <!-- Button -->
+          <button x-show="!result.assignSubmitted"
+                  @click="submitToAssignment(result.assignId, result.data?.id)"
+                  class="btn-primary w-full py-2.5 text-sm"
+                  :disabled="result.assignSubmitting">
+            <span x-show="result.assignSubmitting" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></span>
+            📤 Kumpulkan Tugas Sekarang
+          </button>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button @click="navigate('/quiz/'+(result.data.quiz_id||result.data.quiz?.id))" class="btn-secondary flex-1 justify-center py-2.5">🔄 Coba Lagi</button>
+          <button @click="navigate('/quizzes')" class="btn-primary flex-1 justify-center py-2.5">📝 Quiz Lain</button>
+          <button @click="navigate('/leaderboard')" class="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">🏆 Leaderboard</button>
+        </div>
+      </div>
+    </template>
+  </div>
+</div>

@@ -77,3 +77,5 @@ $funcName = $ns . '_' . ($fn ?: 'index');
 if (function_exists($funcName)) {
     call_user_func($funcName);
 } else {
+    jsonError("Action '$action' not found", 404);
+}
