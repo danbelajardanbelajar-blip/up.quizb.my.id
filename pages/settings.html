@@ -1,0 +1,206 @@
+<!-- SETTINGS PAGE -->
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10"
+     x-data="{
+       settingsForm: {
+         quiz_questions_limit: 10,
+         shuffle_questions: true,
+         shuffle_options:   true,
+       },
+       settingsLoading: false,
+       settingsError: '',
+       settingsSuccess: '',
+       initSettings() {
+         this.settingsForm.quiz_questions_limit = user?.quiz_questions_limit ?? 10;
+         this.settingsForm.shuffle_questions    = user?.shuffle_questions    ?? true;
+         this.settingsForm.shuffle_options      = user?.shuffle_options      ?? true;
+       },
+       async saveSettings() {
+         const limit = parseInt(this.settingsForm.quiz_questions_limit);
+         if (!limit || limit < 1 || limit > 100) {
+           this.settingsError = 'Jumlah soal harus antara 1 dan 100';
+           return;
+         }
+         this.settingsLoading = true;
+         this.settingsError   = '';
+         this.settingsSuccess = '';
+         try {
+           await api.post('auth.update_settings', {
+             quiz_questions_limit: limit,
+             shuffle_questions:    this.settingsForm.shuffle_questions,
+             shuffle_options:      this.settingsForm.shuffle_options,
+           });
+           if (user) {
+             user.quiz_questions_limit = limit;
+             user.shuffle_questions    = this.settingsForm.shuffle_questions;
+             user.shuffle_options      = this.settingsForm.shuffle_options;
+           }
+           this.settingsSuccess = 'Pengaturan berhasil disimpan!';
+         } catch(e) {
+           this.settingsError = e.message;
+         } finally {
+           this.settingsLoading = false;
+         }
+       }
+     }"
+     x-init="initSettings()">
+
+  <div class="mb-8">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">⚙️ Pengaturan</h1>
+    <p class="text-gray-500 dark:text-gray-400 mt-1">Sesuaikan preferensi pengalaman quiz kamu</p>
+  </div>
+
+  <!-- Quiz Settings Card -->
+  <div class="card p-6 mb-6">
+    <h2 class="font-bold text-gray-900 dark:text-white mb-1">📝 Pengaturan Quiz</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
+      Atur tampilan soal setiap kali kamu mengerjakan quiz.
+    </p>
+
+    <!-- Alert info -->
+    <div class="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl mb-6">
+      <span class="text-xl flex-shrink-0">ℹ️</span>
+      <div class="text-sm text-blue-700 dark:text-blue-300">
+        <p class="font-medium mb-1">Prioritas pengaturan soal:</p>
+        <ol class="list-decimal list-inside space-y-0.5 text-blue-600 dark:text-blue-400">
+          <li>Pengaturan tugas oleh guru (menimpa semua)</li>
+          <li>Pengaturan ini (berlaku untuk quiz bebas)</li>
+          <li>Default sistem: 10 soal, acak aktif</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="space-y-6">
+
+      <!-- Jumlah Soal -->
+      <div>
+        <label class="form-label">Jumlah Soal Per Quiz</label>
+        <div class="flex items-center gap-4">
+          <input
+            type="number"
+            x-model.number="settingsForm.quiz_questions_limit"
+            min="1" max="100"
+            class="form-input w-32 text-center text-lg font-semibold"
+            placeholder="10"
+          />
+          <div class="flex-1">
+            <input
+              type="range"
+              x-model.number="settingsForm.quiz_questions_limit"
+              min="1" max="100" step="1"
+              class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-600"
+            />
+            <div class="flex justify-between text-xs text-gray-400 mt-1">
+              <span>1</span><span>25</span><span>50</span><span>75</span><span>100</span>
+            </div>
+          </div>
+        </div>
+        <p class="text-xs text-gray-400 mt-2">
+          Saat ini <strong x-text="settingsForm.quiz_questions_limit"></strong> soal per quiz.
+          Jika bank soal lebih sedikit dari angka ini, semua soal akan ditampilkan.
+        </p>
+        <!-- Preset -->
+        <div class="flex flex-wrap gap-2 mt-3">
+          <template x-for="preset in [5, 10, 15, 20, 25, 30, 50]" :key="preset">
+            <button
+              @click="settingsForm.quiz_questions_limit = preset"
+              class="px-3 py-1 text-sm rounded-lg border transition-colors"
+              :class="settingsForm.quiz_questions_limit === preset
+                ? 'bg-primary-600 border-primary-600 text-white'
+                : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
+              x-text="preset + ' soal'">
+            </button>
+          </template>
+        </div>
+      </div>
+
+      <hr class="border-gray-100 dark:border-gray-800" />
+
+      <!-- Toggle: Acak Urutan Soal -->
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex-1">
+          <p class="text-sm font-medium text-gray-800 dark:text-gray-100">🔀 Acak Urutan Soal</p>
+          <p class="text-xs text-gray-400 mt-0.5">
+            Setiap sesi quiz, soal ditampilkan dalam urutan yang berbeda-beda.
+          </p>
+        </div>
+        <!-- Toggle Switch -->
+        <button
+          type="button"
+          @click="settingsForm.shuffle_questions = !settingsForm.shuffle_questions"
+          class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+          :class="settingsForm.shuffle_questions ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-700'"
+          :aria-checked="settingsForm.shuffle_questions">
+          <span
+            class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+            :class="settingsForm.shuffle_questions ? 'translate-x-5' : 'translate-x-0'">
+          </span>
+        </button>
+      </div>
+
+      <!-- Toggle: Acak Pilihan Jawaban -->
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex-1">
+          <p class="text-sm font-medium text-gray-800 dark:text-gray-100">🔀 Acak Pilihan Jawaban</p>
+          <p class="text-xs text-gray-400 mt-0.5">
+            Urutan pilihan A/B/C/D diacak untuk setiap soal, sehingga lebih sulit menghafal posisi jawaban.
+          </p>
+        </div>
+        <!-- Toggle Switch -->
+        <button
+          type="button"
+          @click="settingsForm.shuffle_options = !settingsForm.shuffle_options"
+          class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+          :class="settingsForm.shuffle_options ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-700'"
+          :aria-checked="settingsForm.shuffle_options">
+          <span
+            class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+            :class="settingsForm.shuffle_options ? 'translate-x-5' : 'translate-x-0'">
+          </span>
+        </button>
+      </div>
+
+      <!-- Status summary -->
+      <div class="flex flex-wrap gap-2 pt-1">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
+              :class="settingsForm.shuffle_questions ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'">
+          <span x-text="settingsForm.shuffle_questions ? '✓' : '✗'"></span>
+          Urutan soal <span x-text="settingsForm.shuffle_questions ? 'diacak' : 'berurutan'"></span>
+        </span>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
+              :class="settingsForm.shuffle_options ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'">
+          <span x-text="settingsForm.shuffle_options ? '✓' : '✗'"></span>
+          Pilihan jawaban <span x-text="settingsForm.shuffle_options ? 'diacak' : 'berurutan'"></span>
+        </span>
+      </div>
+
+    </div>
+
+    <!-- Error / Success -->
+    <div x-show="settingsError"   class="mt-5 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400"     x-text="settingsError"></div>
+    <div x-show="settingsSuccess" class="mt-5 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-600 dark:text-green-400" x-text="settingsSuccess"></div>
+
+    <!-- Save Button -->
+    <div class="mt-6 flex justify-end">
+      <button @click="saveSettings()" class="btn-primary px-6 py-2.5" :disabled="settingsLoading">
+        <span x-show="settingsLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></span>
+        <span x-show="!settingsLoading">💾 </span>
+        Simpan Pengaturan
+      </button>
+    </div>
+  </div>
+
+  <!-- Role-specific info card for pengajar/admin -->
+  <template x-if="user && (user.role === 'pengajar' || user.role === 'admin')">
+    <div class="card p-6 border-l-4 border-primary-500">
+      <h2 class="font-bold text-gray-900 dark:text-white mb-2">👨‍🏫 Info untuk Pengajar / Admin</h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Kamu bisa mengatur jumlah soal, acak soal, dan acak jawaban per tugas saat membuat atau mengedit tugas di halaman kelas.
+        Pengaturan di tugas akan <strong class="text-gray-700 dark:text-gray-300">menimpa pengaturan personal pelajar</strong>.
+      </p>
+      <button @click="navigate('/classroom')" class="mt-4 inline-flex items-center gap-2 text-sm text-primary-600 dark:text-primary-400 hover:underline font-medium">
+        🏫 Kelola Kelas &amp; Tugas →
+      </button>
+    </div>
+  </template>
+
+</div>
