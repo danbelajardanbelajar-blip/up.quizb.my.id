@@ -309,4 +309,12 @@ function QuizEngine() {
     scoreGrade(score) {
       if (score >= 90) return { label: 'Sempurna!', emoji: '🏆', cls: 'text-yellow-500' };
       if (score >= 75) return { label: 'Bagus!',    emoji: '⭐', cls: 'text-green-500'  };
-   
+      if (score >= 60) return { label: 'Lulus',     emoji: '✅', cls: 'text-blue-500'   };
+      return { label: 'Perlu Belajar Lagi', emoji: '📚', cls: 'text-red-500' };
+    },
+
+    destroy() {
+      this.stopTimer();
+    },
+  };
+}
