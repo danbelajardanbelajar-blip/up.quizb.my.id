@@ -10,9 +10,10 @@ function attempt_submit(): void {
     $user = getCurrentUserOrAnon();
     $body = getBody();
 
-    $quizId    = (int)($body['quiz_id']   ?? 0);
-    $answers   = $body['answers']         ?? [];
-    $timeTaken = (int)($body['time_taken'] ?? 0);
+    $quizId          = (int)($body['quiz_id']    ?? 0);
+    $answers         = $body['answers']          ?? [];
+    $timeTaken       = (int)($body['time_taken'] ?? 0);
+    $displayedQIds   = array_map('intval', $body['question_ids'] ?? []);
 
     if (!$quizId) jsonError('Quiz ID diperlukan');
     if (!is_array($answers)) jsonError('Format jawaban tidak valid');
@@ -32,10 +33,22 @@ function attempt_submit(): void {
         }
     }
 
-    $questions = DB::all(
-        'SELECT q.id, q.points FROM questions q WHERE q.quiz_id = ?',
-        [$quizId]
-    );
+    // Ambil hanya soal yang ditampilkan ke user.
+    // Jika question_ids dikirim → filter ke soal tersebut.
+    // Jika tidak (klien lama) → fallback ke semua soal.
+    if (!empty($displayedQIds)) {
+        $placeholders = implode(',', array_fill(0, count($displayedQIds), '?'));
+        $questions = DB::all(
+            "SELECT q.id, q.points FROM questions q
+             WHERE q.quiz_id = ? AND q.id IN ($placeholders)",
+            array_merge([$quizId], $displayedQIds)
+        );
+    } else {
+        $questions = DB::all(
+            'SELECT q.id, q.points FROM questions q WHERE q.quiz_id = ?',
+            [$quizId]
+        );
+    }
 
     $correctOptions = DB::all(
         "SELECT o.id AS option_id, o.question_id
@@ -181,11 +194,6 @@ function attempt_result(): void {
     if (isset($myAttempts[$attemptId])) $canView = true;
     if (!$canView) jsonError('Akses ditolak', 403);
 
-    // Hitung field tambahan
-    $passingScore = (int)($attempt['passing_score'] ?? 60);
-    $attempt['passed']      = $attempt['score'] >= $passingScore;
-    $attempt['wrong_count'] = (int)$attempt['total_questions'] - (int)$attempt['correct_count'];
-
     // Ambil jawaban lengkap dengan opsi
     $answers = DB::all(
         "SELECT aa.question_id, aa.option_id AS selected_option_id, aa.is_correct,
@@ -199,6 +207,16 @@ function attempt_result(): void {
          ORDER BY q.order_num",
         [$attemptId]
     );
+
+    // Hitung field tambahan.
+    // Gunakan jumlah baris attempt_answers sebagai total soal yang DITAMPILKAN
+    // (bukan q.total_questions yang mencerminkan semua soal di database).
+    $shownCount   = count($answers);
+    $correctCount = (int)$attempt['correct_count'];
+    $passingScore = (int)($attempt['passing_score'] ?? 60);
+    $attempt['passed']          = $attempt['score'] >= $passingScore;
+    $attempt['total_questions'] = $shownCount;
+    $attempt['wrong_count']     = $shownCount - $correctCount;
 
     // Ambil semua opsi per soal untuk tampilan review
     // PENTING: cast ke tipe yang benar agar JSON tidak mengirim string "0"/"1"

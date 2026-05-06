@@ -165,7 +165,9 @@ function QuizEngine() {
       try {
         const timeTaken = (this.quiz.time_limit || this.quiz.duration || 600) - this.timeLeft;
         const payload = {
-          quiz_id: this.quiz.id,
+          quiz_id:      this.quiz.id,
+          // Kirim ID soal yang ditampilkan agar server hanya menskor soal tersebut
+          question_ids: this.questions.map(q => q.id),
           answers: Object.entries(this.answers).map(([question_id, option_id]) => ({
             question_id: parseInt(question_id),
             option_id:   parseInt(option_id),
