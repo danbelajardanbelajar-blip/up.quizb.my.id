@@ -58,19 +58,15 @@
           <div class="space-y-4">
             <template x-for="(a, idx) in result.data.answers" :key="a.question_id">
               <div class="border border-gray-100 dark:border-gray-800 rounded-xl p-4">
-                <!-- Soal -->
                 <div class="flex items-start gap-2 mb-3">
                   <span class="text-sm font-bold text-gray-400 flex-shrink-0" x-text="(idx+1)+'.'"></span>
                   <div class="flex-1">
                     <p class="text-sm font-medium text-gray-800 dark:text-gray-200" x-text="a.question_text"></p>
-                    <!-- Benar/Salah badge -->
                     <span class="inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-semibold"
                           :class="a.is_correct ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'"
                           x-text="a.is_correct ? '✅ Benar' : '❌ Salah'"></span>
                   </div>
                 </div>
-
-                <!-- Opsi jawaban -->
                 <div class="space-y-2 mt-2" x-show="a.options && a.options.length > 0">
                   <template x-for="opt in a.options" :key="opt.id">
                     <div class="flex items-center gap-2 text-sm px-3 py-2 rounded-lg"
@@ -84,18 +80,10 @@
                     </div>
                   </template>
                 </div>
-
-                <!-- Fallback jika tidak ada opsi: tampilkan jawaban teks -->
                 <div x-show="!a.options || a.options.length === 0" class="mt-2 text-sm">
-                  <p class="text-gray-500 dark:text-gray-400">
-                    Jawaban kamu: <span class="font-medium" x-text="a.selected_answer || '(tidak dijawab)'"></span>
-                  </p>
-                  <p class="text-green-600 dark:text-green-400">
-                    Jawaban benar: <span class="font-medium" x-text="a.correct_answer"></span>
-                  </p>
+                  <p class="text-gray-500 dark:text-gray-400">Jawaban kamu: <span class="font-medium" x-text="a.selected_answer || '(tidak dijawab)'"></span></p>
+                  <p class="text-green-600 dark:text-green-400">Jawaban benar: <span class="font-medium" x-text="a.correct_answer"></span></p>
                 </div>
-
-                <!-- Penjelasan -->
                 <p x-show="a.explanation" class="mt-3 text-xs text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg px-3 py-2 italic"
                    x-text="'💡 ' + a.explanation"></p>
               </div>
@@ -103,7 +91,7 @@
           </div>
         </div>
 
-        <!-- Challenge Result Card (hanya muncul jika dari tantangan) -->
+        <!-- Challenge Result Card -->
         <template x-if="result.challengeId">
           <div class="card p-5 mb-4 border-2 border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20">
             <div class="flex items-center gap-3 mb-4">
@@ -113,7 +101,11 @@
                 <p class="text-xs text-gray-500 dark:text-gray-400" x-text="result.challengeData?.quiz_title || 'Memuat...'"></p>
               </div>
             </div>
-            <!-- Menunggu lawan -->
+            <template x-if="!result.challengeData">
+              <div class="text-center py-3">
+                <p class="text-sm text-gray-500">Memuat data tantangan...</p>
+              </div>
+            </template>
             <template x-if="result.challengeData && result.challengeData.status !== 'completed'">
               <div class="text-center py-3">
                 <p class="text-sm text-gray-600 dark:text-gray-400">⏳ Menunggu lawan menyelesaikan quiz...</p>
@@ -121,31 +113,23 @@
                         class="mt-3 text-xs text-primary-500 hover:underline">🔄 Cek status</button>
               </div>
             </template>
-            <!-- Selesai — tampilkan pemenang -->
             <template x-if="result.challengeData && result.challengeData.status === 'completed'">
               <div>
-                <!-- Pemenang -->
                 <div class="text-center mb-4">
                   <template x-if="result.challengeData.is_winner">
-                    <div>
-                      <p class="text-4xl mb-1">🏆</p>
-                      <p class="font-bold text-green-600 dark:text-green-400 text-lg">Kamu Menang!</p>
-                    </div>
+                    <div><p class="text-4xl mb-1">🏆</p><p class="font-bold text-green-600 dark:text-green-400 text-lg">Kamu Menang!</p></div>
                   </template>
                   <template x-if="!result.challengeData.is_winner && result.challengeData.winner_id">
                     <div>
                       <p class="text-4xl mb-1">😔</p>
-                      <p class="font-bold text-red-500 text-lg" x-text="(result.challengeData.is_challenger ? result.challengeData.challenged_name : result.challengeData.challenger_name) + ' Menang'"></p>
+                      <p class="font-bold text-red-500 text-lg"
+                         x-text="(result.challengeData.is_challenger ? result.challengeData.challenged_name : result.challengeData.challenger_name) + ' Menang'"></p>
                     </div>
                   </template>
                   <template x-if="!result.challengeData.winner_id">
-                    <div>
-                      <p class="text-4xl mb-1">🤝</p>
-                      <p class="font-bold text-gray-600 dark:text-gray-300 text-lg">Seri!</p>
-                    </div>
+                    <div><p class="text-4xl mb-1">🤝</p><p class="font-bold text-gray-600 dark:text-gray-300 text-lg">Seri!</p></div>
                   </template>
                 </div>
-                <!-- Scoreboard -->
                 <div class="grid grid-cols-2 gap-3">
                   <div class="bg-white dark:bg-gray-900 rounded-xl p-3 text-center border"
                        :class="result.challengeData.is_challenger ? 'border-primary-300' : 'border-gray-200 dark:border-gray-700'">
@@ -168,7 +152,7 @@
           </div>
         </template>
 
-        <!-- Kumpulkan ke Tugas (hanya muncul jika dari assignment) -->
+        <!-- Kumpulkan ke Tugas -->
         <div x-show="result.assignId" class="card p-5 mb-4 border-2 border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/20">
           <div class="flex items-center gap-3 mb-3">
             <span class="text-2xl">📋</span>
@@ -177,13 +161,10 @@
               <p class="text-xs text-gray-500 dark:text-gray-400">Klik tombol di bawah untuk mengumpulkan hasil quiz ini sebagai jawaban tugas.</p>
             </div>
           </div>
-          <!-- Sudah dikumpulkan -->
           <div x-show="result.assignSubmitted" class="flex items-center gap-2 text-green-600 dark:text-green-400 font-semibold text-sm">
             <span>✅</span> Tugas berhasil dikumpulkan!
           </div>
-          <!-- Error -->
           <div x-show="result.assignError && !result.assignSubmitted" class="text-red-500 text-sm mb-2" x-text="result.assignError"></div>
-          <!-- Button -->
           <button x-show="!result.assignSubmitted"
                   @click="submitToAssignment(result.assignId, result.data?.id)"
                   class="btn-primary w-full py-2.5 text-sm"
@@ -199,6 +180,7 @@
           <button @click="navigate('/quizzes')" class="btn-primary flex-1 justify-center py-2.5">📝 Quiz Lain</button>
           <button @click="navigate('/leaderboard')" class="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">🏆 Leaderboard</button>
         </div>
+
       </div>
     </template>
   </div>
