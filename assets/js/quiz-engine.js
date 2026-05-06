@@ -23,6 +23,9 @@ function QuizEngine() {
     mode: 'exam',         // exam | instant | end | challenge
     challengeId: null,    // untuk mode challenge
     playerName: '',        // nama tamu (dari localStorage, opsional)
+    questionTimeLeft: 0,    // timer per soal (instant/end mode)
+    questionTimerInterval: null,
+    questionTimerDefault: 20, // detik per soal
 
     // Computed
     get current() { return this.questions[this.currentIndex] || null; },
@@ -38,6 +41,11 @@ function QuizEngine() {
       return 'timer-danger';
     },
     get timerDisplay() { return formatTime(this.timeLeft); },
+    get questionTimerClass() {
+      if (this.questionTimeLeft > 10) return 'timer-ok';
+      if (this.questionTimeLeft > 5)  return 'timer-warning';
+      return 'timer-danger';
+    },
 
     // Mode helpers
     get isReviewMode() { return this.mode === 'instant' || this.mode === 'end'; },
@@ -60,6 +68,15 @@ function QuizEngine() {
 
     get currentOptionCount() {
       return this.current?.options?.length || 0;
+    },
+
+    // ---- Alpine init: watch currentIndex to reset question timer ----
+    init() {
+      this.$watch('currentIndex', () => {
+        if (this.isReviewMode && this.phase === 'playing') {
+          this.startQuestionTimer();
+        }
+      });
     },
 
     // ---- Load quiz ----
@@ -91,7 +108,11 @@ function QuizEngine() {
     // ---- Start quiz ----
     startQuiz() {
       this.phase = 'playing';
-      this.startTimer();
+      if (this.isReviewMode) {
+        this.startQuestionTimer(); // timer per soal untuk instant/end
+      } else {
+        this.startTimer();         // timer global untuk exam/challenge
+      }
     },
 
     // ---- Timer ----
@@ -111,10 +132,46 @@ function QuizEngine() {
       clearInterval(this.timerInterval);
     },
 
+    // ---- Per-question timer (instant / end review) ----
+    startQuestionTimer() {
+      clearInterval(this.questionTimerInterval);
+      this.questionTimeLeft = this.questionTimerDefault;
+      this.questionTimerInterval = setInterval(() => {
+        if (this.questionTimeLeft > 0) {
+          this.questionTimeLeft--;
+        } else {
+          clearInterval(this.questionTimerInterval);
+          this.onQuestionTimeout();
+        }
+      }, 1000);
+    },
+
+    stopQuestionTimer() {
+      clearInterval(this.questionTimerInterval);
+    },
+
+    onQuestionTimeout() {
+      if (!this.isReviewMode || this.phase !== 'playing') return;
+      if (this.mode === 'instant') {
+        // Waktu habis = tidak menjawab = game over
+        this.submitAnswers();
+      } else {
+        // End review: lanjut soal berikutnya, atau submit jika soal terakhir
+        if (this.currentIndex < this.questions.length - 1) {
+          this.next();
+        } else {
+          this.submitAnswers();
+        }
+      }
+    },
+
     // ---- Select answer ----
     selectOption(questionId, optionId) {
       if (this.phase !== 'playing') return;
       this.answers[questionId] = optionId;
+
+      // Hentikan timer soal saat jawaban dipilih
+      if (this.isReviewMode) this.stopQuestionTimer();
 
       // ---- INSTANT REVIEW ----
       if (this.mode === 'instant') {
@@ -319,6 +376,7 @@ function QuizEngine() {
 
     destroy() {
       this.stopTimer();
+      this.stopQuestionTimer();
     },
   };
 }

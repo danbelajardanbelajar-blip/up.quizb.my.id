@@ -99,10 +99,22 @@
         <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
               :class="modeBadgeClass" x-text="modeLabel"></span>
       </div>
-      <div class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-full shadow text-lg font-bold"
-           :class="timerClass">
-        ⏱ <span x-text="timerDisplay"></span>
-      </div>
+      <!-- Timer global (exam / challenge) -->
+      <template x-if="!isReviewMode">
+        <div class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-full shadow text-lg font-bold"
+             :class="timerClass">
+          ⏱ <span x-text="timerDisplay"></span>
+        </div>
+      </template>
+      <!-- Timer per soal (instant / end review) -->
+      <template x-if="isReviewMode">
+        <div class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-full shadow min-w-[72px] justify-center"
+             :class="questionTimerClass">
+          <span class="text-base">⏳</span>
+          <span class="text-xl font-extrabold tabular-nums" x-text="questionTimeLeft"></span>
+          <span class="text-xs font-medium opacity-70">s</span>
+        </div>
+      </template>
       <template x-if="!isReviewMode">
         <button @click="showNav=!showNav" class="text-sm text-primary-600 dark:text-primary-400 font-medium hover:underline">
           📋 Navigasi
@@ -111,10 +123,32 @@
       <template x-if="isReviewMode"><span class="w-20"></span></template>
     </div>
 
-    <!-- Progress -->
-    <div class="progress-bar mb-6">
-      <div class="progress-fill" :style="'width:' + progress + '%'"></div>
-    </div>
+    <!-- Progress (jawaban dijawab — exam/challenge) -->
+    <template x-if="!isReviewMode">
+      <div class="progress-bar mb-4">
+        <div class="progress-fill" :style="'width:' + progress + '%'"></div>
+      </div>
+    </template>
+
+    <!-- Timer progress bar per soal (instant / end review) -->
+    <template x-if="isReviewMode">
+      <div class="mb-4">
+        <div class="flex items-center justify-between text-xs text-gray-400 mb-1">
+          <span x-text="'Soal ' + (currentIndex+1) + ' dari ' + questions.length"></span>
+          <span :class="questionTimerClass" class="font-semibold" x-text="questionTimeLeft + ' detik tersisa'"></span>
+        </div>
+        <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div class="h-full rounded-full transition-[width] duration-1000 ease-linear"
+               :class="{
+                 'bg-primary-500': questionTimeLeft > 10,
+                 'bg-yellow-400':  questionTimeLeft <= 10 && questionTimeLeft > 5,
+                 'bg-red-500':     questionTimeLeft <= 5,
+               }"
+               :style="'width:' + Math.round((questionTimeLeft / questionTimerDefault) * 100) + '%'">
+          </div>
+        </div>
+      </div>
+    </template>
 
     <!-- Question -->
     <div x-show="current" class="card p-6 mb-6 animate-fade-in" :key="currentIndex">
