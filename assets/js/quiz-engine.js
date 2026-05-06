@@ -92,7 +92,10 @@ function QuizEngine() {
         const data = await api.get('quiz.questions', params);
         this.quiz      = data.quiz;
         this.questions = data.questions;
-        this.timeLeft  = this.quiz.time_limit || this.quiz.duration || 600;
+        // Gunakan exam_duration (dari setting user/assignment) atau fallback ke time_limit quiz
+        this.timeLeft  = this.quiz.exam_duration || this.quiz.time_limit || this.quiz.duration || 600;
+        // Gunakan timer_per_question dari setting (user/assignment), default 20
+        this.questionTimerDefault = this.quiz.timer_per_question || 20;
         this.answers   = {};
         this.flagged   = new Set();
         this.currentIndex = 0;
@@ -273,7 +276,7 @@ function QuizEngine() {
     async submitAnswers() {
       this.loading = true;
       try {
-        const timeTaken = (this.quiz.time_limit || this.quiz.duration || 600) - this.timeLeft;
+        const timeTaken = (this.quiz.exam_duration || this.quiz.time_limit || this.quiz.duration || 600) - this.timeLeft;
         const payload = {
           quiz_id:      this.quiz.id,
           player_name:  this.playerName || undefined,

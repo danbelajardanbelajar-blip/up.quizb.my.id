@@ -61,7 +61,7 @@ function QuizBApp() {
       isTeacher:   false,
       // Create assignment modal
       assignModal: { show: false, editId: null },
-      assignForm:  { title: '', quiz_id: '', mode: 'bebas', deadline: '', max_questions: '', shuffle_questions: null, shuffle_options: null },
+      assignForm:  { title: '', quiz_id: '', mode: 'bebas', deadline: '', max_questions: '', shuffle_questions: null, shuffle_options: null, timer_per_question: '', duration_minutes: '' },
       assignError: '',
       assignLoading: false,
       // Quiz list for assignment dropdown
@@ -578,8 +578,10 @@ function QuizBApp() {
         mode:              assign.mode,
         deadline:          assign.deadline ? assign.deadline.replace(' ', 'T').substring(0, 16) : '',
         max_questions:     assign.max_questions != null ? assign.max_questions : '',
-        shuffle_questions: assign.shuffle_questions, // null | 0 | 1
-        shuffle_options:   assign.shuffle_options,
+        shuffle_questions:   assign.shuffle_questions, // null | 0 | 1
+        shuffle_options:     assign.shuffle_options,
+        timer_per_question:  assign.timer_per_question != null ? assign.timer_per_question : '',
+        duration_minutes:    assign.duration_minutes   != null ? assign.duration_minutes   : '',
       };
       this.classroom.assignError = '';
       this.classroom.assignModal.show = true;
@@ -592,16 +594,20 @@ function QuizBApp() {
       this.classroom.assignLoading = true;
       this.classroom.assignError   = '';
       try {
-        const maxQ     = f.max_questions !== '' && f.max_questions != null ? parseInt(f.max_questions) : null;
-        const shuffleQ  = f.shuffle_questions; // null | 0 | 1
-        const shuffleO  = f.shuffle_options;
+        const maxQ      = f.max_questions !== '' && f.max_questions != null ? parseInt(f.max_questions) : null;
+        const shuffleQ   = f.shuffle_questions; // null | 0 | 1
+        const shuffleO   = f.shuffle_options;
+        const timerPerQ  = f.timer_per_question !== '' && f.timer_per_question != null ? parseInt(f.timer_per_question) : null;
+        const durMins    = f.duration_minutes   !== '' && f.duration_minutes   != null ? parseInt(f.duration_minutes)   : null;
         await api.put('assignment.update', id, {
-          title:            f.title,
-          mode:             f.mode,
-          deadline:         f.deadline || null,
-          max_questions:    maxQ,
-          shuffle_questions: shuffleQ,
-          shuffle_options:   shuffleO,
+          title:              f.title,
+          mode:               f.mode,
+          deadline:           f.deadline || null,
+          max_questions:      maxQ,
+          shuffle_questions:  shuffleQ,
+          shuffle_options:    shuffleO,
+          timer_per_question: timerPerQ,
+          duration_minutes:   durMins,
         });
         this.classroom.assignModal.show = false;
         this.showToast('Tugas berhasil diperbarui!', 'success', '✅');
@@ -615,7 +621,7 @@ function QuizBApp() {
 
     async openAssignModal(existingAssign = null) {
       this.classroom.assignModal.editId = null;
-      this.classroom.assignForm  = { title: '', quiz_id: '', mode: 'bebas', deadline: '', max_questions: '', shuffle_questions: null, shuffle_options: null };
+      this.classroom.assignForm  = { title: '', quiz_id: '', mode: 'bebas', deadline: '', max_questions: '', shuffle_questions: null, shuffle_options: null, timer_per_question: '', duration_minutes: '' };
       this.classroom.assignError = '';
       this.classroom.assignModal.show = true;
       // Load quiz list for dropdown if not already loaded
@@ -639,18 +645,22 @@ function QuizBApp() {
       this.classroom.assignLoading = true;
       this.classroom.assignError   = '';
       try {
-        const maxQ    = f.max_questions !== '' && f.max_questions != null ? parseInt(f.max_questions) : null;
-        const shuffleQ = f.shuffle_questions; // null = ikuti user setting
-        const shuffleO = f.shuffle_options;
+        const maxQ     = f.max_questions !== '' && f.max_questions != null ? parseInt(f.max_questions) : null;
+        const shuffleQ  = f.shuffle_questions; // null = ikuti user setting
+        const shuffleO  = f.shuffle_options;
+        const timerPerQ = f.timer_per_question !== '' && f.timer_per_question != null ? parseInt(f.timer_per_question) : null;
+        const durMins   = f.duration_minutes   !== '' && f.duration_minutes   != null ? parseInt(f.duration_minutes)   : null;
         await api.post('assignment.create', {
-          class_id:         parseInt(classId),
-          quiz_id:          parseInt(f.quiz_id),
-          title:            f.title,
-          mode:             f.mode,
-          deadline:         f.deadline || null,
-          max_questions:    maxQ,
-          ...(shuffleQ !== null ? { shuffle_questions: shuffleQ } : {}),
-          ...(shuffleO !== null ? { shuffle_options:   shuffleO } : {}),
+          class_id:           parseInt(classId),
+          quiz_id:            parseInt(f.quiz_id),
+          title:              f.title,
+          mode:               f.mode,
+          deadline:           f.deadline || null,
+          max_questions:      maxQ,
+          ...(shuffleQ  !== null ? { shuffle_questions:  shuffleQ  } : {}),
+          ...(shuffleO  !== null ? { shuffle_options:    shuffleO  } : {}),
+          ...(timerPerQ !== null ? { timer_per_question: timerPerQ } : {}),
+          ...(durMins   !== null ? { duration_minutes:   durMins   } : {}),
         });
         this.classroom.assignModal.show = false;
         this.showToast('Tugas berhasil dibuat!', 'success', '✅');

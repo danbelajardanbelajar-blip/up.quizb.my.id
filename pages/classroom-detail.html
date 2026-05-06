@@ -326,6 +326,70 @@
             </div>
           </div>
         </div>
+        <!-- Timer Settings -->
+        <div class="border border-gray-100 dark:border-gray-800 rounded-xl p-4 space-y-4">
+          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Pengaturan Timer</p>
+          <p class="text-xs text-gray-400 -mt-2">
+            <span class="text-primary-500 font-medium">Kosongkan</span> → ikuti setting personal pelajar.
+            <span class="font-medium text-green-600">Isi angka</span> → paksa untuk semua pelajar di tugas ini.
+          </p>
+
+          <!-- Timer per soal (Instant/End) -->
+          <div x-show="classroom.assignForm.mode === 'instant' || classroom.assignForm.mode === 'end' || classroom.assignForm.mode === 'bebas'">
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+              ⚡ Timer per Soal <span class="text-orange-500">(detik)</span>
+            </label>
+            <p class="text-xs text-gray-400 mb-2">Berlaku untuk Instant &amp; End Review. Kosongkan = ikuti setting pelajar.</p>
+            <div class="flex items-center gap-2">
+              <input type="number"
+                     x-model.number="classroom.assignForm.timer_per_question"
+                     min="5" max="300" placeholder="kosong = ikuti pelajar"
+                     class="form-input flex-1 text-sm">
+              <span class="text-xs text-gray-400 whitespace-nowrap">detik/soal</span>
+              <button x-show="classroom.assignForm.timer_per_question"
+                      @click="classroom.assignForm.timer_per_question = ''"
+                      class="text-xs text-gray-400 hover:text-red-500">✕</button>
+            </div>
+            <div class="flex gap-1.5 mt-2 flex-wrap">
+              <template x-for="p in [10,15,20,30,45,60]">
+                <button type="button" @click="classroom.assignForm.timer_per_question = p"
+                        class="px-2 py-0.5 text-xs rounded border transition-colors"
+                        :class="classroom.assignForm.timer_per_question === p
+                          ? 'bg-orange-100 border-orange-400 text-orange-700' : 'border-gray-200 dark:border-gray-700 text-gray-400'">
+                  <span x-text="p+'s'"></span>
+                </button>
+              </template>
+            </div>
+          </div>
+
+          <!-- Timer total ujian (Exam) -->
+          <div x-show="classroom.assignForm.mode === 'exam' || classroom.assignForm.mode === 'bebas'">
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+              🎯 Timer Total Ujian <span class="text-blue-500">(menit)</span>
+            </label>
+            <p class="text-xs text-gray-400 mb-2">Berlaku untuk Mode Ujian. Kosongkan = ikuti setting pelajar / durasi quiz.</p>
+            <div class="flex items-center gap-2">
+              <input type="number"
+                     x-model.number="classroom.assignForm.duration_minutes"
+                     min="1" max="180" placeholder="kosong = ikuti pelajar"
+                     class="form-input flex-1 text-sm">
+              <span class="text-xs text-gray-400 whitespace-nowrap">menit</span>
+              <button x-show="classroom.assignForm.duration_minutes"
+                      @click="classroom.assignForm.duration_minutes = ''"
+                      class="text-xs text-gray-400 hover:text-red-500">✕</button>
+            </div>
+            <div class="flex gap-1.5 mt-2 flex-wrap">
+              <template x-for="p in [10,15,20,30,45,60,90]">
+                <button type="button" @click="classroom.assignForm.duration_minutes = p"
+                        class="px-2 py-0.5 text-xs rounded border transition-colors"
+                        :class="classroom.assignForm.duration_minutes === p
+                          ? 'bg-blue-100 border-blue-400 text-blue-700' : 'border-gray-200 dark:border-gray-700 text-gray-400'">
+                  <span x-text="p+' mnt'"></span>
+                </button>
+              </template>
+            </div>
+          </div>
+        </div>
       </div>
       <div x-show="classroom.assignError" class="mt-3 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-sm text-red-600 dark:text-red-400" x-text="classroom.assignError"></div>
       <div class="flex gap-3 mt-6">
