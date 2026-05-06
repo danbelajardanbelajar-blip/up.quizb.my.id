@@ -14,6 +14,8 @@ function attempt_submit(): void {
     $answers         = $body['answers']          ?? [];
     $timeTaken       = (int)($body['time_taken'] ?? 0);
     $displayedQIds   = array_map('intval', $body['question_ids'] ?? []);
+    $playerName      = trim($body['player_name'] ?? '');
+    if (mb_strlen($playerName) > 40) $playerName = mb_substr($playerName, 0, 40);
 
     if (!$quizId) jsonError('Quiz ID diperlukan');
     if (!is_array($answers)) jsonError('Format jawaban tidak valid');
@@ -108,6 +110,14 @@ function attempt_submit(): void {
             'INSERT INTO attempt_answers (attempt_id, question_id, option_id, is_correct) VALUES (?,?,?,?)',
             [$attemptId, $qid, $oid, $correct]
         );
+    }
+
+    // Jika tamu memberikan nama kustom → update nama di DB & session
+    if (!empty($playerName) && ($user['is_anon'] ?? false)) {
+        DB::execute('UPDATE users SET name = ? WHERE id = ?', [$playerName, $user['id']]);
+        startSecureSession();
+        $_SESSION['anon_user_name'] = $playerName;
+        $user['name'] = $playerName;
     }
 
     // Update user stats (hanya user aktif)

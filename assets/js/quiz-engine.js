@@ -22,6 +22,7 @@ function QuizEngine() {
     assignmentId: null,   // jika dimainkan dari tugas
     mode: 'exam',         // exam | instant | end | challenge
     challengeId: null,    // untuk mode challenge
+    playerName: '',        // nama tamu (dari localStorage, opsional)
 
     // Computed
     get current() { return this.questions[this.currentIndex] || null; },
@@ -78,7 +79,9 @@ function QuizEngine() {
         this.answers   = {};
         this.flagged   = new Set();
         this.currentIndex = 0;
-        this.phase = 'ready';
+        // Baca nama tamu dari localStorage (jika user tidak login)
+      this.playerName = (typeof localStorage !== 'undefined' ? localStorage.getItem('quizb_guest_name') : '') || '';
+      this.phase = 'ready';
       } catch (e) {
         this.error = e.message;
         this.phase = 'error';
@@ -216,6 +219,7 @@ function QuizEngine() {
         const timeTaken = (this.quiz.time_limit || this.quiz.duration || 600) - this.timeLeft;
         const payload = {
           quiz_id:      this.quiz.id,
+          player_name:  this.playerName || undefined,
           question_ids: this.questions.map(q => q.id),
           answers: Object.entries(this.answers).map(([question_id, option_id]) => ({
             question_id: parseInt(question_id),
