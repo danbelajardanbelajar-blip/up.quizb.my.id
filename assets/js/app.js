@@ -858,35 +858,3 @@ function QuizBApp() {
     },
   };
 }
- ...o,
-        is_correct: i === index,
-      }));
-    },
-
-    // ---- Search ----
-    onSearch: debounce(async function(q) {
-      if (!q || q.length < 2) return;
-      this.quizzes.search = q;
-      this.quizzes.page = 1;
-      this.navigate('/quizzes');
-      await this.loadQuizzes(true);
-    }, 300),
-
-    // ---- Dark Mode ----
-    toggleDark() {
-      this.darkMode = !this.darkMode;
-      store.set('darkMode', this.darkMode);
-      this.applyDark();
-    },
-    applyDark() {
-      document.documentElement.classList.toggle('dark', this.darkMode);
-    },
-
-    // ---- Toast ----
-    showToast(message, type = 'success', icon = '✅') {
-      clearTimeout(this._toastTimer);
-      this.toast = { show: true, message, type, icon };
-      this._toastTimer = setTimeout(() => { this.toast.show = false; }, 3500);
-    },
-  };
-}
