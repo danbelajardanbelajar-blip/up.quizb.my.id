@@ -56,7 +56,8 @@
   </div>
 
   <!-- NAVBAR -->
-  <nav class="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
+  <nav x-show="!currentRoute.startsWith('/play/')"
+       class="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
 
@@ -141,11 +142,12 @@
     </div>
   </nav>
 
-  <!-- ACTIVITY TICKER — sticky tepat di bawah nav -->
+  <!-- ACTIVITY TICKER — sticky tepat di bawah nav (top-0 saat fullscreen quiz) -->
   <div x-data="globalTicker()"
        x-show="currentItem"
        x-cloak
-       class="sticky top-16 z-40 border-b border-gray-200/30 dark:border-gray-700/30 bg-white/20 dark:bg-gray-900/20 backdrop-blur-sm">
+       class="sticky z-40 border-b border-gray-200/30 dark:border-gray-700/30 bg-white/20 dark:bg-gray-900/20 backdrop-blur-sm"
+       :class="currentRoute.startsWith('/play/') ? 'top-0' : 'top-16'">
 
     <div class="px-6 py-2 text-center">
       <!-- teks animasi -->
@@ -174,7 +176,8 @@
   </div>
 
   <!-- PAGE CONTAINER -->
-  <main id="app" class="min-h-[calc(100vh-4rem)]">
+  <main id="app"
+        :class="currentRoute.startsWith('/play/') ? 'min-h-screen' : 'min-h-[calc(100vh-4rem)]'">
 
     <!-- HOME PAGE -->
     <div x-show="currentRoute === '/'" x-transition:enter="animate-fade-in">
