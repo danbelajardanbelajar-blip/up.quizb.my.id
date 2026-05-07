@@ -28,6 +28,12 @@ function QuizEngine() {
     questionTimerInterval: null,
     questionTimerDefault: 20, // detik per soal
 
+    // ── Audio ──────────────────────────────────
+    _ac: null,          // AudioContext
+    _bgGain: null,      // master gain node untuk bg music
+    _bgNodes: [],       // semua oscillator bg (untuk di-stop)
+    _hbTimeout: null,   // heartbeat timeout id
+
     // Computed
     get current() { return this.questions[this.currentIndex] || null; },
     get progress() {
@@ -112,6 +118,7 @@ function QuizEngine() {
     // ---- Start quiz ----
     startQuiz() {
       this.phase = 'playing';
+      this.startBgMusic();           // 🔊 musik latar mulai
       if (this.isReviewMode) {
         this.startQuestionTimer();
       } else {
@@ -210,28 +217,35 @@ function QuizEngine() {
         const q = this.questions.find(q => q.id === questionId);
         const isWrong = q && q.correct_option_id && q.correct_option_id !== optionId;
         if (isWrong) {
-          // Jawaban salah → langsung submit (game over)
+          // Jawaban salah → suara gagal, hentikan musik, submit
+          this.playWrong();
+          this.stopBgMusic();
           this.stopTimer();
-          setTimeout(() => this.submitAnswers(), 350);
+          setTimeout(() => this.submitAnswers(), 600);
           return;
         }
-        // Jawaban benar → lanjut ke soal berikutnya
+        // Jawaban benar → suara sukses, lanjut ke soal berikutnya
+        this.playCorrect();
         if (this.currentIndex < this.questions.length - 1) {
           setTimeout(() => { if (this.answers[questionId] === optionId) this.next(); }, 450);
         } else {
           // Soal terakhir dan benar → submit
-          setTimeout(() => this.submitAnswers(), 450);
+          setTimeout(() => this.submitAnswers(), 500);
         }
         return;
       }
 
       // ---- END REVIEW ----
       if (this.mode === 'end') {
+        const q2       = this.questions.find(q => q.id === questionId);
+        const isRight2 = q2 && q2.correct_option_id && q2.correct_option_id === optionId;
+        if (isRight2) this.playCorrect(); else this.playWrong();
+
         if (this.currentIndex < this.questions.length - 1) {
           setTimeout(() => { if (this.answers[questionId] === optionId) this.next(); }, 450);
         } else {
           // Soal terakhir → auto-submit
-          setTimeout(() => this.submitAnswers(), 450);
+          setTimeout(() => this.submitAnswers(), 500);
         }
         return;
       }
@@ -304,6 +318,7 @@ function QuizEngine() {
 
     async submitAnswers() {
       this._stopHeartbeat();
+      this.stopBgMusic();            // 🔇 hentikan musik saat submit
       this.loading = true;
       try {
         const timeTaken = (this.quiz.exam_duration || this.quiz.time_limit || this.quiz.duration || 600) - this.timeLeft;
@@ -408,10 +423,181 @@ function QuizEngine() {
       return { label: 'Perlu Belajar Lagi', emoji: '📚', cls: 'text-red-500' };
     },
 
+    // ============================================================
+    // AUDIO SYSTEM — Web Audio API (no external files)
+    // ============================================================
+
+    /** Inisialisasi AudioContext (harus setelah gesture user) */
+    _initAC() {
+      if (this._ac) return;
+      try {
+        this._ac = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (_) {}
+    },
+
+    /** Mulai musik latar menegangkan */
+    startBgMusic() {
+      this._initAC();
+      const ctx = this._ac;
+      if (!ctx) return;
+      this.stopBgMusic();
+
+      // Master gain — fade in perlahan
+      const master = ctx.createGain();
+      master.gain.setValueAtTime(0, ctx.currentTime);
+      master.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 2.5);
+      master.connect(ctx.destination);
+      this._bgGain = master;
+
+      // Reverb sederhana (convolver dihilangkan — cukup delay feedback)
+      const delay = ctx.createDelay(0.5);
+      delay.delayTime.value = 0.35;
+      const fbGain = ctx.createGain();
+      fbGain.gain.value = 0.35;
+      delay.connect(fbGain);
+      fbGain.connect(delay);
+      delay.connect(master);
+
+      // Helper: buat satu drone oscillator
+      const makeDrone = (freq, vol, type = 'sawtooth', detune = 0) => {
+        const osc = ctx.createOscillator();
+        const g   = ctx.createGain();
+        const lpf = ctx.createBiquadFilter();
+        osc.type            = type;
+        osc.frequency.value = freq;
+        osc.detune.value    = detune;
+        lpf.type            = 'lowpass';
+        lpf.frequency.value = freq * 4;
+        lpf.Q.value         = 2;
+        g.gain.value        = vol;
+        osc.connect(lpf); lpf.connect(g); g.connect(master);
+        osc.start();
+        this._bgNodes.push(osc);
+      };
+
+      // Nada: E minor — E2, B2, D3 (minor 7th → tense)
+      makeDrone(82.4,  0.45, 'sawtooth', 0);    // E2 root
+      makeDrone(82.4,  0.20, 'sawtooth', 10);   // E2 sedikit detune
+      makeDrone(123.5, 0.18, 'sawtooth', 0);    // B2 fifth
+      makeDrone(146.8, 0.10, 'sine',     0);    // D3 minor 7th
+      makeDrone(164.8, 0.07, 'sine',     -5);   // E3 octave atas
+
+      // LFO tremolo — bikin suara berdenyut
+      const lfo  = ctx.createOscillator();
+      const lfoG = ctx.createGain();
+      lfo.type            = 'sine';
+      lfo.frequency.value = 1.4;
+      lfoG.gain.value     = 0.07;
+      lfo.connect(lfoG);
+      lfoG.connect(master.gain);
+      lfo.start();
+      this._bgNodes.push(lfo);
+
+      // Detuned high shimmer
+      makeDrone(329.6, 0.04, 'sine', 12);   // E4 shimmer
+
+      // Jadwalkan heartbeat
+      this._scheduleHb();
+    },
+
+    /** Heartbeat thud — "dug-dug" berulang */
+    _scheduleHb() {
+      if (!this._bgGain) return;
+      const ctx = this._ac;
+
+      const thud = (t, startFreq, endFreq, vol) => {
+        const osc = ctx.createOscillator();
+        const g   = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(startFreq, t);
+        osc.frequency.exponentialRampToValueAtTime(endFreq, t + 0.18);
+        g.gain.setValueAtTime(vol, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+        osc.connect(g); g.connect(this._bgGain);
+        osc.start(t); osc.stop(t + 0.32);
+      };
+
+      const beat = () => {
+        if (!this._bgGain) return;
+        const t = ctx.currentTime;
+        thud(t,        130, 45, 0.55);   // ketukan 1
+        thud(t + 0.22, 110, 38, 0.35);   // ketukan 2 (echo)
+        this._hbTimeout = setTimeout(beat, 1400);
+      };
+
+      this._hbTimeout = setTimeout(beat, 800);
+    },
+
+    /** Hentikan musik latar dengan fade out */
+    stopBgMusic() {
+      clearTimeout(this._hbTimeout);
+      this._hbTimeout = null;
+      if (!this._bgGain || !this._ac) return;
+      const ctx = this._ac;
+      const g   = this._bgGain;
+      try {
+        g.gain.cancelScheduledValues(ctx.currentTime);
+        g.gain.setValueAtTime(g.gain.value, ctx.currentTime);
+        g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.6);
+      } catch (_) {}
+      const nodes = this._bgNodes.slice();
+      this._bgNodes = [];
+      this._bgGain  = null;
+      setTimeout(() => nodes.forEach(n => { try { n.stop(); } catch (_) {} }), 700);
+    },
+
+    /** Suara benar: arpeggio naik C–E–G */
+    playCorrect() {
+      this._initAC();
+      const ctx = this._ac;
+      if (!ctx) return;
+      [523.25, 659.25, 783.99].forEach((freq, i) => {
+        const t    = ctx.currentTime + i * 0.09;
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type            = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.35, t + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(t); osc.stop(t + 0.4);
+      });
+    },
+
+    /** Suara salah: buzzer turun + noise singkat */
+    playWrong() {
+      this._initAC();
+      const ctx = this._ac;
+      if (!ctx) return;
+
+      // Buzzer turun
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(320, ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(80, ctx.currentTime + 0.45);
+      gain.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + 0.55);
+
+      // Nada rendah "bum" tambahan
+      const osc2  = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type             = 'sine';
+      osc2.frequency.value  = 110;
+      gain2.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+      osc2.connect(gain2); gain2.connect(ctx.destination);
+      osc2.start(); osc2.stop(ctx.currentTime + 0.65);
+    },
+
     destroy() {
       this.stopTimer();
       this.stopQuestionTimer();
       this._stopHeartbeat();
+      this.stopBgMusic();
     },
   };
 }
