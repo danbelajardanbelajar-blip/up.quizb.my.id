@@ -1264,6 +1264,15 @@ function QuizBApp() {
       this.toast = { show: true, message, type, icon };
       this._toastTimer = setTimeout(() => { this.toast.show = false; }, 3500);
     },
+
+    formatModeLabel(mode) {
+      return {
+        exam: 'Ujian',
+        instant: 'Instan',
+        end: 'Akhir',
+        challenge: 'Tantangan'
+      }[mode] || (mode ? mode.charAt(0).toUpperCase() + mode.slice(1) : 'Bebas');
+    },
   }
 }
 

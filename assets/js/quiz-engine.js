@@ -309,6 +309,7 @@ function QuizEngine() {
         const timeTaken = (this.quiz.exam_duration || this.quiz.time_limit || this.quiz.duration || 600) - this.timeLeft;
         const payload = {
           quiz_id:      this.quiz.id,
+          mode:         this.mode || 'exam',
           player_name:  this.playerName || undefined,
           question_ids: this.questions.map(q => q.id),
           answers: Object.entries(this.answers).map(([question_id, option_id]) => ({

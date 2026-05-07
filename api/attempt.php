@@ -17,6 +17,11 @@ function attempt_submit(): void {
     $playerName      = trim($body['player_name'] ?? '');
     if (mb_strlen($playerName) > 40) $playerName = mb_substr($playerName, 0, 40);
 
+    $mode = sanitizeString($body['mode'] ?? 'exam');
+    if (!in_array($mode, ['exam', 'instant', 'end', 'challenge'], true)) {
+        $mode = 'exam';
+    }
+
     if (!$quizId) jsonError('Quiz ID diperlukan');
     if (!is_array($answers)) jsonError('Format jawaban tidak valid');
 
@@ -94,8 +99,8 @@ function attempt_submit(): void {
 
     // Insert attempt
     DB::execute(
-        'INSERT INTO attempts (user_id, quiz_id, score, total_points, correct_count, time_taken) VALUES (?,?,?,?,?,?)',
-        [$user['id'], $quizId, $score, $totalPoints, $correctCount, $timeTaken]
+        'INSERT INTO attempts (user_id, quiz_id, mode, score, total_points, correct_count, time_taken) VALUES (?,?,?,?,?,?,?)',
+        [$user['id'], $quizId, $mode, $score, $totalPoints, $correctCount, $timeTaken]
     );
     $attemptId = (int)DB::lastId();
 
@@ -186,6 +191,7 @@ function attempt_result(): void {
 
     $attempt = DB::one(
         "SELECT a.id, a.user_id, a.quiz_id, a.score, a.total_points, a.correct_count, a.time_taken, a.completed_at,
+                a.mode,
                 q.title AS quiz_title, q.total_questions, q.passing_score, q.time_limit,
                 c.name AS category_name, c.icon AS category_icon,
                 u.name AS player_name
@@ -271,6 +277,7 @@ function attempt_history(): void {
                 q.id AS quiz_id, q.title AS quiz_title, q.total_questions, q.difficulty, q.passing_score,
                 c.name AS category_name, c.icon AS category_icon,
                 u.name AS user_name,
+                a.mode,
                 IF(a.score >= q.passing_score, 1, 0) AS passed
          FROM attempts a
          INNER JOIN quizzes q ON q.id = a.quiz_id
@@ -346,6 +353,7 @@ function quiz_global_history(): void {
 
     $history = DB::all(
         "SELECT a.id, a.score, a.correct_count, a.time_taken, a.completed_at,
+                a.mode,
                 q.title AS quiz_title, q.difficulty, q.total_questions,
                 COALESCE(u.name, 'Anonymous') AS user_name,
                 CASE WHEN u.id IS NULL OR u.id = 0 THEN 1 ELSE 0 END AS is_anon
