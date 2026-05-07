@@ -270,10 +270,12 @@ function attempt_history(): void {
         "SELECT a.id, a.score, a.correct_count, a.time_taken, a.completed_at,
                 q.id AS quiz_id, q.title AS quiz_title, q.total_questions, q.difficulty, q.passing_score,
                 c.name AS category_name, c.icon AS category_icon,
+                u.name AS user_name,
                 IF(a.score >= q.passing_score, 1, 0) AS passed
          FROM attempts a
          INNER JOIN quizzes q ON q.id = a.quiz_id
          INNER JOIN categories c ON c.id = q.category_id
+         LEFT JOIN users u ON u.id = a.user_id
          WHERE a.user_id = ?
          ORDER BY a.completed_at DESC
          LIMIT ? OFFSET ?",
