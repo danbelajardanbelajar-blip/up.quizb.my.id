@@ -427,16 +427,26 @@ function QuizEngine() {
     // AUDIO SYSTEM — Web Audio API (no external files)
     // ============================================================
 
-    /** Inisialisasi AudioContext (harus setelah gesture user) */
+    /** Apakah mode ini menggunakan suara? */
+    get _soundEnabled() {
+      return this.mode === 'instant' || this.mode === 'end' || this.mode === 'challenge';
+    },
+
+    /** Inisialisasi AudioContext dan langsung resume (wajib setelah user gesture) */
     _initAC() {
-      if (this._ac) return;
+      if (this._ac) {
+        if (this._ac.state === 'suspended') this._ac.resume();
+        return;
+      }
       try {
         this._ac = new (window.AudioContext || window.webkitAudioContext)();
+        this._ac.resume(); // wajib agar tidak stuck di 'suspended'
       } catch (_) {}
     },
 
     /** Mulai musik latar menegangkan */
     startBgMusic() {
+      if (!this._soundEnabled) return;   // exam → skip
       this._initAC();
       const ctx = this._ac;
       if (!ctx) return;
@@ -548,6 +558,7 @@ function QuizEngine() {
 
     /** Suara benar: arpeggio naik C–E–G */
     playCorrect() {
+      if (!this._soundEnabled) return;
       this._initAC();
       const ctx = this._ac;
       if (!ctx) return;
@@ -567,6 +578,7 @@ function QuizEngine() {
 
     /** Suara salah: buzzer turun + noise singkat */
     playWrong() {
+      if (!this._soundEnabled) return;
       this._initAC();
       const ctx = this._ac;
       if (!ctx) return;
