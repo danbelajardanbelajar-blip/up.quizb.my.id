@@ -82,7 +82,7 @@ function QuizBApp() {
     admin: {
       tab: 'stats',
       stats: null,
-      quizzes: [], quizzesTotal: 0, quizzesPage: 1, quizzesSearch: '',
+      quizzes: [], quizzesTotal: 0, quizzesPage: 1, quizzesSearch: '', quizzesView: 'list',
       users:   [],   usersTotal: 0,   usersPage: 1,   usersSearch: '',
       categories: [],
       questions: [], questionsQuizId: null, questionsQuizTitle: '',
@@ -750,6 +750,7 @@ function QuizBApp() {
         if (tab === 'stats') {
           this.admin.stats = await api.get('admin.stats');
         } else if (tab === 'quizzes') {
+          this.admin.quizzesView = 'list';
           const data = await api.get('admin.quiz_list', { page: this.admin.quizzesPage, limit: 15, search: this.admin.quizzesSearch });
           this.admin.quizzes      = data.quizzes || [];
           this.admin.quizzesTotal = data.total   || 0;
@@ -843,11 +844,11 @@ function QuizBApp() {
         } else if (type === 'question_create') {
           await api.post('question.create', f);
           this.showToast('Soal berhasil ditambahkan', 'success', '✅');
-          await this.loadAdminTab('questions');
+          await this.reloadQuizQuestions();
         } else if (type === 'question_edit') {
           await api.post('question.update', f);
           this.showToast('Soal berhasil diperbarui', 'success', '✅');
-          await this.loadAdminTab('questions');
+          await this.reloadQuizQuestions();
         }
         this.closeAdminModal();
         if (type !== 'question_create' && type !== 'question_edit') {
@@ -870,7 +871,7 @@ function QuizBApp() {
         if (type === 'question') {
           await api.post('question.delete', { id });
           this.showToast('Soal berhasil dihapus', 'success', '🗑️');
-          await this.loadAdminTab('questions');
+          await this.reloadQuizQuestions();
           return;
         }
         this.showToast('Berhasil dihapus', 'success', '🗑️');
@@ -963,7 +964,7 @@ function QuizBApp() {
         });
         this.admin.importFile.show = false;
         this.showToast(`${data.imported} soal berhasil diimpor`, 'success', '✅');
-        await this.loadAdminTab('questions');
+        await this.reloadQuizQuestions();
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
@@ -1061,7 +1062,7 @@ function QuizBApp() {
         });
         this.admin.importQuizb.show = false;
         this.showToast(`${data.imported} soal berhasil diimpor dari QuizB`, 'success', '✅');
-        await this.loadAdminTab('questions');
+        await this.reloadQuizQuestions();
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
@@ -1069,6 +1070,34 @@ function QuizBApp() {
       }
     },
 
+
+    // ---- Quiz questions sub-view ----
+    async openQuizQuestions(quiz) {
+      this.admin.questionsQuizId     = quiz.id;
+      this.admin.questionsQuizTitle  = quiz.title;
+      this.admin.questionsQuizFilter = quiz.id;
+      this.admin.questionsPage       = 1;
+      this.admin.questionsSearch     = '';
+      this.admin.quizzesView         = 'questions';
+      await this.reloadQuizQuestions();
+    },
+
+    async reloadQuizQuestions() {
+      this.admin.loading = true;
+      try {
+        const qData = await api.get('question.list_all', {
+          page:    this.admin.questionsPage,
+          search:  this.admin.questionsSearch,
+          quiz_id: this.admin.questionsQuizFilter,
+        });
+        this.admin.questionsAll   = qData.questions || [];
+        this.admin.questionsTotal = qData.total     || 0;
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        this.admin.loading = false;
+      }
+    },
 
     // ---- Admin live search ----
     onAdminQuizSearch: debounce(async function(q) {
@@ -1086,7 +1115,7 @@ function QuizBApp() {
     onAdminQuestionSearch: debounce(async function(q) {
       this.admin.questionsSearch = q;
       this.admin.questionsPage   = 1;
-      await this.loadAdminTab('questions');
+      await this.reloadQuizQuestions();
     }, 300),
 
     // Helper to build question form with blank options
