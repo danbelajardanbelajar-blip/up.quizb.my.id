@@ -78,8 +78,9 @@
           </template>
           <template x-if="mode==='challenge'">
             <div><p class="font-semibold text-purple-600 dark:text-purple-400 mb-1">⚔️ Mode Tantangan</p>
-              <p>• Skor tertinggi menang; seri → waktu lebih cepat</p>
-              <p>• Bisa kembali ke soal sebelumnya</p></div>
+              <p>• Jawab tiap soal dalam waktu terbatas</p>
+              <p>• Tidak bisa kembali ke soal sebelumnya</p>
+              <p>• Menang: skor tertinggi → waktu tercepat → submit lebih awal</p></div>
           </template>
         </div>
         <button @click="startQuiz()" class="btn-primary w-full py-3 text-base">Mulai Sekarang ▶</button>

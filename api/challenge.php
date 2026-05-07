@@ -179,7 +179,7 @@ function challenge_status(): void {
 
     $c['is_challenger'] = (int)$c['challenger_id'] === (int)$user['id'];
     $c['is_winner']     = $c['winner_id'] && (int)$c['winner_id'] === (int)$user['id'];
-    $c['is_draw']       = false;
+    $c['is_draw']       = false; // tidak pernah seri
 
     // Cast numbers
     foreach (['challenger_score','challenger_time','challenged_score','challenged_time'] as $k) {
@@ -228,27 +228,35 @@ function challenge_submit(): void {
     $isDraw     = false;
 
     if ($bothDone) {
-        $a1 = DB::one('SELECT score, time_taken FROM attempts WHERE id = ?', [(int)$updated['challenger_attempt_id']]);
-        $a2 = DB::one('SELECT score, time_taken FROM attempts WHERE id = ?', [(int)$updated['challenged_attempt_id']]);
+        $a1 = DB::one('SELECT score, correct_count, time_taken FROM attempts WHERE id = ?', [(int)$updated['challenger_attempt_id']]);
+        $a2 = DB::one('SELECT score, correct_count, time_taken FROM attempts WHERE id = ?', [(int)$updated['challenged_attempt_id']]);
 
         $s1 = (int)$a1['score'];
         $s2 = (int)$a2['score'];
+        $c1 = (int)$a1['correct_count'];
+        $c2 = (int)$a2['correct_count'];
         $t1 = (int)$a1['time_taken'];
         $t2 = (int)$a2['time_taken'];
 
-        if ($s1 > $s2) {
-            $winnerId = $updated['challenger_id'];
-        } elseif ($s2 > $s1) {
-            $winnerId = $updated['challenged_id'];
-        } else {
-            // Skor sama → waktu lebih cepat menang
-            if ($t1 !== $t2) {
-                $winnerId = $t1 < $t2 ? $updated['challenger_id'] : $updated['challenged_id'];
-            } else {
-                $isDraw = true;
-                $winnerId = null;
-            }
+        // Lapis 1: skor lebih tinggi
+        if ($s1 !== $s2) {
+            $winnerId = $s1 > $s2 ? $updated['challenger_id'] : $updated['challenged_id'];
         }
+        // Lapis 2: jumlah benar lebih banyak (antisipasi pembulatan skor)
+        elseif ($c1 !== $c2) {
+            $winnerId = $c1 > $c2 ? $updated['challenger_id'] : $updated['challenged_id'];
+        }
+        // Lapis 3: waktu lebih cepat
+        elseif ($t1 !== $t2) {
+            $winnerId = $t1 < $t2 ? $updated['challenger_id'] : $updated['challenged_id'];
+        }
+        // Lapis 4 (final — tidak mungkin seri): attempt_id lebih kecil = submit lebih awal
+        else {
+            $winnerId = (int)$updated['challenger_attempt_id'] < (int)$updated['challenged_attempt_id']
+                ? $updated['challenger_id']
+                : $updated['challenged_id'];
+        }
+        // $isDraw selalu false — selalu ada pemenang
 
         DB::execute(
             "UPDATE challenges SET status = 'completed', winner_id = ? WHERE id = ?",
@@ -258,7 +266,7 @@ function challenge_submit(): void {
 
     jsonSuccess([
         'both_done'    => $bothDone,
-        'is_draw'      => $isDraw,
+        'is_draw'      => false,   // tidak pernah seri — selalu ada pemenang
         'winner_id'    => $winnerId ? (int)$winnerId : null,
         'challenge_id' => $challengeId,
     ], $bothDone ? 'Tantangan selesai!' : 'Hasil disimpan, menunggu lawan selesai.');

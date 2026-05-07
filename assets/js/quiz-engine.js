@@ -55,7 +55,7 @@ function QuizEngine() {
     },
 
     // Mode helpers
-    get isReviewMode() { return this.mode === 'instant' || this.mode === 'end'; },
+    get isReviewMode() { return this.mode === 'instant' || this.mode === 'end' || this.mode === 'challenge'; },
     get modeLabel() {
       return { exam: '🎯 Mode Ujian', instant: '⚡ Instant Review', end: '📖 End Review', challenge: '⚔️ Tantangan' }[this.mode] || '';
     },
