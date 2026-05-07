@@ -4,26 +4,28 @@
 // ============================================
 
 function attempt_submit(): void {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    try {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
 
-    // Siapapun bisa submit — login atau anonim
-    $user = getCurrentUserOrAnon();
-    $body = getBody();
+        // Siapapun bisa submit — login atau anonim
+        $user = getCurrentUserOrAnon();
+        $body = getBody();
 
-    $quizId        = (int)($body['quiz_id']    ?? 0);
-    $answers       = $body['answers']          ?? [];
-    $timeTaken     = max(0, min(65535, (int)($body['time_taken'] ?? 0)));
-    $displayedQIds = array_filter(array_unique(array_map('intval', $body['question_ids'] ?? [])), fn($id) => $id > 0);
-    $playerName    = trim($body['player_name'] ?? '');
-    if (mb_strlen($playerName) > 40) $playerName = mb_substr($playerName, 0, 40);
+        $quizId        = (int)($body['quiz_id']    ?? 0);
+        $answers       = $body['answers']          ?? [];
+        $timeTaken     = max(0, min(65535, (int)($body['time_taken'] ?? 0)));
+        $displayedQIds = array_values(array_filter(array_unique(array_map('intval', $body['question_ids'] ?? [])), fn($id) => $id > 0));
+        $playerName    = trim($body['player_name'] ?? '');
+        if (mb_strlen($playerName) > 40) $playerName = mb_substr($playerName, 0, 40);
 
-    $mode = sanitizeString($body['mode'] ?? 'exam');
-    if (!in_array($mode, ['exam', 'instant', 'end', 'challenge'], true)) {
-        $mode = 'exam';
-    }
+        $mode = sanitizeString($body['mode'] ?? 'exam');
+        if (!in_array($mode, ['exam', 'instant', 'end', 'challenge'], true)) {
+            $mode = 'exam';
+        }
 
-    if (!$quizId) jsonError('Quiz ID diperlukan');
-    if (!is_array($answers)) jsonError('Format jawaban tidak valid');
+        if (!$quizId) jsonError('Quiz ID diperlukan');
+            if (!$quizId) jsonError('Quiz ID diperlukan');
+        if (!is_array($answers)) jsonError('Format jawaban tidak valid');
 
     $quiz = DB::one('SELECT id, total_questions, passing_score FROM quizzes WHERE id = ? AND is_published = 1', [$quizId]);
     if (!$quiz) jsonError('Quiz tidak ditemukan', 404);
@@ -156,6 +158,10 @@ function attempt_submit(): void {
         'user_name'       => $user['name'],
         'is_anon'         => $user['is_anon'] ?? false,
     ], 'Quiz berhasil diselesaikan');
+    } catch (Throwable $e) {
+        error_log("[attempt.submit] " . $e->__toString());
+        jsonError('Terjadi kesalahan server', 500);
+    }
 }
 
 function updateQuizDifficultyFromStats(int $quizId): void {
@@ -350,7 +356,7 @@ function attempt_dashboard(): void {
     ]);
 }
 
-function quiz_global_history(): void {
+function attempt_quiz_global_history(): void {
     [$page, $limit, $offset] = getPaginationParams();
 
     $total = DB::one("SELECT COUNT(*) AS cnt FROM attempts WHERE completed_at IS NOT NULL")['cnt'];
@@ -377,4 +383,8 @@ function quiz_global_history(): void {
     unset($h);
 
     jsonPaginated($history, (int)$total, $page, $limit);
+}
+
+function quiz_global_history(): void {
+    attempt_quiz_global_history();
 }

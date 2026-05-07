@@ -28,6 +28,7 @@ require_once __DIR__ . '/includes/response.php';
 startSecureSession();
 
 set_exception_handler(function (Throwable $e) {
+    error_log("[API Exception] " . $e->__toString());
     if (ob_get_level() > 0) ob_end_clean();
     http_response_code(500);
     header('Content-Type: application/json; charset=utf-8');
@@ -42,6 +43,7 @@ set_exception_handler(function (Throwable $e) {
 register_shutdown_function(function () {
     $err = error_get_last();
     if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        error_log(sprintf("[API Shutdown] %s in %s on line %s", $err['message'], $err['file'], $err['line']));
         if (ob_get_level() > 0) ob_end_clean();
         http_response_code(500);
         header('Content-Type: application/json; charset=utf-8');
