@@ -1280,9 +1280,13 @@ function quizHistorySection() {
   return {
     history: [],
     loading: true,
+    currentIndex: 0,
+    visible: true,
+    _ticker: null,
 
     async init() {
       await this.loadHistory();
+      if (this.history.length > 1) this.startTicker();
     },
 
     async loadHistory() {
@@ -1298,6 +1302,22 @@ function quizHistorySection() {
       }
     },
 
+    startTicker() {
+      this._ticker = setInterval(() => {
+        // fade out
+        this.visible = false;
+        setTimeout(() => {
+          this.currentIndex = (this.currentIndex + 1) % this.history.length;
+          // fade in
+          this.visible = true;
+        }, 350);
+      }, 4000);
+    },
+
+    get currentItem() {
+      return this.history.length > 0 ? this.history[this.currentIndex] : null;
+    },
+
     formatTimeAgo(dateStr) {
       const now = new Date();
       const date = new Date(dateStr);
@@ -1310,6 +1330,11 @@ function quizHistorySection() {
       if (diffMins < 60) return `${diffMins}m lalu`;
       if (diffHours < 24) return `${diffHours}j lalu`;
       return `${diffDays}h lalu`;
+    },
+
+    formatModeLabel(mode) {
+      return { exam: 'Ujian', instant: 'Instan', end: 'Akhir', challenge: 'Tantangan' }[mode]
+        || (mode ? mode.charAt(0).toUpperCase() + mode.slice(1) : 'Bebas');
     },
   };
 }
