@@ -245,19 +245,24 @@
         <button type="button" @click="$root.navigate('/result/'+item.id)"
                 class="w-full rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-4 text-left shadow-sm hover:shadow-lg transition-shadow duration-200">
           <div class="flex items-start gap-4">
+            <!-- Icon -->
             <div class="flex-shrink-0 mt-1">
               <div class="w-11 h-11 rounded-2xl bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 flex items-center justify-center text-lg">🔔</div>
             </div>
-            <div class="min-w-0">
-              <p class="text-xs uppercase tracking-[0.2em] text-blue-600 dark:text-blue-300 mb-2" x-text="formatTimeAgo(item.completed_at)"></p>
-              <p class="text-sm leading-7 text-gray-900 dark:text-gray-100">
-                <span class="font-semibold" x-text="item.is_anon ? 'Tamu' : item.user_name || 'Tamu'"></span>
-                <span> baru saja menyelesaikan kuis </span>
-                <span class="font-semibold" x-text="`\"${item.quiz_title}\"`"></span>
-                <span> dalam mode </span>
-                <span class="font-semibold" x-text="`\"${$root.formatModeLabel(item.mode)}\"`"></span>
+            <!-- Content -->
+            <div class="min-w-0 flex-1">
+              <!-- Baris atas: judul quiz + waktu -->
+              <div class="flex items-start justify-between gap-2 mb-1">
+                <p class="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate" x-text="item.quiz_title"></p>
+                <span class="flex-shrink-0 text-xs text-gray-400 dark:text-gray-500 mt-0.5" x-text="formatTimeAgo(item.completed_at)"></span>
+              </div>
+              <!-- Baris bawah: narasi aktivitas -->
+              <p class="text-sm text-gray-500 dark:text-gray-400 leading-6">
+                <span class="font-medium text-gray-700 dark:text-gray-300" x-text="item.is_anon ? 'Tamu' : item.user_name || 'Tamu'"></span>
+                <span> menyelesaikan kuis dalam </span>
+                <span class="font-medium text-blue-600 dark:text-blue-400" x-text="`mode ${$root.formatModeLabel(item.mode)}`"></span>
                 <span> dengan nilai </span>
-                <span class="font-semibold" x-text="`\"${item.score}%\"`"></span>
+                <span class="font-semibold" :class="item.score >= 60 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'" x-text="`${item.score}%`"></span>
               </p>
             </div>
           </div>
