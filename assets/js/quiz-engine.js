@@ -29,10 +29,12 @@ function QuizEngine() {
     questionTimerDefault: 20, // detik per soal
 
     // ── Audio ──────────────────────────────────
-    _ac: null,          // AudioContext
-    _bgGain: null,      // master gain node untuk bg music
-    _bgNodes: [],       // semua oscillator bg (untuk di-stop)
-    _hbTimeout: null,   // heartbeat timeout id
+    _ac: null,           // AudioContext
+    _bgGain: null,       // master gain node untuk bg music
+    _bgNodes: [],        // unused (kept for compat)
+    _hbTimeout: null,    // scheduler timeout id
+    _nextBeatTime: 0,    // Web Audio clock pointer
+    _beatCount: 0,       // 0=ting, 1=tung, 2=ting, …
 
     // Computed
     get current() { return this.questions[this.currentIndex] || null; },
@@ -444,116 +446,106 @@ function QuizEngine() {
       } catch (_) {}
     },
 
-    /** Mulai musik latar menegangkan */
+    /** Mulai pola "ting-tung" memacu adrenalin */
     startBgMusic() {
-      if (!this._soundEnabled) return;   // exam → skip
+      if (!this._soundEnabled) return;
       this._initAC();
       const ctx = this._ac;
       if (!ctx) return;
       this.stopBgMusic();
 
-      // Master gain — fade in perlahan
+      // Master gain — langsung masuk tanpa fade panjang
       const master = ctx.createGain();
       master.gain.setValueAtTime(0, ctx.currentTime);
-      master.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 2.5);
+      master.gain.linearRampToValueAtTime(0.55, ctx.currentTime + 0.3);
       master.connect(ctx.destination);
       this._bgGain = master;
 
-      // Reverb sederhana (convolver dihilangkan — cukup delay feedback)
-      const delay = ctx.createDelay(0.5);
-      delay.delayTime.value = 0.35;
-      const fbGain = ctx.createGain();
-      fbGain.gain.value = 0.35;
-      delay.connect(fbGain);
-      fbGain.connect(delay);
-      delay.connect(master);
-
-      // Helper: buat satu drone oscillator
-      const makeDrone = (freq, vol, type = 'sawtooth', detune = 0) => {
-        const osc = ctx.createOscillator();
-        const g   = ctx.createGain();
-        const lpf = ctx.createBiquadFilter();
-        osc.type            = type;
-        osc.frequency.value = freq;
-        osc.detune.value    = detune;
-        lpf.type            = 'lowpass';
-        lpf.frequency.value = freq * 4;
-        lpf.Q.value         = 2;
-        g.gain.value        = vol;
-        osc.connect(lpf); lpf.connect(g); g.connect(master);
-        osc.start();
-        this._bgNodes.push(osc);
-      };
-
-      // Nada: E minor — E2, B2, D3 (minor 7th → tense)
-      makeDrone(82.4,  0.45, 'sawtooth', 0);    // E2 root
-      makeDrone(82.4,  0.20, 'sawtooth', 10);   // E2 sedikit detune
-      makeDrone(123.5, 0.18, 'sawtooth', 0);    // B2 fifth
-      makeDrone(146.8, 0.10, 'sine',     0);    // D3 minor 7th
-      makeDrone(164.8, 0.07, 'sine',     -5);   // E3 octave atas
-
-      // LFO tremolo — bikin suara berdenyut
-      const lfo  = ctx.createOscillator();
-      const lfoG = ctx.createGain();
-      lfo.type            = 'sine';
-      lfo.frequency.value = 1.4;
-      lfoG.gain.value     = 0.07;
-      lfo.connect(lfoG);
-      lfoG.connect(master.gain);
-      lfo.start();
-      this._bgNodes.push(lfo);
-
-      // Detuned high shimmer
-      makeDrone(329.6, 0.04, 'sine', 12);   // E4 shimmer
-
-      // Jadwalkan heartbeat
+      // Jadwalkan pola ting-tung
       this._scheduleHb();
     },
 
-    /** Heartbeat thud — "dug-dug" berulang */
+    /**
+     * Scheduler "ting-tung" — look-ahead 1.5 detik, interval 200ms
+     * Ting = C6 (1047 Hz) triangle — bright, tajam
+     * Tung = G3 (196 Hz)  sine    — dalam, resonan
+     * Tempo ≈ 160 BPM → 0.375 s/ketukan
+     */
     _scheduleHb() {
       if (!this._bgGain) return;
-      const ctx = this._ac;
+      const ctx      = this._ac;
+      const BEAT     = 0.36;   // detik per ketukan (~167 BPM)
+      const LOOKAHEAD = 1.5;   // jadwalkan sejauh ini ke depan
+      const INTERVAL  = 180;   // ms antar panggilan scheduler
 
-      const thud = (t, startFreq, endFreq, vol) => {
-        const osc = ctx.createOscillator();
-        const g   = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(startFreq, t);
-        osc.frequency.exponentialRampToValueAtTime(endFreq, t + 0.18);
-        g.gain.setValueAtTime(vol, t);
-        g.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
-        osc.connect(g); g.connect(this._bgGain);
-        osc.start(t); osc.stop(t + 0.32);
+      // Inisialisasi pointer waktu pertama kali
+      if (!this._nextBeatTime) this._nextBeatTime = ctx.currentTime + 0.05;
+
+      let beatCount = this._beatCount || 0;
+
+      const scheduleNote = (when, isTing) => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        if (isTing) {
+          // TING — nada tinggi, tajam, pendek
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(1046.5, when);      // C6
+          osc.frequency.setValueAtTime(1318.5, when + 0.01); // E6 aksen sesaat
+          osc.frequency.exponentialRampToValueAtTime(880, when + 0.06); // turun A5
+          gain.gain.setValueAtTime(0, when);
+          gain.gain.linearRampToValueAtTime(0.70, when + 0.008);
+          gain.gain.exponentialRampToValueAtTime(0.001, when + 0.18);
+        } else {
+          // TUNG — nada rendah, dalam, sedikit lebih panjang
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(196, when);         // G3
+          osc.frequency.exponentialRampToValueAtTime(130, when + 0.15); // turun ke C3
+          gain.gain.setValueAtTime(0, when);
+          gain.gain.linearRampToValueAtTime(0.80, when + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.001, when + 0.28);
+        }
+
+        osc.connect(gain);
+        gain.connect(this._bgGain);
+        osc.start(when);
+        osc.stop(when + 0.35);
       };
 
-      const beat = () => {
+      const tick = () => {
         if (!this._bgGain) return;
-        const t = ctx.currentTime;
-        thud(t,        130, 45, 0.55);   // ketukan 1
-        thud(t + 0.22, 110, 38, 0.35);   // ketukan 2 (echo)
-        this._hbTimeout = setTimeout(beat, 1400);
+
+        // Jadwalkan semua ketukan yang masuk dalam jendela lookahead
+        while (this._nextBeatTime < ctx.currentTime + LOOKAHEAD) {
+          const isTing = (this._beatCount % 2 === 0);
+          scheduleNote(this._nextBeatTime, isTing);
+          this._beatCount++;
+          this._nextBeatTime += BEAT;
+        }
+
+        this._hbTimeout = setTimeout(tick, INTERVAL);
       };
 
-      this._hbTimeout = setTimeout(beat, 800);
+      this._beatCount    = 0;
+      this._nextBeatTime = ctx.currentTime + 0.05;
+      tick();
     },
 
-    /** Hentikan musik latar dengan fade out */
+    /** Hentikan ting-tung dengan fade out cepat */
     stopBgMusic() {
       clearTimeout(this._hbTimeout);
-      this._hbTimeout = null;
+      this._hbTimeout    = null;
+      this._nextBeatTime = 0;
+      this._beatCount    = 0;
       if (!this._bgGain || !this._ac) return;
-      const ctx = this._ac;
-      const g   = this._bgGain;
+      const g = this._bgGain;
       try {
-        g.gain.cancelScheduledValues(ctx.currentTime);
-        g.gain.setValueAtTime(g.gain.value, ctx.currentTime);
-        g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.6);
+        g.gain.cancelScheduledValues(this._ac.currentTime);
+        g.gain.setValueAtTime(g.gain.value, this._ac.currentTime);
+        g.gain.linearRampToValueAtTime(0, this._ac.currentTime + 0.15);
       } catch (_) {}
-      const nodes = this._bgNodes.slice();
       this._bgNodes = [];
       this._bgGain  = null;
-      setTimeout(() => nodes.forEach(n => { try { n.stop(); } catch (_) {} }), 700);
     },
 
     /** Suara benar: arpeggio naik C–E–G */
