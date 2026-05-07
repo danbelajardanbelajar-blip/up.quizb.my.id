@@ -240,7 +240,7 @@ function QuizBApp() {
       if (route === '/classroom')          this.loadClassroom();
       if (route.startsWith('/classroom/') && params[0]) this.loadClassroomDetail(params[0]);
       if (route === '/challenges')         this.loadChallenges();
-      if (!currentRoute.includes('/monitor') && this.assignmentView && this.assignmentView.monitorInterval) {
+      if (!this.currentRoute.includes('/monitor') && this.assignmentView && this.assignmentView.monitorInterval) {
         clearInterval(this.assignmentView.monitorInterval);
         this.assignmentView.monitorInterval = null;
       }

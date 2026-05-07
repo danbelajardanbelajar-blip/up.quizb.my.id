@@ -61,7 +61,7 @@
            return;
          }
          if (this.guestName && this.guestName.trim()) localStorage.setItem('quizb_guest_name', this.guestName.trim());
-     navigate('/play/' + quizId + '?mode=' + this.selectedMode);
+          this.navigate('/play/' + quizId + '?mode=' + this.selectedMode);
        },
      }">
 
