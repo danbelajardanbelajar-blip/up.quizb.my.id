@@ -73,7 +73,20 @@ function admin_quiz_list(): void {
     requireAdmin();
     [$page, $limit, $offset] = getPaginationParams();
 
-    $total = (int)(DB::one("SELECT COUNT(*) AS cnt FROM quizzes")['cnt'] ?? 0);
+    $search = trim($_GET['search'] ?? '');
+    $where  = ''; $params = [];
+    if ($search !== '') {
+        $where    = "WHERE (q.title LIKE ? OR c.name LIKE ?)";
+        $like     = '%' . $search . '%';
+        $params   = [$like, $like];
+    }
+
+    $total = (int)(DB::one(
+        "SELECT COUNT(*) AS cnt
+         FROM quizzes q LEFT JOIN categories c ON q.category_id = c.id $where",
+        $params
+    )['cnt'] ?? 0);
+
     $quizzes = DB::all(
         "SELECT q.*, c.name AS category_name,
                 u.name AS creator_name,
@@ -82,9 +95,10 @@ function admin_quiz_list(): void {
          FROM quizzes q
          LEFT JOIN categories c ON q.category_id = c.id
          LEFT JOIN users u ON q.created_by = u.id
+         $where
          ORDER BY q.created_at DESC
          LIMIT ? OFFSET ?",
-        [$limit, $offset]
+        [...$params, $limit, $offset]
     );
 
     jsonSuccess([
@@ -273,11 +287,19 @@ function admin_user_list(): void {
     requireAdmin();
     [$page, $limit, $offset] = getPaginationParams();
 
-    $total = (int)(DB::one("SELECT COUNT(*) AS cnt FROM users")['cnt'] ?? 0);
+    $search = trim($_GET['search'] ?? '');
+    $where  = ''; $params = [];
+    if ($search !== '') {
+        $where  = "WHERE (name LIKE ? OR email LIKE ?)";
+        $like   = '%' . $search . '%';
+        $params = [$like, $like];
+    }
+
+    $total = (int)(DB::one("SELECT COUNT(*) AS cnt FROM users $where", $params)['cnt'] ?? 0);
     $users = DB::all(
         "SELECT id, name, email, role, total_points, quizzes_taken, is_active, created_at
-         FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        [$limit, $offset]
+         FROM users $where ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        [...$params, $limit, $offset]
     );
     jsonSuccess(['users' => $users, 'total' => (int)$total, 'page' => $page, 'limit' => $limit]);
 }

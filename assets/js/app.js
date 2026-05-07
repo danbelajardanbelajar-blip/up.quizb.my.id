@@ -82,8 +82,8 @@ function QuizBApp() {
     admin: {
       tab: 'stats',
       stats: null,
-      quizzes: [], quizzesTotal: 0, quizzesPage: 1,
-      users:   [],   usersTotal: 0,   usersPage: 1,
+      quizzes: [], quizzesTotal: 0, quizzesPage: 1, quizzesSearch: '',
+      users:   [],   usersTotal: 0,   usersPage: 1,   usersSearch: '',
       categories: [],
       questions: [], questionsQuizId: null, questionsQuizTitle: '',
       // Daftar quiz khusus untuk dropdown di tab Soal — agar tidak menimpa
@@ -749,7 +749,7 @@ function QuizBApp() {
         if (tab === 'stats') {
           this.admin.stats = await api.get('admin.stats');
         } else if (tab === 'quizzes') {
-          const data = await api.get('admin.quiz_list', { page: this.admin.quizzesPage, limit: 15 });
+          const data = await api.get('admin.quiz_list', { page: this.admin.quizzesPage, limit: 15, search: this.admin.quizzesSearch });
           this.admin.quizzes      = data.quizzes || [];
           this.admin.quizzesTotal = data.total   || 0;
           // Also load categories for quiz form dropdown
@@ -757,7 +757,7 @@ function QuizBApp() {
             this.admin.categories = await api.get('admin.category_list');
           }
         } else if (tab === 'users') {
-          const data = await api.get('admin.user_list', { page: this.admin.usersPage, limit: 15 });
+          const data = await api.get('admin.user_list', { page: this.admin.usersPage, limit: 15, search: this.admin.usersSearch });
           this.admin.users      = data.users  || [];
           this.admin.usersTotal = data.total  || 0;
         } else if (tab === 'categories') {
@@ -1063,6 +1063,20 @@ function QuizBApp() {
         this.admin.importQuizb.loading = false;
       }
     },
+
+
+    // ---- Admin live search ----
+    onAdminQuizSearch: debounce(async function(q) {
+      this.admin.quizzesSearch = q;
+      this.admin.quizzesPage   = 1;
+      await this.loadAdminTab('quizzes');
+    }, 300),
+
+    onAdminUserSearch: debounce(async function(q) {
+      this.admin.usersSearch = q;
+      this.admin.usersPage   = 1;
+      await this.loadAdminTab('users');
+    }, 300),
 
     // Helper to build question form with blank options
     buildQuestionForm(quizId) {
