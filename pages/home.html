@@ -259,10 +259,12 @@
               <!-- Baris bawah: narasi aktivitas -->
               <p class="text-sm text-gray-500 dark:text-gray-400 leading-6">
                 <span class="font-medium text-gray-700 dark:text-gray-300" x-text="item.is_anon ? 'Tamu' : item.user_name || 'Tamu'"></span>
-                <span> menyelesaikan kuis dalam </span>
-                <span class="font-medium text-blue-600 dark:text-blue-400" x-text="`mode ${$root.formatModeLabel(item.mode)}`"></span>
+                <span> menyelesaikan kuis </span>
+                <span class="font-medium text-gray-700 dark:text-gray-300" x-text="item.quiz_title"></span>
+                <span> dalam </span>
+                <span class="font-medium text-blue-600 dark:text-blue-400" x-text="`mode ${formatModeLabel(item.mode)}`"></span>
                 <span> dengan nilai </span>
-                <span class="font-semibold" :class="item.score >= 60 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'" x-text="`${item.score}%`"></span>
+                <span class="font-semibold" :class="item.score >= 60 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'" x-text="item.score"></span>
               </p>
             </div>
           </div>
