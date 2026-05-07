@@ -192,6 +192,7 @@ function updateQuizDifficultyFromStats(int $quizId): void {
 }
 
 function attempt_result(): void {
+    try {
     $attemptId = (int)($_GET['id'] ?? 0);
     if (!$attemptId) jsonError('Attempt ID diperlukan');
 
@@ -271,9 +272,14 @@ function attempt_result(): void {
         'attempt' => $attempt,
         'answers' => $answers,
     ]);
+    } catch (Throwable $e) {
+        error_log("[attempt.result] " . $e->__toString());
+        jsonError('Terjadi kesalahan server', 500);
+    }
 }
 
 function attempt_history(): void {
+    try {
     $user = requireAuth();
     [$page, $limit, $offset] = getPaginationParams();
 
@@ -306,9 +312,14 @@ function attempt_history(): void {
     unset($h);
 
     jsonPaginated($history, $total, $page, $limit);
+    } catch (Throwable $e) {
+        error_log("[attempt.history] " . $e->__toString());
+        jsonError('Terjadi kesalahan server', 500);
+    }
 }
 
 function attempt_dashboard(): void {
+    try {
     $user = requireAuth();
 
     $stats = DB::one(
@@ -354,9 +365,14 @@ function attempt_dashboard(): void {
         'stats'  => $stats,
         'recent' => $recent,
     ]);
+    } catch (Throwable $e) {
+        error_log("[attempt.dashboard] " . $e->__toString());
+        jsonError('Terjadi kesalahan server', 500);
+    }
 }
 
 function attempt_quiz_global_history(): void {
+    try {
     [$page, $limit, $offset] = getPaginationParams();
 
     $total = DB::one("SELECT COUNT(*) AS cnt FROM attempts WHERE completed_at IS NOT NULL")['cnt'];
@@ -383,6 +399,10 @@ function attempt_quiz_global_history(): void {
     unset($h);
 
     jsonPaginated($history, (int)$total, $page, $limit);
+    } catch (Throwable $e) {
+        error_log("[attempt.quiz_global_history] " . $e->__toString());
+        jsonError('Terjadi kesalahan server', 500);
+    }
 }
 
 function quiz_global_history(): void {
