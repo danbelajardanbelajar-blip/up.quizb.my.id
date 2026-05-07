@@ -336,3 +336,31 @@ function attempt_dashboard(): void {
         'recent' => $recent,
     ]);
 }
+
+function quiz_global_history(): void {
+    [$page, $limit, $offset] = getPaginationParams();
+
+    $total = DB::one("SELECT COUNT(*) AS cnt FROM attempts WHERE completed_at IS NOT NULL")['cnt'];
+
+    $history = DB::all(
+        "SELECT a.id, a.score, a.correct_count, a.time_taken, a.completed_at,
+                q.title AS quiz_title, q.difficulty, q.total_questions,
+                COALESCE(u.name, 'Anonymous') AS user_name,
+                CASE WHEN u.id IS NULL OR u.id = 0 THEN 1 ELSE 0 END AS is_anon
+         FROM attempts a
+         INNER JOIN quizzes q ON q.id = a.quiz_id
+         LEFT JOIN users u ON u.id = a.user_id
+         WHERE a.completed_at IS NOT NULL
+         ORDER BY a.completed_at DESC
+         LIMIT ? OFFSET ?",
+        [$limit, $offset]
+    );
+
+    // Cast booleans
+    foreach ($history as &$h) {
+        $h['is_anon'] = (bool)$h['is_anon'];
+    }
+    unset($h);
+
+    jsonPaginated($history, (int)$total, $page, $limit);
+}
