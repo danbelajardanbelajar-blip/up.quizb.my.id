@@ -152,7 +152,7 @@
     <div class="px-4 py-1 text-center">
       <!-- teks animasi -->
       <p class="inline text-gray-500/80 dark:text-gray-400/80 leading-4"
-         style="font-size:0.65rem; transition: opacity 0.4s cubic-bezier(.4,0,.2,1), transform 0.4s cubic-bezier(.4,0,.2,1);"
+         style="font-size:0.325rem; transition: opacity 0.4s cubic-bezier(.4,0,.2,1), transform 0.4s cubic-bezier(.4,0,.2,1);"
          :style="visible
            ? 'opacity:1; transform:translateY(0)'
            : 'opacity:0; transform:translateY(5px)'">
