@@ -1298,46 +1298,10 @@ function quizHistorySection() {
       const diffDays = Math.floor(diffHours / 24);
 
       if (diffMins < 1) return 'Baru saja';
-      if (diffMins < 60) return ${diffMins}m lalu;
-      if (diffHours < 24) return ${diffHours}j lalu;
-      return ${diffDays}h lalu;
+      if (diffMins < 60) return `${diffMins}m lalu`;
+      if (diffHours < 24) return `${diffHours}j lalu`;
+      return `${diffDays}h lalu`;
     },
-  }
+  };
 }
-function quizHistorySection() {
-  return {
-    history: [],
-    loading: true,
 
-    async init() {
-      await this.loadHistory();
-    },
-
-    async loadHistory() {
-      this.loading = true;
-      try {
-        const data = await api.get('attempt.quiz_global_history');
-        this.history = data.data || [];
-      } catch (e) {
-        console.error('Failed to load history:', e);
-        this.history = [];
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    formatTimeAgo(dateStr) {
-      const now = new Date();
-      const date = new Date(dateStr);
-      const diffMs = now - date;
-      const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMins / 60);
-      const diffDays = Math.floor(diffHours / 24);
-
-      if (diffMins < 1) return 'Baru saja';
-      if (diffMins < 60) return ${diffMins}m lalu;
-      if (diffHours < 24) return ${diffHours}j lalu;
-      return ${diffDays}h lalu;
-    },
-  }
-}
