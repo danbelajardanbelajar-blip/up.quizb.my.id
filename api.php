@@ -27,6 +27,32 @@ require_once __DIR__ . '/includes/response.php';
 
 startSecureSession();
 
+set_exception_handler(function (Throwable $e) {
+    if (ob_get_level() > 0) ob_end_clean();
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    header('X-Content-Type-Options: nosniff');
+    $message = defined('APP_ENV') && APP_ENV === 'development'
+        ? $e->getMessage()
+        : 'Terjadi kesalahan server';
+    echo json_encode(['success' => false, 'error' => $message, 'message' => $message, 'code' => 500], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+});
+
+register_shutdown_function(function () {
+    $err = error_get_last();
+    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        if (ob_get_level() > 0) ob_end_clean();
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        header('X-Content-Type-Options: nosniff');
+        $message = defined('APP_ENV') && APP_ENV === 'development'
+            ? $err['message']
+            : 'Terjadi kesalahan server';
+        echo json_encode(['success' => false, 'error' => $message, 'message' => $message, 'code' => 500], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+});
+
 // Generate CSRF token on first call (GET requests)
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     generateCsrfToken();

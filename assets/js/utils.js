@@ -2,7 +2,7 @@
 // assets/js/utils.js — Shared Utilities
 // ============================================
 
-const API_BASE = 'api.php';
+const API_BASE = '/api.php';
 
 // ---- HTTP Client ----
 const api = {

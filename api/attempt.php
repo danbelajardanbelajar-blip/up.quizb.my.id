@@ -10,11 +10,11 @@ function attempt_submit(): void {
     $user = getCurrentUserOrAnon();
     $body = getBody();
 
-    $quizId          = (int)($body['quiz_id']    ?? 0);
-    $answers         = $body['answers']          ?? [];
-    $timeTaken       = (int)($body['time_taken'] ?? 0);
-    $displayedQIds   = array_map('intval', $body['question_ids'] ?? []);
-    $playerName      = trim($body['player_name'] ?? '');
+    $quizId        = (int)($body['quiz_id']    ?? 0);
+    $answers       = $body['answers']          ?? [];
+    $timeTaken     = max(0, min(65535, (int)($body['time_taken'] ?? 0)));
+    $displayedQIds = array_filter(array_unique(array_map('intval', $body['question_ids'] ?? [])), fn($id) => $id > 0);
+    $playerName    = trim($body['player_name'] ?? '');
     if (mb_strlen($playerName) > 40) $playerName = mb_substr($playerName, 0, 40);
 
     $mode = sanitizeString($body['mode'] ?? 'exam');
@@ -55,6 +55,10 @@ function attempt_submit(): void {
             'SELECT q.id, q.points FROM questions q WHERE q.quiz_id = ?',
             [$quizId]
         );
+    }
+
+    if (empty($questions)) {
+        jsonError('Quiz tidak memiliki soal yang valid untuk disubmit', 400);
     }
 
     $correctOptions = DB::all(
