@@ -343,3 +343,134 @@ function assignment_results(): void {
         'submissions'   => array_values($submissions),
     ]);
 }
+
+// ============================================
+// POST /api?action=assignment.progress_update
+// Siswa kirim heartbeat posisi soal
+// ============================================
+function assignment_progress_update(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $user = requireAuth();
+    $body = getJsonBody();
+
+    $assignmentId = (int)($body['assignment_id']    ?? 0);
+    $currentQ     = (int)($body['current_question'] ?? 0);
+    $totalQ       = (int)($body['total_questions']  ?? 0);
+    if (!$assignmentId) jsonError('assignment_id diperlukan');
+
+    $existing = DB::one(
+        'SELECT is_forced_stop FROM assignment_progress WHERE assignment_id = ? AND user_id = ?',
+        [$assignmentId, $user['id']]
+    );
+    if ($existing && (int)$existing['is_forced_stop']) {
+        jsonSuccess(['is_forced_stop' => true]);
+        return;
+    }
+
+    DB::execute(
+        "INSERT INTO assignment_progress
+         (assignment_id, user_id, current_question, total_questions, last_seen_at)
+         VALUES (?, ?, ?, ?, NOW())
+         ON DUPLICATE KEY UPDATE
+           current_question = VALUES(current_question),
+           total_questions  = VALUES(total_questions),
+           last_seen_at     = NOW()",
+        [$assignmentId, $user['id'], $currentQ, $totalQ]
+    );
+    jsonSuccess(['is_forced_stop' => false]);
+}
+
+// ============================================
+// GET /api?action=assignment.monitor&id=X
+// Guru pantau progress live semua siswa
+// ============================================
+function assignment_monitor(): void {
+    $user = requireAuth();
+    if (!in_array($user['role'], ['pengajar', 'admin'])) jsonError('Akses ditolak', 403);
+
+    $id = (int)($_GET['id'] ?? 0);
+    if ($id <= 0) jsonError('ID tidak valid');
+
+    $assignment = DB::one(
+        "SELECT a.*, q.title AS quiz_title, c.name AS class_name
+         FROM assignments a
+         JOIN quizzes q ON q.id = a.quiz_id
+         JOIN classes  c ON c.id = a.class_id
+         WHERE a.id = ?",
+        [$id]
+    );
+    if (!$assignment) jsonError('Tugas tidak ditemukan', 404);
+    if ((int)$assignment['teacher_id'] !== $user['id'] && $user['role'] !== 'admin')
+        jsonError('Bukan tugas milik Anda', 403);
+
+    $students = DB::all(
+        "SELECT u.id AS user_id, u.name AS student_name,
+                p.current_question, p.total_questions,
+                p.started_at, p.last_seen_at, p.is_forced_stop,
+                s.submitted_at, att.score, att.correct_count, att.time_taken
+         FROM   class_members cm
+         JOIN   users u ON u.id = cm.user_id
+         LEFT JOIN assignment_progress p ON p.assignment_id = ? AND p.user_id = u.id
+         LEFT JOIN assignment_submissions s ON s.assignment_id = ? AND s.user_id = u.id
+         LEFT JOIN attempts att ON att.id = s.attempt_id
+         WHERE  cm.class_id = ?
+         ORDER BY
+           CASE
+             WHEN s.submitted_at IS NOT NULL THEN 3
+             WHEN p.last_seen_at > DATE_SUB(NOW(), INTERVAL 30 SECOND) THEN 1
+             ELSE 2
+           END,
+           p.last_seen_at DESC, u.name ASC",
+        [$id, $id, $assignment['class_id']]
+    );
+
+    $active = 0; $submitted = 0;
+    foreach ($students as &$s) {
+        if (!empty($s['submitted_at'])) {
+            $s['status'] = 'submitted'; $submitted++;
+        } elseif (!empty($s['last_seen_at']) && strtotime($s['last_seen_at']) > time() - 30) {
+            $s['status'] = 'active'; $active++;
+        } elseif (!empty($s['started_at'])) {
+            $s['status'] = (int)($s['is_forced_stop'] ?? 0) ? 'stopped' : 'idle';
+        } else {
+            $s['status'] = 'not_started';
+        }
+    }
+    unset($s);
+
+    jsonSuccess([
+        'assignment'      => $assignment,
+        'students'        => $students,
+        'active_count'    => $active,
+        'submitted_count' => $submitted,
+        'total_count'     => count($students),
+    ]);
+}
+
+// ============================================
+// POST /api?action=assignment.force_stop
+// Guru paksa hentikan pengerjaan siswa
+// ============================================
+function assignment_force_stop(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $user = requireAuth();
+    if (!in_array($user['role'], ['pengajar', 'admin'])) jsonError('Akses ditolak', 403);
+
+    $body      = getJsonBody();
+    $assignId  = (int)($body['assignment_id'] ?? 0);
+    $studentId = (int)($body['student_id']    ?? 0);
+    if (!$assignId || !$studentId) jsonError('Data tidak lengkap');
+
+    $assignment = DB::one('SELECT * FROM assignments WHERE id = ?', [$assignId]);
+    if (!$assignment) jsonError('Tugas tidak ditemukan', 404);
+    if ((int)$assignment['teacher_id'] !== $user['id'] && $user['role'] !== 'admin')
+        jsonError('Bukan tugas milik Anda', 403);
+
+    DB::execute(
+        "INSERT INTO assignment_progress (assignment_id, user_id, is_forced_stop)
+         VALUES (?, ?, 1)
+         ON DUPLICATE KEY UPDATE is_forced_stop = 1",
+        [$assignId, $studentId]
+    );
+    jsonSuccess([], 'Pekerjaan siswa berhasil dihentikan.');
+}

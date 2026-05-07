@@ -22,6 +22,7 @@ function QuizEngine() {
     assignmentId: null,   // jika dimainkan dari tugas
     mode: 'exam',         // exam | instant | end | challenge
     challengeId: null,    // untuk mode challenge
+    heartbeatInterval: null,
     playerName: '',        // nama tamu (dari localStorage, opsional)
     questionTimeLeft: 0,    // timer per soal (instant/end mode)
     questionTimerInterval: null,
@@ -112,10 +113,11 @@ function QuizEngine() {
     startQuiz() {
       this.phase = 'playing';
       if (this.isReviewMode) {
-        this.startQuestionTimer(); // timer per soal untuk instant/end
+        this.startQuestionTimer();
       } else {
-        this.startTimer();         // timer global untuk exam/challenge
+        this.startTimer();
       }
+      if (this.assignmentId) this._startHeartbeat();
     },
 
     // ---- Timer ----
@@ -151,6 +153,33 @@ function QuizEngine() {
 
     stopQuestionTimer() {
       clearInterval(this.questionTimerInterval);
+    },
+
+    _startHeartbeat() {
+      clearInterval(this.heartbeatInterval);
+      this._sendHeartbeat();
+      this.heartbeatInterval = setInterval(() => this._sendHeartbeat(), 8000);
+    },
+    _stopHeartbeat() {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    },
+    async _sendHeartbeat() {
+      if (!this.assignmentId || this.phase !== 'playing') return;
+      try {
+        const res = await api.post('assignment.progress_update', {
+          assignment_id:    parseInt(this.assignmentId),
+          current_question: this.currentIndex + 1,
+          total_questions:  this.questions.length,
+        });
+        if (res && res.is_forced_stop) {
+          this._stopHeartbeat();
+          this.stopTimer();
+          this.stopQuestionTimer();
+          alert('⛔ Guru menghentikan pengerjaan Anda. Jawaban dikumpulkan otomatis.');
+          await this.submitAnswers();
+        }
+      } catch (_) {}
     },
 
     onQuestionTimeout() {
@@ -274,6 +303,7 @@ function QuizEngine() {
     },
 
     async submitAnswers() {
+      this._stopHeartbeat();
       this.loading = true;
       try {
         const timeTaken = (this.quiz.exam_duration || this.quiz.time_limit || this.quiz.duration || 600) - this.timeLeft;
@@ -380,6 +410,7 @@ function QuizEngine() {
     destroy() {
       this.stopTimer();
       this.stopQuestionTimer();
+      this._stopHeartbeat();
     },
   };
 }

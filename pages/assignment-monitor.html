@@ -1,0 +1,127 @@
+<!-- ASSIGNMENT LIVE MONITOR PAGE -->
+<div x-show="currentRoute.startsWith('/assignment/') && routeParams[1] === 'monitor'"
+     class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+  <div class="flex items-center gap-3 mb-6">
+    <button @click="navigate('/assignment/' + routeParams[0] + '/results')"
+            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors">
+      ← Hasil
+    </button>
+    <div class="flex-1">
+      <div class="flex items-center gap-2">
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white">🔴 Monitor Live</h1>
+        <span class="relative flex h-3 w-3">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+        </span>
+      </div>
+      <p class="text-sm text-gray-500 dark:text-gray-400"
+         x-text="(assignmentView.assignment ? assignmentView.assignment.title : '...') + ' — refresh tiap 5 detik'"></p>
+    </div>
+    <button @click="loadAssignmentMonitor(routeParams[0])"
+            class="btn-secondary text-sm px-3 py-2">🔄</button>
+  </div>
+
+  <!-- Loading -->
+  <div x-show="assignmentView.loading" class="space-y-3">
+    <div class="skeleton h-16 rounded-xl"></div>
+    <div class="skeleton h-16 rounded-xl"></div>
+    <div class="skeleton h-16 rounded-xl"></div>
+  </div>
+
+  <div x-show="!assignmentView.loading && assignmentView.monitor">
+
+    <!-- Summary -->
+    <div class="grid grid-cols-3 gap-4 mb-6">
+      <div class="card p-4 text-center border-l-4 border-green-400">
+        <p class="text-2xl font-bold text-green-600 dark:text-green-400"
+           x-text="assignmentView.monitor ? assignmentView.monitor.active_count : 0"></p>
+        <p class="text-xs text-gray-400 mt-1">🟢 Sedang Mengerjakan</p>
+      </div>
+      <div class="card p-4 text-center border-l-4 border-blue-400">
+        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400"
+           x-text="assignmentView.monitor ? assignmentView.monitor.submitted_count : 0"></p>
+        <p class="text-xs text-gray-400 mt-1">✅ Sudah Kumpul</p>
+      </div>
+      <div class="card p-4 text-center border-l-4 border-gray-300">
+        <p class="text-2xl font-bold text-gray-500 dark:text-gray-400"
+           x-text="assignmentView.monitor ? (assignmentView.monitor.total_count - assignmentView.monitor.active_count - assignmentView.monitor.submitted_count) : 0"></p>
+        <p class="text-xs text-gray-400 mt-1">⬜ Belum Mulai</p>
+      </div>
+    </div>
+
+    <!-- Student cards -->
+    <div class="space-y-3">
+      <template x-for="s in (assignmentView.monitor ? assignmentView.monitor.students : [])" :key="s.user_id">
+        <div class="card p-4"
+             :class="s.status === 'active' ? 'border-l-4 border-green-400' : s.status === 'submitted' ? 'border-l-4 border-blue-400' : s.status === 'stopped' ? 'border-l-4 border-red-400' : ''">
+          <div class="flex items-center gap-3">
+
+            <!-- Avatar + info -->
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+                  :class="s.status === 'active' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : s.status === 'submitted' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400' : s.status === 'stopped' ? 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'"
+                  x-text="s.student_name.charAt(0).toUpperCase()"></span>
+
+            <div class="flex-1 min-w-0">
+              <p class="font-semibold text-gray-900 dark:text-white truncate" x-text="s.student_name"></p>
+              <p class="text-xs mt-0.5">
+                <span x-show="s.status === 'active'" class="text-green-600 dark:text-green-400 font-medium">🟢 Sedang mengerjakan</span>
+                <span x-show="s.status === 'submitted'" class="text-blue-600 dark:text-blue-400 font-medium">✅ Sudah dikumpulkan</span>
+                <span x-show="s.status === 'stopped'" class="text-red-500 font-medium">⛔ Dihentikan paksa</span>
+                <span x-show="s.status === 'idle'" class="text-yellow-600 dark:text-yellow-400">⏸ Tidak aktif</span>
+                <span x-show="s.status === 'not_started'" class="text-gray-400">⬜ Belum mulai</span>
+              </p>
+            </div>
+
+            <!-- Progress bar (active/idle) -->
+            <div x-show="s.total_questions > 0 && s.status !== 'submitted'"
+                 class="flex-shrink-0 text-right hidden sm:block w-36">
+              <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                Soal <span x-text="s.current_question"></span>/<span x-text="s.total_questions"></span>
+              </p>
+              <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-500"
+                     :class="s.status === 'active' ? 'bg-green-500' : 'bg-gray-400'"
+                     :style="'width:' + (s.total_questions > 0 ? Math.round((s.current_question / s.total_questions) * 100) : 0) + '%'">
+                </div>
+              </div>
+            </div>
+
+            <!-- Score (submitted) -->
+            <div x-show="s.status === 'submitted'" class="flex-shrink-0">
+              <span class="inline-flex items-center justify-center w-12 h-10 rounded-xl font-bold text-base"
+                    :class="s.score >= 75 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : s.score >= 60 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400' : 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'"
+                    x-text="s.score"></span>
+            </div>
+
+            <!-- Last seen -->
+            <div x-show="s.last_seen_at && s.status !== 'not_started'"
+                 class="hidden md:block flex-shrink-0 text-xs text-gray-400 text-right w-20">
+              <span x-text="new Date(s.last_seen_at).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'})"></span>
+            </div>
+
+            <!-- Stop button -->
+            <div class="flex-shrink-0">
+              <button x-show="s.status === 'active' || s.status === 'idle'"
+                      @click="forceStopStudent(assignmentView.assignment.id, s.user_id, s.student_name)"
+                      class="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-lg transition-colors">
+                ⛔ Stop
+              </button>
+              <span x-show="s.status === 'stopped'"
+                    class="text-xs text-red-500 font-medium">Dihentikan</span>
+            </div>
+
+          </div>
+        </div>
+      </template>
+
+      <!-- Empty -->
+      <div x-show="assignmentView.monitor && assignmentView.monitor.students && assignmentView.monitor.students.length === 0"
+           class="text-center py-16 text-gray-400">
+        <p class="text-4xl mb-3">🏫</p>
+        <p>Tidak ada siswa di kelas ini</p>
+      </div>
+    </div>
+
+  </div>
+</div>

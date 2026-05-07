@@ -98,8 +98,9 @@
   </div>
 
   <!-- === JOIN CLASS MODAL === -->
-  <div x-show="classroom.joinModal.show" @keydown.escape.window="classroom.joinModal.show=false"
-       class="modal-overlay" x-transition>
+  <template x-if="classroom.joinModal.show">
+  <div @keydown.escape.window="classroom.joinModal.show=false"
+       class="modal-overlay">
     <div class="modal-box p-6 max-w-sm">
       <h2 class="font-bold text-lg text-gray-900 dark:text-white mb-1">🔑 Gabung Kelas</h2>
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Masukkan kode kelas yang diberikan oleh pengajar.</p>
@@ -117,10 +118,12 @@
       </div>
     </div>
   </div>
+  </template>
 
   <!-- === CREATE CLASS MODAL === -->
-  <div x-show="classroom.createModal.show" @keydown.escape.window="classroom.createModal.show=false"
-       class="modal-overlay" x-transition>
+  <template x-if="classroom.createModal.show">
+  <div @keydown.escape.window="classroom.createModal.show=false"
+       class="modal-overlay">
     <div class="modal-box p-6">
       <h2 class="font-bold text-lg text-gray-900 dark:text-white mb-5">🏫 Buat Kelas Baru</h2>
       <div class="space-y-4">
@@ -143,5 +146,6 @@
       </div>
     </div>
   </div>
+  </template>
 
 </div>

@@ -165,7 +165,8 @@
   </div>
 
   <!-- ===== MODAL ===== -->
-  <div x-show="admin.modal.show" @keydown.escape.window="closeAdminModal()" class="modal-overlay" x-transition>
+  <template x-if="admin.modal.show">
+  <div @keydown.escape.window="closeAdminModal()" class="modal-overlay">
     <div class="modal-box p-6">
       <!-- Quiz Create/Edit -->
       <div x-show="admin.modal.type==='quiz_create'||admin.modal.type==='quiz_edit'">
@@ -283,6 +284,7 @@
       </div>
     </div>
   </div>
+  </template>
 
   <!-- ===== QUESTIONS TAB ===== -->
   <div x-show="!admin.loading && admin.tab==='questions'" class="animate-fade-in">

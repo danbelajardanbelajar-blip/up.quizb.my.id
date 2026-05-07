@@ -1,0 +1,143 @@
+<!-- ASSIGNMENT RESULTS PAGE -->
+<div x-show="currentRoute.startsWith('/assignment/') && routeParams[1] === 'results'"
+     class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+  <div class="flex items-center gap-3 mb-6">
+    <button @click="navigate('/classroom/' + (assignmentView.assignment?.class_id || ''))"
+            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors">
+      ← Kembali
+    </button>
+    <div>
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white">📊 Hasil Tugas</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400"
+         x-text="assignmentView.assignment?.title || '...'"></p>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div x-show="assignmentView.loading" class="space-y-4">
+    <div class="skeleton h-24 rounded-2xl"></div>
+    <div class="skeleton h-64 rounded-2xl"></div>
+  </div>
+
+  <div x-show="!assignmentView.loading && assignmentView.results">
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+      <div class="card p-4 text-center">
+        <p class="text-2xl font-bold text-gray-900 dark:text-white"
+           x-text="assignmentView.results ? assignmentView.results.total_members : 0"></p>
+        <p class="text-xs text-gray-400 mt-1">Total Siswa</p>
+      </div>
+      <div class="card p-4 text-center">
+        <p class="text-2xl font-bold text-green-600 dark:text-green-400"
+           x-text="assignmentView.results ? assignmentView.results.submitted : 0"></p>
+        <p class="text-xs text-gray-400 mt-1">Sudah Kumpul</p>
+      </div>
+      <div class="card p-4 text-center">
+        <p class="text-2xl font-bold text-yellow-500"
+           x-text="assignmentView.results ? assignmentView.results.not_submitted : 0"></p>
+        <p class="text-xs text-gray-400 mt-1">Belum Kumpul</p>
+      </div>
+      <div class="card p-4 text-center">
+        <p class="text-2xl font-bold text-primary-600 dark:text-primary-400"
+           x-text="assignmentView.results ? (assignmentView.results.avg_score || '—') : '—'"></p>
+        <p class="text-xs text-gray-400 mt-1">Rata-rata Skor</p>
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="card p-5 mb-6">
+      <div class="flex items-center justify-between text-sm mb-2">
+        <span class="font-medium text-gray-700 dark:text-gray-300">Progress Pengumpulan</span>
+        <span class="text-gray-500"
+              x-text="assignmentView.results ? (assignmentView.results.submitted + ' / ' + assignmentView.results.total_members) : '0 / 0'"></span>
+      </div>
+      <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+        <div class="h-full bg-green-500 rounded-full transition-all duration-500"
+             :style="'width:' + (assignmentView.results && assignmentView.results.total_members > 0 ? Math.round((assignmentView.results.submitted / assignmentView.results.total_members) * 100) : 0) + '%'">
+        </div>
+      </div>
+    </div>
+
+    <!-- Header row -->
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-base font-semibold text-gray-700 dark:text-gray-300">👥 Daftar Siswa</h2>
+      <button @click="navigate('/assignment/' + routeParams[0] + '/monitor')"
+              class="btn-secondary text-sm px-4 py-2 flex items-center gap-2">
+        🔴 Pantau Live
+      </button>
+    </div>
+
+    <!-- Table -->
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800/60">
+            <tr>
+              <th class="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 w-10">#</th>
+              <th class="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Nama Siswa</th>
+              <th class="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Skor</th>
+              <th class="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Benar</th>
+              <th class="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Waktu</th>
+              <th class="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="(s, idx) in (assignmentView.results ? assignmentView.results.submissions : [])" :key="s.user_id">
+              <tr class="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                <td class="px-4 py-3">
+                  <span x-show="s.submitted_at && idx === 0" class="text-lg">🥇</span>
+                  <span x-show="s.submitted_at && idx === 1" class="text-lg">🥈</span>
+                  <span x-show="s.submitted_at && idx === 2" class="text-lg">🥉</span>
+                  <span x-show="!s.submitted_at || idx > 2"
+                        class="text-gray-400 text-xs" x-text="idx + 1"></span>
+                </td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 flex items-center justify-center text-xs font-bold flex-shrink-0"
+                          x-text="s.student_name.charAt(0).toUpperCase()"></span>
+                    <span class="font-medium text-gray-800 dark:text-gray-200" x-text="s.student_name"></span>
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <template x-if="s.submitted_at">
+                    <span class="inline-flex items-center justify-center w-12 h-8 rounded-lg font-bold text-sm"
+                          :class="s.score >= 75 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : s.score >= 60 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400' : 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'"
+                          x-text="s.score"></span>
+                  </template>
+                  <template x-if="!s.submitted_at">
+                    <span class="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                  </template>
+                </td>
+                <td class="px-4 py-3 text-center text-gray-500 dark:text-gray-400"
+                    x-text="s.submitted_at && s.correct_count !== null ? s.correct_count : '—'"></td>
+                <td class="px-4 py-3 text-center text-gray-500 dark:text-gray-400"
+                    x-text="s.time_taken ? (Math.floor(s.time_taken/60) + 'm ' + (s.time_taken % 60) + 's') : '—'"></td>
+                <td class="px-4 py-3 text-center">
+                  <template x-if="s.submitted_at">
+                    <span class="text-xs text-gray-500 dark:text-gray-400"
+                          x-text="new Date(s.submitted_at).toLocaleDateString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})"></span>
+                  </template>
+                  <template x-if="!s.submitted_at">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400">
+                      Belum
+                    </span>
+                  </template>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty -->
+      <div x-show="assignmentView.results && assignmentView.results.submissions && assignmentView.results.submissions.length === 0"
+           class="text-center py-16 text-gray-400">
+        <p class="text-4xl mb-3">📭</p>
+        <p>Belum ada siswa yang mengumpulkan tugas</p>
+      </div>
+    </div>
+
+  </div>
+</div>

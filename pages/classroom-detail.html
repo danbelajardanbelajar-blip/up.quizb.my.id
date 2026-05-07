@@ -125,9 +125,13 @@
                         <button @click="navigate('/play/' + assign.quiz_id + '?assign=' + assign.id)"
                                 class="btn-primary text-xs px-3 py-1.5">Kerjakan</button>
                       </template>
-                      <!-- For teachers: edit & delete buttons -->
+                      <!-- For teachers: hasil, live, edit, delete -->
                       <template x-if="classroom.isTeacher">
-                        <div class="flex gap-2">
+                        <div class="flex flex-wrap gap-2">
+                          <button @click="navigate('/assignment/' + assign.id + '/results')"
+                                  class="text-xs text-green-600 dark:text-green-400 hover:underline px-2 py-1.5">📊 Hasil</button>
+                          <button @click="navigate('/assignment/' + assign.id + '/monitor')"
+                                  class="text-xs text-red-500 hover:underline px-2 py-1.5">🔴 Live</button>
                           <button @click="openEditAssignModal(assign)"
                                   class="text-xs text-primary-500 hover:underline px-2 py-1.5">✏️ Edit</button>
                           <button @click="deleteAssignment(assign.id, classroom.detail.id)"

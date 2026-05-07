@@ -222,6 +222,11 @@
     </div>
 
     <!-- CHALLENGES PAGE -->
+    <div x-show="currentRoute.startsWith('/assignment/')" x-transition:enter="animate-fade-in">
+      <?php include 'pages/assignment-results.html'; ?>
+      <?php include 'pages/assignment-monitor.html'; ?>
+    </div>
+
     <div x-show="currentRoute === '/challenges'" x-transition:enter="animate-fade-in">
       <?php include 'pages/challenges.html'; ?>
     </div>

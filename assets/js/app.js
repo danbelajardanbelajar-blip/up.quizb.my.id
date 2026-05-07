@@ -69,6 +69,15 @@ function QuizBApp() {
       quizListLoading: false,
     },
 
+    // Assignment monitor state
+    assignmentView: {
+      loading: false,
+      assignment: null,
+      results:  null,
+      monitor:  null,
+      monitorInterval: null,
+    },
+
     // Admin state
     admin: {
       tab: 'stats',
@@ -187,6 +196,7 @@ function QuizBApp() {
         'admin':       '/admin',
         'classroom':   rest[0] ? '/classroom/' + rest[0] : '/classroom',
         'challenges':  '/challenges',
+        'assignment':  rest[0] ? '/assignment/' + rest.join('/') : '/assignment',
       };
 
       const route = routeMap[base] || (path === '/' ? '/' : '/404');
@@ -230,6 +240,12 @@ function QuizBApp() {
       if (route === '/classroom')          this.loadClassroom();
       if (route.startsWith('/classroom/') && params[0]) this.loadClassroomDetail(params[0]);
       if (route === '/challenges')         this.loadChallenges();
+      if (!currentRoute.includes('/monitor') && this.assignmentView && this.assignmentView.monitorInterval) {
+        clearInterval(this.assignmentView.monitorInterval);
+        this.assignmentView.monitorInterval = null;
+      }
+      if (/^\/assignment\/\d+\/results$/.test(route)) this.loadAssignmentResults(params[0]);
+      if (/^\/assignment\/\d+\/monitor$/.test(route)) this.loadAssignmentMonitor(params[0]);
     },
 
     // ---- Auth ----
@@ -944,6 +960,53 @@ function QuizBApp() {
         await api.post('challenge.accept', { challenge_id: parseInt(challengeId) });
         this.showToast('Tantangan diterima! Mulai bermain.', 'success', '⚔️');
         this.navigate('/play/' + quizId + '?mode=challenge&cid=' + challengeId);
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      }
+    },
+
+    // ---- Assignment Results & Monitor ----
+    async loadAssignmentResults(id) {
+      this.assignmentView.loading = true;
+      this.assignmentView.results = null;
+      try {
+        const data = await api.get('assignment.results', { id });
+        this.assignmentView.results = data;
+        this.assignmentView.assignment = data.assignment;
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        this.assignmentView.loading = false;
+      }
+    },
+
+    async loadAssignmentMonitor(id) {
+      this.assignmentView.loading = true;
+      this.assignmentView.monitor = null;
+      clearInterval(this.assignmentView.monitorInterval);
+      const doFetch = async () => {
+        try {
+          const data = await api.get('assignment.monitor', { id });
+          this.assignmentView.monitor    = data;
+          this.assignmentView.assignment = data.assignment;
+        } catch (e) {
+          this.showToast(e.message, 'error', '❌');
+        } finally {
+          this.assignmentView.loading = false;
+        }
+      };
+      await doFetch();
+      this.assignmentView.monitorInterval = setInterval(doFetch, 5000);
+    },
+
+    async forceStopStudent(assignmentId, studentId, studentName) {
+      if (!confirm('Hentikan paksa pekerjaan ' + studentName + '?')) return;
+      try {
+        await api.post('assignment.force_stop', {
+          assignment_id: parseInt(assignmentId),
+          student_id:    parseInt(studentId),
+        });
+        this.showToast(studentName + ' berhasil dihentikan', 'success', '⛔');
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       }
