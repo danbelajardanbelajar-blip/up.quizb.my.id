@@ -334,6 +334,9 @@
             <th @click="sortAdmin('review','error_pct')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800 text-right">
               % Kesalahan <span class="text-gray-400 text-xs" x-text="sortIcon('review','error_pct')"></span>
             </th>
+            <th @click="sortAdmin('review','avg_score')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800 text-right">
+              Rata-rata Nilai <span class="text-gray-400 text-xs" x-text="sortIcon('review','avg_score')"></span>
+            </th>
             <th @click="sortAdmin('review','difficulty_ratio')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800 text-right">
               Rasio Kesulitan <span class="text-gray-400 text-xs" x-text="sortIcon('review','difficulty_ratio')"></span>
             </th>
@@ -364,6 +367,11 @@
                         x-text="item.error_pct + '%'"></span>
                 </td>
                 <td class="text-right">
+                  <span class="font-semibold tabular-nums text-sm"
+                        :class="item.avg_score >= 70 ? 'text-green-600 dark:text-green-400' : item.avg_score >= 50 ? 'text-yellow-500' : 'text-red-500 dark:text-red-400'"
+                        x-text="item.avg_score != null ? item.avg_score + '%' : '—'"></span>
+                </td>
+                <td class="text-right">
                   <div class="flex items-center justify-end gap-2">
                     <div class="w-16 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                       <div class="h-full rounded-full"
@@ -387,7 +395,7 @@
 
               <!-- Expanded row: attempt history -->
               <tr x-show="admin.review.expandedId === item.id">
-                <td colspan="6" class="p-0 border-t-0">
+                <td colspan="7" class="p-0 border-t-0">
                   <div class="bg-gray-50 dark:bg-gray-800/60 border-t border-b border-gray-100 dark:border-gray-700 px-5 py-4">
 
                     <!-- Loading -->
