@@ -282,7 +282,8 @@
   </main>
 
   <!-- FOOTER -->
-  <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 mt-auto">
+  <footer x-show="!currentRoute.startsWith('/play/')"
+          class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 mt-auto">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div class="flex flex-col md:flex-row items-center justify-between gap-4">
         <div class="flex items-center gap-2">
