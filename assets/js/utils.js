@@ -29,12 +29,25 @@ const api = {
     if (token) this._csrfToken = token;
   },
 
+  // Helper: parse JSON dari response, lempar error yang jelas jika body kosong/rusak
+  async _parseJson(r, fallbackMsg = 'Server mengembalikan respons tidak valid') {
+    const text = await r.text();
+    if (!text || !text.trim()) {
+      throw new Error(`${fallbackMsg} (HTTP ${r.status} — respons kosong)`);
+    }
+    try {
+      return JSON.parse(text);
+    } catch (_) {
+      throw new Error(`${fallbackMsg} (HTTP ${r.status} — bukan JSON valid)`);
+    }
+  },
+
   async get(action, params = {}) {
     const qs = new URLSearchParams({ action, ...params });
     const r = await fetch(`${API_BASE}?${qs}`, { credentials: 'same-origin' });
     const ct = r.headers.get('X-CSRF-Token');
     if (ct) this._csrfToken = ct;
-    const data = await r.json();
+    const data = await this._parseJson(r);
     if (!r.ok) throw new Error(data.message || data.error || 'Request failed');
     return data.data;
   },
@@ -45,7 +58,7 @@ const api = {
     const r = await fetch(`${API_BASE}?${qs}`, { credentials: 'same-origin' });
     const ct = r.headers.get('X-CSRF-Token');
     if (ct) this._csrfToken = ct;
-    const data = await r.json();
+    const data = await this._parseJson(r);
     if (!r.ok) throw new Error(data.message || data.error || 'Request failed');
     return data; // { success, data: [...], meta: {...} }
   },
@@ -58,7 +71,7 @@ const api = {
       body: JSON.stringify(body),
       credentials: 'same-origin',
     });
-    const data = await r.json();
+    const data = await this._parseJson(r, 'Gagal menghubungi server');
     const ct = r.headers.get('X-CSRF-Token');
     if (ct) this._csrfToken = ct;
     if (!r.ok) throw new Error(data.message || 'Request failed');
@@ -73,7 +86,7 @@ const api = {
       body: JSON.stringify(body),
       credentials: 'same-origin',
     });
-    const data = await r.json();
+    const data = await this._parseJson(r);
     if (!r.ok) throw new Error(data.message || 'Request failed');
     return data.data;
   },
@@ -91,7 +104,7 @@ const api = {
       opts.body = JSON.stringify(body);
     }
     const r = await fetch(url, opts);
-    const data = await r.json();
+    const data = await this._parseJson(r);
     if (!r.ok) throw new Error(data.message || data.error || 'Request failed');
     return data.data;
   },
@@ -105,7 +118,7 @@ const api = {
       body: formData,
       credentials: 'same-origin',
     });
-    const data = await r.json();
+    const data = await this._parseJson(r, 'Upload gagal');
     const ct = r.headers.get('X-CSRF-Token');
     if (ct) this._csrfToken = ct;
     if (!r.ok) throw new Error(data.message || 'Upload gagal');

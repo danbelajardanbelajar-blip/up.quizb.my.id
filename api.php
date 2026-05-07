@@ -3,6 +3,9 @@
 // api.php — REST API Router (single entry)
 // ============================================
 
+// Buffer semua output agar PHP warning/notice tidak merusak JSON response
+ob_start();
+
 // CORS & Headers
 header('Access-Control-Allow-Origin: ' . ($_SERVER['HTTP_ORIGIN'] ?? '*'));
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');

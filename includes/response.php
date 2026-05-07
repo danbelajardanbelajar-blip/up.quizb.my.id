@@ -4,14 +4,20 @@
 // ============================================
 
 function jsonResponse(mixed $data, int $code = 200): never {
+    // Buang semua output yang tidak sengaja keluar (PHP warning, notice, dsb)
+    // agar tidak merusak JSON atau menyebabkan response kosong
+    if (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+
     http_response_code($code);
     header('Content-Type: application/json; charset=utf-8');
     header('X-Content-Type-Options: nosniff');
-    
+
     // Send CSRF token in response header for client to pick up
     $token = generateCsrfToken();
     header('X-CSRF-Token: ' . $token);
-    
+
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
