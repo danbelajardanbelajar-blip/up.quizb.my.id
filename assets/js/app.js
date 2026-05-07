@@ -93,6 +93,15 @@ function QuizBApp() {
       groups: [],
       allCategories: [],
       groupAssign: { show: false, group: null, selected: [] },
+      // Review Soal
+      review: { data: [], expandedId: null, attempts: {} },
+      // Sort state per tab (client-side sort current page)
+      sort: {
+        quizzes:    { key: '', dir: 'asc' },
+        users:      { key: '', dir: 'asc' },
+        categories: { key: '', dir: 'asc' },
+        review:     { key: 'total_plays', dir: 'desc' },
+      },
       loading: false,
       modal: { show: false, type: '', data: {} },
       form: {},
@@ -782,11 +791,75 @@ function QuizBApp() {
           const data = await api.get('admin.group_list');
           this.admin.groups        = data.groups         || [];
           this.admin.allCategories = data.all_categories || [];
+        } else if (tab === 'review') {
+          const data = await api.get('admin.review_soal');
+          this.admin.review.data       = Array.isArray(data) ? data : [];
+          this.admin.review.expandedId = null;
+          this.admin.review.attempts   = {};
         }
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
         this.admin.loading = false;
+      }
+    },
+
+    // ---- Sort helpers (client-side, per page) ----
+    sortAdmin(tab, key) {
+      const s = this.admin.sort[tab];
+      if (!s) return;
+      if (s.key === key) {
+        s.dir = s.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        s.key = key;
+        s.dir = 'asc';
+      }
+    },
+
+    sortedAdmin(tab, arr) {
+      const s = this.admin.sort?.[tab];
+      if (!s || !s.key) return arr;
+      return [...arr].sort((a, b) => {
+        let av = a[s.key] ?? '';
+        let bv = b[s.key] ?? '';
+        if (typeof av === 'string') { av = av.toLowerCase(); bv = (bv + '').toLowerCase(); }
+        if (av < bv) return s.dir === 'asc' ? -1 : 1;
+        if (av > bv) return s.dir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    },
+
+    sortIcon(tab, key) {
+      const s = this.admin.sort?.[tab];
+      if (!s || s.key !== key) return '↕';
+      return s.dir === 'asc' ? '↑' : '↓';
+    },
+
+    // ---- Review attempts per quiz ----
+    async toggleReviewExpand(quizId) {
+      if (this.admin.review.expandedId === quizId) {
+        this.admin.review.expandedId = null;
+        return;
+      }
+      this.admin.review.expandedId = quizId;
+      await this.loadReviewAttempts(quizId, 1);
+    },
+
+    async loadReviewAttempts(quizId, page = 1) {
+      if (!this.admin.review.attempts[quizId]) {
+        this.admin.review.attempts[quizId] = { data: [], total: 0, page: 1, loading: false };
+      }
+      const state = this.admin.review.attempts[quizId];
+      state.loading = true;
+      state.page    = page;
+      try {
+        const resp  = await api.getFull('admin.quiz_attempts', { quiz_id: quizId, page, limit: 10 });
+        state.data  = resp.data  || [];
+        state.total = resp.meta?.total || 0;
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        state.loading = false;
       }
     },
 

@@ -504,3 +504,114 @@ function admin_group_assign(): void {
     }
     jsonSuccess(['message' => 'Kategori berhasil diperbarui', 'assigned' => count($categoryIds)]);
 }
+
+// ============================================
+// REVIEW SOAL — Admin & Pengajar
+// ============================================
+
+function admin_review_soal(): void {
+    requirePengajar(); // admin + pengajar
+    try {
+        // Statistik per quiz
+        $quizStats = DB::all(
+            "SELECT
+                q.id,
+                q.title,
+                q.difficulty,
+                COUNT(DISTINCT a.id)          AS total_plays,
+                COALESCE(SUM(a.correct_count), 0) AS total_correct,
+                COALESCE(AVG(a.score), 0)     AS avg_score
+             FROM quizzes q
+             LEFT JOIN attempts a ON a.quiz_id = q.id
+             WHERE q.is_published = 1
+             GROUP BY q.id, q.title, q.difficulty
+             ORDER BY total_plays DESC"
+        );
+
+        // Jawaban salah per quiz dari attempt_answers
+        $wrongRows = DB::all(
+            "SELECT
+                a.quiz_id,
+                SUM(CASE WHEN aa.option_id IS NOT NULL AND aa.is_correct = 0 THEN 1 ELSE 0 END) AS wrong_count,
+                SUM(CASE WHEN aa.option_id IS NOT NULL THEN 1 ELSE 0 END)                        AS total_answered
+             FROM attempt_answers aa
+             JOIN attempts a ON aa.attempt_id = a.id
+             GROUP BY a.quiz_id"
+        );
+        $wrongMap = [];
+        foreach ($wrongRows as $r) {
+            $wrongMap[(int)$r['quiz_id']] = [
+                'wrong'    => (int)$r['wrong_count'],
+                'answered' => (int)$r['total_answered'],
+            ];
+        }
+
+        $result = [];
+        foreach ($quizStats as $q) {
+            $id  = (int)$q['id'];
+            $avg = round((float)$q['avg_score'], 1);
+            $w   = $wrongMap[$id] ?? ['wrong' => 0, 'answered' => 0];
+
+            $errorPct  = $w['answered'] > 0 ? round(($w['wrong'] / $w['answered']) * 100, 1) : 0;
+            $diffRatio = $w['answered'] > 0 ? round($w['wrong'] / $w['answered'], 3) : 0;
+
+            if ($avg >= 80)     $diffLabel = 'Mudah';
+            elseif ($avg >= 50) $diffLabel = 'Sedang';
+            else                $diffLabel = 'Sulit';
+
+            $result[] = [
+                'id'               => $id,
+                'title'            => $q['title'],
+                'difficulty'       => $q['difficulty'],
+                'total_plays'      => (int)$q['total_plays'],
+                'total_correct'    => (int)$q['total_correct'],
+                'total_wrong'      => $w['wrong'],
+                'total_answered'   => $w['answered'],
+                'avg_score'        => $avg,
+                'error_pct'        => $errorPct,
+                'difficulty_ratio' => $diffRatio,
+                'difficulty_label' => $diffLabel,
+            ];
+        }
+
+        jsonSuccess($result);
+    } catch (Throwable $e) {
+        error_log('[admin.review_soal] ' . $e->__toString());
+        jsonError('Terjadi kesalahan server', 500);
+    }
+}
+
+function admin_quiz_attempts(): void {
+    requirePengajar();
+    $quizId = (int)($_GET['quiz_id'] ?? 0);
+    if (!$quizId) jsonError('Quiz ID diperlukan');
+
+    [$page, $limit, $offset] = getPaginationParams();
+    $limit = min(10, max(1, $limit));
+
+    $total = (int)(DB::one(
+        "SELECT COUNT(*) AS cnt FROM attempts WHERE quiz_id = ?", [$quizId]
+    )['cnt'] ?? 0);
+
+    $rows = DB::all(
+        "SELECT a.id, a.score, a.correct_count, a.time_taken, a.completed_at, a.mode,
+                u.name AS user_name, u.is_active
+         FROM attempts a
+         JOIN users u ON a.user_id = u.id
+         WHERE a.quiz_id = ?
+         ORDER BY a.completed_at DESC
+         LIMIT ? OFFSET ?",
+        [$quizId, $limit, $offset]
+    );
+
+    foreach ($rows as &$r) {
+        $r['is_anon']       = !(bool)(int)$r['is_active'];
+        $r['score']         = (int)$r['score'];
+        $r['correct_count'] = (int)$r['correct_count'];
+        $r['time_taken']    = (int)$r['time_taken'];
+        unset($r['is_active']);
+    }
+    unset($r);
+
+    jsonPaginated($rows, $total, $page, $limit);
+}

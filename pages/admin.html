@@ -10,11 +10,12 @@
 
   <!-- Tabs -->
   <div class="flex gap-1 border-b border-gray-200 dark:border-gray-800 mb-6 overflow-x-auto">
-    <button @click="loadAdminTab('stats')"     :class="admin.tab==='stats'     ? 'admin-tab active' : 'admin-tab'">📊 Statistik</button>
-    <button @click="loadAdminTab('quizzes')"   :class="admin.tab==='quizzes'   ? 'admin-tab active' : 'admin-tab'">📝 Quiz</button>
+    <button @click="loadAdminTab('stats')"      :class="admin.tab==='stats'      ? 'admin-tab active' : 'admin-tab'">📊 Statistik</button>
+    <button @click="loadAdminTab('quizzes')"    :class="admin.tab==='quizzes'    ? 'admin-tab active' : 'admin-tab'">📝 Quiz</button>
     <button @click="loadAdminTab('categories')" :class="admin.tab==='categories' ? 'admin-tab active' : 'admin-tab'">📂 Kategori</button>
-    <button @click="loadAdminTab('users')"     :class="admin.tab==='users'     ? 'admin-tab active' : 'admin-tab'">👥 Pengguna</button>
-    <button @click="loadAdminTab('groups')"    :class="admin.tab==='groups'    ? 'admin-tab active' : 'admin-tab'">🗂️ Rumpun</button>
+    <button @click="loadAdminTab('users')"      :class="admin.tab==='users'      ? 'admin-tab active' : 'admin-tab'">👥 Pengguna</button>
+    <button @click="loadAdminTab('groups')"     :class="admin.tab==='groups'     ? 'admin-tab active' : 'admin-tab'">🗂️ Rumpun</button>
+    <button @click="loadAdminTab('review')"     :class="admin.tab==='review'     ? 'admin-tab active' : 'admin-tab'">🔍 Review Soal</button>
   </div>
 
   <!-- Loading -->
@@ -76,9 +77,15 @@
       <div class="card overflow-hidden">
         <div class="overflow-x-auto">
           <table class="data-table">
-            <thead><tr><th>Judul</th><th>Kategori</th><th>Soal</th><th>Percobaan</th><th>Status</th><th>Aksi</th></tr></thead>
+            <thead><tr>
+              <th @click="sortAdmin('quizzes','title')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">Judul <span class="text-gray-400 text-xs" x-text="sortIcon('quizzes','title')"></span></th>
+              <th @click="sortAdmin('quizzes','category_name')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">Kategori <span class="text-gray-400 text-xs" x-text="sortIcon('quizzes','category_name')"></span></th>
+              <th @click="sortAdmin('quizzes','question_count')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">Soal <span class="text-gray-400 text-xs" x-text="sortIcon('quizzes','question_count')"></span></th>
+              <th @click="sortAdmin('quizzes','attempt_count')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">Percobaan <span class="text-gray-400 text-xs" x-text="sortIcon('quizzes','attempt_count')"></span></th>
+              <th>Status</th><th>Aksi</th>
+            </tr></thead>
             <tbody>
-              <template x-for="q in admin.quizzes" :key="q.id">
+              <template x-for="q in sortedAdmin('quizzes', admin.quizzes)" :key="q.id">
                 <tr>
                   <td class="font-medium" x-text="q.title"></td>
                   <td x-text="q.category_name||'-'"></td>
@@ -258,9 +265,16 @@
     <div class="card overflow-hidden">
       <div class="overflow-x-auto">
         <table class="data-table">
-          <thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Poin</th><th>Status</th><th>Aksi</th></tr></thead>
+          <thead><tr>
+            <th @click="sortAdmin('users','name')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">Nama <span class="text-gray-400 text-xs" x-text="sortIcon('users','name')"></span></th>
+            <th @click="sortAdmin('users','email')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">Email <span class="text-gray-400 text-xs" x-text="sortIcon('users','email')"></span></th>
+            <th @click="sortAdmin('users','role')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">Role <span class="text-gray-400 text-xs" x-text="sortIcon('users','role')"></span></th>
+            <th @click="sortAdmin('users','total_points')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">Poin <span class="text-gray-400 text-xs" x-text="sortIcon('users','total_points')"></span></th>
+            <th @click="sortAdmin('users','is_active')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">Status <span class="text-gray-400 text-xs" x-text="sortIcon('users','is_active')"></span></th>
+            <th>Aksi</th>
+          </tr></thead>
           <tbody>
-            <template x-for="u in admin.users" :key="u.id">
+            <template x-for="u in sortedAdmin('users', admin.users)" :key="u.id">
               <tr>
                 <td class="font-medium" x-text="u.name"></td>
                 <td class="text-gray-400 text-xs" x-text="u.email"></td>
@@ -292,6 +306,183 @@
             x-text="'Halaman ' + admin.usersPage + ' dari ' + Math.max(1, Math.ceil(admin.usersTotal/15))"></span>
       <button @click="admin.usersPage++; loadAdminTab('users')" :disabled="admin.usersPage*15 >= admin.usersTotal"
               class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">Next →</button>
+    </div>
+  </div>
+
+  <!-- ===== REVIEW SOAL TAB ===== -->
+  <div x-show="!admin.loading && admin.tab==='review'" class="animate-fade-in">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <p class="text-sm text-gray-500 dark:text-gray-400" x-text="admin.review.data.length + ' quiz dianalisis'"></p>
+      </div>
+      <button @click="loadAdminTab('review')" class="text-xs text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1">↻ Refresh</button>
+    </div>
+
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="data-table">
+          <thead><tr>
+            <th @click="sortAdmin('review','title')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">
+              Nama Quiz <span class="text-gray-400 text-xs" x-text="sortIcon('review','title')"></span>
+            </th>
+            <th @click="sortAdmin('review','total_plays')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800 text-right">
+              Dimainkan <span class="text-gray-400 text-xs" x-text="sortIcon('review','total_plays')"></span>
+            </th>
+            <th @click="sortAdmin('review','total_wrong')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800 text-right">
+              Jawaban Salah <span class="text-gray-400 text-xs" x-text="sortIcon('review','total_wrong')"></span>
+            </th>
+            <th @click="sortAdmin('review','error_pct')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800 text-right">
+              % Kesalahan <span class="text-gray-400 text-xs" x-text="sortIcon('review','error_pct')"></span>
+            </th>
+            <th @click="sortAdmin('review','difficulty_ratio')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800 text-right">
+              Rasio Kesulitan <span class="text-gray-400 text-xs" x-text="sortIcon('review','difficulty_ratio')"></span>
+            </th>
+            <th class="text-center">Review</th>
+          </tr></thead>
+
+          <!-- One <tbody> per quiz item (Alpine x-for on tbody = valid HTML, supports 2 rows/item) -->
+          <template x-for="item in sortedAdmin('review', admin.review.data)" :key="item.id">
+            <tbody>
+              <!-- Main row -->
+              <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  @click="toggleReviewExpand(item.id)">
+                <td>
+                  <div class="flex items-center gap-2">
+                    <span class="inline-block text-gray-400 text-xs transition-transform duration-200"
+                          :style="admin.review.expandedId === item.id ? 'transform:rotate(90deg)' : ''">▶</span>
+                    <div>
+                      <p class="font-medium text-gray-800 dark:text-gray-100 text-sm" x-text="item.title"></p>
+                      <p class="text-xs text-gray-400" x-text="item.difficulty_label"></p>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-right tabular-nums" x-text="(item.total_plays || 0).toLocaleString()"></td>
+                <td class="text-right tabular-nums" x-text="(item.total_wrong || 0).toLocaleString()"></td>
+                <td class="text-right">
+                  <span class="badge text-xs font-semibold"
+                        :class="item.error_pct >= 70 ? 'badge-danger' : item.error_pct >= 40 ? 'badge-warning' : 'badge-success'"
+                        x-text="item.error_pct + '%'"></span>
+                </td>
+                <td class="text-right">
+                  <div class="flex items-center justify-end gap-2">
+                    <div class="w-16 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                      <div class="h-full rounded-full"
+                           :class="item.difficulty_ratio >= 0.7 ? 'bg-red-500' : item.difficulty_ratio >= 0.4 ? 'bg-yellow-500' : 'bg-green-500'"
+                           :style="'width:' + Math.min(100, Math.round((item.difficulty_ratio||0) * 100)) + '%'"></div>
+                    </div>
+                    <span class="text-xs tabular-nums text-gray-500"
+                          x-text="((item.difficulty_ratio||0) * 100).toFixed(0) + '%'"></span>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <button @click.stop="toggleReviewExpand(item.id)"
+                          class="text-xs px-3 py-1 rounded-lg transition-colors font-medium"
+                          :class="admin.review.expandedId === item.id
+                            ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'"
+                          x-text="admin.review.expandedId === item.id ? '▲ Tutup' : '▼ Lihat'">
+                  </button>
+                </td>
+              </tr>
+
+              <!-- Expanded row: attempt history -->
+              <tr x-show="admin.review.expandedId === item.id">
+                <td colspan="6" class="p-0 border-t-0">
+                  <div class="bg-gray-50 dark:bg-gray-800/60 border-t border-b border-gray-100 dark:border-gray-700 px-5 py-4">
+
+                    <!-- Loading -->
+                    <div x-show="!admin.review.attempts[item.id]"
+                         class="flex items-center gap-2 py-2 text-sm text-gray-400">
+                      <div class="w-4 h-4 border-2 border-gray-300 border-t-primary-500 rounded-full animate-spin"></div>
+                      Memuat riwayat...
+                    </div>
+
+                    <!-- Attempts data -->
+                    <div x-show="admin.review.attempts[item.id]">
+                      <div class="flex items-center justify-between mb-3">
+                        <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Riwayat Percobaan</p>
+                        <p class="text-xs text-gray-400"
+                           x-text="(admin.review.attempts[item.id]?.total||0) > 10
+                             ? 'Menampilkan 10 dari ' + admin.review.attempts[item.id]?.total + ' percobaan'
+                             : (admin.review.attempts[item.id]?.data?.length || 0) + ' percobaan'"></p>
+                      </div>
+
+                      <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+                        <table class="w-full text-sm">
+                          <thead>
+                            <tr class="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+                              <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Pemain</th>
+                              <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Mode</th>
+                              <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Skor</th>
+                              <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Benar</th>
+                              <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Waktu</th>
+                              <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Selesai</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <template x-for="att in (admin.review.attempts[item.id]?.data || [])" :key="att.id">
+                              <tr class="border-b border-gray-50 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                <td class="px-4 py-2.5">
+                                  <span class="text-sm font-medium text-gray-800 dark:text-gray-200"
+                                        x-text="att.is_anon ? 'Tamu' : (att.user_name || 'Tamu')"></span>
+                                  <span x-show="att.is_anon" class="ml-1 text-xs text-gray-400">(anonim)</span>
+                                </td>
+                                <td class="px-4 py-2.5">
+                                  <span class="badge text-xs"
+                                        :class="{
+                                          'badge-primary': att.mode === 'exam',
+                                          'badge-success': att.mode === 'instant',
+                                          'badge-warning': att.mode === 'end',
+                                          'badge-danger': att.mode === 'challenge'
+                                        }"
+                                        x-text="{exam:'Ujian',instant:'Instan',end:'Akhir',challenge:'Tantangan'}[att.mode] || att.mode || '—'"></span>
+                                </td>
+                                <td class="px-4 py-2.5 text-right">
+                                  <span class="font-semibold tabular-nums"
+                                        :class="att.score >= 60 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'"
+                                        x-text="att.score + '%'"></span>
+                                </td>
+                                <td class="px-4 py-2.5 text-right tabular-nums text-gray-600 dark:text-gray-300"
+                                    x-text="att.correct_count != null ? att.correct_count : '—'"></td>
+                                <td class="px-4 py-2.5 text-right tabular-nums text-gray-500 text-xs"
+                                    x-text="att.time_taken ? Math.floor(att.time_taken/60) + 'm ' + (att.time_taken%60) + 's' : '—'"></td>
+                                <td class="px-4 py-2.5 text-right text-xs text-gray-400"
+                                    x-text="formatRelative(att.completed_at)"></td>
+                              </tr>
+                            </template>
+                            <tr x-show="(admin.review.attempts[item.id]?.data || []).length === 0">
+                              <td colspan="6" class="px-4 py-6 text-center text-xs text-gray-400">Belum ada percobaan</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <!-- Pagination -->
+                      <div x-show="(admin.review.attempts[item.id]?.total||0) > 10"
+                           class="flex items-center justify-center gap-2 mt-3">
+                        <button @click="loadReviewAttempts(item.id, Math.max(1, (admin.review.attempts[item.id]?.page||1) - 1))"
+                                :disabled="(admin.review.attempts[item.id]?.page||1) <= 1"
+                                class="px-3 py-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">← Prev</button>
+                        <span class="text-xs text-gray-400"
+                              x-text="'Hal. ' + (admin.review.attempts[item.id]?.page||1) + ' / ' + Math.ceil((admin.review.attempts[item.id]?.total||1)/10)"></span>
+                        <button @click="loadReviewAttempts(item.id, (admin.review.attempts[item.id]?.page||1) + 1)"
+                                :disabled="(admin.review.attempts[item.id]?.page||1) * 10 >= (admin.review.attempts[item.id]?.total||0)"
+                                class="px-3 py-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">Next →</button>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </template>
+        </table>
+      </div>
+
+      <!-- Empty state -->
+      <div x-show="admin.review.data.length === 0 && !admin.loading" class="text-center py-16 text-gray-400">
+        <p class="text-4xl mb-3">🔍</p>
+        <p class="text-sm">Belum ada data review soal</p>
+      </div>
     </div>
   </div>
 
