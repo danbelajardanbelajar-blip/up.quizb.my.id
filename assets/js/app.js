@@ -1276,6 +1276,54 @@ function QuizBApp() {
   }
 }
 
+function globalTicker() {
+  return {
+    currentItem: null,
+    visible: false,
+    _items: [],
+    _idx: 0,
+    _timer: null,
+
+    async init() {
+      try {
+        const data = await api.get('attempt.quiz_global_history');
+        this._items = Array.isArray(data) ? data : (data?.data || []);
+      } catch (_) {}
+      if (!this._items.length) return;
+      this.currentItem = this._items[0];
+      this.visible = true;
+      if (this._items.length > 1) this._startTicker();
+    },
+
+    _startTicker() {
+      this._timer = setInterval(() => {
+        this.visible = false;
+        setTimeout(() => {
+          this._idx = (this._idx + 1) % this._items.length;
+          this.currentItem = this._items[this._idx];
+          this.visible = true;
+        }, 420);
+      }, 4500);
+    },
+
+    formatModeLabel(mode) {
+      return { exam: 'Ujian', instant: 'Instan', end: 'Akhir', challenge: 'Tantangan' }[mode]
+        || (mode ? mode.charAt(0).toUpperCase() + mode.slice(1) : 'Bebas');
+    },
+
+    formatTimeAgo(dateStr) {
+      if (!dateStr) return '';
+      const diff = Date.now() - new Date(dateStr).getTime();
+      const m = Math.floor(diff / 60000);
+      if (m < 1)  return 'baru saja';
+      if (m < 60) return `${m}m lalu`;
+      const h = Math.floor(m / 60);
+      if (h < 24) return `${h}j lalu`;
+      return `${Math.floor(h / 24)}h lalu`;
+    },
+  };
+}
+
 function quizHistorySection() {
   return {
     history: [],
