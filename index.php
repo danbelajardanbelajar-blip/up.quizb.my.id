@@ -145,32 +145,29 @@
   <div x-data="globalTicker()"
        x-show="currentItem"
        x-cloak
-       class="sticky top-16 z-40 border-b border-gray-200/60 dark:border-gray-700/60 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md">
+       class="sticky top-16 z-40 border-b border-gray-200/30 dark:border-gray-700/30 bg-white/20 dark:bg-gray-900/20 backdrop-blur-sm">
 
-    <div class="max-w-7xl mx-auto px-6 py-2 flex items-start gap-3">
-      <!-- dot live -->
-      <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse mt-1.5"></span>
-
+    <div class="px-6 py-2 text-center">
       <!-- teks animasi -->
-      <p class="flex-1 text-xs text-gray-500 dark:text-gray-400 leading-5"
+      <p class="inline text-xs text-gray-500/80 dark:text-gray-400/80 leading-5"
          style="transition: opacity 0.4s cubic-bezier(.4,0,.2,1), transform 0.4s cubic-bezier(.4,0,.2,1);"
          :style="visible
            ? 'opacity:1; transform:translateY(0)'
            : 'opacity:0; transform:translateY(6px)'">
 
-        <span class="font-semibold text-gray-700 dark:text-gray-300"
+        <span class="font-semibold text-gray-600/90 dark:text-gray-300/90"
               x-text="currentItem?.is_anon ? 'Tamu' : (currentItem?.user_name || 'Tamu')"></span>
-        <span class="mx-1">menyelesaikan</span>
-        <span class="font-semibold text-gray-700 dark:text-gray-300"
+        <span class="mx-1 text-gray-400/70">menyelesaikan</span>
+        <span class="font-semibold text-gray-600/90 dark:text-gray-300/90"
               x-text="currentItem?.quiz_title"></span>
-        <span class="mx-1">·</span>
-        <span class="text-blue-500 dark:text-blue-400"
+        <span class="mx-1 text-gray-400/50">·</span>
+        <span class="text-blue-500/80 dark:text-blue-400/80"
               x-text="'mode ' + formatModeLabel(currentItem?.mode)"></span>
-        <span class="mx-1">·</span>
+        <span class="mx-1 text-gray-400/50">·</span>
         <span class="font-bold"
-              :class="(currentItem?.score ?? 0) >= 60 ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'"
+              :class="(currentItem?.score ?? 0) >= 60 ? 'text-green-500/80 dark:text-green-400/80' : 'text-red-500/80 dark:text-red-400/80'"
               x-text="currentItem?.score"></span>
-        <span class="ml-2 text-gray-400 dark:text-gray-600"
+        <span class="ml-2 text-gray-400/50 dark:text-gray-600/50"
               x-text="formatTimeAgo(currentItem?.completed_at)"></span>
       </p>
     </div>
