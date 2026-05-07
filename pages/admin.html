@@ -268,6 +268,15 @@
         <h2 class="font-bold text-lg text-gray-900 dark:text-white mb-5"
             x-text="admin.modal.type==='question_create' ? '+ Tambah Soal' : '✏️ Edit Soal'"></h2>
         <div class="space-y-4">
+          <div x-show="admin.modal.type==='question_create'">
+            <label class="form-label">Quiz *</label>
+            <select x-model.number="admin.form.quiz_id" class="form-input">
+              <option value="">-- Pilih Quiz --</option>
+              <template x-for="qz in admin.quizPicker" :key="qz.id">
+                <option :value="qz.id" x-text="qz.title"></option>
+              </template>
+            </select>
+          </div>
           <div><label class="form-label">Teks Soal *</label><textarea x-model="admin.form.question_text" class="form-input" rows="3" placeholder="Tulis pertanyaan..."></textarea></div>
           <div class="grid grid-cols-2 gap-3">
             <div><label class="form-label">Tipe</label>
@@ -316,76 +325,104 @@
 
   <!-- ===== QUESTIONS TAB ===== -->
   <div x-show="!admin.loading && admin.tab==='questions'" class="animate-fade-in">
-    <!-- Quiz picker -->
-    <div class="mb-6">
-      <label class="form-label">Pilih Quiz untuk Kelola Soal</label>
-      <select @change="admin.questionsQuizId && loadAdminQuestions(admin.questionsQuizId, admin.quizPicker.find(q=>q.id==admin.questionsQuizId)?.title || '')" x-model.number="admin.questionsQuizId" class="form-input max-w-md">
-        <option value="">-- Pilih Quiz --</option>
-        <template x-for="q in admin.quizPicker" :key="q.id">
-          <option :value="q.id" x-text="q.title"></option>
+    <!-- Header: search + filter + action buttons -->
+    <div class="flex items-center gap-3 mb-4 flex-wrap">
+      <div class="relative flex-1 min-w-[200px] max-w-xs">
+        <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 pointer-events-none">🔍</span>
+        <input type="search"
+               :value="admin.questionsSearch"
+               @input="onAdminQuestionSearch($event.target.value)"
+               placeholder="Cari teks soal..."
+               class="form-input pl-9 py-2 text-sm w-full" />
+      </div>
+      <select x-model.number="admin.questionsQuizFilter"
+              @change="admin.questionsPage = 1; loadAdminTab('questions')"
+              class="form-input text-sm py-2 min-w-[180px] max-w-[240px]">
+        <option value="0">-- Semua Quiz --</option>
+        <template x-for="qz in admin.quizPicker" :key="qz.id">
+          <option :value="qz.id" x-text="qz.title"></option>
         </template>
       </select>
+      <p class="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap"
+         x-text="admin.questionsTotal + ' soal'"></p>
+      <div class="flex items-center gap-2 flex-shrink-0 ml-auto flex-wrap">
+        <button @click="openImportFileModal()"
+                class="btn-secondary text-sm px-3 py-2 flex items-center gap-1.5">
+          📥 Import File
+        </button>
+        <button @click="openImportQuizbModal()"
+                class="btn-secondary text-sm px-3 py-2 flex items-center gap-1.5">
+          🌐 Import QuizB
+        </button>
+        <button @click="admin.form = buildQuestionForm(); openAdminModal('question_create')"
+                class="btn-primary text-sm px-4 py-2">+ Tambah Soal</button>
+      </div>
     </div>
 
-    <!-- Questions list -->
-    <div x-show="admin.questionsQuizId">
-      <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h2 class="font-semibold text-gray-800 dark:text-gray-100">
-          Soal untuk: <span class="text-primary-600" x-text="admin.questionsQuizTitle"></span>
-          <span class="text-gray-400 text-sm ml-2" x-text="'(' + admin.questions.length + ' soal)'"></span>
-        </h2>
-        <div class="flex items-center gap-2 flex-wrap">
-          <button @click="openImportFileModal()"
-                  class="btn-secondary text-sm px-3 py-2 flex items-center gap-1.5">
-            📥 Import File
-          </button>
-          <button @click="openImportQuizbModal()"
-                  class="btn-secondary text-sm px-3 py-2 flex items-center gap-1.5">
-            🌐 Import QuizB
-          </button>
-          <button @click="admin.form = buildQuestionForm(admin.questionsQuizId); openAdminModal('question_create')"
-                  class="btn-primary text-sm px-4 py-2">+ Tambah Soal</button>
-        </div>
-      </div>
-
-      <div class="space-y-3">
-        <template x-for="(q, idx) in admin.questions" :key="q.id">
-          <div class="card p-4">
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 mb-2">
-                  <span class="w-7 h-7 rounded-lg bg-primary-100 dark:bg-primary-900/40 text-primary-600 text-xs font-bold flex items-center justify-center flex-shrink-0" x-text="idx+1"></span>
-                  <p class="text-sm font-medium text-gray-800 dark:text-gray-100 line-clamp-2" x-text="q.question_text"></p>
-                </div>
-                <div class="ml-9 space-y-1">
+    <!-- Table -->
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="w-10 text-center">#</th>
+              <th>Teks Soal</th>
+              <th class="w-44">Quiz</th>
+              <th class="w-52">Jawaban Benar</th>
+              <th class="w-24">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="(q, idx) in admin.questionsAll" :key="q.id">
+              <tr>
+                <td class="text-gray-400 text-xs text-center"
+                    x-text="(admin.questionsPage - 1) * 20 + idx + 1"></td>
+                <td>
+                  <p class="text-sm font-medium text-gray-800 dark:text-gray-100 max-w-sm truncate"
+                     x-text="q.question_text" :title="q.question_text"></p>
+                  <p x-show="q.explanation"
+                     class="text-xs text-gray-400 italic truncate max-w-sm mt-0.5"
+                     x-text="'💡 ' + q.explanation"></p>
+                </td>
+                <td>
+                  <span class="text-xs text-gray-500 dark:text-gray-400"
+                        x-text="q.quiz_title"></span>
+                </td>
+                <td>
                   <template x-for="opt in q.options" :key="opt.id">
-                    <div class="flex items-center gap-1.5 text-xs">
-                      <span :class="opt.is_correct ? 'text-green-500' : 'text-gray-400'" x-text="opt.is_correct ? '✅' : '○'"></span>
-                      <span :class="opt.is_correct ? 'text-green-600 dark:text-green-400 font-medium' : 'text-gray-500 dark:text-gray-400'" x-text="opt.option_text"></span>
-                    </div>
+                    <p x-show="opt.is_correct"
+                       class="text-xs text-green-600 dark:text-green-400 font-medium truncate max-w-[190px]"
+                       x-text="'✅ ' + opt.option_text"></p>
                   </template>
-                </div>
-                <p x-show="q.explanation" class="ml-9 mt-2 text-xs text-gray-400 italic" x-text="'💡 ' + q.explanation"></p>
-              </div>
-              <div class="flex gap-2 flex-shrink-0">
-                <button @click="openAdminModal('question_edit', {...q, options: q.options.map(o=>({...o}))})" class="text-xs text-blue-500 hover:underline">Edit</button>
-                <button @click="deleteAdminItem('question', q.id)" class="text-xs text-red-500 hover:underline">Hapus</button>
-              </div>
-            </div>
-          </div>
-        </template>
-
-        <div x-show="admin.questions.length === 0 && admin.questionsQuizId" class="text-center py-12 text-gray-400">
-          <p class="text-4xl mb-3">❓</p>
-          <p>Quiz ini belum memiliki soal</p>
-          <button @click="admin.form = buildQuestionForm(admin.questionsQuizId); openAdminModal('question_create')" class="mt-3 btn-primary text-sm px-4 py-2">+ Tambah Soal Pertama</button>
-        </div>
+                </td>
+                <td>
+                  <div class="flex items-center gap-2">
+                    <button @click="openAdminModal('question_edit', {...q, options: q.options.map(o=>({...o}))})"
+                            class="text-xs text-blue-500 hover:underline">Edit</button>
+                    <button @click="deleteAdminItem('question', q.id)"
+                            class="text-xs text-red-500 hover:underline">Hapus</button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+      <div x-show="admin.questionsAll.length === 0 && !admin.loading" class="text-center py-12 text-gray-400">
+        <p class="text-4xl mb-2">❓</p>
+        <p class="text-sm" x-show="admin.questionsSearch">Tidak ada soal yang cocok dengan "<span x-text="admin.questionsSearch" class="font-medium text-gray-600 dark:text-gray-300"></span>"</p>
+        <p class="text-sm" x-show="!admin.questionsSearch">Belum ada soal</p>
       </div>
     </div>
 
-    <div x-show="!admin.questionsQuizId" class="text-center py-16 text-gray-400">
-      <p class="text-4xl mb-3">❓</p>
-      <p>Pilih quiz di atas untuk melihat dan mengelola soal-soalnya</p>
+    <!-- Pagination -->
+    <div x-show="admin.questionsTotal > 20" class="flex items-center justify-center gap-2 mt-5">
+      <button @click="admin.questionsPage--; loadAdminTab('questions')" :disabled="admin.questionsPage<=1"
+              class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">← Prev</button>
+      <span class="text-sm text-gray-500 dark:text-gray-400 px-3"
+            x-text="'Halaman ' + admin.questionsPage + ' dari ' + Math.max(1, Math.ceil(admin.questionsTotal/20))"></span>
+      <button @click="admin.questionsPage++; loadAdminTab('questions')" :disabled="admin.questionsPage*20 >= admin.questionsTotal"
+              class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">Next →</button>
     </div>
   </div>
 

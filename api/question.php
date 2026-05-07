@@ -24,6 +24,56 @@ function question_list(): void {
     jsonSuccess($questions);
 }
 
+
+function question_list_all(): void {
+    requireAdmin();
+    $page   = max(1, (int)($_GET['page']   ?? 1));
+    $limit  = 20;
+    $offset = ($page - 1) * $limit;
+    $search = trim($_GET['search'] ?? '');
+    $quizId = (int)($_GET['quiz_id'] ?? 0);
+
+    $conds  = [];
+    $params = [];
+
+    if ($search !== '') {
+        $conds[]  = 'q.question_text LIKE ?';
+        $params[] = '%' . $search . '%';
+    }
+    if ($quizId > 0) {
+        $conds[]  = 'q.quiz_id = ?';
+        $params[] = $quizId;
+    }
+
+    $whereStr = $conds ? 'WHERE ' . implode(' AND ', $conds) : '';
+
+    $total = (int)(DB::one(
+        "SELECT COUNT(*) AS cnt FROM questions q $whereStr",
+        $params
+    )['cnt'] ?? 0);
+
+    $questions = DB::all(
+        "SELECT q.id, q.question_text, q.type, q.points, q.explanation, q.quiz_id,
+                qz.title AS quiz_title
+         FROM questions q
+         JOIN quizzes qz ON q.quiz_id = qz.id
+         $whereStr
+         ORDER BY qz.title, q.order_num
+         LIMIT ? OFFSET ?",
+        array_merge($params, [$limit, $offset])
+    );
+
+    foreach ($questions as &$q) {
+        $q['options'] = DB::all(
+            'SELECT id, option_text, is_correct, order_num FROM options WHERE question_id = ? ORDER BY order_num',
+            [$q['id']]
+        );
+    }
+    unset($q);
+
+    jsonSuccess(['questions' => $questions, 'total' => $total, 'page' => $page, 'limit' => $limit]);
+}
+
 function question_create(): void {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
     requireAdmin();

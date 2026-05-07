@@ -86,6 +86,7 @@ function QuizBApp() {
       users:   [],   usersTotal: 0,   usersPage: 1,   usersSearch: '',
       categories: [],
       questions: [], questionsQuizId: null, questionsQuizTitle: '',
+      questionsAll: [], questionsTotal: 0, questionsPage: 1, questionsSearch: '', questionsQuizFilter: 0,
       // Daftar quiz khusus untuk dropdown di tab Soal — agar tidak menimpa
       // pagination admin.quizzes pada tab Quiz.
       quizPicker: [],
@@ -763,15 +764,19 @@ function QuizBApp() {
         } else if (tab === 'categories') {
           this.admin.categories = await api.get('admin.category_list');
         } else if (tab === 'questions') {
-          // questions tab: load full quiz list ke variabel terpisah supaya
-          // pagination tab Quiz tidak ikut tertimpa.
+          // Load full quiz list for filter dropdown
           if (!this.admin.quizPicker.length) {
-            const data = await api.get('admin.quiz_list', { limit: 50 });
-            this.admin.quizPicker = data.quizzes || [];
+            const d = await api.get('admin.quiz_list', { limit: 500 });
+            this.admin.quizPicker = d.quizzes || [];
           }
-          if (this.admin.questionsQuizId) {
-            this.admin.questions = await api.get('question.list', { quiz_id: this.admin.questionsQuizId });
-          }
+          // Load all questions (paginated + searchable + filterable)
+          const qData = await api.get('question.list_all', {
+            page:    this.admin.questionsPage,
+            search:  this.admin.questionsSearch,
+            quiz_id: this.admin.questionsQuizFilter || '',
+          });
+          this.admin.questionsAll   = qData.questions || [];
+          this.admin.questionsTotal = qData.total     || 0;
         } else if (tab === 'groups') {
           const data = await api.get('admin.group_list');
           this.admin.groups        = data.groups         || [];
@@ -838,11 +843,11 @@ function QuizBApp() {
         } else if (type === 'question_create') {
           await api.post('question.create', f);
           this.showToast('Soal berhasil ditambahkan', 'success', '✅');
-          await this.loadAdminQuestions(this.admin.questionsQuizId, this.admin.questionsQuizTitle);
+          await this.loadAdminTab('questions');
         } else if (type === 'question_edit') {
           await api.post('question.update', f);
           this.showToast('Soal berhasil diperbarui', 'success', '✅');
-          await this.loadAdminQuestions(this.admin.questionsQuizId, this.admin.questionsQuizTitle);
+          await this.loadAdminTab('questions');
         }
         this.closeAdminModal();
         if (type !== 'question_create' && type !== 'question_edit') {
@@ -865,7 +870,7 @@ function QuizBApp() {
         if (type === 'question') {
           await api.post('question.delete', { id });
           this.showToast('Soal berhasil dihapus', 'success', '🗑️');
-          await this.loadAdminQuestions(this.admin.questionsQuizId, this.admin.questionsQuizTitle);
+          await this.loadAdminTab('questions');
           return;
         }
         this.showToast('Berhasil dihapus', 'success', '🗑️');
@@ -916,11 +921,11 @@ function QuizBApp() {
     // ---- Import soal dari File (Word/Excel) ----
 
     openImportFileModal() {
-      if (!this.admin.questionsQuizId) {
-        this.showToast('Pilih quiz terlebih dahulu', 'error', '❌');
+      if (!this.admin.questionsQuizFilter) {
+        this.showToast('Pilih filter quiz terlebih dahulu sebagai tujuan import', 'error', '❌');
         return;
       }
-      this.admin.importFile = { show: true, loading: false, step: 1, questions: [], quizId: this.admin.questionsQuizId };
+      this.admin.importFile = { show: true, loading: false, step: 1, questions: [], quizId: this.admin.questionsQuizFilter };
     },
 
     async parseImportFile() {
@@ -958,7 +963,7 @@ function QuizBApp() {
         });
         this.admin.importFile.show = false;
         this.showToast(`${data.imported} soal berhasil diimpor`, 'success', '✅');
-        await this.loadAdminQuestions(this.admin.questionsQuizId, this.admin.questionsQuizTitle);
+        await this.loadAdminTab('questions');
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
@@ -973,8 +978,8 @@ function QuizBApp() {
     // ---- Import soal dari QuizB ----
 
     async openImportQuizbModal() {
-      if (!this.admin.questionsQuizId) {
-        this.showToast('Pilih quiz terlebih dahulu', 'error', '❌');
+      if (!this.admin.questionsQuizFilter) {
+        this.showToast('Pilih filter quiz terlebih dahulu sebagai tujuan import', 'error', '❌');
         return;
       }
       this.admin.importQuizb = {
@@ -983,7 +988,7 @@ function QuizBApp() {
         subthemes: [], selectedSubthemeId: null,
         titles: [], selectedTitleId: null, selectedTitleName: '',
         questions: [], selectedIds: [],
-        quizId: this.admin.questionsQuizId,
+        quizId: this.admin.questionsQuizFilter,
       };
       try {
         const data = await api.get('question.browse_quizb');
@@ -1056,7 +1061,7 @@ function QuizBApp() {
         });
         this.admin.importQuizb.show = false;
         this.showToast(`${data.imported} soal berhasil diimpor dari QuizB`, 'success', '✅');
-        await this.loadAdminQuestions(this.admin.questionsQuizId, this.admin.questionsQuizTitle);
+        await this.loadAdminTab('questions');
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
@@ -1078,10 +1083,16 @@ function QuizBApp() {
       await this.loadAdminTab('users');
     }, 300),
 
+    onAdminQuestionSearch: debounce(async function(q) {
+      this.admin.questionsSearch = q;
+      this.admin.questionsPage   = 1;
+      await this.loadAdminTab('questions');
+    }, 300),
+
     // Helper to build question form with blank options
     buildQuestionForm(quizId) {
       return {
-        quiz_id: quizId,
+        quiz_id: quizId || this.admin.questionsQuizFilter || null,
         question_text: '',
         type: 'multiple',
         points: 10,
