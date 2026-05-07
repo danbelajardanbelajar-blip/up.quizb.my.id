@@ -1289,7 +1289,7 @@ function quizHistorySection() {
       this.loading = true;
       try {
         const data = await api.get('attempt.quiz_global_history');
-        this.history = data.data || [];
+        this.history = Array.isArray(data) ? data : (data?.data || []);
       } catch (e) {
         console.error('Failed to load history:', e);
         this.history = [];
