@@ -95,6 +95,22 @@ const api = {
     if (!r.ok) throw new Error(data.message || data.error || 'Request failed');
     return data.data;
   },
+
+  // Upload multipart file (FormData) — DO NOT set Content-Type, browser sets boundary
+  async upload(action, formData) {
+    const token = await this._getToken();
+    const r = await fetch(`${API_BASE}?action=${action}`, {
+      method: 'POST',
+      headers: { 'X-CSRF-Token': token || '' },
+      body: formData,
+      credentials: 'same-origin',
+    });
+    const data = await r.json();
+    const ct = r.headers.get('X-CSRF-Token');
+    if (ct) this._csrfToken = ct;
+    if (!r.ok) throw new Error(data.message || 'Upload gagal');
+    return data.data;
+  },
 };
 
 // ---- Formatters ----
@@ -141,19 +157,19 @@ function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
-// ---- Local Storage ----
 const store = {
-  get: (key, def = null) => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; } },
-  set: (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} },
-  remove: (key) => { try { localStorage.removeItem(key); } catch {} },
+  get(key, def = null) {
+    try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : def; } catch { return def; }
+  },
+  set(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  },
 };
 
-// ---- Debounce ----
-function debounce(fn, ms = 300) {
+function debounce(fn, ms) {
   let t;
   return function(...args) {
-    const context = this;
     clearTimeout(t);
-    t = setTimeout(() => fn.apply(context, args), ms);
+    t = setTimeout(() => fn.apply(this, args), ms);
   };
 }

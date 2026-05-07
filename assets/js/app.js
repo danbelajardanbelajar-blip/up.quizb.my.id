@@ -96,6 +96,18 @@ function QuizBApp() {
       modal: { show: false, type: '', data: {} },
       form: {},
       formError: '',
+      importFile: {
+        show: false, loading: false, step: 1,
+        questions: [], quizId: null,
+      },
+      importQuizb: {
+        show: false, loading: false,
+        themes: [], selectedThemeId: null,
+        subthemes: [], selectedSubthemeId: null,
+        titles: [], selectedTitleId: null, selectedTitleName: '',
+        questions: [], selectedIds: [],
+        quizId: null,
+      },
     },
 
     // Auth forms
@@ -901,6 +913,157 @@ function QuizBApp() {
       }
     },
 
+    // ---- Import soal dari File (Word/Excel) ----
+
+    openImportFileModal() {
+      if (!this.admin.questionsQuizId) {
+        this.showToast('Pilih quiz terlebih dahulu', 'error', '❌');
+        return;
+      }
+      this.admin.importFile = { show: true, loading: false, step: 1, questions: [], quizId: this.admin.questionsQuizId };
+    },
+
+    async parseImportFile() {
+      const fileInput = document.getElementById('import-file-input');
+      if (!fileInput || !fileInput.files[0]) {
+        this.showToast('Pilih file terlebih dahulu', 'error', '❌');
+        return;
+      }
+      this.admin.importFile.loading = true;
+      try {
+        const fd = new FormData();
+        fd.append('file', fileInput.files[0]);
+        const data = await api.upload('question.import_file_parse', fd);
+        if (!data.questions || data.questions.length === 0) {
+          this.showToast('Tidak ada soal yang terbaca. Periksa format file.', 'error', '❌');
+          return;
+        }
+        this.admin.importFile.questions = data.questions.map(q => ({ ...q, _sel: true }));
+        this.admin.importFile.step = 2;
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        this.admin.importFile.loading = false;
+      }
+    },
+
+    async saveImportFile() {
+      const sel = this.admin.importFile.questions.filter(q => q._sel);
+      if (!sel.length) { this.showToast('Pilih minimal satu soal', 'error', '❌'); return; }
+      this.admin.importFile.loading = true;
+      try {
+        const data = await api.post('question.import_save', {
+          quiz_id:   this.admin.importFile.quizId,
+          questions: sel.map(({ question_text, explanation, options }) => ({ question_text, explanation, options })),
+        });
+        this.admin.importFile.show = false;
+        this.showToast(`${data.imported} soal berhasil diimpor`, 'success', '✅');
+        await this.loadAdminQuestions(this.admin.questionsQuizId, this.admin.questionsQuizTitle);
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        this.admin.importFile.loading = false;
+      }
+    },
+
+    toggleAllImportFile(checked) {
+      this.admin.importFile.questions = this.admin.importFile.questions.map(q => ({ ...q, _sel: checked }));
+    },
+
+    // ---- Import soal dari QuizB ----
+
+    async openImportQuizbModal() {
+      if (!this.admin.questionsQuizId) {
+        this.showToast('Pilih quiz terlebih dahulu', 'error', '❌');
+        return;
+      }
+      this.admin.importQuizb = {
+        show: true, loading: true,
+        themes: [], selectedThemeId: null,
+        subthemes: [], selectedSubthemeId: null,
+        titles: [], selectedTitleId: null, selectedTitleName: '',
+        questions: [], selectedIds: [],
+        quizId: this.admin.questionsQuizId,
+      };
+      try {
+        const data = await api.get('question.browse_quizb');
+        this.admin.importQuizb.themes = data.themes || [];
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+        this.admin.importQuizb.show = false;
+      } finally {
+        this.admin.importQuizb.loading = false;
+      }
+    },
+
+    onQuizbThemeChange() {
+      const th = this.admin.importQuizb.themes.find(t => t.id == this.admin.importQuizb.selectedThemeId);
+      this.admin.importQuizb.subthemes         = th ? th.subthemes : [];
+      this.admin.importQuizb.selectedSubthemeId = null;
+      this.admin.importQuizb.titles            = [];
+      this.admin.importQuizb.selectedTitleId   = null;
+      this.admin.importQuizb.questions         = [];
+      this.admin.importQuizb.selectedIds       = [];
+    },
+
+    onQuizbSubthemeChange() {
+      const sub = this.admin.importQuizb.subthemes.find(s => s.id == this.admin.importQuizb.selectedSubthemeId);
+      this.admin.importQuizb.titles          = sub ? sub.titles : [];
+      this.admin.importQuizb.selectedTitleId = null;
+      this.admin.importQuizb.questions       = [];
+      this.admin.importQuizb.selectedIds     = [];
+    },
+
+    async loadQuizbQuestions() {
+      const tid = this.admin.importQuizb.selectedTitleId;
+      if (!tid) return;
+      const title = this.admin.importQuizb.titles.find(t => t.id == tid);
+      this.admin.importQuizb.selectedTitleName = title ? title.title : '';
+      this.admin.importQuizb.loading   = true;
+      this.admin.importQuizb.questions = [];
+      this.admin.importQuizb.selectedIds = [];
+      try {
+        const data = await api.get('question.browse_quizb', { title_id: tid });
+        this.admin.importQuizb.questions   = data.questions || [];
+        this.admin.importQuizb.selectedIds = (data.questions || []).map(q => q.id);
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        this.admin.importQuizb.loading = false;
+      }
+    },
+
+    toggleQuizbQuestion(qId) {
+      const idx = this.admin.importQuizb.selectedIds.indexOf(qId);
+      if (idx === -1) this.admin.importQuizb.selectedIds.push(qId);
+      else            this.admin.importQuizb.selectedIds.splice(idx, 1);
+    },
+
+    toggleAllQuizb(checked) {
+      this.admin.importQuizb.selectedIds = checked
+        ? this.admin.importQuizb.questions.map(q => q.id)
+        : [];
+    },
+
+    async saveImportQuizb() {
+      const ids = this.admin.importQuizb.selectedIds;
+      if (!ids.length) { this.showToast('Pilih minimal satu soal', 'error', '❌'); return; }
+      this.admin.importQuizb.loading = true;
+      try {
+        const data = await api.post('question.import_quizb', {
+          quiz_id:      this.admin.importQuizb.quizId,
+          question_ids: ids,
+        });
+        this.admin.importQuizb.show = false;
+        this.showToast(`${data.imported} soal berhasil diimpor dari QuizB`, 'success', '✅');
+        await this.loadAdminQuestions(this.admin.questionsQuizId, this.admin.questionsQuizTitle);
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        this.admin.importQuizb.loading = false;
+      }
+    },
+
     // Helper to build question form with blank options
     buildQuestionForm(quizId) {
       return {
@@ -1047,5 +1210,5 @@ function QuizBApp() {
       this.toast = { show: true, message, type, icon };
       this._toastTimer = setTimeout(() => { this.toast.show = false; }, 3500);
     },
-  };
+  }
 }
