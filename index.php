@@ -141,47 +141,38 @@
     </div>
   </nav>
 
-  <!-- ACTIVITY TICKER — slim bar tepat di bawah nav -->
+  <!-- ACTIVITY TICKER — sticky tepat di bawah nav -->
   <div x-data="globalTicker()"
        x-show="currentItem"
        x-cloak
-       class="relative overflow-hidden border-b border-gray-100/80 dark:border-gray-800/60"
-       style="height:34px; background:transparent;">
+       class="sticky top-16 z-40 border-b border-gray-200/60 dark:border-gray-700/60 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md">
 
-    <!-- Mask fade kiri & kanan (CSS mask, tidak bergantung warna background) -->
-    <div class="absolute inset-0 pointer-events-none z-10"
-         style="mask-image:linear-gradient(to right,transparent,black 8%,black 92%,transparent);
-                -webkit-mask-image:linear-gradient(to right,transparent,black 8%,black 92%,transparent);">
-    </div>
-
-    <div class="max-w-7xl mx-auto px-6 h-full flex items-center gap-3">
+    <div class="max-w-7xl mx-auto px-6 py-2 flex items-start gap-3">
       <!-- dot live -->
-      <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+      <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse mt-1.5"></span>
 
-      <!-- teks animasi slide up/down -->
-      <div class="relative flex-1 overflow-hidden h-full flex items-center">
-        <p class="absolute whitespace-nowrap text-xs text-gray-500 dark:text-gray-400"
-           style="transition: opacity 0.4s cubic-bezier(.4,0,.2,1), transform 0.4s cubic-bezier(.4,0,.2,1);"
-           :style="visible
-             ? 'opacity:1; transform:translateY(0)'
-             : 'opacity:0; transform:translateY(7px)'">
+      <!-- teks animasi -->
+      <p class="flex-1 text-xs text-gray-500 dark:text-gray-400 leading-5"
+         style="transition: opacity 0.4s cubic-bezier(.4,0,.2,1), transform 0.4s cubic-bezier(.4,0,.2,1);"
+         :style="visible
+           ? 'opacity:1; transform:translateY(0)'
+           : 'opacity:0; transform:translateY(6px)'">
 
-          <span class="font-semibold text-gray-700 dark:text-gray-300"
-                x-text="currentItem?.is_anon ? 'Tamu' : (currentItem?.user_name || 'Tamu')"></span>
-          <span class="mx-1 text-gray-400">menyelesaikan</span>
-          <span class="font-semibold text-gray-700 dark:text-gray-300"
-                x-text="currentItem?.quiz_title"></span>
-          <span class="mx-1 text-gray-400">·</span>
-          <span class="text-blue-500 dark:text-blue-400"
-                x-text="'mode ' + formatModeLabel(currentItem?.mode)"></span>
-          <span class="mx-1 text-gray-400">·</span>
-          <span class="font-bold"
-                :class="(currentItem?.score ?? 0) >= 60 ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'"
-                x-text="currentItem?.score"></span>
-          <span class="ml-3 text-gray-400 dark:text-gray-600 font-normal"
-                x-text="formatTimeAgo(currentItem?.completed_at)"></span>
-        </p>
-      </div>
+        <span class="font-semibold text-gray-700 dark:text-gray-300"
+              x-text="currentItem?.is_anon ? 'Tamu' : (currentItem?.user_name || 'Tamu')"></span>
+        <span class="mx-1">menyelesaikan</span>
+        <span class="font-semibold text-gray-700 dark:text-gray-300"
+              x-text="currentItem?.quiz_title"></span>
+        <span class="mx-1">·</span>
+        <span class="text-blue-500 dark:text-blue-400"
+              x-text="'mode ' + formatModeLabel(currentItem?.mode)"></span>
+        <span class="mx-1">·</span>
+        <span class="font-bold"
+              :class="(currentItem?.score ?? 0) >= 60 ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'"
+              x-text="currentItem?.score"></span>
+        <span class="ml-2 text-gray-400 dark:text-gray-600"
+              x-text="formatTimeAgo(currentItem?.completed_at)"></span>
+      </p>
     </div>
   </div>
 
