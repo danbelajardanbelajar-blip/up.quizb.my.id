@@ -581,6 +581,39 @@ function admin_review_soal(): void {
     }
 }
 
+function admin_user_history(): void {
+    requireAdmin();
+    $userId = (int)($_GET['user_id'] ?? 0);
+    if (!$userId) jsonError('User ID diperlukan');
+
+    [$page, $limit, $offset] = getPaginationParams();
+    $limit = min(20, max(1, $limit));
+
+    $total = (int)(DB::one(
+        "SELECT COUNT(*) AS cnt FROM attempts WHERE user_id = ?", [$userId]
+    )['cnt'] ?? 0);
+
+    $rows = DB::all(
+        "SELECT a.id, a.score, a.correct_count, a.time_taken, a.completed_at, a.mode,
+                q.title AS quiz_title
+         FROM attempts a
+         JOIN quizzes q ON a.quiz_id = q.id
+         WHERE a.user_id = ?
+         ORDER BY a.completed_at DESC
+         LIMIT ? OFFSET ?",
+        [$userId, $limit, $offset]
+    );
+
+    foreach ($rows as &$r) {
+        $r['score']         = (int)$r['score'];
+        $r['correct_count'] = (int)$r['correct_count'];
+        $r['time_taken']    = (int)$r['time_taken'];
+    }
+    unset($r);
+
+    jsonPaginated($rows, $total, $page, $limit);
+}
+
 function admin_quiz_attempts(): void {
     requirePengajar();
     $quizId = (int)($_GET['quiz_id'] ?? 0);

@@ -94,13 +94,16 @@ function QuizBApp() {
       allCategories: [],
       groupAssign: { show: false, group: null, selected: [] },
       // Review Soal
-      review: { data: [], expandedId: null, attempts: {} },
+      review: { data: [], expandedId: null, attempts: {}, search: '', page: 1, perPage: 15 },
+      // User history modal
+      userHistory: { show: false, user: null, attempts: [], total: 0, page: 1, loading: false },
       // Sort state per tab (client-side sort current page)
       sort: {
         quizzes:    { key: '', dir: 'asc' },
         users:      { key: '', dir: 'asc' },
         categories: { key: '', dir: 'asc' },
         review:     { key: 'total_plays', dir: 'desc' },
+        questions:  { key: '', dir: 'asc' },
       },
       loading: false,
       modal: { show: false, type: '', data: {} },
@@ -1216,6 +1219,61 @@ function QuizBApp() {
       this.admin.questionsPage   = 1;
       await this.reloadQuizQuestions();
     }, 300),
+
+    onAdminReviewSearch(q) {
+      this.admin.review.search = q;
+      this.admin.review.page   = 1;
+    },
+
+    // Client-side filter + sort + paginate for Review Soal tab
+    filteredReview() {
+      const search = (this.admin.review.search || '').toLowerCase();
+      let data = this.admin.review.data;
+      if (search) {
+        data = data.filter(item => (item.title || '').toLowerCase().includes(search));
+      }
+      const s = this.admin.sort.review;
+      if (s && s.key) {
+        data = [...data].sort((a, b) => {
+          let av = a[s.key] ?? '';
+          let bv = b[s.key] ?? '';
+          if (typeof av === 'string') { av = av.toLowerCase(); bv = (bv + '').toLowerCase(); }
+          if (av < bv) return s.dir === 'asc' ? -1 : 1;
+          if (av > bv) return s.dir === 'asc' ? 1 : -1;
+          return 0;
+        });
+      }
+      const pp   = this.admin.review.perPage;
+      const page = this.admin.review.page;
+      return data.slice((page - 1) * pp, page * pp);
+    },
+
+    reviewFilteredTotal() {
+      const search = (this.admin.review.search || '').toLowerCase();
+      if (!search) return this.admin.review.data.length;
+      return this.admin.review.data.filter(item =>
+        (item.title || '').toLowerCase().includes(search)
+      ).length;
+    },
+
+    // User history modal
+    async loadUserHistory(u, page = 1) {
+      this.admin.userHistory.user     = u;
+      this.admin.userHistory.page     = page;
+      this.admin.userHistory.show     = true;
+      this.admin.userHistory.loading  = true;
+      this.admin.userHistory.attempts = [];
+      this.admin.userHistory.total    = 0;
+      try {
+        const resp = await api.getFull('admin.user_history', { user_id: u.id, page, limit: 15 });
+        this.admin.userHistory.attempts = resp.data  || [];
+        this.admin.userHistory.total    = resp.meta?.total || 0;
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        this.admin.userHistory.loading = false;
+      }
+    },
 
     // Helper to build question form with blank options
     buildQuestionForm(quizId) {

@@ -164,13 +164,15 @@
             <thead>
               <tr>
                 <th class="w-10 text-center">#</th>
-                <th>Teks Soal</th>
+                <th @click="sortAdmin('questions','question_text')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">
+                  Teks Soal <span class="text-gray-400 text-xs" x-text="sortIcon('questions','question_text')"></span>
+                </th>
                 <th class="w-52">Jawaban Benar</th>
                 <th class="w-24">Aksi</th>
               </tr>
             </thead>
             <tbody>
-              <template x-for="(q, idx) in admin.questionsAll" :key="q.id">
+              <template x-for="(q, idx) in sortedAdmin('questions', admin.questionsAll)" :key="q.id">
                 <tr>
                   <td class="text-gray-400 text-xs text-center"
                       x-text="(admin.questionsPage - 1) * 20 + idx + 1"></td>
@@ -276,7 +278,11 @@
           <tbody>
             <template x-for="u in sortedAdmin('users', admin.users)" :key="u.id">
               <tr>
-                <td class="font-medium" x-text="u.name"></td>
+                <td>
+                  <button @click="loadUserHistory(u)"
+                          class="font-medium text-left hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
+                          x-text="u.name"></button>
+                </td>
                 <td class="text-gray-400 text-xs" x-text="u.email"></td>
                 <td><span class="badge text-xs" :class="u.role==='admin'?'badge-primary':''" x-text="u.role"></span></td>
                 <td x-text="u.total_points?.toLocaleString()"></td>
@@ -311,11 +317,18 @@
 
   <!-- ===== REVIEW SOAL TAB ===== -->
   <div x-show="!admin.loading && admin.tab==='review'" class="animate-fade-in">
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <p class="text-sm text-gray-500 dark:text-gray-400" x-text="admin.review.data.length + ' quiz dianalisis'"></p>
+    <div class="flex items-center gap-3 mb-4 flex-wrap">
+      <div class="relative flex-1 min-w-[200px] max-w-sm">
+        <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 pointer-events-none">🔍</span>
+        <input type="search"
+               :value="admin.review.search"
+               @input="onAdminReviewSearch($event.target.value)"
+               placeholder="Cari nama quiz..."
+               class="form-input pl-9 py-2 text-sm w-full" />
       </div>
-      <button @click="loadAdminTab('review')" class="text-xs text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1">↻ Refresh</button>
+      <p class="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap flex-shrink-0"
+         x-text="reviewFilteredTotal() + ' quiz'"></p>
+      <button @click="loadAdminTab('review')" class="text-xs text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1 flex-shrink-0">↻ Refresh</button>
     </div>
 
     <div class="card overflow-hidden">
@@ -344,7 +357,7 @@
           </tr></thead>
 
           <!-- One <tbody> per quiz item (Alpine x-for on tbody = valid HTML, supports 2 rows/item) -->
-          <template x-for="item in sortedAdmin('review', admin.review.data)" :key="item.id">
+          <template x-for="item in filteredReview()" :key="item.id">
             <tbody>
               <!-- Main row -->
               <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -491,6 +504,21 @@
         <p class="text-4xl mb-3">🔍</p>
         <p class="text-sm">Belum ada data review soal</p>
       </div>
+      <div x-show="admin.review.data.length > 0 && reviewFilteredTotal() === 0" class="text-center py-16 text-gray-400">
+        <p class="text-4xl mb-2">🔍</p>
+        <p class="text-sm">Tidak ada quiz yang cocok dengan "<span x-text="admin.review.search" class="font-medium text-gray-600 dark:text-gray-300"></span>"</p>
+      </div>
+    </div>
+    <!-- Pagination review -->
+    <div x-show="reviewFilteredTotal() > admin.review.perPage" class="flex items-center justify-center gap-2 mt-5">
+      <button @click="admin.review.page--"
+              :disabled="admin.review.page <= 1"
+              class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">← Prev</button>
+      <span class="text-sm text-gray-500 dark:text-gray-400 px-3"
+            x-text="'Halaman ' + admin.review.page + ' dari ' + Math.max(1, Math.ceil(reviewFilteredTotal() / admin.review.perPage))"></span>
+      <button @click="admin.review.page++"
+              :disabled="admin.review.page * admin.review.perPage >= reviewFilteredTotal()"
+              class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">Next →</button>
     </div>
   </div>
 
@@ -1004,6 +1032,97 @@
             <button @click="saveGroupAssign()" class="btn-primary text-sm px-4 py-2" :disabled="admin.loading">Simpan</button>
           </div>
         </div>
+      </div>
+    </div>
+  </template>
+
+
+  <!-- ===== MODAL: USER HISTORY ===== -->
+  <template x-if="admin.userHistory.show">
+    <div @keydown.escape.window="admin.userHistory.show = false" class="modal-overlay">
+      <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+          <div>
+            <h3 class="font-bold text-gray-900 dark:text-white">
+              📋 Riwayat Quiz — <span x-text="admin.userHistory.user?.name"></span>
+            </h3>
+            <p class="text-xs text-gray-400 mt-0.5" x-text="admin.userHistory.user?.email"></p>
+          </div>
+          <button @click="admin.userHistory.show = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl leading-none">&times;</button>
+        </div>
+
+        <!-- Loading -->
+        <div x-show="admin.userHistory.loading" class="flex items-center justify-center py-16 flex-1">
+          <div class="w-8 h-8 border-3 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+        </div>
+
+        <!-- Table -->
+        <div x-show="!admin.userHistory.loading" class="overflow-y-auto flex-1">
+          <table class="w-full text-sm">
+            <thead class="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+              <tr>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">Quiz</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">Mode</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">Skor</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">Benar</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">Waktu</th>
+                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">Selesai</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="att in admin.userHistory.attempts" :key="att.id">
+                <tr class="border-b border-gray-50 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                  <td class="px-5 py-3 font-medium text-gray-800 dark:text-gray-100 max-w-[220px] truncate" x-text="att.quiz_title"></td>
+                  <td class="px-4 py-3 text-center">
+                    <span class="badge text-xs"
+                          :class="{
+                            'badge-primary': att.mode === 'exam',
+                            'badge-success': att.mode === 'instant',
+                            'badge-warning': att.mode === 'end',
+                            'badge-danger':  att.mode === 'challenge'
+                          }"
+                          x-text="{exam:'Ujian',instant:'Instan',end:'Akhir',challenge:'Tantangan'}[att.mode] || att.mode || '—'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <span class="font-bold tabular-nums"
+                          :class="att.score >= 60 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'"
+                          x-text="att.score + '%'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-right tabular-nums text-gray-600 dark:text-gray-300"
+                      x-text="att.correct_count ?? '—'"></td>
+                  <td class="px-4 py-3 text-right tabular-nums text-xs text-gray-500"
+                      x-text="att.time_taken ? Math.floor(att.time_taken/60) + 'm ' + (att.time_taken%60) + 's' : '—'"></td>
+                  <td class="px-5 py-3 text-right text-xs text-gray-400"
+                      x-text="formatRelative(att.completed_at)"></td>
+                </tr>
+              </template>
+              <tr x-show="admin.userHistory.attempts.length === 0 && !admin.userHistory.loading">
+                <td colspan="6" class="px-5 py-12 text-center text-gray-400 text-sm">Pengguna ini belum pernah mengerjakan quiz</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination + Footer -->
+        <div class="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex-shrink-0">
+          <span class="text-xs text-gray-400"
+                x-text="admin.userHistory.total + ' percobaan total'"></span>
+          <div x-show="admin.userHistory.total > 15" class="flex items-center gap-2">
+            <button @click="loadUserHistory(admin.userHistory.user, admin.userHistory.page - 1)"
+                    :disabled="admin.userHistory.page <= 1"
+                    class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">← Prev</button>
+            <span class="text-xs text-gray-500 dark:text-gray-400"
+                  x-text="'Hal. ' + admin.userHistory.page + ' / ' + Math.max(1, Math.ceil(admin.userHistory.total / 15))"></span>
+            <button @click="loadUserHistory(admin.userHistory.user, admin.userHistory.page + 1)"
+                    :disabled="admin.userHistory.page * 15 >= admin.userHistory.total"
+                    class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">Next →</button>
+          </div>
+          <button @click="admin.userHistory.show = false"
+                  class="text-sm px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Tutup</button>
+        </div>
+
       </div>
     </div>
   </template>
