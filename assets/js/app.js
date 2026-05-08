@@ -12,6 +12,7 @@ function QuizBApp() {
     darkMode: store.get('darkMode', false),
     mobileMenu: false,
     mobileSearch: false,
+    search: { q: '', results: [], loading: false, total: 0 },
     pageTransition: { show: false, message: '' },
     pageTitle: 'QuizB — Platform Kuis Modern',
     toast: { show: false, message: '', type: 'success', icon: '✅' },
@@ -251,6 +252,7 @@ function QuizBApp() {
         'assignment':  rest[0] ? '/assignment/' + rest.join('/') : '/assignment',
         'onboarding':  '/onboarding',
         'messages':    '/messages',
+        'search':      '/search',
       };
 
       const route = routeMap[base] || (path === '/' ? '/' : '/404');
@@ -262,7 +264,6 @@ function QuizBApp() {
 
     navigate(path) {
       this.pageTransition.show = true;
-      this.pageTransition.message = 'Memuat halaman...';
       window.location.hash = '#' + path;
     },
 
@@ -304,11 +305,10 @@ function QuizBApp() {
       if (/^\/assignment\/\d+\/results$/.test(route)) this.loadAssignmentResults(params[0]);
       if (/^\/assignment\/\d+\/monitor$/.test(route)) this.loadAssignmentMonitor(params[0]);
       if (route === '/messages') this.loadMsgThreads();
+      if (route === '/search')   { this.search.q = ''; this.search.results = []; }
 
-      // Hide page transition after a short delay
-      setTimeout(() => {
-        this.pageTransition.show = false;
-      }, 500);
+      // Hide transition fast — 120ms is enough for visual feedback
+      setTimeout(() => { this.pageTransition.show = false; }, 120);
     },
 
     // ---- Auth ----
@@ -1743,6 +1743,29 @@ function QuizBApp() {
 
     formatRelative(dateStr) { return this.formatTimeAgo(dateStr); },
 
+
+    // ============================================================
+    // SEARCH PAGE
+    // ============================================================
+    async loadSearch(q) {
+      this.search.q = q;
+      if (!q || q.trim().length < 2) {
+        this.search.results = [];
+        this.search.total   = 0;
+        return;
+      }
+      this.search.loading = true;
+      try {
+        const data = await api.get('quiz.list', { search: q.trim(), limit: 20, page: 1 });
+        this.search.results = Array.isArray(data) ? data : (data?.data || []);
+        this.search.total   = data?.total || this.search.results.length;
+      } catch (e) {
+        this.search.results = [];
+      } finally {
+        this.search.loading = false;
+      }
+    },
+
     // ---- Search ----
     onSearch: debounce(async function(q) {
       if (!q || q.length < 2) return;
@@ -1880,7 +1903,7 @@ function quizHistorySection() {
 
       if (diffMins < 1) return 'Baru saja';
       if (diffMins < 60) return `${diffMins}m lalu`;
-      if (diffHours < 24) return `${diffHours}j lalu`;
+            if (diffHours < 24) return `${diffHours}j lalu`;
       return `${diffDays}h lalu`;
     },
 
@@ -1890,4 +1913,3 @@ function quizHistorySection() {
     },
   };
 }
-

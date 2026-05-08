@@ -1,0 +1,113 @@
+<!-- SEARCH PAGE -->
+<div class="max-w-2xl mx-auto px-4 py-6"
+     x-init="$nextTick(() => $refs.searchInput?.focus())">
+
+  <!-- Header -->
+  <div class="mb-5">
+    <h1 class="text-xl font-bold text-gray-900 dark:text-white mb-1">🔍 Cari Quiz</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400">Temukan kuis sesuai topik yang kamu inginkan</p>
+  </div>
+
+  <!-- Search Input -->
+  <div class="relative mb-6">
+    <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
+         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+    </svg>
+    <input type="search"
+           x-ref="searchInput"
+           x-model="search.q"
+           @input.debounce.300ms="loadSearch(search.q)"
+           @keydown.escape="search.q=''; search.results=[]"
+           placeholder="Ketik nama kuis, topik, kategori..."
+           class="w-full pl-11 pr-4 py-3 text-base bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-400 transition-all"/>
+    <!-- Clear button -->
+    <button x-show="search.q"
+            @click="search.q=''; search.results=[]; $refs.searchInput.focus()"
+            class="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div x-show="search.loading" class="flex flex-col items-center justify-center py-16 gap-3">
+    <div class="w-8 h-8 border-3 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+    <p class="text-sm text-gray-400">Mencari...</p>
+  </div>
+
+  <!-- Empty state — awal (belum ketik) -->
+  <div x-show="!search.loading && !search.q" class="text-center py-16 text-gray-400">
+    <div class="text-5xl mb-4">🔍</div>
+    <p class="font-medium text-gray-600 dark:text-gray-300 mb-1">Apa yang ingin kamu cari?</p>
+    <p class="text-sm">Ketik nama kuis atau topik di atas</p>
+  </div>
+
+  <!-- Empty state — tidak ditemukan -->
+  <div x-show="!search.loading && search.q.length >= 2 && search.results.length === 0"
+       class="text-center py-16 text-gray-400">
+    <div class="text-5xl mb-4">😕</div>
+    <p class="font-medium text-gray-600 dark:text-gray-300 mb-1">
+      Tidak ada hasil untuk "<span x-text="search.q" class="text-gray-900 dark:text-white"></span>"
+    </p>
+    <p class="text-sm">Coba kata kunci yang berbeda</p>
+  </div>
+
+  <!-- Results -->
+  <div x-show="!search.loading && search.results.length > 0">
+    <!-- Count -->
+    <p class="text-xs text-gray-400 mb-3 px-1">
+      Menampilkan <span class="font-semibold text-gray-600 dark:text-gray-300" x-text="search.results.length"></span>
+      <template x-if="search.total > search.results.length">
+        <span> dari <span class="font-semibold" x-text="search.total"></span></span>
+      </template>
+      hasil
+    </p>
+
+    <!-- Grid -->
+    <div class="space-y-3">
+      <template x-for="q in search.results" :key="q.id">
+        <button @click="navigate('/quiz/' + q.id)"
+                class="w-full text-left bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 hover:border-primary-400 dark:hover:border-primary-500 hover:shadow-md transition-all duration-150 group">
+          <div class="flex items-start gap-3">
+            <!-- Icon -->
+            <div class="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+              <span class="text-xl" x-text="q.icon || '📝'"></span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap mb-1">
+                <h3 class="font-semibold text-gray-900 dark:text-white text-sm leading-snug" x-text="q.title"></h3>
+                <!-- Difficulty badge -->
+                <span x-show="q.difficulty"
+                      class="text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0"
+                      :class="{
+                        'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400': q.difficulty === 'easy',
+                        'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400': q.difficulty === 'medium',
+                        'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400': q.difficulty === 'hard'
+                      }"
+                      x-text="{easy:'Mudah',medium:'Sedang',hard:'Sulit'}[q.difficulty] || q.difficulty"></span>
+              </div>
+              <p x-show="q.description"
+                 class="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-2"
+                 x-text="q.description"></p>
+              <div class="flex items-center gap-3 text-xs text-gray-400">
+                <span x-show="q.category_name" x-text="'📂 ' + q.category_name"></span>
+                <span x-show="q.question_count || q.total_questions"
+                      x-text="(q.question_count || q.total_questions) + ' soal'"></span>
+                <span x-show="q.attempt_count || q.total_attempts"
+                      x-text="(q.attempt_count || q.total_attempts) + '× dikerjakan'"></span>
+              </div>
+            </div>
+            <!-- Arrow -->
+            <svg class="w-4 h-4 text-gray-300 group-hover:text-primary-500 flex-shrink-0 mt-1 transition-colors"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </div>
+        </button>
+      </template>
+    </div>
+  </div>
+</div>
