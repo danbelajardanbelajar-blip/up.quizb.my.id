@@ -81,8 +81,8 @@
           </template>
         </div>
 
-        <!-- Right Actions (hidden on mobile) -->
-        <div class="hidden md:flex items-center gap-2">
+        <!-- Right Actions -->
+        <div class="flex items-center gap-2">
           <!-- Search -->
           <div class="relative hidden sm:block" x-data="{ open: false, q: '' }">
             <input type="text" placeholder="Cari quiz..." x-model="q" @focus="open=true" @blur="setTimeout(()=>open=false,200)"
@@ -195,6 +195,13 @@
                 <a href="#/dashboard" @click.prevent="navigate('/dashboard');open=false" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📊 Dashboard</a>
                 <a href="#/profile" @click.prevent="navigate('/profile');open=false" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">👤 Profil</a>
                 <a href="#/history" @click.prevent="navigate('/history');open=false" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📋 Histori</a>
+                <template x-if="user">
+                  <a href="#/classroom" @click.prevent="navigate('/classroom');open=false" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 md:hidden">🏫 Kelas</a>
+                  <a href="#/challenges" @click.prevent="navigate('/challenges');open=false" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 md:hidden" :class="challenge.pendingCount > 0 ? 'relative' : ''">
+                    <span>⚔️ Tantangan</span>
+                    <span x-show="challenge.pendingCount > 0" class="ml-1 bg-red-500 text-white text-xs px-1 rounded" x-text="challenge.pendingCount > 99 ? '99+' : challenge.pendingCount"></span>
+                  </a>
+                </template>
                 <a href="#/settings" @click.prevent="navigate('/settings');open=false" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">⚙️ Pengaturan</a>
                 <template x-if="user && user.role === 'admin'">
                   <a href="#/admin" @click.prevent="navigate('/admin');open=false" class="flex items-center gap-2 px-4 py-2 text-sm text-purple-600 dark:text-purple-400 hover:bg-gray-50 dark:hover:bg-gray-700">⚙️ Admin Panel</a>
@@ -240,6 +247,25 @@
         <span class="ml-1.5 text-gray-400/50 dark:text-gray-600/50"
               x-text="formatTimeAgo(currentItem?.completed_at)"></span>
       </p>
+    </div>
+  </div>
+
+  <!-- Page Transition Overlay -->
+  <div x-show="pageTransition.show"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-[9998] bg-white/90 dark:bg-gray-900/90 backdrop-blur-md flex items-center justify-center">
+    <div class="text-center">
+      <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center shadow-lg animate-pulse">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0 9c-1.657 0-3-4.03-3-9s1.343-9 3-9m0 18c1.657 0 3-4.03 3-9s-1.343-9-3-9"/>
+        </svg>
+      </div>
+      <p class="text-gray-600 dark:text-gray-400 text-sm" x-text="pageTransition.message || 'Memuat...'"></p>
     </div>
   </div>
 

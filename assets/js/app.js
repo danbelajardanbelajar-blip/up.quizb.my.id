@@ -12,6 +12,7 @@ function QuizBApp() {
     darkMode: store.get('darkMode', false),
     mobileMenu: false,
     mobileSearch: false,
+    pageTransition: { show: false, message: '' },
     pageTitle: 'QuizB — Platform Kuis Modern',
     toast: { show: false, message: '', type: 'success', icon: '✅' },
     _toastTimer: null,
@@ -260,6 +261,8 @@ function QuizBApp() {
     },
 
     navigate(path) {
+      this.pageTransition.show = true;
+      this.pageTransition.message = 'Memuat halaman...';
       window.location.hash = '#' + path;
     },
 
@@ -301,6 +304,11 @@ function QuizBApp() {
       if (/^\/assignment\/\d+\/results$/.test(route)) this.loadAssignmentResults(params[0]);
       if (/^\/assignment\/\d+\/monitor$/.test(route)) this.loadAssignmentMonitor(params[0]);
       if (route === '/messages') this.loadMsgThreads();
+
+      // Hide page transition after a short delay
+      setTimeout(() => {
+        this.pageTransition.show = false;
+      }, 500);
     },
 
     // ---- Auth ----
