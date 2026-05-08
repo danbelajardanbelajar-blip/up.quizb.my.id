@@ -396,6 +396,7 @@
 
   <!-- App Scripts -->
   <script src="assets/js/utils.js"></script>
+  <script src="assets/js/quiz-engine.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 </html>
