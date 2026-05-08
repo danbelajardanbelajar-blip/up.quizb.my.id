@@ -1127,7 +1127,7 @@
                       x-text="formatRelative(att.completed_at)"></td>
                 </tr>
               </template>
-              <tr x-show="admin.userHistory.attempts.length === 0 && !admin.userHistory.loading">
+              <tr x-show="admin.userHistory.allAttempts.length === 0 && !admin.userHistory.loading">
                 <td colspan="6" class="px-5 py-12 text-center text-gray-400 text-sm">Pengguna ini belum pernah mengerjakan quiz</td>
               </tr>
             </tbody>
@@ -1137,15 +1137,15 @@
         <!-- Pagination + Footer -->
         <div class="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex-shrink-0">
           <span class="text-xs text-gray-400"
-                x-text="admin.userHistory.total + ' percobaan total'"></span>
-          <div x-show="admin.userHistory.total > 15" class="flex items-center gap-2">
-            <button @click="loadUserHistory(admin.userHistory.user, admin.userHistory.page - 1)"
+                x-text="admin.userHistory.allAttempts.length + ' percobaan total'"></span>
+          <div x-show="admin.userHistory.allAttempts.length > admin.userHistory.perPage" class="flex items-center gap-2">
+            <button @click="admin.userHistory.page--"
                     :disabled="admin.userHistory.page <= 1"
                     class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">← Prev</button>
             <span class="text-xs text-gray-500 dark:text-gray-400"
-                  x-text="'Hal. ' + admin.userHistory.page + ' / ' + Math.max(1, Math.ceil(admin.userHistory.total / 15))"></span>
-            <button @click="loadUserHistory(admin.userHistory.user, admin.userHistory.page + 1)"
-                    :disabled="admin.userHistory.page * 15 >= admin.userHistory.total"
+                  x-text="'Hal. ' + admin.userHistory.page + ' / ' + Math.max(1, Math.ceil(admin.userHistory.allAttempts.length / admin.userHistory.perPage))"></span>
+            <button @click="admin.userHistory.page++"
+                    :disabled="admin.userHistory.page * admin.userHistory.perPage >= admin.userHistory.allAttempts.length"
                     class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">Next →</button>
           </div>
           <button @click="admin.userHistory.show = false"

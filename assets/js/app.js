@@ -96,7 +96,7 @@ function QuizBApp() {
       // Review Soal
       review: { data: [], expandedId: null, attempts: {}, search: '', page: 1, perPage: 15 },
       // User history modal
-      userHistory: { show: false, user: null, attempts: [], total: 0, page: 1, loading: false, sort: { key: '', dir: 'asc' }, exporting: false },
+      userHistory: { show: false, user: null, allAttempts: [], page: 1, perPage: 15, loading: false, sort: { key: '', dir: 'asc' }, exporting: false },
       // Sort state per tab (client-side sort current page)
       sort: {
         quizzes:    { key: '', dir: 'asc' },
@@ -1257,21 +1257,25 @@ function QuizBApp() {
     },
 
     // User history modal
-    async loadUserHistory(u, page = 1) {
-      this.admin.userHistory.user     = u;
-      this.admin.userHistory.page     = page;
-      this.admin.userHistory.show     = true;
-      this.admin.userHistory.loading  = true;
-      this.admin.userHistory.attempts = [];
-      this.admin.userHistory.total    = 0;
+    async loadUserHistory(u) {
+      // Reset — jika user berbeda, ambil ulang semua data
+      const uh = this.admin.userHistory;
+      if (!uh.show || uh.user?.id !== u.id) {
+        uh.user        = u;
+        uh.page        = 1;
+        uh.allAttempts = [];
+        uh.sort        = { key: '', dir: 'asc' };
+      }
+      uh.show    = true;
+      uh.loading = true;
       try {
-        const resp = await api.getFull('admin.user_history', { user_id: u.id, page, limit: 15 });
-        this.admin.userHistory.attempts = resp.data  || [];
-        this.admin.userHistory.total    = resp.meta?.total || 0;
+        // Ambil SEMUA data sekaligus — sort & paginate sepenuhnya di client
+        const resp     = await api.getFull('admin.user_history', { user_id: u.id, page: 1, limit: 9999 });
+        uh.allAttempts = resp.data || [];
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
-        this.admin.userHistory.loading = false;
+        uh.loading = false;
       }
     },
 
@@ -1279,6 +1283,7 @@ function QuizBApp() {
       const s = this.admin.userHistory.sort;
       if (s.key === key) { s.dir = s.dir === 'asc' ? 'desc' : 'asc'; }
       else               { s.key = key; s.dir = 'asc'; }
+      this.admin.userHistory.page = 1; // reset ke hal.1 setelah sort
     },
 
     sortIconUH(key) {
@@ -1288,25 +1293,44 @@ function QuizBApp() {
     },
 
     sortedUserHistory() {
-      const s = this.admin.userHistory.sort;
-      if (!s.key) return this.admin.userHistory.attempts;
-      return [...this.admin.userHistory.attempts].sort((a, b) => {
-        let av = a[s.key] ?? '';
-        let bv = b[s.key] ?? '';
-        if (typeof av === 'string') { av = av.toLowerCase(); bv = (bv + '').toLowerCase(); }
-        if (av < bv) return s.dir === 'asc' ? -1 : 1;
-        if (av > bv) return s.dir === 'asc' ? 1 : -1;
-        return 0;
-      });
+      const uh = this.admin.userHistory;
+      const s  = uh.sort;
+      let data = uh.allAttempts;
+      if (s.key) {
+        data = [...data].sort((a, b) => {
+          let av = a[s.key] ?? '';
+          let bv = b[s.key] ?? '';
+          if (typeof av === 'string') { av = av.toLowerCase(); bv = (bv + '').toLowerCase(); }
+          if (av < bv) return s.dir === 'asc' ? -1 : 1;
+          if (av > bv) return s.dir === 'asc' ? 1 : -1;
+          return 0;
+        });
+      }
+      // Paginate dari data yang sudah disort
+      const from = (uh.page - 1) * uh.perPage;
+      return data.slice(from, from + uh.perPage);
     },
 
     async exportUserHistoryExcel(u) {
       this.admin.userHistory.exporting = true;
       try {
-        const resp = await api.getFull('admin.user_history', { user_id: u.id, page: 1, limit: 9999 });
-        const rows = resp.data || [];
+        // Gunakan allAttempts yang sudah ada — tidak perlu fetch ulang
+        const uh  = this.admin.userHistory;
+        const s   = uh.sort;
+        let rows  = uh.allAttempts;
+        // Terapkan urutan sort yang sedang aktif ke export
+        if (s.key) {
+          rows = [...rows].sort((a, b) => {
+            let av = a[s.key] ?? '';
+            let bv = b[s.key] ?? '';
+            if (typeof av === 'string') { av = av.toLowerCase(); bv = (bv + '').toLowerCase(); }
+            if (av < bv) return s.dir === 'asc' ? -1 : 1;
+            if (av > bv) return s.dir === 'asc' ? 1 : -1;
+            return 0;
+          });
+        }
         const modeLabel = { exam: 'Ujian', instant: 'Instan', end: 'Akhir', challenge: 'Tantangan' };
-        const headers = ['Quiz', 'Mode', 'Skor (%)', 'Benar', 'Waktu (dtk)', 'Selesai'];
+        const headers   = ['Quiz', 'Mode', 'Skor (%)', 'Benar', 'Waktu (dtk)', 'Selesai'];
         const csv = [
           headers.join(','),
           ...rows.map(r => [
@@ -1318,15 +1342,14 @@ function QuizBApp() {
             '"' + (r.completed_at || '') + '"',
           ].join(','))
         ].join('\n');
-        const bom  = '\uFEFF';
-        const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
         a.href     = url;
         a.download = 'riwayat_' + (u.name || 'user').replace(/\s+/g, '_') + '.csv';
         a.click();
         URL.revokeObjectURL(url);
-        this.showToast('File berhasil diunduh', 'success', '✅');
+        this.showToast('File berhasil diunduh (' + rows.length + ' baris)', 'success', '✅');
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
