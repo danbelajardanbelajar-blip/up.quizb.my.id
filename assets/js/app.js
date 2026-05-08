@@ -19,9 +19,6 @@ function QuizBApp() {
     get navItems() {
       const base = [
         { href: '/',            label: '🏠 Beranda'     },
-        { href: '/categories',  label: '📂 Kategori'    },
-        { href: '/quizzes',     label: '📝 Semua Kuis'  },
-        { href: '/leaderboard', label: '🏆 Leaderboard' },
       ];
       if (this.user) {
         base.push({ href: '/classroom', label: '🏫 Kelas' });
