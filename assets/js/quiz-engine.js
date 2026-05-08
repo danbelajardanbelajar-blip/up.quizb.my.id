@@ -466,59 +466,58 @@ function QuizEngine() {
     },
 
     /**
-     * Scheduler "ting-tung" — look-ahead 1.5 detik, interval 200ms
-     * Ting = C6 (1047 Hz) triangle — bright, tajam
-     * Tung = G3 (196 Hz)  sine    — dalam, resonan
-     * Tempo ≈ 160 BPM → 0.375 s/ketukan
+     * Scheduler pulse meditasi — look-ahead 1.5 detik, interval 250ms
+     * Pulse lembut dengan interval yang lebih lambat (100 BPM) untuk kesan fokus dan tenang
+     * Pulse1 = G3 (196 Hz) sine — nada dasar yang stabil, menenangkan
+     * Pulse2 = D4 (293.66 Hz) sine — quint yang sempurna, harmonis
      */
     _scheduleHb() {
       if (!this._bgGain) return;
       const ctx      = this._ac;
-      const BEAT     = 0.36;   // detik per ketukan (~167 BPM)
+      const BEAT     = 0.60;   // detik per ketukan (~100 BPM) — lebih lambat, lebih tenang
       const LOOKAHEAD = 1.5;   // jadwalkan sejauh ini ke depan
-      const INTERVAL  = 180;   // ms antar panggilan scheduler
+      const INTERVAL  = 250;   // ms antar panggilan scheduler
 
       // Inisialisasi pointer waktu pertama kali
       if (!this._nextBeatTime) this._nextBeatTime = ctx.currentTime + 0.05;
 
       let beatCount = this._beatCount || 0;
 
-      const scheduleNote = (when, isTing) => {
+      const scheduleNote = (when, isPulse1) => {
         const osc  = ctx.createOscillator();
         const gain = ctx.createGain();
+        
+        // Selalu gunakan sine wave untuk suara yang smooth dan lembut
+        osc.type = 'sine';
 
-        if (isTing) {
-          // TING — nada tinggi, tajam, pendek
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(1046.5, when);      // C6
-          osc.frequency.setValueAtTime(1318.5, when + 0.01); // E6 aksen sesaat
-          osc.frequency.exponentialRampToValueAtTime(880, when + 0.06); // turun A5
+        if (isPulse1) {
+          // PULSE 1 — G3 (196 Hz) — bass yang stabil dan menenangkan
+          osc.frequency.setValueAtTime(196, when);
           gain.gain.setValueAtTime(0, when);
-          gain.gain.linearRampToValueAtTime(0.70, when + 0.008);
-          gain.gain.exponentialRampToValueAtTime(0.001, when + 0.18);
+          gain.gain.linearRampToValueAtTime(0.12, when + 0.08);        // Onset yang sangat gentle
+          gain.gain.exponentialRampToValueAtTime(0.001, when + 0.55);  // Decay yang panjang untuk resonansi
         } else {
-          // TUNG — nada rendah, dalam, sedikit lebih panjang
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(196, when);         // G3
-          osc.frequency.exponentialRampToValueAtTime(130, when + 0.15); // turun ke C3
+          // PULSE 2 — D4 (293.66 Hz) — quint yang harmonis, memberikan "lift" positif
+          osc.frequency.setValueAtTime(293.66, when);
+          osc.frequency.linearRampToValueAtTime(196, when + 0.4);      // Smooth pitch glide ke bass
           gain.gain.setValueAtTime(0, when);
-          gain.gain.linearRampToValueAtTime(0.80, when + 0.01);
-          gain.gain.exponentialRampToValueAtTime(0.001, when + 0.28);
+          gain.gain.linearRampToValueAtTime(0.10, when + 0.10);        // Sedikit lebih lambat onset
+          gain.gain.exponentialRampToValueAtTime(0.001, when + 0.60);  // Decay lebih lama
         }
 
         osc.connect(gain);
         gain.connect(this._bgGain);
         osc.start(when);
-        osc.stop(when + 0.35);
+        osc.stop(when + 0.65);
       };
 
       const tick = () => {
         if (!this._bgGain) return;
 
-        // Jadwalkan semua ketukan yang masuk dalam jendela lookahead
+        // Jadwalkan semua pulse yang masuk dalam jendela lookahead
         while (this._nextBeatTime < ctx.currentTime + LOOKAHEAD) {
-          const isTing = (this._beatCount % 2 === 0);
-          scheduleNote(this._nextBeatTime, isTing);
+          const isPulse1 = (this._beatCount % 2 === 0);
+          scheduleNote(this._nextBeatTime, isPulse1);
           this._beatCount++;
           this._nextBeatTime += BEAT;
         }
@@ -548,53 +547,62 @@ function QuizEngine() {
       this._bgGain  = null;
     },
 
-    /** Suara benar: arpeggio naik C–E–G */
+    /** Suara benar: harmoni yang hangat dan menenangkan — F major chord */
     playCorrect() {
       if (!this._soundEnabled) return;
       this._initAC();
       const ctx = this._ac;
       if (!ctx) return;
-      [523.25, 659.25, 783.99].forEach((freq, i) => {
-        const t    = ctx.currentTime + i * 0.09;
+      
+      // F major chord: F (349.2), A (440), C (261.6) — warm, positive, calming
+      const freqs = [261.6, 349.2, 440];
+      freqs.forEach((freq, i) => {
+        const t    = ctx.currentTime + i * 0.08;  // Sedikit lebih lambat untuk kesan lembut
         const osc  = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type            = 'sine';
         osc.frequency.value = freq;
+        
+        // Envelope yang lebih halus dan lembut — ideal untuk menenangkan
         gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(0.35, t + 0.04);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+        gain.gain.linearRampToValueAtTime(0.25, t + 0.06);      // Naik lebih lambat (gentle)
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.55); // Lebih panjang untuk resonansi
+        
         osc.connect(gain); gain.connect(ctx.destination);
-        osc.start(t); osc.stop(t + 0.4);
+        osc.start(t); osc.stop(t + 0.6);
       });
     },
 
-    /** Suara salah: buzzer turun + noise singkat */
+    /** Suara salah: 2-nada yang lembut dan jelas — bukan harsh, tapi informatif */
     playWrong() {
       if (!this._soundEnabled) return;
       this._initAC();
       const ctx = this._ac;
       if (!ctx) return;
 
-      // Buzzer turun
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(320, ctx.currentTime);
-      osc.frequency.linearRampToValueAtTime(80, ctx.currentTime + 0.45);
-      gain.gain.setValueAtTime(0.35, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.start(); osc.stop(ctx.currentTime + 0.55);
+      // Nada pertama: A4 (440 Hz) — nada yang jelas tapi lembut
+      const osc1  = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(440, ctx.currentTime);
+      osc1.frequency.linearRampToValueAtTime(220, ctx.currentTime + 0.35); // Turun ke A3 — smooth
+      gain1.gain.setValueAtTime(0, ctx.currentTime);
+      gain1.gain.linearRampToValueAtTime(0.20, ctx.currentTime + 0.05);     // Onset yang lembut
+      gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45); // Decay yang smooth
+      osc1.connect(gain1); gain1.connect(ctx.destination);
+      osc1.start(); osc1.stop(ctx.currentTime + 0.5);
 
-      // Nada rendah "bum" tambahan
+      // Nada kedua (harmonik): E3 (164.8 Hz) — resonansi dalam yang menenangkan, bukan mengganggu
       const osc2  = ctx.createOscillator();
       const gain2 = ctx.createGain();
-      osc2.type             = 'sine';
-      osc2.frequency.value  = 110;
-      gain2.gain.setValueAtTime(0.25, ctx.currentTime);
-      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(164.8, ctx.currentTime + 0.1);  // Start setelah nada pertama
+      osc2.frequency.linearRampToValueAtTime(110, ctx.currentTime + 0.45);   // Turun ke A2
+      gain2.gain.setValueAtTime(0, ctx.currentTime + 0.1);
+      gain2.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.15);      // Lebih lembut dari osc1
+      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
       osc2.connect(gain2); gain2.connect(ctx.destination);
-      osc2.start(); osc2.stop(ctx.currentTime + 0.65);
+      osc2.start(ctx.currentTime + 0.1); osc2.stop(ctx.currentTime + 0.6);
     },
 
     destroy() {
