@@ -27,7 +27,7 @@
             brand:   { DEFAULT:'#6366f1', dark:'#4f46e5' }
           },
           animation: {
-            'fade-in': 'fadeIn 0.3s ease-out',
+            'fade-in': 'fadeIn 0.12s ease-out',
             'slide-up': 'slideUp 0.4s ease-out',
             'pulse-slow': 'pulse 3s infinite',
           },
@@ -231,125 +231,110 @@
   </div>
 
   <!-- Page Transition Overlay — cepat 120ms, logo Q -->
-  <div x-show="pageTransition.show"
-       x-transition:enter="transition ease-out duration-100"
-       x-transition:enter-start="opacity-0 scale-95"
-       x-transition:enter-end="opacity-100 scale-100"
-       x-transition:leave="transition ease-in duration-80"
-       x-transition:leave-start="opacity-100"
-       x-transition:leave-end="opacity-0"
-       class="fixed inset-0 z-[9998] bg-white/88 dark:bg-gray-900/88 backdrop-blur-sm flex items-center justify-center pointer-events-none">
-    <div class="flex flex-col items-center gap-3">
-      <div class="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center shadow-lg">
-        <span class="text-white font-bold text-lg">Q</span>
-      </div>
-      <div class="flex gap-1.5">
-        <div class="w-1.5 h-1.5 bg-primary-500 rounded-full animate-bounce" style="animation-delay:0ms;animation-duration:0.6s"></div>
-        <div class="w-1.5 h-1.5 bg-primary-400 rounded-full animate-bounce" style="animation-delay:0.15s;animation-duration:0.6s"></div>
-        <div class="w-1.5 h-1.5 bg-primary-300 rounded-full animate-bounce" style="animation-delay:0.3s;animation-duration:0.6s"></div>
-      </div>
-    </div>
-  </div>
+  <!-- Nav Progress Bar — thin 2px bar, no blur, no lag -->
+  <div id="nav-progress"
+       style="position:fixed;top:0;left:0;height:2px;width:0%;opacity:0;z-index:9999;pointer-events:none;background:linear-gradient(to right,#6366f1,#818cf8,#a5b4fc);border-radius:0 2px 2px 0;will-change:width,opacity;"></div>
 
   <!-- PAGE CONTAINER -->
+    <!-- PAGE CONTAINER -->
   <main id="app"
         class="pb-16 md:pb-0"
         :class="currentRoute.startsWith('/play/') ? 'min-h-screen' : 'min-h-[calc(100vh-4rem)]'">
 
     <!-- SEARCH PAGE -->
-    <div x-show="currentRoute === '/search'" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute === '/search'">
       <?php include 'pages/search.html'; ?>
     </div>
 
     <!-- HOME PAGE -->
-    <div x-show="currentRoute === '/'" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute === '/'">
       <?php include 'pages/home.html'; ?>
     </div>
 
     <!-- CATEGORIES PAGE -->
-    <div x-show="currentRoute === '/categories'" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute === '/categories'">
       <?php include 'pages/categories.html'; ?>
     </div>
 
     <!-- QUIZ LIST PAGE -->
-    <div x-show="currentRoute === '/quizzes'" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute === '/quizzes'">
       <?php include 'pages/quizzes.html'; ?>
     </div>
 
     <!-- QUIZ DETAIL PAGE -->
-    <div x-show="currentRoute.startsWith('/quiz/')" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute.startsWith('/quiz/')">
       <?php include 'pages/quiz-detail.html'; ?>
     </div>
 
     <!-- QUIZ ENGINE PAGE -->
     <template x-if="currentRoute.startsWith('/play/')">
-      <div x-transition:enter="animate-fade-in">
+      <div>
         <?php include 'pages/quiz-engine.html'; ?>
       </div>
     </template>
 
     <!-- RESULT PAGE -->
-    <div x-show="currentRoute.startsWith('/result/')" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute.startsWith('/result/')">
       <?php include 'pages/result.html'; ?>
     </div>
 
     <!-- LEADERBOARD PAGE -->
-    <div x-show="currentRoute === '/leaderboard'" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute === '/leaderboard'">
       <?php include 'pages/leaderboard.html'; ?>
     </div>
 
     <!-- DASHBOARD PAGE -->
-    <div x-show="currentRoute === '/dashboard'" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute === '/dashboard'">
       <?php include 'pages/dashboard.html'; ?>
     </div>
 
     <!-- HISTORY PAGE -->
-    <div x-show="currentRoute === '/history'" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute === '/history'">
       <?php include 'pages/history.html'; ?>
     </div>
 
     <!-- LOGIN PAGE -->
-    <div x-show="currentRoute === '/login'" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute === '/login'">
       <?php include 'pages/login.html'; ?>
     </div>
 
     <!-- REGISTER PAGE -->
-    <div x-show="currentRoute === '/register'" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute === '/register'">
       <?php include 'pages/register.html'; ?>
     </div>
 
     <!-- PROFILE PAGE -->
-    <div x-show="currentRoute === '/profile'" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute === '/profile'">
       <?php include 'pages/profile.html'; ?>
     </div>
 
     <!-- SETTINGS PAGE -->
-    <div x-show="currentRoute === '/settings'" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute === '/settings'">
       <?php include 'pages/settings.html'; ?>
     </div>
 
     <!-- CLASSROOM LIST PAGE -->
-    <div x-show="currentRoute === '/classroom'" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute === '/classroom'">
       <?php include 'pages/classroom.html'; ?>
     </div>
 
     <!-- CLASSROOM DETAIL PAGE -->
-    <div x-show="currentRoute.startsWith('/classroom/') && currentRoute !== '/classroom'" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute.startsWith('/classroom/') && currentRoute !== '/classroom'">
       <?php include 'pages/classroom-detail.html'; ?>
     </div>
 
     <!-- CHALLENGES PAGE -->
-    <div x-show="currentRoute.startsWith('/assignment/')" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute.startsWith('/assignment/')">
       <?php include 'pages/assignment-results.html'; ?>
       <?php include 'pages/assignment-monitor.html'; ?>
     </div>
 
-    <div x-show="currentRoute === '/challenges'" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute === '/challenges'">
       <?php include 'pages/challenges.html'; ?>
     </div>
 
     <!-- ADMIN PAGE -->
-    <div x-show="currentRoute.startsWith('/admin')" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute.startsWith('/admin')">
       <?php include 'pages/admin.html'; ?>
     </div>
 
@@ -361,7 +346,7 @@
     </template>
 
     <!-- ONBOARDING PAGE -->
-    <div x-show="currentRoute === '/onboarding'" x-transition:enter="animate-fade-in">
+    <div x-show="currentRoute === '/onboarding'">
       <?php include 'pages/onboarding.html'; ?>
     </div>
 

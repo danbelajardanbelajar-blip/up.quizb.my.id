@@ -13,7 +13,7 @@ function QuizBApp() {
     mobileMenu: false,
     mobileSearch: false,
     search: { q: '', results: [], loading: false, total: 0 },
-    pageTransition: { show: false, message: '' },
+    pageTransition: { show: false }, // legacy — progress bar used instead
     pageTitle: 'QuizB — Platform Kuis Modern',
     toast: { show: false, message: '', type: 'success', icon: '✅' },
     _toastTimer: null,
@@ -263,8 +263,30 @@ function QuizBApp() {
     },
 
     navigate(path) {
-      this.pageTransition.show = true;
+      // Thin progress bar — no backdrop-blur, no GPU lag
+      const bar = document.getElementById('nav-progress');
+      if (bar) {
+        bar.style.transition = 'none';
+        bar.style.width = '0%';
+        bar.style.opacity = '1';
+        requestAnimationFrame(() => {
+          bar.style.transition = 'width 0.25s cubic-bezier(0.4,0,0.2,1)';
+          bar.style.width = '75%';
+        });
+      }
       window.location.hash = '#' + path;
+    },
+
+    _finishProgress() {
+      const bar = document.getElementById('nav-progress');
+      if (!bar) return;
+      bar.style.transition = 'width 0.1s ease-out';
+      bar.style.width = '100%';
+      setTimeout(() => {
+        bar.style.transition = 'opacity 0.15s ease-in';
+        bar.style.opacity = '0';
+        setTimeout(() => { bar.style.width = '0%'; }, 160);
+      }, 110);
     },
 
     onRouteChange(route, params) {
@@ -287,7 +309,7 @@ function QuizBApp() {
       if (route === '/categories')         this.loadCategories();
       if (route === '/quizzes')            this.loadQuizzes();
       if (route.startsWith('/quiz/'))      this.loadQuizDetail(params[0]);
-      if (route.startsWith('/play/'))      return; // Quiz engine handles its own load via x-init
+      if (route.startsWith('/play/'))      { this._finishProgress(); return; } // Quiz engine handles its own load via x-init
       if (route === '/leaderboard')        this.loadLeaderboard();
       if (route === '/dashboard')          this.loadDashboard();
       if (route === '/history')            this.loadHistory();
@@ -307,8 +329,8 @@ function QuizBApp() {
       if (route === '/messages') this.loadMsgThreads();
       if (route === '/search')   { this.search.q = ''; this.search.results = []; }
 
-      // Hide transition fast — 120ms is enough for visual feedback
-      setTimeout(() => { this.pageTransition.show = false; }, 120);
+      // Complete progress bar
+      this._finishProgress();
     },
 
     // ---- Auth ----

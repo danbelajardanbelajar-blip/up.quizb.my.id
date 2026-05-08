@@ -209,7 +209,7 @@ html { scroll-behavior: smooth; }
 .incorrect .answer-letter  { background: #ef4444; color: white; }
 
 /* ---- Animate ---- */
-.animate-fade-in { animation: fadeIn 0.3s ease-out; }
+.animate-fade-in { animation: fadeIn 0.12s ease-out; }
 .animate-slide-up { animation: slideUp 0.4s ease-out; }
 
 /* ---- Admin Tabs ---- */
@@ -255,4 +255,26 @@ html { scroll-behavior: smooth; }
 /* ---- Responsive ---- */
 @media (max-width: 640px) {
   .btn-primary, .btn-secondary { padding: 0.5rem 1rem; font-size: 0.8125rem; }
+}
+
+/* ── Page transition: fast, GPU-accelerated, no backdrop-blur ── */
+#app > div {
+  will-change: opacity;
+}
+#app > div[style*="display: none"] {
+  will-change: auto;  /* free GPU when hidden */
+}
+
+/* Nav progress bar smooth animation */
+#nav-progress {
+  will-change: width, opacity;
+  transform: translateZ(0);  /* promote to GPU layer */
+}
+
+/* Disable slow transitions on mobile for snappier feel */
+@media (max-width: 768px) {
+  .transition-all  { transition-duration: 100ms !important; }
+  .transition      { transition-duration: 100ms !important; }
+  .duration-200    { transition-duration: 100ms !important; }
+  .duration-300    { transition-duration: 150ms !important; }
 }
