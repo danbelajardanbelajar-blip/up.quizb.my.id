@@ -59,18 +59,20 @@
   <nav x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding' && currentRoute !== '/messages'"
        class="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex items-center justify-between h-16">
+      <div class="flex items-center justify-between h-16 md:justify-start md:gap-8">
 
-        <!-- Logo -->
-        <a href="#/" @click.prevent="navigate('/')" class="flex items-center gap-2 group">
-          <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-            <span class="text-white font-bold text-sm">Q</span>
-          </div>
-          <span class="font-bold text-xl bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">QuizB</span>
-        </a>
+        <!-- Logo (centered on mobile) -->
+        <div class="flex-1 md:flex-none flex justify-center md:justify-start">
+          <a href="#/" @click.prevent="navigate('/')" class="flex items-center gap-2 group">
+            <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+              <span class="text-white font-bold text-sm">Q</span>
+            </div>
+            <span class="font-bold text-xl bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">QuizB</span>
+          </a>
+        </div>
 
         <!-- Desktop Nav -->
-        <div class="hidden md:flex items-center gap-1">
+        <div class="hidden md:flex items-center gap-1" x-show="false">
           <template x-for="item in navItems" :key="item.href">
             <a :href="'#' + item.href" @click.prevent="navigate(item.href)"
                class="px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200"
@@ -79,8 +81,8 @@
           </template>
         </div>
 
-        <!-- Right Actions -->
-        <div class="flex items-center gap-2">
+        <!-- Right Actions (hidden on mobile) -->
+        <div class="hidden md:flex items-center gap-2">
           <!-- Search -->
           <div class="relative hidden sm:block" x-data="{ open: false, q: '' }">
             <input type="text" placeholder="Cari quiz..." x-model="q" @focus="open=true" @blur="setTimeout(()=>open=false,200)"
@@ -410,9 +412,9 @@
       </button>
 
       <!-- Pencarian -->
-      <button @click="mobileSearch = !mobileSearch"
+      <button @click="navigate('/quizzes'); mobileSearch = true"
               class="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors"
-              :class="mobileSearch ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'">
+              :class="currentRoute === '/quizzes' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
         </svg>

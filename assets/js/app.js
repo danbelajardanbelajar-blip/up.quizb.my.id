@@ -11,6 +11,7 @@ function QuizBApp() {
     user: null,
     darkMode: store.get('darkMode', false),
     mobileMenu: false,
+    mobileSearch: false,
     pageTitle: 'QuizB — Platform Kuis Modern',
     toast: { show: false, message: '', type: 'success', icon: '✅' },
     _toastTimer: null,
