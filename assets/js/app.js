@@ -182,6 +182,7 @@ function QuizBApp() {
     _guardRoute(route) {
       const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges'];
       const admin_routes     = ['/admin'];
+      if (route === '/onboarding' && !this.user) return this.navigate('/login');
       if (protected_routes.some(r => route.startsWith(r)) && !this.user) {
         this.showToast('Silakan login untuk mengakses halaman ini', 'warning', '⚠️');
         return this.navigate('/login');
@@ -219,6 +220,7 @@ function QuizBApp() {
         'classroom':   rest[0] ? '/classroom/' + rest[0] : '/classroom',
         'challenges':  '/challenges',
         'assignment':  rest[0] ? '/assignment/' + rest.join('/') : '/assignment',
+        'onboarding':  '/onboarding',
       };
 
       const route = routeMap[base] || (path === '/' ? '/' : '/404');
@@ -237,6 +239,7 @@ function QuizBApp() {
       const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges'];
       const admin_routes     = ['/admin'];
 
+      if (route === '/onboarding' && !this.user) return this.navigate('/login');
       if (protected_routes.some(r => route.startsWith(r)) && !this.user) {
         this.showToast('Silakan login untuk mengakses halaman ini', 'warning', '⚠️');
         return this.navigate('/login');
@@ -326,8 +329,9 @@ function QuizBApp() {
         const data = await api.post('auth.register', { name: f.name, email: f.email, password: f.password });
         this.user = { id: data.id, name: data.name, email: data.email, role: data.role };
         api._csrfToken = data.csrf_token || null;
-        this.showToast('Registrasi berhasil!', 'success', '🎉');
-        this.navigate('/dashboard');
+        this.showToast('Registrasi berhasil! Selamat datang 🎉', 'success', '🎉');
+        // User baru → arahkan ke pilihan role dulu
+        this.navigate(data.is_new_user ? '/onboarding' : '/dashboard');
       } catch (e) {
         f.error = e.message;
       } finally {
@@ -548,6 +552,28 @@ function QuizBApp() {
         this.showToast(e.message, 'error', '❌');
       } finally {
         this.classroom.detailLoading = false;
+      }
+    },
+
+    // ---- Onboarding: pilih role untuk user baru ----
+    async setOnboardingRole(role) {
+      try {
+        await api.post('auth.set_role', { role });
+        if (this.user) this.user.role = role;
+        if (role === 'pelajar') {
+          this.navigate('/classroom');
+          await this.$nextTick?.();
+          // Buka modal join kelas setelah halaman classroom dimuat
+          setTimeout(() => this.openJoinClassModal(), 600);
+        } else if (role === 'pengajar') {
+          this.navigate('/classroom');
+          setTimeout(() => this.openCreateClassModal(), 600);
+        } else {
+          // role = 'user' → ke beranda
+          this.navigate('/');
+        }
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
       }
     },
 

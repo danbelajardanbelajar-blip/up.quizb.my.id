@@ -67,11 +67,12 @@ function auth_register(): void {
     loginUser($user);
 
     jsonSuccess([
-        'id'         => (int)$user['id'],
-        'name'       => $user['name'],
-        'email'      => $user['email'],
-        'role'       => $user['role'],
-        'csrf_token' => generateCsrfToken(),
+        'id'          => (int)$user['id'],
+        'name'        => $user['name'],
+        'email'       => $user['email'],
+        'role'        => $user['role'],
+        'csrf_token'  => generateCsrfToken(),
+        'is_new_user' => true,
     ], 'Registrasi berhasil');
 }
 
@@ -135,6 +136,24 @@ function auth_update_settings(): void {
 
 function auth_csrf(): void {
     jsonSuccess(['token' => generateCsrfToken()]);
+}
+
+// POST — set role saat onboarding pertama kali (user baru)
+function auth_set_role(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $user = requireAuth();
+    $body = getBody();
+    $role = trim($body['role'] ?? '');
+
+    $allowed = ['user', 'pelajar', 'pengajar'];
+    if (!in_array($role, $allowed)) jsonError('Role tidak valid');
+
+    DB::execute('UPDATE users SET role = ?, updated_at = NOW() WHERE id = ?', [$role, $user['id']]);
+
+    // Sinkronkan session
+    $_SESSION['user_role'] = $role;
+
+    jsonSuccess(['role' => $role], 'Role berhasil disimpan');
 }
 
 function auth_update_profile(): void {

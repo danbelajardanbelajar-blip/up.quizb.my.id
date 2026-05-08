@@ -1,0 +1,84 @@
+<!-- ONBOARDING PAGE -->
+<div class="min-h-[90vh] flex items-center justify-center px-4 py-12">
+  <div class="w-full max-w-2xl animate-slide-up" x-data="{ loading: false }">
+
+    <!-- Header -->
+    <div class="text-center mb-10">
+      <div class="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center shadow-xl mx-auto mb-5">
+        <span class="text-white font-bold text-3xl">Q</span>
+      </div>
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Selamat datang di QuizB! 🎉</h1>
+      <p class="text-gray-500 dark:text-gray-400 text-sm max-w-sm mx-auto">
+        Pilih peran kamu agar kami bisa menyesuaikan pengalaman terbaik untukmu.
+      </p>
+    </div>
+
+    <!-- Role Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+
+      <!-- Pengguna Umum -->
+      <button
+        @click="loading = true; setOnboardingRole('user')"
+        :disabled="loading"
+        class="group relative card p-6 text-left hover:border-primary-400 dark:hover:border-primary-500 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none">
+        <div class="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+          🧑
+        </div>
+        <h3 class="font-bold text-gray-900 dark:text-white text-base mb-1">Pengguna Umum</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+          Eksplorasi kuis, latihan soal, dan bersaing di leaderboard sesuka hati.
+        </p>
+        <div class="mt-4 flex items-center gap-1 text-xs font-medium text-primary-600 dark:text-primary-400 opacity-0 group-hover:opacity-100 transition-opacity">
+          Pilih ini <span>→</span>
+        </div>
+      </button>
+
+      <!-- Pelajar -->
+      <button
+        @click="loading = true; setOnboardingRole('pelajar')"
+        :disabled="loading"
+        class="group relative card p-6 text-left hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none">
+        <div class="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+          🎒
+        </div>
+        <h3 class="font-bold text-gray-900 dark:text-white text-base mb-1">Pelajar</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+          Ikuti kelas, kerjakan tugas yang diberikan guru, dan pantau perkembangan belajarmu.
+        </p>
+        <div class="mt-4 flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
+          Pilih ini <span>→</span>
+        </div>
+      </button>
+
+      <!-- Pengajar -->
+      <button
+        @click="loading = true; setOnboardingRole('pengajar')"
+        :disabled="loading"
+        class="group relative card p-6 text-left hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none">
+        <div class="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+          🏫
+        </div>
+        <h3 class="font-bold text-gray-900 dark:text-white text-base mb-1">Pengajar</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+          Buat kelas, kelola siswa, beri tugas, dan pantau hasil belajar secara real-time.
+        </p>
+        <div class="mt-4 flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity">
+          Pilih ini <span>→</span>
+        </div>
+      </button>
+
+    </div>
+
+    <!-- Loading indicator -->
+    <div x-show="loading" class="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+      <span class="inline-block w-4 h-4 border-2 border-primary-300 border-t-primary-600 rounded-full animate-spin"></span>
+      <span>Menyimpan pilihan...</span>
+    </div>
+
+    <!-- Footer note -->
+    <p x-show="!loading" class="text-center text-xs text-gray-400 dark:text-gray-600 mt-2">
+      Peran bisa diubah nanti melalui pengaturan profil.
+    </p>
+
+  </div>
+</div>

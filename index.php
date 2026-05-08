@@ -56,7 +56,7 @@
   </div>
 
   <!-- NAVBAR -->
-  <nav x-show="!currentRoute.startsWith('/play/')"
+  <nav x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding'"
        class="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
@@ -144,7 +144,7 @@
 
   <!-- ACTIVITY TICKER — sticky tepat di bawah nav (top-0 saat fullscreen quiz) -->
   <div x-data="globalTicker()"
-       x-show="currentItem"
+       x-show="currentItem && currentRoute !== '/onboarding'"
        x-cloak
        class="sticky z-40 border-b border-gray-200/30 dark:border-gray-700/30 bg-white/20 dark:bg-gray-900/20 backdrop-blur-sm"
        :class="currentRoute.startsWith('/play/') ? 'top-0' : 'top-16'">
@@ -268,6 +268,11 @@
       <?php include 'pages/admin.html'; ?>
     </div>
 
+    <!-- ONBOARDING PAGE -->
+    <div x-show="currentRoute === '/onboarding'" x-transition:enter="animate-fade-in">
+      <?php include 'pages/onboarding.html'; ?>
+    </div>
+
     <!-- 404 PAGE -->
     <div x-show="currentRoute === '/404'" class="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
       <div class="text-8xl mb-4">🔍</div>
@@ -279,7 +284,7 @@
   </main>
 
   <!-- FOOTER -->
-  <footer x-show="!currentRoute.startsWith('/play/')"
+  <footer x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding'"
           class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 mt-auto">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div class="flex flex-col md:flex-row items-center justify-between gap-4">
