@@ -39,6 +39,15 @@ function challenge_create(): void {
     );
     $challengeId = (int)DB::lastId();
 
+    // Notifikasi ke penerima tantangan
+    pushNotification(
+        $challengedId,
+        'challenge',
+        $user['name'] . ' menantangmu! ⚔️',
+        'Kamu diundang bermain "' . $quiz['title'] . '"',
+        '/challenges'
+    );
+
     jsonSuccess([
         'challenge_id'     => $challengeId,
         'quiz_title'       => $quiz['title'],
@@ -142,12 +151,22 @@ function challenge_decline(): void {
     if (!$challengeId) jsonError('Challenge ID diperlukan');
 
     $challenge = DB::one(
-        "SELECT id FROM challenges WHERE id = ? AND challenged_id = ? AND status = 'pending'",
+        "SELECT id, challenger_id FROM challenges WHERE id = ? AND challenged_id = ? AND status = 'pending'",
         [$challengeId, $user['id']]
     );
     if (!$challenge) jsonError('Tantangan tidak ditemukan', 404);
 
     DB::execute("UPDATE challenges SET status = 'declined' WHERE id = ?", [$challengeId]);
+
+    // Notifikasi ke pengirim tantangan
+    pushNotification(
+        (int)$challenge['challenger_id'],
+        'challenge',
+        $user['name'] . ' menolak tantanganmu',
+        'Tantanganmu tidak diterima. Coba tantang yang lain!',
+        '/challenges'
+    );
+
     jsonSuccess([], 'Tantangan ditolak.');
 }
 
@@ -262,6 +281,23 @@ function challenge_submit(): void {
             "UPDATE challenges SET status = 'completed', winner_id = ? WHERE id = ?",
             [$winnerId, $challengeId]
         );
+
+        // Notifikasi hasil ke kedua pemain
+        $quizTitle   = DB::one("SELECT title FROM quizzes WHERE id = ?", [$updated['quiz_id']])['title'] ?? 'quiz';
+        $challengerId = (int)$updated['challenger_id'];
+        $challengedId = (int)$updated['challenged_id'];
+        $winnerIdInt  = (int)$winnerId;
+
+        foreach ([$challengerId, $challengedId] as $pid) {
+            $iWin = $pid === $winnerIdInt;
+            pushNotification(
+                $pid,
+                'challenge_result',
+                $iWin ? '🏆 Kamu menang!' : '😔 Kamu kalah',
+                ($iWin ? 'Selamat! Kamu memenangkan tantangan "' : 'Sayang sekali, kamu kalah di tantangan "') . $quizTitle . '"',
+                '/challenges'
+            );
+        }
     }
 
     jsonSuccess([

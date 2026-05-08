@@ -136,6 +136,32 @@ function QuizBApp() {
       pollInterval: null,
     },
 
+    // Notifications
+    notif: {
+      unreadCount: 0,
+      list: [],
+      total: 0,
+      page: 1,
+      show: false,
+      loading: false,
+    },
+
+    // Messages
+    msgs: {
+      unreadCount: 0,
+      threads: [],
+      activeThread: null,
+      chat: [],
+      chatTotal: 0,
+      chatPage: 1,
+      input: '',
+      sending: false,
+      loading: false,
+      chatLoading: false,
+      pollInterval: null,
+      newChat: { show: false, q: '', results: [], loading: false },
+    },
+
     // ---- Lifecycle ----
     async init() {
       // Dark mode
@@ -160,16 +186,17 @@ function QuizBApp() {
         this.settings.shuffleOptions   = this.user.shuffle_options      ?? true;
       }
 
-      // Start challenge notification polling for logged-in users
+      // Start challenge + notification polling for logged-in users
       if (this.user) {
         this.loadChallenges();
         this.challenge.pollInterval = setInterval(() => this.loadChallenges(), 20000);
+        this.pollCounts();
       }
 
       // After loadUser: if the user IS authenticated and the original route was
       // a protected page (but we were bounced to /login because user hadn't loaded
       // yet), navigate back to the intended destination now.
-      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges'];
+      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges', '/messages'];
       const intendedPath = (initialHash.replace(/^#/, '').split('?')[0]) || '/';
       if (this.user && protected_routes.some(r => intendedPath.startsWith(r))) {
         return this.handleRoute(initialHash);
@@ -183,7 +210,7 @@ function QuizBApp() {
 
     // Lightweight guard re-check (used after async loadUser).
     _guardRoute(route) {
-      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges'];
+      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges', '/messages'];
       const admin_routes     = ['/admin'];
       if (route === '/onboarding' && !this.user) return this.navigate('/login');
       if (protected_routes.some(r => route.startsWith(r)) && !this.user) {
@@ -224,6 +251,7 @@ function QuizBApp() {
         'challenges':  '/challenges',
         'assignment':  rest[0] ? '/assignment/' + rest.join('/') : '/assignment',
         'onboarding':  '/onboarding',
+        'messages':    '/messages',
       };
 
       const route = routeMap[base] || (path === '/' ? '/' : '/404');
@@ -239,7 +267,7 @@ function QuizBApp() {
 
     onRouteChange(route, params) {
       // Guard protected routes
-      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges'];
+      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges', '/messages'];
       const admin_routes     = ['/admin'];
 
       if (route === '/onboarding' && !this.user) return this.navigate('/login');
@@ -274,6 +302,7 @@ function QuizBApp() {
       }
       if (/^\/assignment\/\d+\/results$/.test(route)) this.loadAssignmentResults(params[0]);
       if (/^\/assignment\/\d+\/monitor$/.test(route)) this.loadAssignmentMonitor(params[0]);
+      if (route === '/messages') this.loadMsgThreads();
     },
 
     // ---- Auth ----
@@ -1493,6 +1522,220 @@ function QuizBApp() {
         this.showToast(e.message, 'error', '❌');
       }
     },
+
+
+    // ============================================================
+    // NOTIFICATIONS
+    // ============================================================
+    async loadNotifications() {
+      this.notif.loading = true;
+      try {
+        const data = await api.get('notification.list', { page: this.notif.page, limit: 30 });
+        this.notif.list  = data.data  || [];
+        this.notif.total = data.total || 0;
+      } catch (e) {
+        console.error('loadNotifications:', e);
+      } finally {
+        this.notif.loading = false;
+      }
+    },
+
+    async markAllNotifRead() {
+      try {
+        await api.post('notification.mark_read', { all: true });
+        this.notif.list = this.notif.list.map(n => ({ ...n, is_read: 1 }));
+        this.notif.unreadCount = 0;
+      } catch (e) { /* silent */ }
+    },
+
+    async clearReadNotif() {
+      try {
+        await api.delete('notification.delete', 0); // 0 = clear all read (backend checks)
+        this.notif.list = this.notif.list.filter(n => !n.is_read);
+        this.notif.total = this.notif.list.length;
+      } catch (e) { /* silent */ }
+    },
+
+    async clickNotif(n) {
+      if (!n.is_read) {
+        try {
+          await api.post('notification.mark_read', { id: n.id });
+          n.is_read = 1;
+          this.notif.unreadCount = Math.max(0, this.notif.unreadCount - 1);
+        } catch (e) { /* silent */ }
+      }
+      this.notif.show = false;
+      if (n.link) this.navigate(n.link);
+    },
+
+    async pollCounts() {
+      const fetchCounts = async () => {
+        if (!this.user) return;
+        try {
+          const data = await api.get('notification.counts');
+          this.notif.unreadCount = data.notifications || 0;
+          this.msgs.unreadCount  = data.messages       || 0;
+        } catch (e) { /* silent */ }
+      };
+      await fetchCounts();
+      setInterval(fetchCounts, 20000);
+    },
+
+    // ============================================================
+    // MESSAGES
+    // ============================================================
+    async loadMsgThreads() {
+      this.msgs.loading = true;
+      try {
+        const data = await api.get('message.threads');
+        this.msgs.threads = Array.isArray(data) ? data : (data?.data || []);
+      } catch (e) {
+        console.error('loadMsgThreads:', e);
+      } finally {
+        this.msgs.loading = false;
+      }
+    },
+
+    async openThread(th) {
+      this.msgs.activeThread = th;
+      this.msgs.chat = [];
+      this.msgs.chatPage = 1;
+      this.msgs.chatTotal = 0;
+      await this.loadChat(th.id, 1);
+      this._startMsgPoll(th.id);
+    },
+
+    async loadChat(threadId, page) {
+      this.msgs.chatLoading = true;
+      try {
+        const data = await api.get('message.thread_messages', { thread_id: threadId, page, limit: 30 });
+        const rows = data.data || [];
+        if (page === 1) {
+          this.msgs.chat = rows;
+        } else {
+          this.msgs.chat = [...rows, ...this.msgs.chat]; // prepend older
+        }
+        this.msgs.chatTotal = data.total || 0;
+        this.msgs.chatPage  = page;
+        if (page === 1) (this.$nextTick ? this.$nextTick(() => this._scrollChatBottom()) : setTimeout(() => this._scrollChatBottom(), 50));
+      } catch (e) {
+        console.error('loadChat:', e);
+      } finally {
+        this.msgs.chatLoading = false;
+      }
+    },
+
+    async loadMoreChat() {
+      if (!this.msgs.activeThread) return;
+      await this.loadChat(this.msgs.activeThread.id, this.msgs.chatPage + 1);
+    },
+
+    async sendMessage() {
+      const body = this.msgs.input.trim();
+      if (!body || this.msgs.sending || !this.msgs.activeThread) return;
+      this.msgs.sending = true;
+      this.msgs.input   = '';
+      try {
+        await api.post('message.send', { thread_id: this.msgs.activeThread.id, body });
+        await this.loadChat(this.msgs.activeThread.id, 1);
+        // refresh thread list to update last message
+        this.loadMsgThreads();
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+        this.msgs.input = body; // restore on error
+      } finally {
+        this.msgs.sending = false;
+      }
+    },
+
+    async deleteChatMsg(msgId) {
+      if (!confirm('Hapus pesan ini?')) return;
+      try {
+        await api.delete('message.delete', msgId);
+        this.msgs.chat = this.msgs.chat.filter(m => m.id !== msgId);
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      }
+    },
+
+    async searchMsgUsers(q) {
+      const query = q ?? this.msgs.newChat.q;
+      if (!query || query.length < 2) { this.msgs.newChat.results = []; return; }
+      this.msgs.newChat.loading = true;
+      try {
+        const data = await api.get('message.search_users', { q: query });
+        this.msgs.newChat.results = Array.isArray(data) ? data : (data?.data || []);
+      } catch (e) {
+        this.msgs.newChat.results = [];
+      } finally {
+        this.msgs.newChat.loading = false;
+      }
+    },
+
+    async startNewChat(u) {
+      this.msgs.newChat.show = false;
+      this.msgs.newChat.q = '';
+      this.msgs.newChat.results = [];
+      try {
+        const data = await api.get('message.open_thread', { user_id: u.id });
+        const threadId = data.thread_id;
+        // find or create synthetic thread obj
+        let th = this.msgs.threads.find(t => t.id === threadId);
+        if (!th) {
+          th = { id: threadId, other_name: u.name, other_id: u.id, last_body: '', unread_count: 0 };
+          this.msgs.threads.unshift(th);
+        }
+        await this.openThread(th);
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      }
+    },
+
+    _startMsgPoll(threadId) {
+      this.clearMsgPoll();
+      this.msgs.pollInterval = setInterval(async () => {
+        if (this.msgs.activeThread?.id === threadId) {
+          await this.loadChat(threadId, 1);
+        } else {
+          this.clearMsgPoll();
+        }
+      }, 5000);
+    },
+
+    clearMsgPoll() {
+      if (this.msgs.pollInterval) {
+        clearInterval(this.msgs.pollInterval);
+        this.msgs.pollInterval = null;
+      }
+    },
+
+    _scrollChatBottom() {
+      const el = document.getElementById('chat-messages');
+      if (el) el.scrollTop = el.scrollHeight;
+    },
+
+    // ---- Date helpers ----
+    sameDay(d1, d2) {
+      const a = new Date(d1), b = new Date(d2);
+      return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    },
+
+    formatTime(dt) {
+      if (!dt) return '';
+      return new Date(dt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    },
+
+    formatDayLabel(dt) {
+      if (!dt) return '';
+      const d = new Date(dt);
+      const now = new Date();
+      const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+      if (this.sameDay(d, now))       return 'Hari ini';
+      if (this.sameDay(d, yesterday)) return 'Kemarin';
+      return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    },
+
+    formatRelative(dateStr) { return this.formatTimeAgo(dateStr); },
 
     // ---- Search ----
     onSearch: debounce(async function(q) {

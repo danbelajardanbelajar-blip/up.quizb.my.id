@@ -1,0 +1,212 @@
+<!-- MESSAGES PAGE -->
+<div class="flex overflow-hidden bg-white dark:bg-gray-900"
+     style="height:calc(100vh - 4rem)"
+     x-init="loadMsgThreads()">
+
+  <!-- ── SIDEBAR: Daftar Thread ───────────────────────────────────── -->
+  <div class="flex flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+       :class="msgs.activeThread ? 'hidden md:flex md:w-80 lg:w-96' : 'flex w-full md:w-80 lg:w-96'">
+
+    <!-- Header sidebar -->
+    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+      <h2 class="font-bold text-gray-900 dark:text-white text-base">💬 Pesan</h2>
+      <button @click="msgs.newChat.show = true"
+              class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center hover:bg-primary-100 transition-colors"
+              title="Pesan baru">
+        ✏️
+      </button>
+    </div>
+
+    <!-- Search user baru -->
+    <template x-if="msgs.newChat.show">
+      <div class="px-3 pt-3 pb-2 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+        <div class="relative">
+          <input type="search" x-model="msgs.newChat.q"
+                 @input.debounce.300ms="searchMsgUsers()"
+                 placeholder="Cari nama atau email pengguna..."
+                 class="form-input pl-3 pr-8 py-2 text-sm w-full"
+                 x-ref="newChatInput"
+                 x-init="$nextTick(()=>$refs.newChatInput?.focus())" />
+          <button @click="msgs.newChat.show=false; msgs.newChat.q=''; msgs.newChat.results=[]"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+        </div>
+        <div x-show="msgs.newChat.loading" class="text-xs text-gray-400 text-center py-2">Mencari...</div>
+        <div class="mt-1 space-y-0.5" x-show="msgs.newChat.results.length > 0">
+          <template x-for="u in msgs.newChat.results" :key="u.id">
+            <button @click="startNewChat(u)"
+                    class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-left transition-colors">
+              <div class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-primary-600 dark:text-primary-400 text-sm font-bold flex-shrink-0"
+                   x-text="u.name.charAt(0).toUpperCase()"></div>
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate" x-text="u.name"></p>
+                <p class="text-xs text-gray-400 truncate" x-text="u.email"></p>
+              </div>
+            </button>
+          </template>
+        </div>
+        <p x-show="msgs.newChat.q.length >= 2 && !msgs.newChat.loading && msgs.newChat.results.length === 0"
+           class="text-xs text-gray-400 text-center py-2">Tidak ada pengguna ditemukan</p>
+      </div>
+    </template>
+
+    <!-- Thread list -->
+    <div class="flex-1 overflow-y-auto">
+      <!-- Loading -->
+      <div x-show="msgs.loading" class="p-4 space-y-3">
+        <div class="skeleton h-16 rounded-xl"></div>
+        <div class="skeleton h-16 rounded-xl"></div>
+        <div class="skeleton h-16 rounded-xl"></div>
+      </div>
+
+      <!-- Empty state -->
+      <div x-show="!msgs.loading && msgs.threads.length === 0"
+           class="flex flex-col items-center justify-center h-full text-gray-400 p-8 text-center">
+        <p class="text-4xl mb-3">💬</p>
+        <p class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Belum ada percakapan</p>
+        <p class="text-xs">Klik ✏️ untuk memulai chat baru</p>
+      </div>
+
+      <!-- Thread items -->
+      <template x-for="th in msgs.threads" :key="th.id">
+        <button @click="openThread(th)"
+                class="w-full flex items-center gap-3 px-4 py-3 border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left"
+                :class="msgs.activeThread?.id === th.id ? 'bg-primary-50 dark:bg-primary-900/20' : ''">
+          <!-- Avatar -->
+          <div class="relative flex-shrink-0">
+            <div class="w-11 h-11 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-base"
+                 x-text="th.other_name.charAt(0).toUpperCase()"></div>
+            <span x-show="th.unread_count > 0"
+                  class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold"
+                  x-text="th.unread_count > 9 ? '9+' : th.unread_count"></span>
+          </div>
+          <!-- Info -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-baseline justify-between gap-2">
+              <p class="text-sm font-semibold text-gray-900 dark:text-white truncate"
+                 :class="th.unread_count > 0 ? 'font-bold' : ''"
+                 x-text="th.other_name"></p>
+              <p class="text-xs text-gray-400 flex-shrink-0"
+                 x-text="th.last_msg_at ? formatRelative(th.last_msg_at) : ''"></p>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5"
+               :class="th.unread_count > 0 ? 'font-medium text-gray-700 dark:text-gray-200' : ''"
+               x-text="th.last_body ? (th.is_last_mine ? 'Kamu: ' : '') + th.last_body : 'Belum ada pesan'"></p>
+          </div>
+        </button>
+      </template>
+    </div>
+  </div>
+
+  <!-- ── AREA CHAT ─────────────────────────────────────────────────── -->
+  <div class="flex-1 flex flex-col min-w-0"
+       :class="msgs.activeThread ? 'flex' : 'hidden md:flex'">
+
+    <!-- Placeholder: belum pilih thread -->
+    <div x-show="!msgs.activeThread"
+         class="flex-1 flex flex-col items-center justify-center text-gray-400">
+      <p class="text-6xl mb-4">💬</p>
+      <p class="text-base font-medium text-gray-600 dark:text-gray-300">Pilih percakapan</p>
+      <p class="text-sm mt-1">atau mulai chat baru dengan klik ✏️</p>
+    </div>
+
+    <!-- Chat aktif -->
+    <div x-show="msgs.activeThread" class="flex flex-col h-full">
+
+      <!-- Chat header -->
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex-shrink-0">
+        <!-- Back button (mobile) -->
+        <button @click="msgs.activeThread = null; clearMsgPoll()"
+                class="md:hidden p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors">
+          ← 
+        </button>
+        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold"
+             x-text="msgs.activeThread?.other_name?.charAt(0)?.toUpperCase()"></div>
+        <div>
+          <p class="font-semibold text-gray-900 dark:text-white text-sm" x-text="msgs.activeThread?.other_name"></p>
+          <p class="text-xs text-gray-400">Pengguna QuizB</p>
+        </div>
+      </div>
+
+      <!-- Bubble pesan -->
+      <div class="flex-1 overflow-y-auto px-4 py-4 space-y-1" x-ref="chatBox">
+
+        <!-- Load more -->
+        <div x-show="msgs.chatTotal > msgs.chat.length" class="flex justify-center mb-2">
+          <button @click="loadMoreChat()"
+                  class="text-xs text-primary-600 dark:text-primary-400 hover:underline px-3 py-1 rounded-full border border-primary-200 dark:border-primary-800">
+            ↑ Muat pesan sebelumnya
+          </button>
+        </div>
+
+        <!-- Loading -->
+        <div x-show="msgs.chatLoading" class="flex justify-center py-4">
+          <div class="w-5 h-5 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+        </div>
+
+        <template x-for="(msg, idx) in msgs.chat" :key="msg.id">
+          <div>
+            <!-- Tanggal separator -->
+            <div x-show="idx === 0 || !sameDay(msgs.chat[idx-1]?.created_at, msg.created_at)"
+                 class="flex items-center gap-3 my-3">
+              <div class="flex-1 h-px bg-gray-100 dark:bg-gray-800"></div>
+              <span class="text-xs text-gray-400 px-2"
+                    x-text="formatDayLabel(msg.created_at)"></span>
+              <div class="flex-1 h-px bg-gray-100 dark:bg-gray-800"></div>
+            </div>
+
+            <!-- Bubble -->
+            <div class="flex mb-1" :class="msg.is_mine ? 'justify-end' : 'justify-start'">
+              <div class="group relative max-w-[72%]">
+                <div class="px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words"
+                     :class="msg.is_mine
+                       ? 'bg-primary-600 text-white rounded-br-sm'
+                       : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-sm'"
+                     x-text="msg.body"></div>
+                <div class="flex items-center gap-1 mt-0.5"
+                     :class="msg.is_mine ? 'justify-end' : 'justify-start'">
+                  <span class="text-xs text-gray-400"
+                        x-text="formatTime(msg.created_at)"></span>
+                  <span x-show="msg.is_mine" class="text-xs"
+                        :class="msg.is_read ? 'text-primary-400' : 'text-gray-300'">✓✓</span>
+                </div>
+                <!-- Hapus (hover, hanya pesan sendiri) -->
+                <button x-show="msg.is_mine"
+                        @click="deleteChatMsg(msg.id)"
+                        class="absolute -top-2 -left-6 opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-500 text-xs flex items-center justify-center">
+                  ×
+                </button>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Empty chat -->
+        <div x-show="!msgs.chatLoading && msgs.chat.length === 0"
+             class="flex flex-col items-center justify-center h-full text-gray-400 py-16">
+          <p class="text-3xl mb-2">👋</p>
+          <p class="text-sm">Belum ada pesan. Mulai percakapan!</p>
+        </div>
+      </div>
+
+      <!-- Input area -->
+      <div class="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
+        <form @submit.prevent="sendMessage()" class="flex items-end gap-3">
+          <textarea x-model="msgs.input"
+                    @keydown.enter.exact.prevent="sendMessage()"
+                    @keydown.enter.shift.prevent="msgs.input += '\n'"
+                    rows="1"
+                    x-ref="msgInput"
+                    placeholder="Tulis pesan... (Enter kirim, Shift+Enter baris baru)"
+                    class="flex-1 resize-none form-input py-2.5 text-sm max-h-32 overflow-y-auto leading-relaxed"
+                    style="field-sizing: content"></textarea>
+          <button type="submit"
+                  :disabled="!msgs.input.trim() || msgs.sending"
+                  class="flex-shrink-0 w-10 h-10 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed text-white flex items-center justify-center transition-colors">
+            <span x-show="!msgs.sending" class="text-base">➤</span>
+            <span x-show="msgs.sending" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

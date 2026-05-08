@@ -24,6 +24,7 @@ require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/csrf.php';
 require_once __DIR__ . '/includes/response.php';
+require_once __DIR__ . '/includes/helpers.php';
 
 startSecureSession();
 
@@ -89,6 +90,8 @@ $routes = [
     'class'       => __DIR__ . '/api/class.php',
     'assignment'  => __DIR__ . '/api/assignment.php',
     'challenge'   => __DIR__ . '/api/challenge.php',
+    'notification' => __DIR__ . '/api/notification.php',
+    'message'     => __DIR__ . '/api/message.php',
 ];
 
 if (!isset($routes[$ns])) {
