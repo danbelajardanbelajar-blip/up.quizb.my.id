@@ -122,7 +122,9 @@
                     <div class="flex gap-2 flex-shrink-0">
                       <!-- For students: play button -->
                       <template x-if="!classroom.isTeacher">
-                        <button @click="navigate('/play/' + assign.quiz_id + '?assign=' + assign.id)"
+                        <button @click="assign.mode === 'bebas'
+                                  ? navigate('/quiz/' + assign.quiz_id + '?assign=' + assign.id)
+                                  : navigate('/play/' + assign.quiz_id + '?mode=' + assign.mode + '&assign=' + assign.id)"
                                 class="btn-primary text-xs px-3 py-1.5">Kerjakan</button>
                       </template>
                       <!-- For teachers: hasil, live, edit, delete -->

@@ -61,7 +61,12 @@
            return;
          }
          if (this.guestName && this.guestName.trim()) localStorage.setItem('quizb_guest_name', this.guestName.trim());
-          this.navigate('/play/' + quizId + '?mode=' + this.selectedMode);
+         // Baca param assign dari URL (jika siswa datang dari halaman tugas mode bebas)
+         const qs       = window.location.hash.split('?')[1] || '';
+         const assignId = new URLSearchParams(qs).get('assign');
+         let url = '/play/' + quizId + '?mode=' + this.selectedMode;
+         if (assignId) url += '&assign=' + assignId;
+         this.navigate(url);
        },
      }">
 
