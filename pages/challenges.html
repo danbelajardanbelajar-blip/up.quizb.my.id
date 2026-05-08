@@ -55,6 +55,10 @@
                         class="px-4 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 text-xs font-semibold rounded-lg hover:border-red-400 hover:text-red-500 transition-colors">
                   ❌ Tolak
                 </button>
+                <button @click="deleteChallenge(c.id, 'incoming')"
+                        class="px-4 py-1.5 border border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 text-xs font-semibold rounded-lg hover:border-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  🗑️ Hapus
+                </button>
               </div>
             </div>
           </div>
@@ -125,6 +129,10 @@
                         class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors">
                   ▶ Lanjut Main
                 </button>
+                <button @click="deleteChallenge(c.id, 'received')"
+                        class="px-4 py-1.5 border border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 text-xs font-semibold rounded-lg hover:border-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  🗑️ Hapus
+                </button>
               </div>
             </div>
           </div>
@@ -156,7 +164,7 @@
                 <p class="text-xs text-gray-400"
                    x-text="new Date(c.created_at).toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric'})"></p>
               </div>
-              <div class="flex-shrink-0 text-right">
+              <div class="flex-shrink-0 text-right flex flex-col items-end gap-2">
                 <!-- Status badges -->
                 <span x-show="c.status === 'pending'"
                       class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400">
@@ -187,6 +195,10 @@
                     🤝 Seri
                   </span>
                 </div>
+                <button @click="deleteChallenge(c.id, 'outgoing')"
+                        class="px-4 py-1.5 border border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 text-xs font-semibold rounded-lg hover:border-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  🗑️ Hapus
+                </button>
               </div>
             </div>
           </div>

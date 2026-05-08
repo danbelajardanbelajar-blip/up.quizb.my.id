@@ -1478,6 +1478,22 @@ function QuizBApp() {
       }
     },
 
+    async deleteChallenge(challengeId, section) {
+      // section: 'incoming' | 'received' | 'outgoing'
+      if (!confirm('Hapus tantangan ini? Data tidak bisa dikembalikan.')) return;
+      try {
+        await api.delete('challenge.delete', challengeId);
+        this.showToast('Tantangan berhasil dihapus.', 'success', '🗑️');
+        // Hapus dari array lokal tanpa fetch ulang agar lebih cepat
+        if (section === 'incoming')  this.challenge.incoming  = this.challenge.incoming.filter(c => c.id !== challengeId);
+        if (section === 'received')  this.challenge.received  = this.challenge.received.filter(c => c.id !== challengeId);
+        if (section === 'outgoing')  this.challenge.outgoing  = this.challenge.outgoing.filter(c => c.id !== challengeId);
+        this.challenge.pendingCount = this.challenge.incoming.length;
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      }
+    },
+
     // ---- Search ----
     onSearch: debounce(async function(q) {
       if (!q || q.length < 2) return;

@@ -272,6 +272,54 @@ function challenge_submit(): void {
     ], $bothDone ? 'Tantangan selesai!' : 'Hasil disimpan, menunggu lawan selesai.');
 }
 
+// DELETE — hapus tantangan (oleh pengirim atau penerima)
+function challenge_delete(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'DELETE') jsonError('Method not allowed', 405);
+    $user        = requireAuth();
+    $challengeId = (int)($_GET['id'] ?? 0);
+    if (!$challengeId) jsonError('Challenge ID diperlukan');
+
+    // User boleh menghapus jika dia adalah pengirim ATAU penerima
+    $c = DB::one(
+        "SELECT id, challenger_id, challenged_id FROM challenges WHERE id = ?",
+        [$challengeId]
+    );
+    if (!$c) jsonError('Tantangan tidak ditemukan', 404);
+
+    $uid = (int)$user['id'];
+    if ((int)$c['challenger_id'] !== $uid && (int)$c['challenged_id'] !== $uid) {
+        jsonError('Akses ditolak', 403);
+    }
+
+    // Hapus attempt_answers terkait agar tidak ada foreign key error
+    $pdo = DB::conn();
+    $pdo->prepare(
+        "DELETE aa FROM attempt_answers aa
+         JOIN attempts a ON aa.attempt_id = a.id
+         WHERE a.id IN (
+             SELECT v FROM (
+                 SELECT challenger_attempt_id AS v FROM challenges WHERE id = ?
+                 UNION
+                 SELECT challenged_attempt_id  AS v FROM challenges WHERE id = ?
+             ) sub WHERE v IS NOT NULL
+         )"
+    )->execute([$challengeId, $challengeId]);
+
+    $pdo->prepare(
+        "DELETE FROM attempts WHERE id IN (
+             SELECT v FROM (
+                 SELECT challenger_attempt_id AS v FROM challenges WHERE id = ?
+                 UNION
+                 SELECT challenged_attempt_id  AS v FROM challenges WHERE id = ?
+             ) sub WHERE v IS NOT NULL
+         )"
+    )->execute([$challengeId, $challengeId]);
+
+    $pdo->prepare("DELETE FROM challenges WHERE id = ?")->execute([$challengeId]);
+
+    jsonSuccess([], 'Tantangan berhasil dihapus.');
+}
+
 // GET — cari user untuk ditantang
 function challenge_search_users(): void {
     $user = requireAuth();
