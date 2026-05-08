@@ -396,4 +396,6 @@
 
   <!-- App Scripts -->
   <script src="assets/js/utils.js"></script>
-  <scrip
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
