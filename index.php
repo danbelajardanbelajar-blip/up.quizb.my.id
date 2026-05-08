@@ -55,31 +55,60 @@
     <span x-text="toast.message"></span>
   </div>
 
-  <!-- NAVBAR — logo centered, desktop keeps user controls on right -->
+  <!-- NAVBAR — mobile: logo center | desktop: logo left + nav + dark + profile -->
   <nav x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding' && currentRoute !== '/messages'"
        class="sticky top-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
-    <div class="relative flex items-center justify-center h-14 px-4">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-      <!-- Logo — always centered -->
-      <a href="#/" @click.prevent="navigate('/')" class="flex items-center gap-2 group">
-        <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-          <span class="text-white font-bold text-sm">Q</span>
+      <!-- ── MOBILE: logo centered, nothing else ─────────── -->
+      <div class="flex md:hidden items-center justify-center h-14">
+        <a href="#/" @click.prevent="navigate('/')" class="flex items-center gap-2 group">
+          <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+            <span class="text-white font-bold text-sm">Q</span>
+          </div>
+          <span class="font-bold text-xl bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">QuizB</span>
+        </a>
+      </div>
+
+      <!-- ── DESKTOP: logo left + nav + dark + notif + profile ── -->
+      <div class="hidden md:flex items-center h-16 gap-6">
+
+        <!-- Logo -->
+        <a href="#/" @click.prevent="navigate('/')" class="flex items-center gap-2 group flex-shrink-0">
+          <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+            <span class="text-white font-bold text-sm">Q</span>
+          </div>
+          <span class="font-bold text-xl bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">QuizB</span>
+        </a>
+
+        <!-- Nav items -->
+        <div class="flex items-center gap-1">
+          <template x-for="item in navItems" :key="item.href">
+            <a :href="'#' + item.href" @click.prevent="navigate(item.href)"
+               class="px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150"
+               :class="currentRoute === item.href
+                 ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400'
+                 : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'"
+               x-text="item.label"></a>
+          </template>
         </div>
-        <span class="font-bold text-xl bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">QuizB</span>
-      </a>
 
-      <!-- Desktop right: dark mode + notif/msg + user menu (hidden on mobile — bottom nav handles it) -->
-      <div class="absolute right-4 hidden md:flex items-center gap-1">
+        <!-- Spacer -->
+        <div class="flex-1"></div>
 
         <!-- Dark Mode Toggle -->
-        <button @click="toggleDark()" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Toggle dark mode">
+        <button @click="toggleDark()"
+                class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                title="Toggle dark mode">
           <svg x-show="!darkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
-          <svg x-show="darkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          <svg x-show="darkMode"  class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
         </button>
 
-        <!-- Notifikasi (desktop) -->
+        <!-- Notifikasi + Pesan (logged in) -->
         <template x-if="user">
           <div class="flex items-center gap-1">
+
+            <!-- Notifikasi -->
             <div class="relative" x-data="{ open: false }">
               <button @click="open=!open; if(open) loadNotifications()"
                       class="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Notifikasi">
@@ -90,6 +119,7 @@
                       class="absolute top-0.5 right-0.5 min-w-[1.1rem] h-[1.1rem] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5"
                       x-text="notif.unreadCount > 99 ? '99+' : notif.unreadCount"></span>
               </button>
+              <!-- Dropdown -->
               <div x-show="open" @click.outside="open=false" x-transition
                    class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 z-50 flex flex-col overflow-hidden"
                    style="max-height:480px">
@@ -111,7 +141,7 @@
                            :class="!n.is_read ? 'bg-primary-100 dark:bg-primary-900/40' : 'bg-gray-100 dark:bg-gray-800'"
                            x-text="{challenge:'⚔️',challenge_result:'🏆',message:'💬',system:'📢'}[n.type] || '🔔'"></div>
                       <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug" x-text="n.title" :class="!n.is_read ? 'font-semibold' : ''"></p>
+                        <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug" :class="!n.is_read ? 'font-semibold' : ''" x-text="n.title"></p>
                         <p x-show="n.body" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2" x-text="n.body"></p>
                         <p class="text-xs text-gray-300 dark:text-gray-600 mt-1" x-text="formatRelative(n.created_at)"></p>
                       </div>
@@ -121,31 +151,37 @@
                 </div>
               </div>
             </div>
-            <!-- Pesan (desktop) -->
-            <button @click="navigate('/messages')" class="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Pesan">
+
+            <!-- Pesan -->
+            <button @click="navigate('/messages')"
+                    class="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Pesan">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-              <span x-show="msgs.unreadCount > 0" class="absolute top-0.5 right-0.5 min-w-[1.1rem] h-[1.1rem] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5" x-text="msgs.unreadCount > 99 ? '99+' : msgs.unreadCount"></span>
+              <span x-show="msgs.unreadCount > 0"
+                    class="absolute top-0.5 right-0.5 min-w-[1.1rem] h-[1.1rem] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5"
+                    x-text="msgs.unreadCount > 99 ? '99+' : msgs.unreadCount"></span>
             </button>
+
           </div>
         </template>
 
-        <!-- Auth (desktop, not logged in) -->
+        <!-- Auth (not logged in) -->
         <template x-if="!user">
           <div class="flex items-center gap-2">
-            <a href="#/login" @click.prevent="navigate('/login')" class="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-primary-600 transition-colors">Masuk</a>
+            <a href="#/login"    @click.prevent="navigate('/login')"    class="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-primary-600 transition-colors">Masuk</a>
             <a href="#/register" @click.prevent="navigate('/register')" class="btn-primary text-sm px-4 py-1.5">Daftar</a>
           </div>
         </template>
 
-        <!-- User menu (desktop, logged in) -->
+        <!-- User menu (logged in) -->
         <template x-if="user">
           <div class="relative" x-data="{ open: false }">
             <button @click="open=!open" class="flex items-center gap-2 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
               <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-semibold text-sm" x-text="user.name.charAt(0).toUpperCase()"></div>
-              <span class="text-sm font-medium" x-text="user.name"></span>
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-200" x-text="user.name.split(' ')[0]"></span>
               <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </button>
-            <div x-show="open" @click.outside="open=false" x-transition class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50">
+            <div x-show="open" @click.outside="open=false" x-transition
+                 class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50">
               <a href="#/dashboard" @click.prevent="navigate('/dashboard');open=false" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📊 Dashboard</a>
               <a href="#/profile"   @click.prevent="navigate('/profile');open=false"   class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">👤 Profil</a>
               <a href="#/history"   @click.prevent="navigate('/history');open=false"   class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📋 Histori</a>
@@ -159,7 +195,7 @@
           </div>
         </template>
 
-      </div><!-- end desktop right -->
+      </div><!-- end desktop row -->
 
     </div>
   </nav>
