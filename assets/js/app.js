@@ -1764,16 +1764,20 @@ function QuizBApp() {
     async loadChat(threadId, page) {
       this.msgs.chatLoading = true;
       try {
-        const data = await api.get('message.thread_messages', { thread_id: threadId, page, limit: 30 });
-        const rows = data.data || [];
+        const resp = await api.getFull('message.thread_messages', { thread_id: threadId, page, limit: 30 });
+        const rows = resp.data || [];
         if (page === 1) {
           this.msgs.chat = rows;
         } else {
           this.msgs.chat = [...rows, ...this.msgs.chat]; // prepend older
         }
-        this.msgs.chatTotal = data.total || 0;
+        this.msgs.chatTotal = resp.meta?.total || resp.total || 0;
         this.msgs.chatPage  = page;
-        if (page === 1) (this.$nextTick ? this.$nextTick(() => this._scrollChatBottom()) : setTimeout(() => this._scrollChatBottom(), 50));
+        if (page === 1) {
+          this.$nextTick
+            ? this.$nextTick(() => this._scrollChatBottom())
+            : setTimeout(() => this._scrollChatBottom(), 50);
+        }
       } catch (e) {
         console.error('loadChat:', e);
       } finally {
