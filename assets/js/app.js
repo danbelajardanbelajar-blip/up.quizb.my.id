@@ -1780,14 +1780,36 @@ function QuizBApp() {
       if (!body || this.msgs.sending || !this.msgs.activeThread) return;
       this.msgs.sending = true;
       this.msgs.input   = '';
+
+      // Optimistic update — tampilkan pesan langsung tanpa tunggu server
+      const tempId = 'temp_' + Date.now();
+      const tempMsg = {
+        id:          tempId,
+        sender_id:   this.user?.id,
+        sender_name: this.user?.name,
+        body,
+        is_mine:     true,
+        is_read:     false,
+        created_at:  new Date().toISOString(),
+      };
+      this.msgs.chat.push(tempMsg);
+      this.$nextTick(() => this._scrollChatBottom());
+
       try {
-        await api.post('message.send', { thread_id: this.msgs.activeThread.id, body });
-        await this.loadChat(this.msgs.activeThread.id, 1);
-        // refresh thread list to update last message
+        const res = await api.post('message.send', { thread_id: this.msgs.activeThread.id, body });
+        // Ganti pesan temp dengan data asli dari server
+        const realMsg = res?.data ?? res;
+        if (realMsg?.id) {
+          const idx = this.msgs.chat.findIndex(m => m.id === tempId);
+          if (idx !== -1) this.msgs.chat.splice(idx, 1, { ...tempMsg, id: realMsg.id, is_read: false });
+        }
+        // Refresh thread list preview (background)
         this.loadMsgThreads();
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
-        this.msgs.input = body; // restore on error
+        // Hapus pesan temp jika gagal, kembalikan input
+        this.msgs.chat = this.msgs.chat.filter(m => m.id !== tempId);
+        this.msgs.input = body;
+        this.showToast(e.message || 'Gagal mengirim pesan', 'error', '❌');
       } finally {
         this.msgs.sending = false;
       }
@@ -1855,7 +1877,7 @@ function QuizBApp() {
     },
 
     _scrollChatBottom() {
-      const el = document.getElementById('chat-messages');
+      const el = document.getElementById('chat-messages') || this.$refs?.chatBox;
       if (el) el.scrollTop = el.scrollHeight;
     },
 
