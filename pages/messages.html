@@ -1,7 +1,9 @@
 <!-- MESSAGES PAGE -->
+<!-- Desktop: 100vh - top-nav(3.5rem) | Mobile: 100vh - top-nav(3.5rem) - bottom-nav(3.5rem) -->
 <div class="flex overflow-hidden bg-white dark:bg-gray-900"
-     style="height:calc(100vh - 4rem)"
-     x-init="loadMsgThreads()">
+     x-bind:style="{ height: window.innerWidth < 768 ? 'calc(100vh - 7rem)' : 'calc(100vh - 3.5rem)' }"
+     x-init="loadMsgThreads()"
+     @resize.window="$el.style.height = window.innerWidth < 768 ? 'calc(100vh - 7rem)' : 'calc(100vh - 3.5rem)'">
 
   <!-- ── SIDEBAR: Daftar Thread ───────────────────────────────────── -->
   <div class="flex flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"

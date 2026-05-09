@@ -56,7 +56,7 @@
   </div>
 
   <!-- NAVBAR — mobile: logo center | desktop: logo left + nav + dark + profile -->
-  <nav x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding' && currentRoute !== '/messages'"
+  <nav x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding'"
        class="sticky top-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
@@ -219,7 +219,7 @@
 
     <!-- ACTIVITY TICKER — sticky tepat di bawah nav (top-0 saat fullscreen quiz) -->
   <div x-data="globalTicker()"
-       x-show="currentItem && currentRoute !== '/onboarding' && currentRoute !== '/messages'"
+       x-show="currentItem && currentRoute !== '/onboarding' && currentRoute !== '/messages' && !currentRoute.startsWith('/play/')"
        x-cloak
        class="sticky z-40 border-b border-gray-200/30 dark:border-gray-700/30 bg-white/20 dark:bg-gray-900/20 backdrop-blur-sm"
        :class="currentRoute.startsWith('/play/') ? 'top-0' : 'top-16'">
@@ -388,7 +388,7 @@
   </main>
 
   <!-- FOOTER -->
-  <footer x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding' && currentRoute !== '/messages'"
+  <footer x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding' && currentRoute !== '/messages' && currentRoute !== '/play'"
           class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 mt-auto">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div class="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -420,7 +420,7 @@
        MOBILE BOTTOM NAV — hanya tampil di layar kecil
        Tersembunyi di /play/, /onboarding, /messages
   ═══════════════════════════════════════════════ -->
-  <nav x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding' && currentRoute !== '/messages'"
+  <nav x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding'"
        x-cloak
        class="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 safe-area-pb"
        style="padding-bottom: env(safe-area-inset-bottom)">
