@@ -63,21 +63,40 @@ function activity_feed(): void {
     [$page, $limit, $offset] = getPaginationParams();
     $limit = min(30, max(5, $limit));
 
-    $total = (int)DB::one("
-        SELECT COUNT(*) AS cnt
-        FROM attempts a
-        INNER JOIN quizzes q ON q.id = a.quiz_id
-        INNER JOIN users   u ON u.id = a.user_id
-        WHERE q.is_published = 1
-          AND u.is_active = 1
-    ")['cnt'];
+    // Hitung dari SELURUH isi tabel attempts (tanpa filter is_published/is_active)
+    // agar total dan offset mencerminkan urutan global yang sesungguhnya.
+    $total = (int)DB::one("SELECT COUNT(*) AS cnt FROM attempts")['cnt'];
 
-    $rows = DB::all(
-        _activitySelect() . "
-        ORDER BY a.completed_at DESC
-        LIMIT ? OFFSET ?",
-        [$limit, $offset]
-    );
+    // Ambil ID terbaru dari seluruh tabel dulu (subquery),
+    // baru JOIN ke data lengkap — agar urutan benar-benar dari seluruh tabel.
+    $rows = DB::all("
+        SELECT
+            a.id,
+            u.id                                 AS user_id,
+            u.name                               AS user_name,
+            q.id                                 AS quiz_id,
+            q.title                              AS quiz_title,
+            q.total_questions                    AS total_questions,
+            q.passing_score                      AS passing_score,
+            c.name                               AS category_name,
+            c.icon                               AS category_icon,
+            a.score,
+            a.correct_count                      AS correct_answers,
+            a.time_taken,
+            a.mode,
+            a.completed_at,
+            IF(a.score >= q.passing_score, 1, 0) AS passed
+        FROM (
+            SELECT id FROM attempts
+            ORDER BY id DESC
+            LIMIT ? OFFSET ?
+        ) AS ranked
+        INNER JOIN attempts    a ON a.id  = ranked.id
+        INNER JOIN users       u ON u.id  = a.user_id
+        INNER JOIN quizzes     q ON q.id  = a.quiz_id
+        LEFT  JOIN categories  c ON c.id  = q.category_id
+        ORDER BY a.id DESC
+    ", [$limit, $offset]);
 
     _activityEnrich($rows);
     jsonPaginated($rows, $total, $page, $limit);
