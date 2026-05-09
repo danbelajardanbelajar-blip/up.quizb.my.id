@@ -495,6 +495,7 @@ function assignment_my_dashboard(): void {
             SELECT
                 a.id, a.title, a.deadline, a.mode,
                 a.timer_per_question, a.duration_minutes,
+                q.id     AS quiz_id,
                 q.title  AS quiz_title,
                 q.total_questions,
                 cl.id    AS class_id,
@@ -527,6 +528,7 @@ function assignment_my_dashboard(): void {
 
         foreach ($rows as &$r) {
             $r['id']             = (int)$r['id'];
+            $r['quiz_id']        = (int)$r['quiz_id'];
             $r['class_id']       = (int)$r['class_id'];
             $r['total_questions']= (int)$r['total_questions'];
             $r['my_score']       = $r['my_score'] !== null ? (int)$r['my_score'] : null;
