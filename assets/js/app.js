@@ -309,6 +309,8 @@ function QuizBApp() {
         this.showToast('Akses ditolak', 'error', '🚫');
         return this.navigate('/');
       }
+      // User sudah login → redirect dari home ke dashboard
+      if (route === '/' && this.user) return this.navigate('/dashboard');
 
       // Load data per route
       if (route === '/')                   this.loadHome();
