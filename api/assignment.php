@@ -474,3 +474,104 @@ function assignment_force_stop(): void {
     );
     jsonSuccess([], 'Pekerjaan siswa berhasil dihentikan.');
 }
+
+// ============================================
+// GET /api?action=assignment.my_dashboard
+// Ringkasan tugas untuk dashboard (pelajar & pengajar)
+// ============================================
+function assignment_my_dashboard(): void {
+    $user = requireAuth();
+    $role = $user['role'];
+
+    if (!in_array($role, ['pelajar', 'pengajar', 'admin'])) {
+        jsonSuccess(['assignments' => [], 'role' => $role]);
+        return;
+    }
+
+    if ($role === 'pelajar') {
+        // Ambil semua tugas aktif dari kelas yang diikuti pelajar,
+        // lengkap dengan status submission
+        $rows = DB::all("
+            SELECT
+                a.id, a.title, a.deadline, a.mode,
+                a.timer_per_question, a.duration_minutes,
+                q.title  AS quiz_title,
+                q.total_questions,
+                cl.id    AS class_id,
+                cl.name  AS class_name,
+                s.id     AS submission_id,
+                s.submitted_at,
+                att.score AS my_score,
+                CASE
+                    WHEN s.id IS NOT NULL THEN 'done'
+                    WHEN a.deadline IS NOT NULL AND a.deadline < NOW() THEN 'overdue'
+                    ELSE 'pending'
+                END AS status
+            FROM class_members cm
+            INNER JOIN classes      cl ON cl.id = cm.class_id AND cl.is_active = 1
+            INNER JOIN assignments  a  ON a.class_id = cl.id  AND a.is_active  = 1
+            INNER JOIN quizzes      q  ON q.id = a.quiz_id
+            LEFT  JOIN assignment_submissions s
+                   ON s.assignment_id = a.id AND s.user_id = ?
+            LEFT  JOIN attempts att ON att.id = s.attempt_id
+            WHERE cm.user_id = ?
+            ORDER BY
+                CASE
+                    WHEN s.id IS NULL AND (a.deadline IS NULL OR a.deadline > NOW()) THEN 0
+                    WHEN a.deadline IS NOT NULL AND a.deadline < NOW() AND s.id IS NULL THEN 1
+                    ELSE 2
+                END,
+                a.deadline ASC,
+                a.created_at DESC
+        ", [$user['id'], $user['id']]);
+
+        foreach ($rows as &$r) {
+            $r['id']             = (int)$r['id'];
+            $r['class_id']       = (int)$r['class_id'];
+            $r['total_questions']= (int)$r['total_questions'];
+            $r['my_score']       = $r['my_score'] !== null ? (int)$r['my_score'] : null;
+        }
+        unset($r);
+
+        jsonSuccess(['assignments' => $rows, 'role' => 'pelajar']);
+
+    } else {
+        // Pengajar / admin: semua tugas aktif milik mereka + jumlah submission
+        $teacherCond = $role === 'admin' ? '' : 'AND a.teacher_id = ?';
+        $params      = $role === 'admin' ? [] : [$user['id']];
+
+        $rows = DB::all("
+            SELECT
+                a.id, a.title, a.deadline, a.mode,
+                q.title AS quiz_title,
+                q.total_questions,
+                cl.id   AS class_id,
+                cl.name AS class_name,
+                (SELECT COUNT(*) FROM class_members
+                 WHERE class_id = cl.id) AS member_count,
+                (SELECT COUNT(*) FROM assignment_submissions
+                 WHERE assignment_id = a.id) AS submission_count,
+                CASE
+                    WHEN a.deadline IS NOT NULL AND a.deadline < NOW() THEN 'expired'
+                    ELSE 'active'
+                END AS status
+            FROM assignments a
+            INNER JOIN quizzes q  ON q.id  = a.quiz_id
+            INNER JOIN classes cl ON cl.id = a.class_id AND cl.is_active = 1
+            WHERE a.is_active = 1 $teacherCond
+            ORDER BY a.deadline ASC, a.created_at DESC
+            LIMIT 20
+        ", $params);
+
+        foreach ($rows as &$r) {
+            $r['id']              = (int)$r['id'];
+            $r['class_id']        = (int)$r['class_id'];
+            $r['total_questions'] = (int)$r['total_questions'];
+            $r['member_count']    = (int)$r['member_count'];
+            $r['submission_count']= (int)$r['submission_count'];
+        }
+        unset($r);
+
+        jsonSuccess(['assignments' => $rows, 'role' => 'pengajar']);
+    }
+}

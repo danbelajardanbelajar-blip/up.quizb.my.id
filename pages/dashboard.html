@@ -7,6 +7,163 @@
     <p class="text-gray-500 dark:text-gray-400 mt-1">Pantau progres belajarmu</p>
   </div>
 
+  <!-- =====================================================
+       SECTION TUGAS — hanya untuk pelajar & pengajar
+       ===================================================== -->
+  <template x-if="user && ['pelajar','pengajar','admin'].includes(user.role)">
+    <div class="mb-8">
+
+      <!-- Header section -->
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white">
+            <span x-text="dashboard.assignmentsRole === 'pelajar' ? '📚 Tugas Saya' : '📋 Tugas Aktif'"></span>
+          </h2>
+          <p class="text-xs text-gray-400 mt-0.5"
+             x-text="dashboard.assignmentsRole === 'pelajar'
+               ? 'Tugas dari kelas yang kamu ikuti'
+               : 'Tugas yang kamu buat untuk kelasmu'"></p>
+        </div>
+        <button @click="navigate('/classroom')"
+                class="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline">
+          Lihat kelas →
+        </button>
+      </div>
+
+      <!-- Skeleton assignments -->
+      <div x-show="dashboard.assignmentsLoading" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <template x-for="i in 3">
+          <div class="card p-4 space-y-3">
+            <div class="skeleton h-3 w-20 rounded"></div>
+            <div class="skeleton h-5 w-48 rounded"></div>
+            <div class="skeleton h-3 w-32 rounded"></div>
+            <div class="skeleton h-8 w-full rounded-lg"></div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Empty state -->
+      <div x-show="!dashboard.assignmentsLoading && dashboard.assignments.length === 0"
+           class="card p-8 text-center text-gray-400">
+        <p class="text-3xl mb-2">📭</p>
+        <p class="text-sm" x-text="dashboard.assignmentsRole === 'pelajar'
+          ? 'Tidak ada tugas aktif saat ini'
+          : 'Belum ada tugas yang dibuat'"></p>
+        <button x-show="dashboard.assignmentsRole !== 'pelajar'"
+                @click="navigate('/classroom')"
+                class="mt-3 btn-primary text-sm px-4 py-1.5">Buka Kelas</button>
+      </div>
+
+      <!-- ── PELAJAR: kartu tugas ── -->
+      <template x-if="!dashboard.assignmentsLoading && dashboard.assignmentsRole === 'pelajar' && dashboard.assignments.length > 0">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <template x-for="a in dashboard.assignments" :key="a.id">
+            <div class="card p-4 flex flex-col gap-3 border-l-4 transition-shadow hover:shadow-md"
+                 :class="{
+                   'border-green-400':  a.status === 'done',
+                   'border-red-400':    a.status === 'overdue',
+                   'border-primary-400': a.status === 'pending',
+                 }">
+
+              <!-- Kelas & status badge -->
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-medium text-gray-500 dark:text-gray-400 truncate"
+                      x-text="'🏫 ' + a.class_name"></span>
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0"
+                      :class="{
+                        'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400': a.status === 'done',
+                        'bg-red-100 dark:bg-red-900/30 text-red-500':                           a.status === 'overdue',
+                        'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400': a.status === 'pending',
+                      }"
+                      x-text="a.status === 'done' ? '✅ Selesai' : (a.status === 'overdue' ? '⏰ Lewat Waktu' : '📌 Belum Dikerjakan')">
+                </span>
+              </div>
+
+              <!-- Judul tugas -->
+              <div>
+                <p class="font-semibold text-gray-800 dark:text-gray-100 leading-snug" x-text="a.title"></p>
+                <p class="text-xs text-gray-400 mt-0.5" x-text="a.quiz_title + ' · ' + a.total_questions + ' soal'"></p>
+              </div>
+
+              <!-- Deadline -->
+              <div x-show="a.deadline" class="flex items-center gap-1.5 text-xs"
+                   :class="a.status === 'overdue' ? 'text-red-500' : 'text-gray-400'">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <span x-text="a.deadline ? formatDayLabel(a.deadline) + ', ' + formatTime(a.deadline) : ''"></span>
+              </div>
+
+              <!-- Skor jika sudah selesai -->
+              <div x-show="a.status === 'done' && a.my_score !== null"
+                   class="text-xs text-gray-500 dark:text-gray-400">
+                Skor kamu: <span class="font-bold text-primary-600 dark:text-primary-400" x-text="a.my_score + ' pts'"></span>
+              </div>
+
+              <!-- Tombol aksi -->
+              <button x-show="a.status === 'pending'"
+                      @click="navigate('/classroom/' + a.class_id)"
+                      class="w-full btn-primary text-sm py-2 mt-auto">
+                Kerjakan Sekarang
+              </button>
+              <button x-show="a.status !== 'pending'"
+                      @click="navigate('/classroom/' + a.class_id)"
+                      class="w-full text-sm py-2 mt-auto rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                Lihat Kelas
+              </button>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- ── PENGAJAR: tabel ringkas ── -->
+      <template x-if="!dashboard.assignmentsLoading && dashboard.assignmentsRole === 'pengajar' && dashboard.assignments.length > 0">
+        <div class="card overflow-hidden">
+          <template x-for="a in dashboard.assignments" :key="a.id">
+            <div class="flex items-center gap-4 px-5 py-3.5 border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
+                 @click="navigate('/classroom/' + a.class_id)">
+
+              <!-- Status dot -->
+              <div class="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                   :class="a.status === 'active' ? 'bg-green-400' : 'bg-gray-300 dark:bg-gray-600'"></div>
+
+              <!-- Info -->
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate" x-text="a.title"></p>
+                <p class="text-xs text-gray-400 truncate"
+                   x-text="a.class_name + ' · ' + a.quiz_title"></p>
+              </div>
+
+              <!-- Submission progress -->
+              <div class="text-right flex-shrink-0">
+                <p class="text-sm font-bold"
+                   :class="a.submission_count >= a.member_count ? 'text-green-500' : 'text-gray-700 dark:text-gray-300'"
+                   x-text="a.submission_count + '/' + a.member_count"></p>
+                <p class="text-xs text-gray-400">mengumpulkan</p>
+              </div>
+
+              <!-- Deadline -->
+              <div class="text-right flex-shrink-0 hidden sm:block">
+                <p x-show="a.deadline"
+                   class="text-xs"
+                   :class="a.status === 'expired' ? 'text-red-400' : 'text-gray-400'"
+                   x-text="a.deadline ? formatDayLabel(a.deadline) : ''"></p>
+                <p x-show="!a.deadline" class="text-xs text-gray-300 dark:text-gray-600">Tanpa batas</p>
+              </div>
+
+              <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </div>
+          </template>
+        </div>
+      </template>
+
+    </div>
+  </template>
+  <!-- ===== END SECTION TUGAS ===== -->
+
   <!-- Skeleton -->
   <div x-show="dashboard.loading" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
     <template x-for="i in 4">

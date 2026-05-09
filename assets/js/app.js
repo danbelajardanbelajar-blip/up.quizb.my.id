@@ -41,7 +41,7 @@ function QuizBApp() {
     activity:       { list: [], loading: true, total: 0, page: 1, loadingMore: false },
     publicHistory:  { list: [], loading: true, loadingMore: false, total: 0, page: 1, limit: 50,
                       filterType: '', filterId: null, filterLabel: '' },
-    dashboard:   { stats: null, userInfo: null, recent: [], loading: true },
+    dashboard:   { stats: null, userInfo: null, recent: [], loading: true, assignments: [], assignmentsRole: '', assignmentsLoading: false },
     history:     { list: [], loading: true, total: 0, page: 1 },
     result:      { data: null, loading: true, assignId: null, assignSubmitted: false, assignSubmitting: false, assignError: '', challengeId: null, challengeData: null, mode: null },
 
@@ -608,6 +608,19 @@ function QuizBApp() {
         this.showToast(e.message, 'error', '❌');
       } finally {
         this.dashboard.loading = false;
+      }
+      // Muat tugas untuk pelajar & pengajar (parallel, tidak block stats)
+      if (this.user && ['pelajar', 'pengajar', 'admin'].includes(this.user.role)) {
+        this.dashboard.assignmentsLoading = true;
+        try {
+          const aData = await api.get('assignment.my_dashboard');
+          this.dashboard.assignments     = aData.assignments || [];
+          this.dashboard.assignmentsRole = aData.role        || '';
+        } catch (e) {
+          this.dashboard.assignments = [];
+        } finally {
+          this.dashboard.assignmentsLoading = false;
+        }
       }
     },
 
