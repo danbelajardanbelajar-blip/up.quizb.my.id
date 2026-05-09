@@ -567,7 +567,35 @@
             <p class="font-semibold text-sm text-gray-900 dark:text-white" x-text="user?.name"></p>
             <p class="text-xs text-gray-400 truncate" x-text="user?.email"></p>
           </div>
-          <!-- Menu items -->
+          <!-- Navigasi utama (sama seperti desktop) -->
+          <div class="pt-1">
+            <a @click.prevent="navigate(user ? '/dashboard' : '/');open=false" :href="user ? '#/dashboard' : '#/'"
+               class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+               :class="(user ? currentRoute==='/dashboard' : currentRoute==='/') ? 'text-primary-600 dark:text-primary-400 font-medium' : ''">🏠 Beranda</a>
+            <a @click.prevent="navigate('/activity');open=false" href="#/activity"
+               class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+               :class="currentRoute==='/activity' ? 'text-primary-600 dark:text-primary-400 font-medium' : ''">🌐 Aktivitas</a>
+            <template x-if="user">
+              <a @click.prevent="navigate('/classroom');open=false" href="#/classroom"
+                 class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                 :class="currentRoute.startsWith('/classroom') ? 'text-primary-600 dark:text-primary-400 font-medium' : ''">🏫 Kelas</a>
+            </template>
+            <template x-if="user">
+              <a @click.prevent="navigate('/challenges');open=false" href="#/challenges"
+                 class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                 :class="currentRoute==='/challenges' ? 'text-primary-600 dark:text-primary-400 font-medium' : ''">
+                <span>⚔️ Tantangan</span>
+                <span x-show="user && challenge.pendingCount > 0"
+                      class="ml-auto text-[10px] px-1.5 py-0.5 bg-red-500 text-white rounded-full font-bold"
+                      x-text="challenge.pendingCount > 9 ? '9+' : challenge.pendingCount"></span>
+              </a>
+            </template>
+          </div>
+
+          <!-- Pemisah -->
+          <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+
+          <!-- Menu akun -->
           <a @click.prevent="navigate('/dashboard');open=false" href="#/dashboard"
              class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📊 Dashboard</a>
           <a @click.prevent="navigate('/profile');open=false" href="#/profile"
@@ -580,7 +608,8 @@
             <a @click.prevent="navigate('/admin');open=false" href="#/admin"
                class="flex items-center gap-2 px-4 py-2.5 text-sm text-purple-600 dark:text-purple-400 hover:bg-gray-50 dark:hover:bg-gray-700">🛡️ Admin Panel</a>
           </template>
-          <!-- Logout -->
+
+          <!-- Pemisah + Logout -->
           <div class="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
             <button @click="logout();open=false"
                     class="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-gray-700 rounded-b-2xl transition-colors">
