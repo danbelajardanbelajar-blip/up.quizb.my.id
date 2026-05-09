@@ -333,7 +333,18 @@ function QuizBApp() {
       }
       if (/^\/assignment\/\d+\/results$/.test(route)) this.loadAssignmentResults(params[0]);
       if (/^\/assignment\/\d+\/monitor$/.test(route)) this.loadAssignmentMonitor(params[0]);
-      if (route === '/messages') this.loadMsgThreads();
+      if (route === '/messages') {
+        // Refresh thread list
+        this.loadMsgThreads();
+        // Jika ada thread aktif, reload chat-nya dan scroll ke bawah
+        if (this.msgs.activeThread) {
+          this.loadChat(this.msgs.activeThread.id, 1).then(() => this._scrollChatBottom());
+          if (!this.msgs.pollInterval) this._startMsgPoll(this.msgs.activeThread.id);
+        }
+      } else {
+        // Saat meninggalkan halaman pesan, hentikan polling
+        if (this.msgs.pollInterval) this.clearMsgPoll();
+      }
       if (route === '/search') {
         if (this.search.q.trim().length >= 2) this.loadSearch(this.search.q);
         else this.search.results = [];

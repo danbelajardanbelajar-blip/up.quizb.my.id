@@ -366,11 +366,9 @@
     </div>
 
     <!-- MESSAGES PAGE (full height, no footer) -->
-    <template x-if="currentRoute === '/messages'">
-      <div>
-        <?php include 'pages/messages.html'; ?>
-      </div>
-    </template>
+    <div x-show="currentRoute === '/messages'" x-cloak>
+      <?php include 'pages/messages.html'; ?>
+    </div>
 
     <!-- ONBOARDING PAGE -->
     <div x-show="currentRoute === '/onboarding'">

@@ -2,7 +2,6 @@
 <!-- Desktop: 100vh - top-nav(3.5rem) | Mobile: 100vh - top-nav(3.5rem) - bottom-nav(3.5rem) -->
 <div class="flex overflow-hidden bg-white dark:bg-gray-900"
      x-bind:style="{ height: window.innerWidth < 768 ? 'calc(100vh - 7rem)' : 'calc(100vh - 3.5rem)' }"
-     x-init="loadMsgThreads()"
      @resize.window="$el.style.height = window.innerWidth < 768 ? 'calc(100vh - 7rem)' : 'calc(100vh - 3.5rem)'">
 
   <!-- ── SIDEBAR: Daftar Thread ───────────────────────────────────── -->
