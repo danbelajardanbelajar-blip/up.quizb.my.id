@@ -22,6 +22,7 @@ function QuizBApp() {
     get navItems() {
       const base = [
         { href: '/',            label: '🏠 Beranda'     },
+        { href: '/activity',    label: '🌐 Aktivitas'   },
       ];
       if (this.user) {
         base.push({ href: '/classroom', label: '🏫 Kelas' });
@@ -37,6 +38,7 @@ function QuizBApp() {
     quizzes:     { list: [], loading: true, total: 0, page: 1, categoryId: 0, search: '', difficulty: '' },
     quizDetail:  { quiz: null, loading: true },
     leaderboard: { list: [], loading: true },
+    activity:    { list: [], loading: true, total: 0, page: 1, loadingMore: false },
     dashboard:   { stats: null, userInfo: null, recent: [], loading: true },
     history:     { list: [], loading: true, total: 0, page: 1 },
     result:      { data: null, loading: true, assignId: null, assignSubmitted: false, assignSubmitting: false, assignError: '', challengeId: null, challengeData: null, mode: null },
@@ -249,6 +251,7 @@ function QuizBApp() {
         'admin':       '/admin',
         'classroom':   rest[0] ? '/classroom/' + rest[0] : '/classroom',
         'challenges':  '/challenges',
+        'activity':    '/activity',
         'assignment':  rest[0] ? '/assignment/' + rest.join('/') : '/assignment',
         'onboarding':  '/onboarding',
         'messages':    '/messages',
@@ -320,6 +323,7 @@ function QuizBApp() {
       if (route === '/classroom')          this.loadClassroom();
       if (route.startsWith('/classroom/') && params[0]) this.loadClassroomDetail(params[0]);
       if (route === '/challenges')         this.loadChallenges();
+      if (route === '/activity')           this.loadActivity();
       if (!this.currentRoute.includes('/monitor') && this.assignmentView && this.assignmentView.monitorInterval) {
         clearInterval(this.assignmentView.monitorInterval);
         this.assignmentView.monitorInterval = null;
@@ -492,6 +496,38 @@ function QuizBApp() {
         this.showToast(e.message, 'error', '❌');
       } finally {
         this.leaderboard.loading = false;
+      }
+    },
+
+    async loadActivity(reset = false) {
+      if (reset) { this.activity.page = 1; this.activity.list = []; }
+      this.activity.loading = true;
+      try {
+        const resp = await api.getFull('activity.feed', { page: 1, limit: 20 });
+        this.activity.list  = Array.isArray(resp.data) ? resp.data : [];
+        this.activity.total = resp.meta?.total || 0;
+        this.activity.page  = 1;
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        this.activity.loading = false;
+      }
+    },
+
+    async loadMoreActivity() {
+      if (this.activity.loadingMore) return;
+      this.activity.loadingMore = true;
+      try {
+        const nextPage = this.activity.page + 1;
+        const resp = await api.getFull('activity.feed', { page: nextPage, limit: 20 });
+        const more = Array.isArray(resp.data) ? resp.data : [];
+        this.activity.list  = [...this.activity.list, ...more];
+        this.activity.total = resp.meta?.total || this.activity.total;
+        this.activity.page  = nextPage;
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        this.activity.loadingMore = false;
       }
     },
 

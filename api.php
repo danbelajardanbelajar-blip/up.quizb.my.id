@@ -92,6 +92,7 @@ $routes = [
     'challenge'   => __DIR__ . '/api/challenge.php',
     'notification' => __DIR__ . '/api/notification.php',
     'message'     => __DIR__ . '/api/message.php',
+    'activity'    => __DIR__ . '/api/activity.php',
 ];
 
 if (!isset($routes[$ns])) {

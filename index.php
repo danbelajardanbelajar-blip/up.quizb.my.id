@@ -333,6 +333,11 @@
       <?php include 'pages/challenges.html'; ?>
     </div>
 
+    <!-- ACTIVITY PAGE (public) -->
+    <div x-show="currentRoute === '/activity'">
+      <?php include 'pages/activity.html'; ?>
+    </div>
+
     <!-- ADMIN PAGE -->
     <div x-show="currentRoute.startsWith('/admin')">
       <?php include 'pages/admin.html'; ?>
