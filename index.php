@@ -446,39 +446,78 @@
         <span class="text-[10px] font-medium leading-none">Cari</span>
       </button>
 
-      <!-- Tantangan -->
-      <button @click="user ? navigate('/challenges') : navigate('/login')"
-              class="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors relative"
-              :class="currentRoute === '/challenges' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'">
-        <span class="relative inline-flex">
+      <!-- Slot 3: Tantangan (login) / Kategori (guest) -->
+      <template x-if="user">
+        <button @click="navigate('/challenges')"
+                class="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors relative"
+                :class="currentRoute === '/challenges' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'">
+          <span class="relative inline-flex">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z"/>
+            </svg>
+            <span x-show="challenge.pendingCount > 0"
+                  class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center"
+                  x-text="challenge.pendingCount > 9 ? '9+' : challenge.pendingCount"></span>
+          </span>
+          <span class="text-[10px] font-medium leading-none">Tantangan</span>
+        </button>
+      </template>
+      <template x-if="!user">
+        <button @click="navigate('/categories')"
+                class="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors"
+                :class="currentRoute === '/categories' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
           </svg>
-          <span x-show="user && challenge.pendingCount > 0"
-                class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center"
-                x-text="challenge.pendingCount > 9 ? '9+' : challenge.pendingCount"></span>
-        </span>
-        <span class="text-[10px] font-medium leading-none">Tantangan</span>
-      </button>
+          <span class="text-[10px] font-medium leading-none">Kategori</span>
+        </button>
+      </template>
 
-      <!-- Pesan -->
-      <button @click="user ? navigate('/messages') : navigate('/login')"
-              class="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors relative"
-              :class="currentRoute === '/messages' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'">
-        <span class="relative inline-flex">
+      <!-- Slot 4: Pesan (login) / Leaderboard (guest) -->
+      <template x-if="user">
+        <button @click="navigate('/messages')"
+                class="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors relative"
+                :class="currentRoute === '/messages' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'">
+          <span class="relative inline-flex">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+            </svg>
+            <span x-show="msgs.unreadCount > 0"
+                  class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center"
+                  x-text="msgs.unreadCount > 99 ? '99+' : msgs.unreadCount"></span>
+          </span>
+          <span class="text-[10px] font-medium leading-none">Pesan</span>
+        </button>
+      </template>
+      <template x-if="!user">
+        <button @click="navigate('/leaderboard')"
+                class="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors"
+                :class="currentRoute === '/leaderboard' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
           </svg>
-          <span x-show="user && msgs.unreadCount > 0"
-                class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center"
-                x-text="msgs.unreadCount > 99 ? '99+' : msgs.unreadCount"></span>
-        </span>
-        <span class="text-[10px] font-medium leading-none">Pesan</span>
-      </button>
+          <span class="text-[10px] font-medium leading-none">Peringkat</span>
+        </button>
+      </template>
 
-      <!-- Notifikasi — dengan panel slide-up -->
+      <!-- Slot 5: Notifikasi (login) / Aktivitas (guest) — dengan panel slide-up -->
       <div class="flex-1 relative" x-data="{ open: false }">
-        <button @click="user ? (open=!open, open && loadNotifications()) : navigate('/login')"
+
+        <!-- Guest: tombol Aktivitas -->
+        <template x-if="!user">
+          <button @click="navigate('/activity')"
+                  class="w-full h-full flex flex-col items-center justify-center gap-0.5 transition-colors"
+                  :class="currentRoute === '/activity' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            <span class="text-[10px] font-medium leading-none">Aktivitas</span>
+          </button>
+        </template>
+
+        <!-- Login: tombol Notifikasi -->
+        <template x-if="user">
+        <button @click="open=!open; open && loadNotifications()"
                 class="w-full h-full flex flex-col items-center justify-center gap-0.5 transition-colors relative"
                 :class="open ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'">
           <span class="relative inline-flex">
@@ -491,8 +530,10 @@
           </span>
           <span class="text-[10px] font-medium leading-none">Notifikasi</span>
         </button>
+        </template>
 
-        <!-- Notif slide-up panel (mobile) -->
+        <!-- Notif slide-up panel (mobile) — hanya muncul saat login -->
+        <template x-if="user">
         <div x-show="open" @click.outside="open=false" x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
              x-transition:leave="transition ease-in duration-150"
@@ -535,6 +576,8 @@
             </template>
           </div>
         </div>
+        </template>
+
       </div>
 
       <!-- Profil -->
