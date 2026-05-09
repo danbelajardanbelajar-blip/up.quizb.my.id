@@ -1,0 +1,236 @@
+<!-- PUBLIC HISTORY PAGE — adaptif: by user / by quiz / by mode -->
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+  <!-- Back button -->
+  <button @click="navigate('/activity')"
+          class="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors mb-6 group">
+    <svg class="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+    </svg>
+    Kembali ke Aktivitas
+  </button>
+
+  <!-- Header -->
+  <div class="mb-8">
+    <!-- Loading state -->
+    <div x-show="publicHistory.loading" class="space-y-2">
+      <div class="skeleton h-8 w-64 rounded"></div>
+      <div class="skeleton h-4 w-40 rounded"></div>
+    </div>
+
+    <!-- Loaded: by user -->
+    <template x-if="!publicHistory.loading && publicHistory.filterType === 'user'">
+      <div class="flex items-center gap-4">
+        <div class="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-md flex-shrink-0"
+             :style="'background: hsl(' + (publicHistory.filterId * 47 % 360) + ',58%,52%)'">
+          <span x-text="publicHistory.filterLabel?.charAt(0)?.toUpperCase()"></span>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white" x-text="publicHistory.filterLabel"></h1>
+          <p class="text-gray-500 dark:text-gray-400 mt-0.5 text-sm"
+             x-text="publicHistory.total + ' percobaan quiz'"></p>
+        </div>
+      </div>
+    </template>
+
+    <!-- Loaded: by quiz -->
+    <template x-if="!publicHistory.loading && publicHistory.filterType === 'quiz'">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-xs font-medium mb-2">
+          📋 Riwayat Quiz
+        </div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white" x-text="publicHistory.filterLabel"></h1>
+        <p class="text-gray-500 dark:text-gray-400 mt-0.5 text-sm"
+           x-text="publicHistory.total + ' percobaan oleh berbagai pengguna'"></p>
+      </div>
+    </template>
+
+    <!-- Loaded: by mode -->
+    <template x-if="!publicHistory.loading && publicHistory.filterType === 'mode'">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-2"
+             :class="{
+               'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400':   publicHistory.filterId === 'exam',
+               'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400': publicHistory.filterId === 'instant',
+               'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400': publicHistory.filterId === 'end',
+               'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400':         publicHistory.filterId === 'challenge',
+             }">
+          <span x-text="{exam:'📝',instant:'⚡',end:'🎓',challenge:'⚔️'}[publicHistory.filterId] || '🎮'"></span>
+          <span>Mode</span>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white"
+            x-text="'Mode ' + publicHistory.filterLabel"></h1>
+        <p class="text-gray-500 dark:text-gray-400 mt-0.5 text-sm"
+           x-text="publicHistory.total + ' percobaan dengan mode ini'"></p>
+      </div>
+    </template>
+  </div>
+
+  <!-- Loading Skeleton -->
+  <div x-show="publicHistory.loading" class="space-y-3">
+    <template x-for="i in 8">
+      <div class="card p-4 flex items-center gap-4">
+        <div class="skeleton w-12 h-12 rounded-xl flex-shrink-0"></div>
+        <div class="flex-1 space-y-2">
+          <div class="skeleton h-4 w-48 rounded"></div>
+          <div class="skeleton h-3 w-32 rounded"></div>
+          <div class="skeleton h-2 w-full max-w-xs rounded-full"></div>
+        </div>
+        <div class="skeleton h-12 w-12 rounded-xl flex-shrink-0"></div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Empty state -->
+  <div x-show="!publicHistory.loading && publicHistory.list.length === 0"
+       class="text-center py-20 text-gray-400">
+    <p class="text-5xl mb-4">📭</p>
+    <p class="text-lg font-medium">Belum ada percobaan</p>
+    <button @click="navigate('/quizzes')" class="btn-primary mt-6 px-6 py-2.5 text-sm">🚀 Mulai Quiz</button>
+  </div>
+
+  <!-- List -->
+  <div x-show="!publicHistory.loading && publicHistory.list.length > 0" class="space-y-3">
+    <template x-for="item in publicHistory.list" :key="item.id">
+      <div class="card p-4 sm:p-5 flex items-start gap-4 hover:shadow-md transition-shadow duration-200 group">
+
+        <!-- Score circle -->
+        <div class="w-12 h-12 rounded-xl flex flex-col items-center justify-center font-bold text-sm flex-shrink-0 border"
+             :class="{
+               'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400': item.badge === 'perfect',
+               'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400':    item.badge === 'good',
+               'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-600 dark:text-yellow-400': item.badge === 'ok',
+               'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-500 dark:text-red-400':          item.badge === 'low',
+             }">
+          <span class="text-xs font-bold" x-text="item.score"></span>
+          <span class="text-[10px] text-gray-400">pts</span>
+        </div>
+
+        <!-- Content -->
+        <div class="flex-1 min-w-0">
+
+          <!-- Row 1: user name (klik → by user) | quiz title (klik → by quiz) -->
+          <div class="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-sm leading-snug">
+            <!-- Nama user — tampil hanya jika filter bukan by-user -->
+            <template x-if="publicHistory.filterType !== 'user'">
+              <button @click.stop="openPublicHistory('user', item.user_id, item.user_name)"
+                      class="font-semibold text-gray-800 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+                <span x-text="item.user_name"></span>
+              </button>
+            </template>
+            <template x-if="publicHistory.filterType === 'user'">
+              <span class="font-semibold text-gray-800 dark:text-gray-100" x-text="item.user_name"></span>
+            </template>
+
+            <span class="text-gray-400 text-xs" x-show="publicHistory.filterType !== 'user'">mengerjakan</span>
+
+            <!-- Judul quiz — tampil hanya jika filter bukan by-quiz -->
+            <template x-if="publicHistory.filterType !== 'quiz'">
+              <button @click.stop="openPublicHistory('quiz', item.quiz_id, item.quiz_title)"
+                      class="font-semibold text-primary-600 dark:text-primary-400 hover:underline truncate max-w-[200px] sm:max-w-xs">
+                <span x-text="item.quiz_title"></span>
+              </button>
+            </template>
+            <template x-if="publicHistory.filterType === 'quiz'">
+              <span class="font-semibold text-gray-700 dark:text-gray-300 truncate max-w-xs" x-text="item.quiz_title"></span>
+            </template>
+          </div>
+
+          <!-- Row 2: meta info -->
+          <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-gray-400">
+
+            <!-- Kategori -->
+            <span x-show="item.category_name" class="inline-flex items-center gap-0.5">
+              <span x-text="item.category_icon || '📂'"></span>
+              <span x-text="item.category_name"></span>
+            </span>
+
+            <span class="text-gray-200 dark:text-gray-700" x-show="item.category_name">•</span>
+
+            <!-- Mode — klik → by mode (jika filter bukan by-mode) -->
+            <template x-if="publicHistory.filterType !== 'mode'">
+              <button @click.stop="openPublicHistory('mode', item.mode, {exam:'Ujian',instant:'Instan',end:'Akhir',challenge:'Tantangan'}[item.mode] || item.mode)"
+                      class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full transition-colors"
+                      :class="{
+                        'bg-blue-50 dark:bg-blue-900/20 text-blue-500 hover:bg-blue-100':         item.mode === 'exam',
+                        'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 hover:bg-yellow-100': item.mode === 'instant',
+                        'bg-purple-50 dark:bg-purple-900/20 text-purple-500 hover:bg-purple-100': item.mode === 'end',
+                        'bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100':             item.mode === 'challenge',
+                      }">
+                <span x-text="{exam:'📝',instant:'⚡',end:'🎓',challenge:'⚔️'}[item.mode] || '🎮'"></span>
+                <span x-text="{exam:'Ujian',instant:'Instan',end:'Akhir',challenge:'Tantangan'}[item.mode] || item.mode"></span>
+              </button>
+            </template>
+            <template x-if="publicHistory.filterType === 'mode'">
+              <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full"
+                    :class="{
+                      'bg-blue-50 dark:bg-blue-900/20 text-blue-500':         item.mode === 'exam',
+                      'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600':   item.mode === 'instant',
+                      'bg-purple-50 dark:bg-purple-900/20 text-purple-500':   item.mode === 'end',
+                      'bg-red-50 dark:bg-red-900/20 text-red-500':            item.mode === 'challenge',
+                    }">
+                <span x-text="{exam:'📝',instant:'⚡',end:'🎓',challenge:'⚔️'}[item.mode] || '🎮'"></span>
+                <span x-text="{exam:'Ujian',instant:'Instan',end:'Akhir',challenge:'Tantangan'}[item.mode] || item.mode"></span>
+              </span>
+            </template>
+
+            <span class="text-gray-200 dark:text-gray-700">•</span>
+            <span x-text="formatRelative(item.completed_at)"></span>
+            <span x-show="item.time_taken > 0" class="text-gray-200 dark:text-gray-700">•</span>
+            <span x-show="item.time_taken > 0"
+                  x-text="'⏱ ' + (item.time_taken >= 60 ? Math.floor(item.time_taken/60) + 'm ' + (item.time_taken%60) + 'd' : item.time_taken + 'd')"></span>
+          </div>
+
+          <!-- Row 3: progress bar -->
+          <div class="mt-2.5 flex items-center gap-3">
+            <div class="flex-1 max-w-[200px]">
+              <div class="flex justify-between text-xs text-gray-400 mb-1">
+                <span x-text="item.correct_answers + '/' + item.total_questions + ' benar'"></span>
+                <span x-text="item.percent + '%'"
+                      :class="{
+                        'text-green-500 font-semibold': item.badge === 'perfect',
+                        'text-blue-500 font-semibold':  item.badge === 'good',
+                        'text-yellow-500':              item.badge === 'ok',
+                        'text-red-400':                 item.badge === 'low',
+                      }"></span>
+              </div>
+              <div class="h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-700"
+                     :style="'width:' + item.percent + '%'"
+                     :class="{
+                       'bg-green-500': item.badge === 'perfect',
+                       'bg-blue-500':  item.badge === 'good',
+                       'bg-yellow-400': item.badge === 'ok',
+                       'bg-red-400':   item.badge === 'low',
+                     }"></div>
+              </div>
+            </div>
+            <!-- Passed badge -->
+            <span x-show="item.passed !== null"
+                  class="text-xs px-2 py-0.5 rounded-full font-medium"
+                  :class="item.passed ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-500'"
+                  x-text="item.passed ? '✅ Lulus' : '❌ Gagal'"></span>
+          </div>
+        </div>
+
+      </div>
+    </template>
+
+    <!-- Pagination -->
+    <div x-show="publicHistory.total > publicHistory.limit" class="flex items-center justify-center gap-2 mt-8">
+      <button @click="publicHistory.page--; loadPublicHistory()"
+              :disabled="publicHistory.page <= 1"
+              class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">
+        ← Prev
+      </button>
+      <span class="text-sm text-gray-500 dark:text-gray-400 px-3"
+            x-text="'Halaman ' + publicHistory.page + ' dari ' + Math.ceil(publicHistory.total / publicHistory.limit)"></span>
+      <button @click="publicHistory.page++; loadPublicHistory()"
+              :disabled="publicHistory.page * publicHistory.limit >= publicHistory.total"
+              class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">
+        Next →
+      </button>
+    </div>
+  </div>
+
+</div>

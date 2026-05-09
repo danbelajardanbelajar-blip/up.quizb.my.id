@@ -38,7 +38,9 @@ function QuizBApp() {
     quizzes:     { list: [], loading: true, total: 0, page: 1, categoryId: 0, search: '', difficulty: '' },
     quizDetail:  { quiz: null, loading: true },
     leaderboard: { list: [], loading: true },
-    activity:    { list: [], loading: true, total: 0, page: 1, loadingMore: false },
+    activity:       { list: [], loading: true, total: 0, page: 1, loadingMore: false },
+    publicHistory:  { list: [], loading: true, total: 0, page: 1, limit: 20,
+                      filterType: '', filterId: null, filterLabel: '' },
     dashboard:   { stats: null, userInfo: null, recent: [], loading: true },
     history:     { list: [], loading: true, total: 0, page: 1 },
     result:      { data: null, loading: true, assignId: null, assignSubmitted: false, assignSubmitting: false, assignError: '', challengeId: null, challengeData: null, mode: null },
@@ -250,8 +252,9 @@ function QuizBApp() {
         'register':    '/register',
         'admin':       '/admin',
         'classroom':   rest[0] ? '/classroom/' + rest[0] : '/classroom',
-        'challenges':  '/challenges',
-        'activity':    '/activity',
+        'challenges':      '/challenges',
+        'activity':        '/activity',
+        'public-history':  '/public-history',
         'assignment':  rest[0] ? '/assignment/' + rest.join('/') : '/assignment',
         'onboarding':  '/onboarding',
         'messages':    '/messages',
@@ -323,7 +326,8 @@ function QuizBApp() {
       if (route === '/classroom')          this.loadClassroom();
       if (route.startsWith('/classroom/') && params[0]) this.loadClassroomDetail(params[0]);
       if (route === '/challenges')         this.loadChallenges();
-      if (route === '/activity')           this.loadActivity();
+      if (route === '/activity')            this.loadActivity();
+      if (route === '/public-history')     this.loadPublicHistory();
       if (!this.currentRoute.includes('/monitor') && this.assignmentView && this.assignmentView.monitorInterval) {
         clearInterval(this.assignmentView.monitorInterval);
         this.assignmentView.monitorInterval = null;
@@ -528,6 +532,43 @@ function QuizBApp() {
         this.showToast(e.message, 'error', '❌');
       } finally {
         this.activity.loadingMore = false;
+      }
+    },
+
+    // Shortcut: set filter lalu navigate ke /public-history
+    openPublicHistory(type, id, label) {
+      this.publicHistory.filterType  = type;
+      this.publicHistory.filterId    = id;
+      this.publicHistory.filterLabel = label;
+      this.publicHistory.page        = 1;
+      this.publicHistory.list        = [];
+      this.navigate('/public-history');
+    },
+
+    async loadPublicHistory() {
+      if (!this.publicHistory.filterType) return;
+      this.publicHistory.loading = true;
+      try {
+        const params = { page: this.publicHistory.page, limit: this.publicHistory.limit };
+        let action;
+        if (this.publicHistory.filterType === 'user') {
+          action = 'activity.user_history';
+          params.user_id = this.publicHistory.filterId;
+        } else if (this.publicHistory.filterType === 'quiz') {
+          action = 'activity.quiz_history';
+          params.quiz_id = this.publicHistory.filterId;
+        } else {
+          action = 'activity.mode_history';
+          params.mode = this.publicHistory.filterId;
+        }
+        const resp = await api.get(action, params);
+        this.publicHistory.list        = Array.isArray(resp.data) ? resp.data : [];
+        this.publicHistory.total       = resp.meta?.total || 0;
+        this.publicHistory.filterLabel = resp.filter?.label || this.publicHistory.filterLabel;
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        this.publicHistory.loading = false;
       }
     },
 

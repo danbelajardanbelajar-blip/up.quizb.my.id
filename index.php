@@ -338,6 +338,11 @@
       <?php include 'pages/activity.html'; ?>
     </div>
 
+    <!-- PUBLIC HISTORY PAGE (by user / quiz / mode) -->
+    <div x-show="currentRoute === '/public-history'">
+      <?php include 'pages/public-history.html'; ?>
+    </div>
+
     <!-- ADMIN PAGE -->
     <div x-show="currentRoute.startsWith('/admin')">
       <?php include 'pages/admin.html'; ?>

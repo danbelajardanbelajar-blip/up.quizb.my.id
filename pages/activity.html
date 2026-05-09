@@ -45,26 +45,42 @@
         <!-- Content -->
         <div class="flex-1 min-w-0">
           <!-- Name + action -->
-          <p class="text-sm text-gray-800 dark:text-gray-200 leading-snug">
-            <span class="font-semibold" x-text="item.user_name"></span>
-            <span class="text-gray-500 dark:text-gray-400"> menyelesaikan </span>
-            <button @click="navigate('/quiz/' + item.quiz_id)"
+          <p class="text-sm text-gray-800 dark:text-gray-200 leading-snug flex flex-wrap items-baseline gap-x-1 gap-y-0.5">
+            <!-- Nama user — klik → public history by user -->
+            <button @click="openPublicHistory('user', item.user_id, item.user_name)"
+                    class="font-semibold hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+              <span x-text="item.user_name"></span>
+            </button>
+            <span class="text-gray-500 dark:text-gray-400 text-xs">menyelesaikan</span>
+            <!-- Judul quiz — klik → public history by quiz -->
+            <button @click="openPublicHistory('quiz', item.quiz_id, item.quiz_title)"
                     class="font-semibold text-primary-600 dark:text-primary-400 hover:underline truncate max-w-[180px] sm:max-w-xs inline-block align-bottom"
                     x-text="item.quiz_title"></button>
           </p>
 
-          <!-- Category + time -->
-          <div class="flex items-center gap-2 mt-1 flex-wrap">
+          <!-- Category + time + mode -->
+          <div class="flex items-center gap-2 mt-1.5 flex-wrap">
             <span x-show="item.category_name"
                   class="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
               <span x-text="item.category_icon || '📂'"></span>
               <span x-text="item.category_name"></span>
             </span>
-            <span class="text-xs text-gray-300 dark:text-gray-600">•</span>
+            <span class="text-xs text-gray-300 dark:text-gray-600" x-show="item.category_name">•</span>
             <span class="text-xs text-gray-400" x-text="formatRelative(item.completed_at)"></span>
-            <span x-show="item.mode && item.mode !== 'exam'"
-                  class="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 capitalize"
-                  x-text="item.mode === 'instant' ? '⚡ Instan' : (item.mode === 'challenge' ? '⚔️ Tantangan' : item.mode)"></span>
+            <span class="text-xs text-gray-300 dark:text-gray-600">•</span>
+            <!-- Mode — klik → public history by mode -->
+            <button @click="openPublicHistory('mode', item.mode, {exam:'Ujian',instant:'Instan',end:'Akhir',challenge:'Tantangan'}[item.mode] || item.mode)"
+                    class="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full transition-colors"
+                    :class="{
+                      'bg-blue-50 dark:bg-blue-900/20 text-blue-500 hover:bg-blue-100':         item.mode === 'exam',
+                      'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 hover:bg-yellow-100': item.mode === 'instant',
+                      'bg-purple-50 dark:bg-purple-900/20 text-purple-500 hover:bg-purple-100': item.mode === 'end',
+                      'bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100':             item.mode === 'challenge',
+                      'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200':           !['exam','instant','end','challenge'].includes(item.mode),
+                    }">
+              <span x-text="{exam:'📝',instant:'⚡',end:'🎓',challenge:'⚔️'}[item.mode] || '🎮'"></span>
+              <span x-text="{exam:'Ujian',instant:'Instan',end:'Akhir',challenge:'Tantangan'}[item.mode] || item.mode"></span>
+            </button>
           </div>
 
           <!-- Stats bar -->
