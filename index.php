@@ -62,7 +62,7 @@
 
       <!-- ── MOBILE: logo centered, nothing else ─────────── -->
       <div class="flex md:hidden items-center justify-center h-14">
-        <a href="#/" @click.prevent="navigate('/')" class="flex items-center gap-2 group">
+        <a :href="user ? '#/dashboard' : '#/'" @click.prevent="navigate(user ? '/dashboard' : '/')" class="flex items-center gap-2 group">
           <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
             <span class="text-white font-bold text-sm">Q</span>
           </div>
@@ -74,7 +74,7 @@
       <div class="hidden md:flex items-center h-16 gap-6">
 
         <!-- Logo -->
-        <a href="#/" @click.prevent="navigate('/')" class="flex items-center gap-2 group flex-shrink-0">
+        <a :href="user ? '#/dashboard' : '#/'" @click.prevent="navigate(user ? '/dashboard' : '/')" class="flex items-center gap-2 group flex-shrink-0">
           <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
             <span class="text-white font-bold text-sm">Q</span>
           </div>
