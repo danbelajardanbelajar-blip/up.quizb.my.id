@@ -554,6 +554,46 @@
           <span class="text-[10px] font-medium leading-none">Profil</span>
         </button>
 
+        <!-- Profile mini menu (mobile) -->
+        <div x-show="open" @click.outside="open=false"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-2"
+             class="absolute bottom-full right-0 mb-2 w-52 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 py-1 z-50"
+             style="right: 0">
+          <!-- User info -->
+          <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+            <p class="font-semibold text-sm text-gray-900 dark:text-white" x-text="user?.name"></p>
+            <p class="text-xs text-gray-400 truncate" x-text="user?.email"></p>
+          </div>
+          <!-- Menu items -->
+          <a @click.prevent="navigate('/dashboard');open=false" href="#/dashboard"
+             class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📊 Dashboard</a>
+          <a @click.prevent="navigate('/profile');open=false" href="#/profile"
+             class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">👤 Profil</a>
+          <a @click.prevent="navigate('/history');open=false" href="#/history"
+             class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📋 Histori</a>
+          <a @click.prevent="navigate('/settings');open=false" href="#/settings"
+             class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">⚙️ Pengaturan</a>
+          <template x-if="user && user.role === 'admin'">
+            <a @click.prevent="navigate('/admin');open=false" href="#/admin"
+               class="flex items-center gap-2 px-4 py-2.5 text-sm text-purple-600 dark:text-purple-400 hover:bg-gray-50 dark:hover:bg-gray-700">🛡️ Admin Panel</a>
+          </template>
+          <!-- Logout -->
+          <div class="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
+            <button @click="logout();open=false"
+                    class="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-gray-700 rounded-b-2xl transition-colors">
+              🚪 Keluar
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </nav>
+
+
         <!-- Profile mini menu -->
         <div x-show="open" @click.outside="open=false" x-transition
              class="absolute bottom-full right-0 mb-2 w-52 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 py-1 z-50"
