@@ -17,12 +17,13 @@ function activity_feed(): void {
         SELECT COUNT(*) AS cnt
         FROM attempts a
         INNER JOIN quizzes q ON q.id = a.quiz_id
-        WHERE a.user_id IS NOT NULL
-          AND a.completed_at IS NOT NULL
-          AND q.is_published = 1
+        INNER JOIN users   u ON u.id = a.user_id
+        WHERE q.is_published = 1
+          AND u.is_active = 1
     ")['cnt'];
 
     // Feed: attempt selesai beserta info user & quiz
+    // Kolom yang benar: correct_count (bukan correct_answers), total_questions dari quizzes
     $rows = DB::all("
         SELECT
             a.id,
@@ -31,21 +32,19 @@ function activity_feed(): void {
             u.name              AS user_name,
             q.id                AS quiz_id,
             q.title             AS quiz_title,
+            q.total_questions   AS total_questions,
             c.name              AS category_name,
             c.icon              AS category_icon,
             a.score,
-            a.total_questions,
-            a.correct_answers,
+            a.correct_count     AS correct_answers,
             a.time_taken,
             a.mode,
             a.completed_at
         FROM attempts a
-        INNER JOIN users   u ON u.id   = a.user_id
-        INNER JOIN quizzes q ON q.id   = a.quiz_id
-        LEFT  JOIN categories c ON c.id = q.category_id
-        WHERE a.user_id IS NOT NULL
-          AND a.completed_at IS NOT NULL
-          AND q.is_published = 1
+        INNER JOIN users      u ON u.id  = a.user_id
+        INNER JOIN quizzes    q ON q.id  = a.quiz_id
+        LEFT  JOIN categories c ON c.id  = q.category_id
+        WHERE q.is_published = 1
           AND u.is_active = 1
         ORDER BY a.completed_at DESC
         LIMIT ? OFFSET ?
