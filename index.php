@@ -105,10 +105,10 @@
           </svg>
           <input type="search"
                  x-model="search.q"
-                 @focus="focused = true; if(currentRoute !== '/search') navigate('/search')"
-                 @input.debounce.300ms="loadSearch(search.q)"
+                 @focus="focused = true"
+                 @input.debounce.300ms="if(search.q.trim().length >= 2) { if(currentRoute !== '/search') navigate('/search'); loadSearch(search.q); } else { search.results = []; }"
                  @keydown.escape="search.q=''; search.results=[]; $el.blur(); focused=false"
-                 @keydown.enter="search.q.trim().length >= 2 && navigate('/search')"
+                 @keydown.enter="search.q.trim().length >= 2 && (currentRoute !== '/search' ? navigate('/search') : loadSearch(search.q))"
                  placeholder="Cari quiz..."
                  class="w-48 lg:w-64 pl-9 pr-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-400 focus:bg-white dark:focus:bg-gray-700 transition-all placeholder-gray-400"/>
         </div>

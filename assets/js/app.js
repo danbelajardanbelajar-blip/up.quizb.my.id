@@ -334,7 +334,10 @@ function QuizBApp() {
       if (/^\/assignment\/\d+\/results$/.test(route)) this.loadAssignmentResults(params[0]);
       if (/^\/assignment\/\d+\/monitor$/.test(route)) this.loadAssignmentMonitor(params[0]);
       if (route === '/messages') this.loadMsgThreads();
-      if (route === '/search')   { this.search.q = ''; this.search.results = []; }
+      if (route === '/search') {
+        if (this.search.q.trim().length >= 2) this.loadSearch(this.search.q);
+        else this.search.results = [];
+      }
 
       // Complete progress bar
       this._finishProgress();
