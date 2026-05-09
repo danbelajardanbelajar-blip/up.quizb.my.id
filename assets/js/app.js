@@ -1753,12 +1753,29 @@ function QuizBApp() {
     },
 
     async openThread(th) {
+      // Kurangi unreadCount segera sebelum server merespons
+      const wasUnread = (int => int > 0 ? int : 0)(th.unread_count || 0);
+      if (wasUnread > 0) {
+        this.msgs.unreadCount = Math.max(0, this.msgs.unreadCount - wasUnread);
+      }
+
       this.msgs.activeThread = th;
       this.msgs.chat = [];
       this.msgs.chatPage = 1;
       this.msgs.chatTotal = 0;
       await this.loadChat(th.id, 1);
       this._startMsgPoll(th.id);
+
+      // Tandai thread lokal sebagai sudah dibaca
+      const t = this.msgs.threads.find(t => t.id === th.id);
+      if (t) t.unread_count = 0;
+
+      // Refresh count dari server untuk akurasi
+      try {
+        const counts = await api.get('notification.counts');
+        this.msgs.unreadCount = counts.messages || 0;
+        this.notif.unreadCount = counts.notifications || 0;
+      } catch (_) {}
     },
 
     async loadChat(threadId, page) {
@@ -1877,7 +1894,16 @@ function QuizBApp() {
       this.clearMsgPoll();
       this.msgs.pollInterval = setInterval(async () => {
         if (this.msgs.activeThread?.id === threadId) {
+          const prevLen = this.msgs.chat.length;
           await this.loadChat(threadId, 1);
+          // Jika ada pesan baru masuk, refresh unread count
+          if (this.msgs.chat.length !== prevLen) {
+            try {
+              const counts = await api.get('notification.counts');
+              this.msgs.unreadCount  = counts.messages      || 0;
+              this.notif.unreadCount = counts.notifications || 0;
+            } catch (_) {}
+          }
         } else {
           this.clearMsgPoll();
         }
