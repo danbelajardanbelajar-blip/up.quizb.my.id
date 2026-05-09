@@ -39,7 +39,7 @@ function QuizBApp() {
     quizDetail:  { quiz: null, loading: true },
     leaderboard: { list: [], loading: true },
     activity:       { list: [], loading: true, total: 0, page: 1, loadingMore: false },
-    publicHistory:  { list: [], loading: true, total: 0, page: 1, limit: 20,
+    publicHistory:  { list: [], loading: true, loadingMore: false, total: 0, page: 1, limit: 50,
                       filterType: '', filterId: null, filterLabel: '' },
     dashboard:   { stats: null, userInfo: null, recent: [], loading: true },
     history:     { list: [], loading: true, total: 0, page: 1 },
@@ -542,25 +542,32 @@ function QuizBApp() {
       this.publicHistory.filterLabel = label;
       this.publicHistory.page        = 1;
       this.publicHistory.list        = [];
+      this.publicHistory.total       = 0;
       this.navigate('/public-history');
+    },
+
+    // Helper: bangun params & action sesuai filterType
+    _publicHistoryParams() {
+      const params = { page: this.publicHistory.page, limit: this.publicHistory.limit };
+      let action;
+      if (this.publicHistory.filterType === 'user') {
+        action = 'activity.user_history';
+        params.user_id = this.publicHistory.filterId;
+      } else if (this.publicHistory.filterType === 'quiz') {
+        action = 'activity.quiz_history';
+        params.quiz_id = this.publicHistory.filterId;
+      } else {
+        action = 'activity.mode_history';
+        params.mode = this.publicHistory.filterId;
+      }
+      return { action, params };
     },
 
     async loadPublicHistory() {
       if (!this.publicHistory.filterType) return;
       this.publicHistory.loading = true;
       try {
-        const params = { page: this.publicHistory.page, limit: this.publicHistory.limit };
-        let action;
-        if (this.publicHistory.filterType === 'user') {
-          action = 'activity.user_history';
-          params.user_id = this.publicHistory.filterId;
-        } else if (this.publicHistory.filterType === 'quiz') {
-          action = 'activity.quiz_history';
-          params.quiz_id = this.publicHistory.filterId;
-        } else {
-          action = 'activity.mode_history';
-          params.mode = this.publicHistory.filterId;
-        }
+        const { action, params } = this._publicHistoryParams();
         const resp = await api.get(action, params);
         this.publicHistory.list        = Array.isArray(resp.data) ? resp.data : [];
         this.publicHistory.total       = resp.meta?.total || 0;
@@ -569,6 +576,24 @@ function QuizBApp() {
         this.showToast(e.message, 'error', '❌');
       } finally {
         this.publicHistory.loading = false;
+      }
+    },
+
+    async loadMorePublicHistory() {
+      if (this.publicHistory.loadingMore) return;
+      this.publicHistory.loadingMore = true;
+      try {
+        this.publicHistory.page++;
+        const { action, params } = this._publicHistoryParams();
+        const resp = await api.get(action, params);
+        const more = Array.isArray(resp.data) ? resp.data : [];
+        this.publicHistory.list  = [...this.publicHistory.list, ...more];
+        this.publicHistory.total = resp.meta?.total || this.publicHistory.total;
+      } catch (e) {
+        this.publicHistory.page--;          // rollback page jika gagal
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        this.publicHistory.loadingMore = false;
       }
     },
 

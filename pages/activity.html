@@ -66,7 +66,12 @@
               <span x-text="item.category_name"></span>
             </span>
             <span class="text-xs text-gray-300 dark:text-gray-600" x-show="item.category_name">•</span>
-            <span class="text-xs text-gray-400" x-text="formatRelative(item.completed_at)"></span>
+            <span class="inline-flex items-center gap-1 text-xs text-gray-400"
+                  :title="new Date(item.completed_at).toLocaleString('id-ID')">
+              <span x-text="formatRelative(item.completed_at)"></span>
+              <span class="text-gray-300 dark:text-gray-600">·</span>
+              <span x-text="formatDayLabel(item.completed_at) + ', ' + formatTime(item.completed_at)"></span>
+            </span>
             <span class="text-xs text-gray-300 dark:text-gray-600">•</span>
             <!-- Mode — klik → public history by mode -->
             <button @click="openPublicHistory('mode', item.mode, {exam:'Ujian',instant:'Instan',end:'Akhir',challenge:'Tantangan'}[item.mode] || item.mode)"

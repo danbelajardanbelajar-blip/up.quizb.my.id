@@ -216,21 +216,36 @@
       </div>
     </template>
 
-    <!-- Pagination -->
-    <div x-show="publicHistory.total > publicHistory.limit" class="flex items-center justify-center gap-2 mt-8">
-      <button @click="publicHistory.page--; loadPublicHistory()"
-              :disabled="publicHistory.page <= 1"
-              class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">
-        ← Prev
-      </button>
-      <span class="text-sm text-gray-500 dark:text-gray-400 px-3"
-            x-text="'Halaman ' + publicHistory.page + ' dari ' + Math.ceil(publicHistory.total / publicHistory.limit)"></span>
-      <button @click="publicHistory.page++; loadPublicHistory()"
-              :disabled="publicHistory.page * publicHistory.limit >= publicHistory.total"
-              class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">
-        Next →
+    <!-- Counter: tampil berapa record dari total -->
+    <div x-show="publicHistory.list.length > 0"
+         class="text-center text-xs text-gray-400 dark:text-gray-600 mt-6">
+      Menampilkan <span class="font-medium text-gray-500 dark:text-gray-400" x-text="publicHistory.list.length"></span>
+      dari <span class="font-medium text-gray-500 dark:text-gray-400" x-text="publicHistory.total"></span> record
+    </div>
+
+    <!-- Load More -->
+    <div x-show="publicHistory.list.length > 0 && publicHistory.list.length < publicHistory.total"
+         class="text-center mt-4">
+      <button @click="loadMorePublicHistory()"
+              :disabled="publicHistory.loadingMore"
+              class="px-6 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors">
+        <span x-show="!publicHistory.loadingMore">Muat lebih banyak</span>
+        <span x-show="publicHistory.loadingMore" class="flex items-center justify-center gap-2">
+          <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          Memuat...
+        </span>
       </button>
     </div>
+
+    <!-- End of list -->
+    <div x-show="publicHistory.list.length > 0 && publicHistory.list.length >= publicHistory.total && publicHistory.total > 0"
+         class="text-center py-6 text-xs text-gray-300 dark:text-gray-700">
+      — Semua <span x-text="publicHistory.total"></span> record telah ditampilkan —
+    </div>
+
   </div>
 
 </div>
