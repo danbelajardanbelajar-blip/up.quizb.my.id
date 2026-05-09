@@ -21,8 +21,8 @@ function QuizBApp() {
     // Nav items — dinamis di getter, tapi definisikan base dulu
     get navItems() {
       const base = [
-        { href: '/',            label: '🏠 Beranda'     },
-        { href: '/activity',    label: '🌐 Aktivitas'   },
+        { href: this.user ? '/dashboard' : '/', label: '🏠 Beranda' },
+        { href: '/activity',                    label: '🌐 Aktivitas' },
       ];
       if (this.user) {
         base.push({ href: '/classroom', label: '🏫 Kelas' });
@@ -309,9 +309,6 @@ function QuizBApp() {
         this.showToast('Akses ditolak', 'error', '🚫');
         return this.navigate('/');
       }
-      // User sudah login → redirect dari home ke dashboard
-      if (route === '/' && this.user) return this.navigate('/dashboard');
-
       // Load data per route
       if (route === '/')                   this.loadHome();
       if (route === '/categories')         this.loadCategories();
