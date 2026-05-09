@@ -96,6 +96,23 @@
         <!-- Spacer -->
         <div class="flex-1"></div>
 
+        <!-- Search bar desktop -->
+        <div class="relative" x-data="{ focused: false }">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+               fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input type="search"
+                 x-model="search.q"
+                 @focus="focused = true; if(currentRoute !== '/search') navigate('/search')"
+                 @input.debounce.300ms="loadSearch(search.q)"
+                 @keydown.escape="search.q=''; search.results=[]; $el.blur(); focused=false"
+                 @keydown.enter="search.q.trim().length >= 2 && navigate('/search')"
+                 placeholder="Cari quiz..."
+                 class="w-48 lg:w-64 pl-9 pr-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-400 focus:bg-white dark:focus:bg-gray-700 transition-all placeholder-gray-400"/>
+        </div>
+
         <!-- Dark Mode Toggle -->
         <button @click="toggleDark()"
                 class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"

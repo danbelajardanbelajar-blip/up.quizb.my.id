@@ -1878,9 +1878,6 @@ function QuizBApp() {
     },
 
     formatRelative(dateStr) { return this.formatTimeAgo(dateStr); },
-
-
-    // ============================================================
     // SEARCH PAGE
     // ============================================================
     async loadSearch(q) {
