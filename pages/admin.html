@@ -737,7 +737,7 @@
         <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
           <div>
             <h3 class="font-bold text-gray-900 dark:text-white">📥 Import Soal dari File</h3>
-            <p class="text-xs text-gray-400 mt-0.5">Format yang didukung: Word (.docx), Excel (.xlsx), dan CSV (.csv)</p>
+            <p class="text-xs text-gray-400 mt-0.5">Format yang didukung: Word (.doc/.docx), Excel (.xlsx/.xls), CSV (.csv), dan PDF (.pdf)</p>
           </div>
           <button @click="admin.importFile.show = false" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
         </div>
@@ -747,12 +747,9 @@
           <div class="space-y-5">
             <div class="grid sm:grid-cols-3 gap-3">
               <div class="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 text-sm">
-                <p class="font-semibold text-blue-700 dark:text-blue-400 mb-2">📄 Word (.docx)</p>
+                <p class="font-semibold text-blue-700 dark:text-blue-400 mb-2">📄 Word (.doc/.docx)</p>
                 <p class="text-blue-600 dark:text-blue-300 text-xs leading-relaxed">
-                  <code class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded">1. Teks soal?</code><br>
-                  <code class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded">A. Pilihan A *</code> ← * = benar<br>
-                  <code class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded">B. Pilihan B</code><br>
-                  <code class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded">Penjelasan: ...</code>
+                  Dapat memproses berbagai template Word dengan nomor soal, opsi A/B/C/D, kunci, dan penjelasan.
                 </p>
               </div>
               <div class="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 text-sm">
@@ -774,11 +771,17 @@
                   Separator koma <code class="bg-orange-100 dark:bg-orange-900/40 px-1 rounded">,</code> atau titik koma <code class="bg-orange-100 dark:bg-orange-900/40 px-1 rounded">;</code>
                 </p>
               </div>
+              <div class="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 text-sm">
+                <p class="font-semibold text-purple-700 dark:text-purple-400 mb-2">📄 PDF (.pdf)</p>
+                <p class="text-purple-600 dark:text-purple-300 text-xs leading-relaxed">
+                  PDF akan diproses dengan text extraction / OCR bila tersedia di server.
+                </p>
+              </div>
             </div>
 
             <div>
               <label class="form-label">Pilih File</label>
-              <input id="import-file-input" type="file" accept=".docx,.xlsx,.xls,.csv"
+              <input id="import-file-input" type="file" accept=".doc,.docx,.xlsx,.xls,.csv,.pdf"
                      class="block w-full text-sm text-gray-600 dark:text-gray-300
                             file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0
                             file:text-sm file:font-semibold

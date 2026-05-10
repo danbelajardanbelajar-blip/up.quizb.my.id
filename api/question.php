@@ -193,6 +193,151 @@ function question_delete(): void {
 // HELPERS — DOCX / XLSX PARSER
 // ============================================
 
+function _findExecutable(string $name): ?string {
+    if (!function_exists('shell_exec')) return null;
+    $cmd = PHP_OS_FAMILY === 'Windows' ? 'where ' . escapeshellarg($name) : 'command -v ' . escapeshellarg($name);
+    $output = shell_exec($cmd . ' 2>NUL');
+    if (!$output) return null;
+    $path = trim(explode("\n", $output)[0]);
+    return $path !== '' ? $path : null;
+}
+
+function _runShell(string $cmd): string {
+    if (!function_exists('shell_exec')) return '';
+    $output = shell_exec($cmd . ' 2>&1');
+    return $output === null ? '' : trim($output);
+}
+
+function _extractTextFromDoc(string $path): string {
+    $path = realpath($path);
+    if (!$path) return '';
+
+    $antiword = _findExecutable('antiword');
+    if ($antiword) {
+        return _runShell(escapeshellarg($antiword) . ' -m UTF-8.txt ' . escapeshellarg($path));
+    }
+
+    $catdoc = _findExecutable('catdoc');
+    if ($catdoc) {
+        return _runShell(escapeshellarg($catdoc) . ' ' . escapeshellarg($path));
+    }
+
+    $soffice = _findExecutable('soffice') ?: _findExecutable('libreoffice');
+    if ($soffice) {
+        $outDir   = sys_get_temp_dir();
+        $basename = pathinfo($path, PATHINFO_FILENAME);
+        $txtPath  = $outDir . DIRECTORY_SEPARATOR . $basename . '.txt';
+        if (file_exists($txtPath)) @unlink($txtPath);
+        _runShell(escapeshellarg($soffice) . ' --headless --convert-to txt:Text --outdir ' . escapeshellarg($outDir) . ' ' . escapeshellarg($path));
+        if (file_exists($txtPath)) {
+            $text = file_get_contents($txtPath);
+            @unlink($txtPath);
+            return $text ?: '';
+        }
+    }
+
+    return '';
+}
+
+function _extractTextFromPdf(string $path): string {
+    $path = realpath($path);
+    if (!$path) return '';
+
+    $pdftotext = _findExecutable('pdftotext');
+    if ($pdftotext) {
+        return _runShell(escapeshellarg($pdftotext) . ' -layout ' . escapeshellarg($path) . ' -');
+    }
+
+    $tesseract = _findExecutable('tesseract');
+    if ($tesseract) {
+        $output = _runShell(escapeshellarg($tesseract) . ' ' . escapeshellarg($path) . ' stdout -l eng');
+        if ($output !== '') return $output;
+        return _runShell(escapeshellarg($tesseract) . ' ' . escapeshellarg($path) . ' stdout');
+    }
+
+    return '';
+}
+
+function _applyAnswerHint(array &$question, string $hint): void {
+    $hint = strtoupper(trim($hint));
+    if ($hint === '') return;
+    $hint = $hint[0];
+    $mapping = ['A' => 0, 'B' => 1, 'C' => 2, 'D' => 3, 'E' => 4, '1' => 0, '2' => 1, '3' => 2, '4' => 3, '5' => 4];
+    if (!isset($mapping[$hint]) || !isset($question['options'][$mapping[$hint]])) return;
+    foreach ($question['options'] as &$opt) {
+        $opt['is_correct'] = 0;
+    }
+    $question['options'][$mapping[$hint]]['is_correct'] = 1;
+    unset($opt);
+}
+
+function _parseTextQuestions(string $text): array {
+    $lines = preg_split('/\r\n|\r|\n/', trim($text));
+    $questions = [];
+    $cur = null;
+    $answerHint = null;
+
+    foreach ($lines as $line) {
+        $line = trim(preg_replace('/\s+/', ' ', $line));
+        if ($line === '') {
+            continue;
+        }
+
+        if (preg_match('/^(?:No\.?\s*)?(\d+)[\).\s-]+(.+)$/i', $line, $m)) {
+            if ($cur && !empty($cur['options'])) {
+                if ($answerHint) _applyAnswerHint($cur, $answerHint);
+                $questions[] = $cur;
+            }
+            $cur = ['question_text' => trim($m[2]), 'explanation' => '', 'options' => []];
+            $answerHint = null;
+            continue;
+        }
+
+        if ($cur && preg_match('/^([A-Ea-e])[\).\s-]+(.+)$/', $line, $m)) {
+            $opt = trim($m[2]);
+            $correct = false;
+            if (preg_match('/\*|[\[\(]?(?:benar|correct)[\]\)]?/i', $opt)) {
+                $correct = true;
+                $opt = trim(preg_replace('/\*|[\[\(]?(?:benar|correct)[\]\)]?/i', '', $opt));
+            }
+            $cur['options'][] = [
+                'option_text' => $opt,
+                'is_correct'  => $correct ? 1 : 0,
+                'label'       => strtoupper($m[1]),
+            ];
+            continue;
+        }
+
+        if ($cur && preg_match('/^(?:Jawaban|Kunci|Answer|Key)[:\s-]+([A-Ea-e1-5])\b/i', $line, $m)) {
+            $answerHint = strtoupper($m[1]);
+            continue;
+        }
+
+        if ($cur && preg_match('/^(?:Penjelasan|Pembahasan|Explanation)[:\s-]+(.+)$/i', $line, $m)) {
+            $cur['explanation'] = trim($m[1]);
+            continue;
+        }
+
+        if ($cur) {
+            if (empty($cur['options'])) {
+                $cur['question_text'] .= ' ' . $line;
+            } else {
+                $lastIndex = count($cur['options']) - 1;
+                if ($lastIndex >= 0) {
+                    $cur['options'][$lastIndex]['option_text'] .= ' ' . $line;
+                }
+            }
+        }
+    }
+
+    if ($cur && !empty($cur['options'])) {
+        if ($answerHint) _applyAnswerHint($cur, $answerHint);
+        $questions[] = $cur;
+    }
+
+    return _fixCorrect($questions);
+}
+
 function _parseDocx(string $path): array {
     if (!class_exists('ZipArchive')) return [];
     $zip = new ZipArchive();
@@ -206,35 +351,29 @@ function _parseDocx(string $path): array {
 
     $paragraphs = [];
     foreach ($doc->xpath('//w:p') as $p) {
-        $text = ''; $bold = false;
-        foreach ($p->xpath('.//w:r') as $r) {
-            if (!empty($r->xpath('.//w:rPr/w:b'))) $bold = true;
-            foreach ($r->xpath('.//w:t') as $t) $text .= (string)$t;
+        $text = '';
+        foreach ($p->xpath('.//w:t') as $t) {
+            $text .= (string)$t;
         }
-        $text = trim($text);
-        if ($text !== '') $paragraphs[] = ['text' => $text, 'bold' => $bold];
+        $text = trim(preg_replace('/\s+/', ' ', $text));
+        if ($text !== '') {
+            $paragraphs[] = $text;
+        }
     }
-    return _paragraphsToQuestions($paragraphs);
+
+    return _parseTextQuestions(implode("\n", $paragraphs));
 }
 
-function _paragraphsToQuestions(array $paragraphs): array {
-    $questions = []; $cur = null;
-    foreach ($paragraphs as $p) {
-        $t = $p['text']; $bold = $p['bold'];
-        if (preg_match('/^\d+[.)]\s+(.+)/', $t, $m)) {
-            if ($cur && !empty($cur['options'])) $questions[] = $cur;
-            $cur = ['question_text' => trim($m[1]), 'explanation' => '', 'options' => []];
-        } elseif ($cur && preg_match('/^([A-Ea-e])[.)]\s*(.+)/', $t, $m)) {
-            $opt    = trim($m[2]);
-            $isCorr = $bold || str_ends_with($opt, '*') || stripos($opt, '[benar]') !== false;
-            $opt    = trim(str_ireplace(['[benar]', '*'], '', $opt));
-            $cur['options'][] = ['option_text' => $opt, 'is_correct' => $isCorr ? 1 : 0];
-        } elseif ($cur && preg_match('/^(penjelasan|pembahasan)[:\s-]+(.+)/i', $t, $m)) {
-            $cur['explanation'] = trim($m[2]);
-        }
-    }
-    if ($cur && !empty($cur['options'])) $questions[] = $cur;
-    return _fixCorrect($questions);
+function _parseDoc(string $path): array {
+    $text = _extractTextFromDoc($path);
+    if (!$text) return [];
+    return _parseTextQuestions($text);
+}
+
+function _parsePdf(string $path): array {
+    $text = _extractTextFromPdf($path);
+    if (!$text) return [];
+    return _parseTextQuestions($text);
 }
 
 function _parseXlsx(string $path): array {
@@ -389,12 +528,16 @@ function question_import_file_parse(): void {
 
     if ($ext === 'docx') {
         $questions = _parseDocx($f['tmp_name']);
+    } elseif ($ext === 'doc') {
+        $questions = _parseDoc($f['tmp_name']);
     } elseif (in_array($ext, ['xlsx', 'xls'])) {
         $questions = _parseXlsx($f['tmp_name']);
     } elseif ($ext === 'csv') {
         $questions = _parseCsv($f['tmp_name']);
+    } elseif ($ext === 'pdf') {
+        $questions = _parsePdf($f['tmp_name']);
     } else {
-        jsonError('Format tidak didukung. Gunakan .docx, .xlsx, atau .csv');
+        jsonError('Format tidak didukung. Gunakan .doc, .docx, .xlsx, .xls, .csv, atau .pdf');
     }
 
     if (empty($questions)) jsonError('Tidak ada soal yang dapat diparsing. Periksa format file.');
