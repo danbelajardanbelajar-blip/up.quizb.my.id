@@ -197,37 +197,6 @@
             <span x-text="formatRelative(item.completed_at)"></span>
           </div>
 
-          <!-- Row 3: progress bar — hanya tampil di mode selain 'user' -->
-          <template x-if="publicHistory.filterType !== 'user'">
-            <div class="mt-2.5 flex items-center gap-3">
-              <div class="flex-1 max-w-[200px]">
-                <div class="flex justify-between text-xs text-gray-400 mb-1">
-                  <span x-text="item.correct_answers + '/' + item.total_questions + ' benar'"></span>
-                  <span x-text="item.percent + '%'"
-                        :class="{
-                          'text-green-500 font-semibold': item.badge === 'perfect',
-                          'text-blue-500 font-semibold':  item.badge === 'good',
-                          'text-yellow-500':              item.badge === 'ok',
-                          'text-red-400':                 item.badge === 'low',
-                        }"></span>
-                </div>
-                <div class="h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                  <div class="h-full rounded-full transition-all duration-700"
-                       :style="'width:' + item.percent + '%'"
-                       :class="{
-                         'bg-green-500': item.badge === 'perfect',
-                         'bg-blue-500':  item.badge === 'good',
-                         'bg-yellow-400': item.badge === 'ok',
-                         'bg-red-400':   item.badge === 'low',
-                       }"></div>
-                </div>
-              </div>
-              <span x-show="item.passed !== null"
-                    class="text-xs px-2 py-0.5 rounded-full font-medium"
-                    :class="item.passed ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-500'"
-                    x-text="item.passed ? '✅ Lulus' : '❌ Gagal'"></span>
-            </div>
-          </template>
 
         </div>
       </div>
