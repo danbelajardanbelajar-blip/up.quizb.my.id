@@ -532,23 +532,14 @@
         <div class="space-y-4">
           <div><label class="form-label">Judul *</label><input x-model="admin.form.title" class="form-input" placeholder="Judul quiz" /></div>
           <div><label class="form-label">Deskripsi</label><textarea x-model="admin.form.description" class="form-input" rows="2" placeholder="Deskripsi..."></textarea></div>
-          <div class="grid grid-cols-2 gap-3">
-            <div><label class="form-label">Difficulty</label>
-              <select x-model="admin.form.difficulty" class="form-input">
-                <option value="easy">Mudah</option><option value="medium">Sedang</option><option value="hard">Sulit</option>
-              </select>
-            </div>
-            <div><label class="form-label">Waktu (detik)</label><input type="number" x-model.number="admin.form.time_limit" class="form-input" /></div>
-            <div><label class="form-label">Min. Lulus (%)</label><input type="number" x-model.number="admin.form.passing_score" class="form-input" min="0" max="100" /></div>
-            <div>
-              <label class="form-label">Kategori *</label>
-              <select x-model.number="admin.form.category_id" class="form-input">
-                <option value="">-- Pilih Kategori --</option>
-                <template x-for="cat in admin.categories" :key="cat.id">
-                  <option :value="cat.id" x-text="cat.name"></option>
-                </template>
-              </select>
-            </div>
+          <div>
+            <label class="form-label">Kategori *</label>
+            <select x-model.number="admin.form.category_id" class="form-input">
+              <option value="">-- Pilih Kategori --</option>
+              <template x-for="cat in admin.categories" :key="cat.id">
+                <option :value="cat.id" x-text="cat.name"></option>
+              </template>
+            </select>
           </div>
           <div class="flex items-center gap-2">
             <input type="checkbox" id="is-published" x-model.number="admin.form.is_published" :checked="admin.form.is_published==1" class="w-4 h-4 accent-primary-600" />
