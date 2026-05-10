@@ -20,16 +20,29 @@
 
     <!-- Loaded: by user -->
     <template x-if="!publicHistory.loading && publicHistory.filterType === 'user'">
-      <div class="flex items-center gap-4">
-        <div class="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-md flex-shrink-0"
-             :style="'background: hsl(' + (publicHistory.filterId * 47 % 360) + ',58%,52%)'">
-          <span x-text="publicHistory.filterLabel?.charAt(0)?.toUpperCase()"></span>
+      <div class="flex items-center justify-between gap-4 flex-wrap">
+        <div class="flex items-center gap-4">
+          <div class="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-md flex-shrink-0"
+               :style="'background: hsl(' + (publicHistory.filterId * 47 % 360) + ',58%,52%)'">
+            <span x-text="publicHistory.filterLabel?.charAt(0)?.toUpperCase()"></span>
+          </div>
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white" x-text="publicHistory.filterLabel"></h1>
+            <p class="text-gray-500 dark:text-gray-400 mt-0.5 text-sm"
+               x-text="publicHistory.total + ' quiz dimainkan'"></p>
+          </div>
         </div>
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white" x-text="publicHistory.filterLabel"></h1>
-          <p class="text-gray-500 dark:text-gray-400 mt-0.5 text-sm"
-             x-text="publicHistory.total + ' percobaan quiz'"></p>
-        </div>
+        <!-- Tombol kirim pesan — hanya tampil jika bukan profil sendiri -->
+        <template x-if="user && user.id !== publicHistory.filterId">
+          <button @click="startNewChat({ id: publicHistory.filterId, name: publicHistory.filterLabel }); navigate('/messages')"
+                  class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium transition-colors shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+            </svg>
+            Kirim Pesan
+          </button>
+        </template>
       </div>
     </template>
 
@@ -92,25 +105,35 @@
   <!-- List -->
   <div x-show="!publicHistory.loading && publicHistory.list.length > 0" class="space-y-3">
     <template x-for="item in publicHistory.list" :key="item.id">
-      <div class="card p-4 sm:p-5 flex items-start gap-4 hover:shadow-md transition-shadow duration-200 group">
+      <div class="card p-4 sm:p-5 flex items-start gap-4 hover:shadow-md transition-shadow duration-200">
 
-        <!-- Score circle -->
-        <div class="w-12 h-12 rounded-xl flex flex-col items-center justify-center font-bold text-sm flex-shrink-0 border"
-             :class="{
-               'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400': item.badge === 'perfect',
-               'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400':    item.badge === 'good',
-               'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-600 dark:text-yellow-400': item.badge === 'ok',
-               'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-500 dark:text-red-400':          item.badge === 'low',
-             }">
-          <span class="text-xs font-bold" x-text="item.score"></span>
-          <span class="text-[10px] text-gray-400">pts</span>
-        </div>
+        <!-- Score circle — disembunyikan di mode 'user' (profil orang lain) -->
+        <template x-if="publicHistory.filterType !== 'user'">
+          <div class="w-12 h-12 rounded-xl flex flex-col items-center justify-center font-bold text-sm flex-shrink-0 border"
+               :class="{
+                 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400': item.badge === 'perfect',
+                 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400':    item.badge === 'good',
+                 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-600 dark:text-yellow-400': item.badge === 'ok',
+                 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-500 dark:text-red-400':          item.badge === 'low',
+               }">
+            <span class="text-xs font-bold" x-text="item.score"></span>
+            <span class="text-[10px] text-gray-400">pts</span>
+          </div>
+        </template>
+
+        <!-- Ikon quiz (mode 'user') -->
+        <template x-if="publicHistory.filterType === 'user'">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 bg-primary-50 dark:bg-primary-900/20">
+            <span x-text="item.category_icon || '📝'"></span>
+          </div>
+        </template>
 
         <!-- Content -->
         <div class="flex-1 min-w-0">
 
-          <!-- Row 1: user name (klik → by user) | quiz title (klik → by quiz) -->
+          <!-- Row 1: judul quiz (klik → detail quiz) -->
           <div class="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-sm leading-snug">
+
             <!-- Nama user — tampil hanya jika filter bukan by-user -->
             <template x-if="publicHistory.filterType !== 'user'">
               <button @click.stop="openPublicHistory('user', item.user_id, item.user_name)"
@@ -118,15 +141,12 @@
                 <span x-text="item.user_name"></span>
               </button>
             </template>
-            <template x-if="publicHistory.filterType === 'user'">
-              <span class="font-semibold text-gray-800 dark:text-gray-100" x-text="item.user_name"></span>
-            </template>
 
             <span class="text-gray-400 text-xs" x-show="publicHistory.filterType !== 'user'">mengerjakan</span>
 
-            <!-- Judul quiz — tampil hanya jika filter bukan by-quiz -->
+            <!-- Judul quiz -->
             <template x-if="publicHistory.filterType !== 'quiz'">
-              <button @click.stop="openPublicHistory('quiz', item.quiz_id, item.quiz_title)"
+              <button @click.stop="navigate('/quiz/' + item.quiz_id)"
                       class="font-semibold text-primary-600 dark:text-primary-400 hover:underline truncate max-w-[200px] sm:max-w-xs">
                 <span x-text="item.quiz_title"></span>
               </button>
@@ -144,10 +164,9 @@
               <span x-text="item.category_icon || '📂'"></span>
               <span x-text="item.category_name"></span>
             </span>
-
             <span class="text-gray-200 dark:text-gray-700" x-show="item.category_name">•</span>
 
-            <!-- Mode — klik → by mode (jika filter bukan by-mode) -->
+            <!-- Mode -->
             <template x-if="publicHistory.filterType !== 'mode'">
               <button @click.stop="openPublicHistory('mode', item.mode, {exam:'Ujian',instant:'Instan',end:'Akhir',challenge:'Tantangan'}[item.mode] || item.mode)"
                       class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full transition-colors"
@@ -176,43 +195,41 @@
 
             <span class="text-gray-200 dark:text-gray-700">•</span>
             <span x-text="formatRelative(item.completed_at)"></span>
-            <span x-show="item.time_taken > 0" class="text-gray-200 dark:text-gray-700">•</span>
-            <span x-show="item.time_taken > 0"
-                  x-text="'⏱ ' + (item.time_taken >= 60 ? Math.floor(item.time_taken/60) + 'm ' + (item.time_taken%60) + 'd' : item.time_taken + 'd')"></span>
           </div>
 
-          <!-- Row 3: progress bar -->
-          <div class="mt-2.5 flex items-center gap-3">
-            <div class="flex-1 max-w-[200px]">
-              <div class="flex justify-between text-xs text-gray-400 mb-1">
-                <span x-text="item.correct_answers + '/' + item.total_questions + ' benar'"></span>
-                <span x-text="item.percent + '%'"
-                      :class="{
-                        'text-green-500 font-semibold': item.badge === 'perfect',
-                        'text-blue-500 font-semibold':  item.badge === 'good',
-                        'text-yellow-500':              item.badge === 'ok',
-                        'text-red-400':                 item.badge === 'low',
-                      }"></span>
+          <!-- Row 3: progress bar — hanya tampil di mode selain 'user' -->
+          <template x-if="publicHistory.filterType !== 'user'">
+            <div class="mt-2.5 flex items-center gap-3">
+              <div class="flex-1 max-w-[200px]">
+                <div class="flex justify-between text-xs text-gray-400 mb-1">
+                  <span x-text="item.correct_answers + '/' + item.total_questions + ' benar'"></span>
+                  <span x-text="item.percent + '%'"
+                        :class="{
+                          'text-green-500 font-semibold': item.badge === 'perfect',
+                          'text-blue-500 font-semibold':  item.badge === 'good',
+                          'text-yellow-500':              item.badge === 'ok',
+                          'text-red-400':                 item.badge === 'low',
+                        }"></span>
+                </div>
+                <div class="h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                  <div class="h-full rounded-full transition-all duration-700"
+                       :style="'width:' + item.percent + '%'"
+                       :class="{
+                         'bg-green-500': item.badge === 'perfect',
+                         'bg-blue-500':  item.badge === 'good',
+                         'bg-yellow-400': item.badge === 'ok',
+                         'bg-red-400':   item.badge === 'low',
+                       }"></div>
+                </div>
               </div>
-              <div class="h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                <div class="h-full rounded-full transition-all duration-700"
-                     :style="'width:' + item.percent + '%'"
-                     :class="{
-                       'bg-green-500': item.badge === 'perfect',
-                       'bg-blue-500':  item.badge === 'good',
-                       'bg-yellow-400': item.badge === 'ok',
-                       'bg-red-400':   item.badge === 'low',
-                     }"></div>
-              </div>
+              <span x-show="item.passed !== null"
+                    class="text-xs px-2 py-0.5 rounded-full font-medium"
+                    :class="item.passed ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-500'"
+                    x-text="item.passed ? '✅ Lulus' : '❌ Gagal'"></span>
             </div>
-            <!-- Passed badge -->
-            <span x-show="item.passed !== null"
-                  class="text-xs px-2 py-0.5 rounded-full font-medium"
-                  :class="item.passed ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-500'"
-                  x-text="item.passed ? '✅ Lulus' : '❌ Gagal'"></span>
-          </div>
-        </div>
+          </template>
 
+        </div>
       </div>
     </template>
 
