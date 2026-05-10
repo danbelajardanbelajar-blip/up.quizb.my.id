@@ -294,6 +294,65 @@ function _fixCorrect(array $questions): array {
     return $questions;
 }
 
+function _parseCsv(string $path): array {
+    // Deteksi encoding: coba baca sebagai UTF-8, fallback strip BOM
+    $handle = fopen($path, 'r');
+    if (!$handle) return [];
+
+    // Strip UTF-8 BOM jika ada
+    $bom = fread($handle, 3);
+    if ($bom !== "\xEF\xBB\xBF") rewind($handle);
+
+    $rows = [];
+    while (($row = fgetcsv($handle, 0, ',')) !== false) {
+        // Coba separator koma dulu, nanti fallback ke titik koma
+        $rows[] = $row;
+    }
+    fclose($handle);
+
+    // Jika semua baris hanya 1 kolom, kemungkinan separator titik koma
+    $allSingle = !empty($rows) && count(array_filter($rows, fn($r) => count($r) > 1)) === 0;
+    if ($allSingle) {
+        $handle = fopen($path, 'r');
+        $bom    = fread($handle, 3);
+        if ($bom !== "\xEF\xBB\xBF") rewind($handle);
+        $rows = [];
+        while (($row = fgetcsv($handle, 0, ';')) !== false) {
+            $rows[] = $row;
+        }
+        fclose($handle);
+    }
+
+    if (empty($rows)) return [];
+
+    // Lewati header jika baris pertama berisi kata seperti "soal", "question", dll.
+    $start = 0;
+    $cell0 = strtolower(trim($rows[0][0] ?? ''));
+    if (in_array($cell0, ['soal', 'pertanyaan', 'question', 'no', 'nomor', ''])) $start = 1;
+
+    $questions = [];
+    $letters   = ['A', 'B', 'C', 'D', 'E'];
+    for ($i = $start; $i < count($rows); $i++) {
+        $r = $rows[$i];
+        $q = trim($r[0] ?? '');
+        if (!$q) continue;
+
+        $correct = strtoupper(trim($r[5] ?? 'A'));
+        $expl    = trim($r[6] ?? '');
+        $opts    = [];
+        for ($j = 1; $j <= 5; $j++) {
+            $ot = trim($r[$j] ?? '');
+            if ($ot !== '') {
+                $opts[] = ['option_text' => $ot, 'is_correct' => ($correct === $letters[$j - 1]) ? 1 : 0];
+            }
+        }
+        if (!empty($opts)) {
+            $questions[] = ['question_text' => $q, 'explanation' => $expl, 'options' => $opts];
+        }
+    }
+    return _fixCorrect($questions);
+}
+
 function _quizbPdo(): PDO {
     return new PDO(
         'mysql:host=' . DB_HOST . ';dbname=quic1934_quizb;charset=utf8mb4',
@@ -319,8 +378,10 @@ function question_import_file_parse(): void {
         $questions = _parseDocx($f['tmp_name']);
     } elseif (in_array($ext, ['xlsx', 'xls'])) {
         $questions = _parseXlsx($f['tmp_name']);
+    } elseif ($ext === 'csv') {
+        $questions = _parseCsv($f['tmp_name']);
     } else {
-        jsonError('Format tidak didukung. Gunakan .docx atau .xlsx');
+        jsonError('Format tidak didukung. Gunakan .docx, .xlsx, atau .csv');
     }
 
     if (empty($questions)) jsonError('Tidak ada soal yang dapat diparsing. Periksa format file.');
