@@ -105,18 +105,11 @@
       <p class="text-gray-600 dark:text-gray-400 mb-6" x-text="quizDetail.quiz?.description || 'Tidak ada deskripsi.'"></p>
 
       <!-- Stats Grid -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl mb-6">
+      <div class="grid grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl mb-6">
         <div class="text-center">
-          <div class="text-xl font-bold text-gray-800 dark:text-gray-200" x-text="quizDetail.quiz?.total_questions || quizDetail.quiz?.question_count || '?'"></div>
-          <div class="text-xs text-gray-400 mt-0.5">Soal</div>
-        </div>
-        <div class="text-center">
-          <div class="text-xl font-bold text-gray-800 dark:text-gray-200" x-text="Math.floor((quizDetail.quiz?.time_limit||600)/60) + ' mnt'"></div>
-          <div class="text-xs text-gray-400 mt-0.5">Waktu</div>
-        </div>
-        <div class="text-center">
-          <div class="text-xl font-bold text-gray-800 dark:text-gray-200" x-text="(quizDetail.quiz?.passing_score||60) + '%'"></div>
-          <div class="text-xs text-gray-400 mt-0.5">Min. Lulus</div>
+          <div class="text-xl font-bold text-gray-800 dark:text-gray-200"
+               x-text="Math.min(user?.quiz_questions_limit || 10, quizDetail.quiz?.total_questions || 10) + ' dari ' + (quizDetail.quiz?.total_questions || '?')"></div>
+          <div class="text-xs text-gray-400 mt-0.5">Soal ditampilkan</div>
         </div>
         <div class="text-center">
           <div class="text-xl font-bold text-gray-800 dark:text-gray-200" x-text="quizDetail.quiz?.total_attempts || quizDetail.quiz?.attempt_count || 0"></div>
@@ -139,6 +132,7 @@
             <span class="text-2xl">⚡</span>
             <p class="text-sm font-bold text-gray-900 dark:text-white">Instant Review</p>
             <p class="text-xs text-gray-500 dark:text-gray-400">Jawab salah → langsung selesai. Uji pemahaman per soal.</p>
+            <p class="text-xs text-orange-500 dark:text-orange-400 font-medium mt-0.5" x-text="'⏱ ' + Math.floor((quizDetail.quiz?.time_limit||600)/60) + ' mnt'"></p>
           </button>
 
           <!-- End Review -->
@@ -151,6 +145,7 @@
             <span class="text-2xl">📖</span>
             <p class="text-sm font-bold text-gray-900 dark:text-white">End Review</p>
             <p class="text-xs text-gray-500 dark:text-gray-400">Kerjakan semua soal, hasil tampil di akhir. Tidak bisa kembali.</p>
+            <p class="text-xs text-green-600 dark:text-green-400 font-medium mt-0.5" x-text="'⏱ ' + Math.floor((quizDetail.quiz?.time_limit||600)/60) + ' mnt'"></p>
           </button>
 
           <!-- Exam -->
@@ -163,6 +158,7 @@
             <span class="text-2xl">🎯</span>
             <p class="text-sm font-bold text-gray-900 dark:text-white">Mode Ujian</p>
             <p class="text-xs text-gray-500 dark:text-gray-400">Kerjakan bebas, bisa kembali & tandai soal. Mode standar.</p>
+            <p class="text-xs text-blue-600 dark:text-blue-400 font-medium mt-0.5" x-text="'⏱ ' + Math.floor((quizDetail.quiz?.time_limit||600)/60) + ' mnt'"></p>
           </button>
 
           <!-- Challenge -->
@@ -179,6 +175,7 @@
               <span x-show="user">Duel skor & kecepatan dengan teman. Perlu login.</span>
               <span x-show="!user" class="text-orange-500">Login untuk tantang teman</span>
             </p>
+            <p class="text-xs text-purple-600 dark:text-purple-400 font-medium mt-0.5" x-text="'⏱ ' + Math.floor((quizDetail.quiz?.time_limit||600)/60) + ' mnt'"></p>
           </button>
 
         </div>

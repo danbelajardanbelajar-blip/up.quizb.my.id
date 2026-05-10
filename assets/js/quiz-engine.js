@@ -110,7 +110,7 @@ function QuizEngine() {
         this.currentIndex = 0;
         // Baca nama tamu dari localStorage (jika user tidak login)
       this.playerName = (typeof localStorage !== 'undefined' ? localStorage.getItem('quizb_guest_name') : '') || '';
-      this.phase = 'ready';
+      this.startQuiz();
       } catch (e) {
         this.error = e.message;
         this.phase = 'error';
