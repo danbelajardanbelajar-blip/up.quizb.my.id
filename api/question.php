@@ -276,23 +276,38 @@ function _parseTextQuestions(string $text): array {
     $questions = [];
     $cur = null;
     $answerHint = null;
+    $inOptions = false;
 
     foreach ($lines as $line) {
         $line = trim(preg_replace('/\s+/', ' ', $line));
         if ($line === '') {
+            if ($cur && $inOptions) {
+                $inOptions = false;
+            }
             continue;
         }
 
-        if (preg_match('/^(?:No\.?\s*)?(\d+)[\).\s-]+(.+)$/i', $line, $m)) {
+        // Check for numbered question: 1. Question or 1) Question
+        if (preg_match('/^(?:No\.?\s*)?(\d+)[\).\s:-]+(.+)$/i', $line, $m)) {
             if ($cur && !empty($cur['options'])) {
                 if ($answerHint) _applyAnswerHint($cur, $answerHint);
                 $questions[] = $cur;
             }
             $cur = ['question_text' => trim($m[2]), 'explanation' => '', 'options' => []];
             $answerHint = null;
+            $inOptions = false;
             continue;
         }
 
+        // Check for question ending with ... or .... or ? or :
+        if (!$cur && (str_ends_with($line, '...') || str_ends_with($line, '....') || str_ends_with($line, '.....') || str_ends_with($line, '?') || str_ends_with($line, ':') || strpos($line, '....') !== false || strpos($line, '...') !== false)) {
+            $cur = ['question_text' => $line, 'explanation' => '', 'options' => []];
+            $answerHint = null;
+            $inOptions = true;
+            continue;
+        }
+
+        // Check for options with letters: A. Option or A) Option
         if ($cur && preg_match('/^([A-Ea-e])[\).\s:-]+(.+)$/', $line, $m)) {
             $opt = trim($m[2]);
             $correct = false;
@@ -304,6 +319,23 @@ function _parseTextQuestions(string $text): array {
                 'option_text' => $opt,
                 'is_correct'  => $correct ? 1 : 0,
                 'label'       => strtoupper($m[1]),
+            ];
+            $inOptions = true;
+            continue;
+        }
+
+        // If in options mode and line doesn't match above, treat as option without letter
+        if ($cur && $inOptions && !preg_match('/^(?:Jawaban|Kunci|Answer|Key|Penjelasan|Pembahasan|Explanation)[:\s-]+/i', $line)) {
+            $opt = $line;
+            $correct = false;
+            if (preg_match('/\*|[\[\(]?(?:benar|correct)[\]\)]?/i', $opt)) {
+                $correct = true;
+                $opt = trim(preg_replace('/\*|[\[\(]?(?:benar|correct)[\]\)]?/i', '', $opt));
+            }
+            $cur['options'][] = [
+                'option_text' => $opt,
+                'is_correct'  => $correct ? 1 : 0,
+                'label'       => chr(65 + count($cur['options'])), // A, B, C, ...
             ];
             continue;
         }
@@ -318,15 +350,9 @@ function _parseTextQuestions(string $text): array {
             continue;
         }
 
-        if ($cur) {
-            if (empty($cur['options'])) {
-                $cur['question_text'] .= ' ' . $line;
-            } else {
-                $lastIndex = count($cur['options']) - 1;
-                if ($lastIndex >= 0) {
-                    $cur['options'][$lastIndex]['option_text'] .= ' ' . $line;
-                }
-            }
+        // If we have a current question and it's not in options, append to question text
+        if ($cur && !$inOptions) {
+            $cur['question_text'] .= ' ' . $line;
         }
     }
 
