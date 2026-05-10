@@ -374,6 +374,16 @@
       <?php include 'pages/onboarding.html'; ?>
     </div>
 
+    <!-- ABOUT PAGE -->
+    <div x-show="currentRoute === '/about'">
+      <?php include 'pages/about.html'; ?>
+    </div>
+
+    <!-- PRIVACY PAGE -->
+    <div x-show="currentRoute === '/privacy'">
+      <?php include 'pages/privacy.html'; ?>
+    </div>
+
     <!-- 404 PAGE -->
     <div x-show="currentRoute === '/404'" class="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
       <div class="text-8xl mb-4">🔍</div>
@@ -400,6 +410,8 @@
         <div class="flex items-center gap-4 text-sm text-gray-400">
           <a href="#/categories" @click.prevent="navigate('/categories')" class="hover:text-primary-500 transition-colors">Kategori</a>
           <a href="#/leaderboard" @click.prevent="navigate('/leaderboard')" class="hover:text-primary-500 transition-colors">Leaderboard</a>
+          <a href="#/about" @click.prevent="navigate('/about')" class="hover:text-primary-500 transition-colors">Tentang</a>
+          <a href="#/privacy" @click.prevent="navigate('/privacy')" class="hover:text-primary-500 transition-colors">Privasi</a>
         </div>
       </div>
     </div>

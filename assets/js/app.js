@@ -259,6 +259,8 @@ function QuizBApp() {
         'onboarding':  '/onboarding',
         'messages':    '/messages',
         'search':      '/search',
+        'about':       '/about',
+        'privacy':     '/privacy',
       };
 
       const route = routeMap[base] || (path === '/' ? '/' : '/404');
