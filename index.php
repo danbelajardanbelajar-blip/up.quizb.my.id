@@ -156,7 +156,7 @@
                          :class="!n.is_read ? 'bg-primary-50/50 dark:bg-primary-900/10' : ''">
                       <div class="w-8 h-8 rounded-full flex items-center justify-center text-lg flex-shrink-0 mt-0.5"
                            :class="!n.is_read ? 'bg-primary-100 dark:bg-primary-900/40' : 'bg-gray-100 dark:bg-gray-800'"
-                           x-text="{challenge:'⚔️',challenge_result:'🏆',message:'💬',system:'📢'}[n.type] || '🔔'"></div>
+                           x-text="{challenge:'⚔️',challenge_result:'🏆',message:'💬',system:'📢',new_user:'👤',new_question:'📝'}[n.type] || '🔔'"></div>
                       <div class="flex-1 min-w-0">
                         <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug" :class="!n.is_read ? 'font-semibold' : ''" x-text="n.title"></p>
                         <p x-show="n.body" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2" x-text="n.body"></p>
@@ -562,7 +562,7 @@
                    :class="!n.is_read ? 'bg-primary-50/50 dark:bg-primary-900/10' : ''">
                 <div class="w-8 h-8 rounded-full flex items-center justify-center text-lg flex-shrink-0 mt-0.5"
                      :class="!n.is_read ? 'bg-primary-100 dark:bg-primary-900/40' : 'bg-gray-100 dark:bg-gray-800'"
-                     x-text="{challenge:'⚔️',challenge_result:'🏆',message:'💬',system:'📢'}[n.type] || '🔔'"></div>
+                     x-text="{challenge:'⚔️',challenge_result:'🏆',message:'💬',system:'📢',new_user:'👤',new_question:'📝'}[n.type] || '🔔'"></div>
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug"
                      :class="!n.is_read ? 'font-semibold' : ''" x-text="n.title"></p>

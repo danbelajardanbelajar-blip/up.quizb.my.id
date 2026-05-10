@@ -66,6 +66,22 @@ function auth_register(): void {
     $user = DB::one('SELECT id, name, email, role FROM users WHERE email = ?', [$email]);
     loginUser($user);
 
+    // — Broadcast notifikasi "pengguna baru" ke semua user aktif lain (kecuali si pendaftar)
+    $newUserId = (int)$user['id'];
+    $others = DB::all(
+        "SELECT id FROM users WHERE id != ? AND is_active = 1",
+        [$newUserId]
+    );
+    foreach ($others as $other) {
+        pushNotification(
+            (int)$other['id'],
+            'new_user',
+            '👤 Pengguna baru bergabung',
+            $name . ' baru saja mendaftar di QuizB.',
+            '/public-history?user_id=' . $newUserId
+        );
+    }
+
     jsonSuccess([
         'id'          => (int)$user['id'],
         'name'        => $user['name'],
