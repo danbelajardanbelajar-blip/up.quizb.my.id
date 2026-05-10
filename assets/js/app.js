@@ -1721,6 +1721,16 @@ function QuizBApp() {
         } catch (e) { /* silent */ }
       }
       this.notif.show = false;
+
+      // Notif new_user → buka public-history dengan filter user yang baru daftar
+      if (n.type === 'new_user' && n.link) {
+        const m = n.link.match(/user_id=(\d+)/);
+        if (m) {
+          this.openPublicHistory('user', parseInt(m[1]), '');
+          return;
+        }
+      }
+
       if (n.link) this.navigate(n.link);
     },
 

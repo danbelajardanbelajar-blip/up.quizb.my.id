@@ -159,7 +159,6 @@
                            x-text="{challenge:'⚔️',challenge_result:'🏆',message:'💬',system:'📢',new_user:'👤',new_question:'📝'}[n.type] || '🔔'"></div>
                       <div class="flex-1 min-w-0">
                         <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug" :class="!n.is_read ? 'font-semibold' : ''" x-text="n.title"></p>
-                        <p x-show="n.body" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2" x-text="n.body"></p>
                         <p class="text-xs text-gray-300 dark:text-gray-600 mt-1" x-text="formatRelative(n.created_at)"></p>
                       </div>
                       <div x-show="!n.is_read" class="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0 mt-2"></div>
@@ -566,7 +565,6 @@
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug"
                      :class="!n.is_read ? 'font-semibold' : ''" x-text="n.title"></p>
-                  <p x-show="n.body" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2" x-text="n.body"></p>
                   <p class="text-xs text-gray-300 dark:text-gray-600 mt-1" x-text="formatRelative(n.created_at)"></p>
                 </div>
                 <div x-show="!n.is_read" class="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0 mt-2"></div>
