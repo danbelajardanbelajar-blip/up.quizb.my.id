@@ -113,25 +113,9 @@ function question_create(): void {
         [$quizId, $quizId]
     );
 
-    // — Broadcast notifikasi "soal baru" ke semua user aktif (kecuali admin yang menambahkan)
-    $admin = getCurrentUser();
-    $adminId = (int)($admin['id'] ?? 0);
-    $quiz = DB::one('SELECT title FROM quizzes WHERE id = ?', [$quizId]);
-    $quizTitle = $quiz['title'] ?? 'Quiz';
-
-    $recipients = DB::all(
-        "SELECT id FROM users WHERE id != ? AND is_active = 1",
-        [$adminId]
-    );
-    foreach ($recipients as $rec) {
-        pushNotification(
-            (int)$rec['id'],
-            'new_question',
-            '📝 Soal baru ditambahkan',
-            'Soal baru tersedia di kuis "' . $quizTitle . '".',
-            '/quiz/' . $quizId
-        );
-    }
+    // — Broadcast notifikasi ke semua user aktif kecuali admin yang menambahkan
+    $adminUser = getCurrentUser();
+    broadcastNewQuestion($quizId, (int)($adminUser['id'] ?? 0));
 
     jsonSuccess(['id' => $qId], 'Soal berhasil ditambahkan');
 }
@@ -386,6 +370,13 @@ function question_import_save(): void {
         'UPDATE quizzes SET total_questions = (SELECT COUNT(*) FROM questions WHERE quiz_id = ?) WHERE id = ?',
         [$quizId, $quizId]
     );
+
+    // — Broadcast notifikasi soal baru (hanya jika ada yang berhasil diimpor)
+    if ($imported > 0) {
+        $adminUser = getCurrentUser();
+        broadcastNewQuestion($quizId, (int)($adminUser['id'] ?? 0));
+    }
+
     jsonSuccess(['imported' => $imported], "$imported soal berhasil diimpor");
 }
 
@@ -493,6 +484,13 @@ function question_import_quizb(): void {
             'UPDATE quizzes SET total_questions = (SELECT COUNT(*) FROM questions WHERE quiz_id = ?) WHERE id = ?',
             [$quizId, $quizId]
         );
+
+        // — Broadcast notifikasi soal baru
+        if ($imported > 0) {
+            $adminUser = getCurrentUser();
+            broadcastNewQuestion($quizId, (int)($adminUser['id'] ?? 0));
+        }
+
         jsonSuccess(['imported' => $imported], "$imported soal berhasil diimpor dari QuizB");
     } catch (Exception $e) {
         jsonError('Gagal import dari QuizB: ' . $e->getMessage(), 500);
