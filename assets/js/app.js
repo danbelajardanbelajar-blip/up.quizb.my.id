@@ -1001,7 +1001,7 @@ function QuizBApp() {
             search:  this.admin.questionsSearch,
             quiz_id: this.admin.questionsQuizFilter || '',
           });
-          this.admin.questionsAll   = qData.questions || [];
+          this.admin.questionsAll   = (qData.questions || []).map(q => ({ ...q, _sel: false }));
           this.admin.questionsTotal = qData.total     || 0;
         } else if (tab === 'groups') {
           const data = await api.get('admin.group_list');
@@ -1049,6 +1049,29 @@ function QuizBApp() {
       const s = this.admin.sort?.[tab];
       if (!s || s.key !== key) return '↕';
       return s.dir === 'asc' ? '↑' : '↓';
+    },
+
+    get selectedAdminQuestionsCount() {
+      return this.admin.questionsAll?.filter(q => q._sel).length || 0;
+    },
+
+    toggleSelectAllQuestions(checked) {
+      this.admin.questionsAll = this.admin.questionsAll.map(q => ({ ...q, _sel: checked }));
+    },
+
+    async deleteSelectedQuestions() {
+      const ids = this.admin.questionsAll.filter(q => q._sel).map(q => q.id);
+      if (ids.length === 0) return;
+      if (!confirm(`Yakin ingin menghapus ${ids.length} soal terpilih?`)) return;
+      try {
+        for (const id of ids) {
+          await api.post('question.delete', { id });
+        }
+        this.showToast(`${ids.length} soal berhasil dihapus`, 'success', '🗑️');
+        await this.reloadQuizQuestions();
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      }
     },
 
     // ---- Review attempts per quiz ----
@@ -1392,7 +1415,7 @@ function QuizBApp() {
           search:  this.admin.questionsSearch,
           quiz_id: this.admin.questionsQuizFilter,
         });
-        this.admin.questionsAll   = qData.questions || [];
+        this.admin.questionsAll   = (qData.questions || []).map(q => ({ ...q, _sel: false }));
         this.admin.questionsTotal = qData.total     || 0;
       } catch (e) {
         this.showToast(e.message, 'error', '❌');

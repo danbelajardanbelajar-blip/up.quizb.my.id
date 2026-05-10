@@ -152,9 +152,18 @@
         <div class="flex items-center gap-2 flex-shrink-0 ml-auto flex-wrap">
           <button @click="openImportFileModal()" class="btn-secondary text-sm px-3 py-2 flex items-center gap-1.5">📥 Import File</button>
           <button @click="openImportQuizbModal()" class="btn-secondary text-sm px-3 py-2 flex items-center gap-1.5">🌐 Import QuizB</button>
+          <button @click="deleteSelectedQuestions()"
+                  :disabled="selectedAdminQuestionsCount === 0"
+                  class="btn-danger text-sm px-3 py-2 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+            🗑️ Hapus Terpilih
+          </button>
           <button @click="admin.form = buildQuestionForm(); openAdminModal('question_create')"
                   class="btn-primary text-sm px-4 py-2">+ Tambah Soal</button>
         </div>
+      </div>
+      <div x-show="selectedAdminQuestionsCount > 0" class="text-sm text-gray-500 mb-3">
+        <span class="font-semibold" x-text="selectedAdminQuestionsCount"></span> soal terpilih.
+        <button @click="toggleSelectAllQuestions(false)" class="underline ml-2">Bersihkan pilihan</button>
       </div>
 
       <!-- Questions table -->
@@ -163,7 +172,12 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th class="w-10 text-center">#</th>
+                <th class="w-10 text-center">
+                  <input type="checkbox"
+                         @change="toggleSelectAllQuestions($event.target.checked)"
+                         :checked="admin.questionsAll.length > 0 && admin.questionsAll.every(q => q._sel)"
+                         class="accent-primary-600" />
+                </th>
                 <th @click="sortAdmin('questions','question_text')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">
                   Teks Soal <span class="text-gray-400 text-xs" x-text="sortIcon('questions','question_text')"></span>
                 </th>
@@ -174,8 +188,9 @@
             <tbody>
               <template x-for="(q, idx) in sortedAdmin('questions', admin.questionsAll)" :key="q.id">
                 <tr>
-                  <td class="text-gray-400 text-xs text-center"
-                      x-text="(admin.questionsPage - 1) * 20 + idx + 1"></td>
+                  <td class="text-center">
+                    <input type="checkbox" x-model="q._sel" class="accent-primary-600" />
+                  </td>
                   <td>
                     <p class="text-sm font-medium text-gray-800 dark:text-gray-100 max-w-lg truncate"
                        x-text="q.question_text" :title="q.question_text"></p>
