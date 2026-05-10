@@ -10,13 +10,13 @@ function notification_list(): void {
     $limit = min(30, max(1, $limit));
 
     $total = (int)(DB::one(
-        "SELECT COUNT(*) AS cnt FROM notifications WHERE user_id = ?",
+        "SELECT COUNT(*) AS cnt FROM notifications WHERE user_id = ? AND type != 'message'",
         [$user['id']]
     )['cnt'] ?? 0);
 
     $rows = DB::all(
         "SELECT id, type, title, body, link, is_read, created_at
-         FROM notifications WHERE user_id = ?
+         FROM notifications WHERE user_id = ? AND type != 'message'
          ORDER BY created_at DESC LIMIT ? OFFSET ?",
         [$user['id'], $limit, $offset]
     );
@@ -33,7 +33,7 @@ function notification_counts(): void {
     $uid  = (int)$user['id'];
 
     $notifCount = (int)(DB::one(
-        "SELECT COUNT(*) AS cnt FROM notifications WHERE user_id = ? AND is_read = 0",
+        "SELECT COUNT(*) AS cnt FROM notifications WHERE user_id = ? AND is_read = 0 AND type != 'message'",
         [$uid]
     )['cnt'] ?? 0);
 
