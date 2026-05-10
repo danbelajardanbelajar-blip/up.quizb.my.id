@@ -1122,8 +1122,12 @@ function QuizBApp() {
           }
           if (!f.category_id) { this.admin.formError = 'Pilih atau buat kategori terlebih dahulu'; this.admin.loading = false; return; }
           if (type === 'quiz_create') {
-            await api.post('admin.quiz_create', f);
+            const newQuiz = await api.post('admin.quiz_create', f);
             this.showToast('Quiz berhasil dibuat', 'success', '✅');
+            this.closeAdminModal();
+            await this.loadAdminTab('quizzes');
+            await this.openQuizQuestions(newQuiz);
+            return;
           } else {
             await api.put('admin.quiz_update', f.id, f);
             this.showToast('Quiz berhasil diperbarui', 'success', '✅');
