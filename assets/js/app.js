@@ -1954,6 +1954,18 @@ function QuizBApp() {
     },
 
     formatRelative(dateStr) { return this.formatTimeAgo(dateStr); },
+
+    formatDateTime(dateStr) {
+      if (!dateStr) return '—';
+      const d   = new Date(dateStr);
+      const now = new Date();
+      const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+      const time = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      if (d.toDateString() === now.toDateString())       return 'Hari ini, ' + time;
+      if (d.toDateString() === yesterday.toDateString()) return 'Kemarin, '  + time;
+      return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' }) + ', ' + time;
+    },
+
     // SEARCH PAGE
     // ============================================================
     async loadSearch(q) {

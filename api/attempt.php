@@ -105,7 +105,7 @@ function attempt_submit(): void {
 
     // Insert attempt
     DB::execute(
-        'INSERT INTO attempts (user_id, quiz_id, mode, score, total_points, correct_count, time_taken) VALUES (?,?,?,?,?,?,?)',
+        'INSERT INTO attempts (user_id, quiz_id, mode, score, total_points, correct_count, time_taken, completed_at) VALUES (?,?,?,?,?,?,?,NOW())',
         [$user['id'], $quizId, $mode, $score, $totalPoints, $correctCount, $timeTaken]
     );
     $attemptId = (int)DB::lastId();
