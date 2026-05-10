@@ -1113,12 +1113,21 @@ function QuizBApp() {
         } else if (type === 'group_edit') {
           await api.put('admin.group_update', f.id, f);
           this.showToast('Rumpun berhasil diperbarui', 'success', '✅');
-        } else if (type === 'quiz_create') {
-          await api.post('admin.quiz_create', f);
-          this.showToast('Quiz berhasil dibuat', 'success', '✅');
-        } else if (type === 'quiz_edit') {
-          await api.put('admin.quiz_update', f.id, f);
-          this.showToast('Quiz berhasil diperbarui', 'success', '✅');
+        } else if (type === 'quiz_create' || type === 'quiz_edit') {
+          // Jika kategori baru perlu dibuat terlebih dahulu
+          if (f._newCat && f._newCatName && f._newCatName.trim().length >= 2) {
+            const newCat = await api.post('admin.category_create', { name: f._newCatName.trim() });
+            f.category_id = newCat.id;
+            this.admin.categories = await api.get('admin.category_list');
+          }
+          if (!f.category_id) { this.admin.formError = 'Pilih atau buat kategori terlebih dahulu'; this.admin.loading = false; return; }
+          if (type === 'quiz_create') {
+            await api.post('admin.quiz_create', f);
+            this.showToast('Quiz berhasil dibuat', 'success', '✅');
+          } else {
+            await api.put('admin.quiz_update', f.id, f);
+            this.showToast('Quiz berhasil diperbarui', 'success', '✅');
+          }
         } else if (type === 'category_create') {
           await api.post('admin.category_create', f);
           this.showToast('Kategori berhasil dibuat', 'success', '✅');
