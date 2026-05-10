@@ -76,7 +76,7 @@ function auth_register(): void {
         pushNotification(
             (int)$other['id'],
             'new_user',
-            '👤 Pengguna baru bergabung',
+            '👤 ' . $name . ' bergabung',
             $name . ' baru saja mendaftar di QuizB.',
             '/public-history?user_id=' . $newUserId
         );
