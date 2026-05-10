@@ -445,8 +445,7 @@
                               <tr class="border-b border-gray-50 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                 <td class="px-4 py-2.5">
                                   <span class="text-sm font-medium text-gray-800 dark:text-gray-200"
-                                        x-text="att.is_anon ? 'Tamu' : (att.user_name || 'Tamu')"></span>
-                                  <span x-show="att.is_anon" class="ml-1 text-xs text-gray-400">(anonim)</span>
+                                        x-text="att.user_name || '—'"></span>
                                 </td>
                                 <td class="px-4 py-2.5">
                                   <span class="badge text-xs"
