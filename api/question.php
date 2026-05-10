@@ -293,7 +293,7 @@ function _parseTextQuestions(string $text): array {
             continue;
         }
 
-        if ($cur && preg_match('/^([A-Ea-e])[\).\s-]+(.+)$/', $line, $m)) {
+        if ($cur && preg_match('/^([A-Ea-e])[\).\s:-]+(.+)$/', $line, $m)) {
             $opt = trim($m[2]);
             $correct = false;
             if (preg_match('/\*|[\[\(]?(?:benar|correct)[\]\)]?/i', $opt)) {
