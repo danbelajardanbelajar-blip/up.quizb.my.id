@@ -1,8 +1,11 @@
 <!-- MESSAGES PAGE -->
-<!-- Desktop: 100vh - top-nav(3.5rem) | Mobile: 100vh - top-nav(3.5rem) - bottom-nav(3.5rem) -->
-<div class="flex overflow-hidden bg-white dark:bg-gray-900"
+<!-- Desktop: container max-w-6xl centered, dengan padding atas-bawah 1rem -->
+<!-- Mobile: 100vh - top-nav(3.5rem) - bottom-nav(3.5rem) -->
+<div class="w-full md:max-w-6xl md:mx-auto md:px-4 lg:px-6 md:py-4"
      x-bind:style="{ height: window.innerWidth < 768 ? 'calc(100vh - 7rem)' : 'calc(100vh - 3.5rem)' }"
      @resize.window="$el.style.height = window.innerWidth < 768 ? 'calc(100vh - 7rem)' : 'calc(100vh - 3.5rem)'">
+
+<div class="flex overflow-hidden bg-white dark:bg-gray-900 h-full md:rounded-2xl md:border md:border-gray-200 md:dark:border-gray-700 md:shadow-sm">
 
   <!-- ── SIDEBAR: Daftar Thread ───────────────────────────────────── -->
   <div class="flex flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
@@ -210,4 +213,5 @@
       </div>
     </div>
   </div>
-</div>
+</div><!-- end flex chat container -->
+</div><!-- end desktop wrapper -->
