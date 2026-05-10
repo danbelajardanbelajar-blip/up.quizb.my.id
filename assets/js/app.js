@@ -1686,9 +1686,9 @@ function QuizBApp() {
     async loadNotifications() {
       this.notif.loading = true;
       try {
-        const data = await api.get('notification.list', { page: this.notif.page, limit: 30 });
-        this.notif.list  = data.data  || [];
-        this.notif.total = data.total || 0;
+        const resp = await api.getFull('notification.list', { page: this.notif.page, limit: 30 });
+        this.notif.list  = resp.data       || [];
+        this.notif.total = resp.meta?.total || 0;
       } catch (e) {
         console.error('loadNotifications:', e);
       } finally {
