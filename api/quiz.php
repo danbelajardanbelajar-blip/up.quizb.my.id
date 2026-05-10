@@ -143,6 +143,7 @@ function quiz_questions(): void {
     // ---- Muat opsi untuk setiap soal ----
     $labels = ['A','B','C','D','E','F'];
     foreach ($allQuestions as &$q) {
+        $q['question_text'] = html_entity_decode($q['question_text'], ENT_QUOTES, 'UTF-8');
         $opts = DB::all(
             'SELECT id, option_text, order_num FROM options WHERE question_id = ? ORDER BY order_num',
             [$q['id']]
@@ -156,6 +157,7 @@ function quiz_questions(): void {
         // Pasang label A/B/C/D/... setelah (mungkin) diacak
         foreach ($opts as $i => &$opt) {
             $opt['label'] = $labels[$i] ?? chr(65 + $i);
+            $opt['option_text'] = html_entity_decode($opt['option_text'], ENT_QUOTES, 'UTF-8');
         }
         unset($opt);
         $q['options'] = $opts;

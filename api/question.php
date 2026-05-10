@@ -14,10 +14,16 @@ function question_list(): void {
     );
 
     foreach ($questions as &$q) {
+        $q['question_text'] = html_entity_decode($q['question_text'], ENT_QUOTES, 'UTF-8');
         $q['options'] = DB::all(
             'SELECT id, option_text, is_correct, order_num FROM options WHERE question_id = ? ORDER BY order_num',
             [$q['id']]
         );
+        foreach ($q['options'] as &$o) {
+            $o['option_text'] = html_entity_decode($o['option_text'], ENT_QUOTES, 'UTF-8');
+            $o['is_correct']  = (bool)(int)$o['is_correct'];
+        }
+        unset($o);
     }
     unset($q);
 
@@ -64,10 +70,17 @@ function question_list_all(): void {
     );
 
     foreach ($questions as &$q) {
+        $q['question_text'] = html_entity_decode($q['question_text'], ENT_QUOTES, 'UTF-8');
+        $q['explanation']   = html_entity_decode($q['explanation'] ?? '', ENT_QUOTES, 'UTF-8');
         $q['options'] = DB::all(
             'SELECT id, option_text, is_correct, order_num FROM options WHERE question_id = ? ORDER BY order_num',
             [$q['id']]
         );
+        foreach ($q['options'] as &$o) {
+            $o['option_text'] = html_entity_decode($o['option_text'], ENT_QUOTES, 'UTF-8');
+            $o['is_correct']  = (bool)(int)$o['is_correct'];
+        }
+        unset($o);
     }
     unset($q);
 
