@@ -90,29 +90,6 @@
 
           <!-- Stats bar -->
           <div class="mt-2.5 flex items-center gap-3">
-            <!-- Progress bar -->
-            <div class="flex-1 max-w-[160px] sm:max-w-xs">
-              <div class="flex justify-between text-xs text-gray-400 mb-1">
-                <span x-text="item.correct_answers + '/' + item.total_questions + ' benar'"></span>
-                <span x-text="item.percent + '%'"
-                      :class="{
-                        'text-green-500 font-semibold': item.badge === 'perfect',
-                        'text-blue-500 font-semibold':  item.badge === 'good',
-                        'text-yellow-500':              item.badge === 'ok',
-                        'text-red-400':                 item.badge === 'low'
-                      }"></span>
-              </div>
-              <div class="h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                <div class="h-full rounded-full transition-all duration-700"
-                     :style="'width:' + item.percent + '%'"
-                     :class="{
-                       'bg-green-500': item.badge === 'perfect',
-                       'bg-blue-500':  item.badge === 'good',
-                       'bg-yellow-400': item.badge === 'ok',
-                       'bg-red-400':   item.badge === 'low'
-                     }"></div>
-              </div>
-            </div>
 
             <!-- Time taken -->
             <span x-show="item.time_taken > 0"
