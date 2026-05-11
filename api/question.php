@@ -272,10 +272,80 @@ function _applyAnswerHint(array &$question, string $hint): void {
 }
 
 function _parseTextQuestions(string $text): array {
+    // Split on "....." or "...." to detect question boundaries
+    // This pattern is used as question ending marker in the document
+    $questionBlocks = preg_split('/\.{4,}/', $text, -1, PREG_SPLIT_NO_EMPTY);
+    
+    if (count($questionBlocks) <= 1) {
+        // Fallback: use line-by-line parsing if no "...." boundary found
+        return _parseTextQuestionsLineByLine($text);
+    }
+
+    $questions = [];
+    foreach ($questionBlocks as $block) {
+        $lines = preg_split('/\r\n|\r|\n/', trim($block));
+        if (empty($lines)) continue;
+
+        // First line is usually the question
+        $questionText = trim(array_shift($lines));
+        if (!$questionText) continue;
+
+        $options = [];
+        foreach ($lines as $line) {
+            $line = trim(preg_replace('/\s+/', ' ', $line));
+            if ($line === '') continue;
+
+            // Check if line is an option with letter prefix
+            if (preg_match('/^([A-Ea-e])[\).\s:-]+(.+)$/', $line, $m)) {
+                $optText = trim($m[2]);
+                $correct = false;
+                if (preg_match('/\*|[\[\(]?(?:benar|correct)[\]\)]?/i', $optText)) {
+                    $correct = true;
+                    $optText = trim(preg_replace('/\*|[\[\(]?(?:benar|correct)[\]\)]?/i', '', $optText));
+                }
+                $options[] = [
+                    'option_text' => $optText,
+                    'is_correct'  => $correct ? 1 : 0,
+                    'label'       => strtoupper($m[1]),
+                ];
+            } elseif (!preg_match('/^(?:Jawaban|Kunci|Answer|Key|Penjelasan|Pembahasan|Explanation)[:\s-]+/i', $line) && !empty($options)) {
+                // Append text without letter to last option (multi-line option)
+                $lastIdx = count($options) - 1;
+                if ($lastIdx >= 0) {
+                    $options[$lastIdx]['option_text'] .= ' ' . $line;
+                }
+            } else {
+                // Treat as standalone option without letter
+                $optText = $line;
+                $correct = false;
+                if (preg_match('/\*|[\[\(]?(?:benar|correct)[\]\)]?/i', $optText)) {
+                    $correct = true;
+                    $optText = trim(preg_replace('/\*|[\[\(]?(?:benar|correct)[\]\)]?/i', '', $optText));
+                }
+                $options[] = [
+                    'option_text' => $optText,
+                    'is_correct'  => $correct ? 1 : 0,
+                    'label'       => chr(65 + count($options)),
+                ];
+            }
+        }
+
+        if (!empty($options)) {
+            $questions[] = [
+                'question_text' => $questionText,
+                'explanation'   => '',
+                'options'       => $options,
+            ];
+        }
+    }
+
+    return _fixCorrect($questions);
+}
+
+function _parseTextQuestionsLineByLine(string $text): array {
     $lines = preg_split('/\r\n|\r|\n/', trim($text));
     $questions = [];
     $cur = null;
-    $answerHint = null;
     $inOptions = false;
 
     foreach ($lines as $line) {
@@ -287,27 +357,24 @@ function _parseTextQuestions(string $text): array {
             continue;
         }
 
-        // Check for numbered question: 1. Question or 1) Question
+        // Check for numbered question
         if (preg_match('/^(?:No\.?\s*)?(\d+)[\).\s:-]+(.+)$/i', $line, $m)) {
             if ($cur && !empty($cur['options'])) {
-                if ($answerHint) _applyAnswerHint($cur, $answerHint);
                 $questions[] = $cur;
             }
             $cur = ['question_text' => trim($m[2]), 'explanation' => '', 'options' => []];
-            $answerHint = null;
             $inOptions = false;
             continue;
         }
 
-        // Check for question ending with ... or .... or ? or :
-        if (!$cur && (str_ends_with($line, '...') || str_ends_with($line, '....') || str_ends_with($line, '.....') || str_ends_with($line, '?') || str_ends_with($line, ':') || strpos($line, '....') !== false || strpos($line, '...') !== false)) {
+        // Check for question ending with punctuation
+        if (!$cur && (strpos($line, '....') !== false || strpos($line, '...') !== false || str_ends_with($line, '?') || str_ends_with($line, ':'))) {
             $cur = ['question_text' => $line, 'explanation' => '', 'options' => []];
-            $answerHint = null;
             $inOptions = true;
             continue;
         }
 
-        // Check for options with letters: A. Option or A) Option
+        // Check for options with letter prefix
         if ($cur && preg_match('/^([A-Ea-e])[\).\s:-]+(.+)$/', $line, $m)) {
             $opt = trim($m[2]);
             $correct = false;
@@ -324,7 +391,7 @@ function _parseTextQuestions(string $text): array {
             continue;
         }
 
-        // If in options mode and line doesn't match above, treat as option without letter
+        // Options without letter in options-mode
         if ($cur && $inOptions && !preg_match('/^(?:Jawaban|Kunci|Answer|Key|Penjelasan|Pembahasan|Explanation)[:\s-]+/i', $line)) {
             $opt = $line;
             $correct = false;
@@ -335,29 +402,18 @@ function _parseTextQuestions(string $text): array {
             $cur['options'][] = [
                 'option_text' => $opt,
                 'is_correct'  => $correct ? 1 : 0,
-                'label'       => chr(65 + count($cur['options'])), // A, B, C, ...
+                'label'       => chr(65 + count($cur['options'])),
             ];
             continue;
         }
 
-        if ($cur && preg_match('/^(?:Jawaban|Kunci|Answer|Key)[:\s-]+([A-Ea-e1-5])\b/i', $line, $m)) {
-            $answerHint = strtoupper($m[1]);
-            continue;
-        }
-
-        if ($cur && preg_match('/^(?:Penjelasan|Pembahasan|Explanation)[:\s-]+(.+)$/i', $line, $m)) {
-            $cur['explanation'] = trim($m[1]);
-            continue;
-        }
-
-        // If we have a current question and it's not in options, append to question text
+        // Append to question text if not in options
         if ($cur && !$inOptions) {
             $cur['question_text'] .= ' ' . $line;
         }
     }
 
     if ($cur && !empty($cur['options'])) {
-        if ($answerHint) _applyAnswerHint($cur, $answerHint);
         $questions[] = $cur;
     }
 
