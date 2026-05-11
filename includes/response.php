@@ -18,7 +18,15 @@ function jsonResponse(mixed $data, int $code = 200): never {
     $token = generateCsrfToken();
     header('X-CSRF-Token: ' . $token);
 
-    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+    if ($json === false) {
+        $message = 'Terjadi kesalahan respons JSON';
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $message, 'message' => $message, 'code' => 500], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    echo $json;
     exit;
 }
 
