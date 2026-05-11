@@ -272,74 +272,127 @@ function _applyAnswerHint(array &$question, string $hint): void {
 }
 
 function _parseTextQuestions(string $text): array {
-    // Split on "....." or "...." to detect question boundaries
-    // This pattern is used as question ending marker in the document
-    $questionBlocks = preg_split('/\.{4,}/', $text, -1, PREG_SPLIT_NO_EMPTY);
+    // NEW STRATEGY: Detect patterns of [question] + [5 option lines]
+    // This works for files where options are short, consecutive lines
     
-    if (count($questionBlocks) <= 1) {
-        // Fallback: use line-by-line parsing if no "...." boundary found
+    $lines = [];
+    foreach (preg_split('/\r\n|\r|\n/', trim($text)) as $line) {
+        $trimmed = trim(preg_replace('/\s+/', ' ', $line));
+        if ($trimmed !== '') {
+            $lines[] = $trimmed;
+        }
+    }
+    
+    if (count($lines) < 6) {
         return _parseTextQuestionsLineByLine($text);
     }
-
+    
     $questions = [];
-    foreach ($questionBlocks as $block) {
-        $lines = preg_split('/\r\n|\r|\n/', trim($block));
-        if (empty($lines)) continue;
-
-        // First line is usually the question
-        $questionText = trim(array_shift($lines));
-        if (!$questionText) continue;
-
-        $options = [];
-        foreach ($lines as $line) {
-            $line = trim(preg_replace('/\s+/', ' ', $line));
-            if ($line === '') continue;
-
-            // Check if line is an option with letter prefix
-            if (preg_match('/^([A-Ea-e])[\).\s:-]+(.+)$/', $line, $m)) {
-                $optText = trim($m[2]);
-                $correct = false;
-                if (preg_match('/\*|[\[\(]?(?:benar|correct)[\]\)]?/i', $optText)) {
-                    $correct = true;
-                    $optText = trim(preg_replace('/\*|[\[\(]?(?:benar|correct)[\]\)]?/i', '', $optText));
+    $i = 0;
+    
+    while ($i < count($lines)) {
+        // Check if next 5 lines could be options
+        if ($i + 5 <= count($lines)) {
+            $potentialOptions = array_slice($lines, $i, 5);
+            
+            // Heuristic: options are typically shorter (< 150 chars each)
+            // and have reasonable average length
+            $avgLength = array_sum(array_map('strlen', $potentialOptions)) / 5;
+            $isOptionGroup = true;
+            
+            foreach ($potentialOptions as $opt) {
+                if (strlen($opt) > 150) {
+                    $isOptionGroup = false;
+                    break;
                 }
-                $options[] = [
-                    'option_text' => $optText,
-                    'is_correct'  => $correct ? 1 : 0,
-                    'label'       => strtoupper($m[1]),
-                ];
-            } elseif (!preg_match('/^(?:Jawaban|Kunci|Answer|Key|Penjelasan|Pembahasan|Explanation)[:\s-]+/i', $line) && !empty($options)) {
-                // Append text without letter to last option (multi-line option)
-                $lastIdx = count($options) - 1;
-                if ($lastIdx >= 0) {
-                    $options[$lastIdx]['option_text'] .= ' ' . $line;
+            }
+            
+            // Also check: no line should start with question indicators
+            foreach ($potentialOptions as $opt) {
+                if (preg_match('/^(?:No\.?\s*)?(\d+)[\).\s:-]+/i', $opt) || 
+                    strpos($opt, 'Jawaban') !== false || 
+                    strpos($opt, 'Kunci') !== false) {
+                    $isOptionGroup = false;
+                    break;
                 }
-            } else {
-                // Treat as standalone option without letter
-                $optText = $line;
-                $correct = false;
-                if (preg_match('/\*|[\[\(]?(?:benar|correct)[\]\)]?/i', $optText)) {
-                    $correct = true;
-                    $optText = trim(preg_replace('/\*|[\[\(]?(?:benar|correct)[\]\)]?/i', '', $optText));
+            }
+            
+            if ($isOptionGroup && $avgLength > 5 && $avgLength < 100) {
+                // Found 5 potential options!
+                // Gather the question: all non-empty lines before this, back to previous option group
+                $questionStart = $i - 1;
+                
+                // Find where the question actually starts
+                $questionLines = [];
+                for ($j = $questionStart; $j >= 0; $j--) {
+                    if (strlen($lines[$j]) > 200) {
+                        // Very long line - likely a paragraph before questions
+                        if (!empty($questionLines)) break;
+                        $questionLines[] = $lines[$j];
+                    } elseif (strlen($lines[$j]) > 30) {
+                        // Medium length - likely question
+                        $questionLines[] = $lines[$j];
+                    } else {
+                        // Short line - might be end of options from previous question
+                        if (!empty($questionLines)) break;
+                    }
                 }
-                $options[] = [
-                    'option_text' => $optText,
-                    'is_correct'  => $correct ? 1 : 0,
-                    'label'       => chr(65 + count($options)),
-                ];
+                
+                if (!empty($questionLines)) {
+                    $questionLines = array_reverse($questionLines);
+                    $questionText = implode(' ', $questionLines);
+                    
+                    // Parse options from the 5 lines
+                    $options = [];
+                    foreach ($potentialOptions as $idx => $optLine) {
+                        // Try to extract option letter if present
+                        $optText = $optLine;
+                        $label = chr(65 + $idx);
+                        
+                        if (preg_match('/^([A-Ea-e])[\).\s:-]+(.+)$/', $optLine, $m)) {
+                            $label = strtoupper($m[1]);
+                            $optText = trim($m[2]);
+                        }
+                        
+                        // Check for correct indicator
+                        $correct = 0;
+                        if (preg_match('/\*|[\[\(]?(?:benar|correct|✓)[\]\)]?/i', $optText)) {
+                            $correct = 1;
+                            $optText = trim(preg_replace('/\*|[\[\(]?(?:benar|correct|✓)[\]\)]?/i', '', $optText));
+                        }
+                        
+                        $options[] = [
+                            'option_text' => $optText,
+                            'is_correct'  => $correct,
+                            'label'       => $label,
+                        ];
+                    }
+                    
+                    if (!empty($options)) {
+                        $questions[] = [
+                            'question_text' => $questionText,
+                            'explanation'   => '',
+                            'options'       => $options,
+                        ];
+                    }
+                }
+                
+                // Skip the options we just processed
+                $i += 5;
+                continue;
             }
         }
-
-        if (!empty($options)) {
-            $questions[] = [
-                'question_text' => $questionText,
-                'explanation'   => '',
-                'options'       => $options,
-            ];
-        }
+        
+        $i++;
     }
-
-    return _fixCorrect($questions);
+    
+    // If we found reasonable number of questions, use them
+    if (count($questions) >= 5) {
+        return _fixCorrect($questions);
+    }
+    
+    // Fallback to line-by-line parsing if detection failed
+    return _parseTextQuestionsLineByLine($text);
 }
 
 function _parseTextQuestionsLineByLine(string $text): array {
