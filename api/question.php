@@ -574,8 +574,12 @@ function _parseXlsx(string $path): array {
 function _fixCorrect(array $questions): array {
     foreach ($questions as &$q) {
         $has = false;
-        foreach ($q['options'] as $o) if ($o['is_correct']) { $has = true; break; }
-        if (!$has && !empty($q['options'])) $q['options'][0]['is_correct'] = 1;
+        foreach ($q['options'] as $o) {
+            if ((int)$o['is_correct']) { $has = true; break; }
+        }
+        // Tandai apakah kunci jawaban terdeteksi dari file
+        $q['has_key'] = $has;
+        // TIDAK auto-assign opsi pertama — biarkan user memilih lewat UI jika belum ada kunci
     }
     unset($q);
     return $questions;

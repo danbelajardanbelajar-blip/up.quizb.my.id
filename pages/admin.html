@@ -805,17 +805,27 @@
 
         <!-- Step 2: Preview & Select -->
         <div x-show="admin.importFile.step === 2" class="flex flex-col flex-1 min-h-0">
-          <div class="px-6 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between flex-shrink-0">
-            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Ditemukan <span class="text-primary-600 font-bold" x-text="admin.importFile.questions.length"></span> soal
-            </p>
-            <div class="flex items-center gap-3 text-sm">
-              <label class="flex items-center gap-1.5 cursor-pointer text-gray-500">
-                <input type="checkbox" checked @change="toggleAllImportFile($event.target.checked)"
-                       class="w-4 h-4 rounded accent-primary-600">
-                Pilih semua
-              </label>
-              <span class="text-gray-400" x-text="admin.importFile.questions.filter(q=>q._sel).length + ' dipilih'"></span>
+          <div class="px-6 py-3 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Ditemukan <span class="text-primary-600 font-bold" x-text="admin.importFile.questions.length"></span> soal
+                </p>
+                <p class="text-xs mt-0.5"
+                   :class="admin.importFile.questions.some(q=>!q.has_key) ? 'text-amber-500' : 'text-green-500'"
+                   x-text="admin.importFile.questions.some(q=>!q.has_key)
+                     ? '⚠️ Klik salah satu opsi pada setiap soal untuk menentukan kunci jawaban'
+                     : '✅ Semua kunci jawaban berhasil terdeteksi dari file'">
+                </p>
+              </div>
+              <div class="flex items-center gap-3 text-sm">
+                <label class="flex items-center gap-1.5 cursor-pointer text-gray-500">
+                  <input type="checkbox" checked @change="toggleAllImportFile($event.target.checked)"
+                         class="w-4 h-4 rounded accent-primary-600">
+                  Pilih semua
+                </label>
+                <span class="text-gray-400" x-text="admin.importFile.questions.filter(q=>q._sel).length + ' dipilih'"></span>
+              </div>
             </div>
           </div>
 
@@ -828,19 +838,45 @@
                          @change="admin.importFile.questions[idx]._sel = $event.target.checked; admin.importFile.questions = [...admin.importFile.questions]"
                          class="w-4 h-4 mt-0.5 rounded accent-primary-600 flex-shrink-0">
                   <div class="flex-1 min-w-0">
+                    <!-- Nomor + teks soal -->
                     <p class="text-sm font-medium text-gray-800 dark:text-gray-100 mb-2">
                       <span class="text-gray-400 mr-1" x-text="(idx+1) + '.'"></span>
                       <span x-text="q.question_text"></span>
                     </p>
-                    <div class="grid grid-cols-2 gap-1">
-                      <template x-for="(o, oi) in q.options" :key="oi">
-                        <p class="text-xs flex items-center gap-1"
-                           :class="o.is_correct ? 'text-green-600 dark:text-green-400 font-medium' : 'text-gray-500 dark:text-gray-400'">
-                          <span x-text="o.is_correct ? '✅' : '○'"></span>
-                          <span x-text="o.option_text"></span>
-                        </p>
+
+                    <!-- Badge status kunci -->
+                    <div class="mb-2">
+                      <template x-if="q.has_key">
+                        <span class="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                          🔑 Kunci terdeteksi dari file
+                        </span>
+                      </template>
+                      <template x-if="!q.has_key">
+                        <span class="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 animate-pulse">
+                          ⚠️ Pilih kunci jawaban — klik opsi di bawah
+                        </span>
                       </template>
                     </div>
+
+                    <!-- Opsi jawaban interaktif — klik untuk pilih kunci -->
+                    <div class="space-y-1">
+                      <template x-for="(o, oi) in q.options" :key="oi">
+                        <button type="button"
+                                @click="setImportCorrect(idx, oi)"
+                                class="w-full text-left flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs transition-all"
+                                :class="o.is_correct
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-semibold ring-1 ring-green-400/50'
+                                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/60 cursor-pointer'">
+                          <span class="w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors"
+                                :class="o.is_correct ? 'border-green-500 bg-green-500' : 'border-gray-300 dark:border-gray-600'">
+                            <span x-show="o.is_correct" class="text-white text-[9px] leading-none">✓</span>
+                          </span>
+                          <span class="text-gray-400 dark:text-gray-500 font-mono flex-shrink-0" x-text="String.fromCharCode(65+oi) + '.'"></span>
+                          <span x-text="o.option_text"></span>
+                        </button>
+                      </template>
+                    </div>
+
                     <p x-show="q.explanation" class="mt-1.5 text-xs text-gray-400 italic" x-text="'💡 ' + q.explanation"></p>
                   </div>
                 </div>
@@ -848,11 +884,21 @@
             </template>
           </div>
 
-          <div class="flex gap-3 px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex-shrink-0">
+          <div class="flex items-center gap-3 px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex-shrink-0">
+            <div class="flex-1 text-xs">
+              <template x-if="admin.importFile.questions.filter(q=>q._sel && !q.has_key).length > 0">
+                <span class="text-amber-600 dark:text-amber-400">
+                  ⚠️ <span x-text="admin.importFile.questions.filter(q=>q._sel && !q.has_key).length"></span> soal dipilih belum ada kuncinya
+                </span>
+              </template>
+              <template x-if="admin.importFile.questions.filter(q=>q._sel && !q.has_key).length === 0 && admin.importFile.questions.filter(q=>q._sel).length > 0">
+                <span class="text-green-600 dark:text-green-400">✅ Semua soal sudah memiliki kunci</span>
+              </template>
+            </div>
             <button @click="admin.importFile.step = 1"
-                    class="flex-1 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">← Kembali</button>
+                    class="py-2 px-4 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">← Kembali</button>
             <button @click="saveImportFile()" :disabled="admin.importFile.loading"
-                    class="flex-1 btn-primary py-2 text-sm">
+                    class="btn-primary py-2 px-5 text-sm">
               <span x-show="admin.importFile.loading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></span>
               <span x-show="!admin.importFile.loading"
                     x-text="'✅ Import ' + admin.importFile.questions.filter(q=>q._sel).length + ' Soal'"></span>
@@ -860,6 +906,7 @@
             </button>
           </div>
         </div>
+
 
       </div>
     </div>

@@ -1269,7 +1269,7 @@ function QuizBApp() {
           this.showToast('Tidak ada soal yang terbaca. Periksa format file.', 'error', '❌');
           return;
         }
-        this.admin.importFile.questions = data.questions.map(q => ({ ...q, _sel: true }));
+        this.admin.importFile.questions = data.questions.map(q => ({ ...q, _sel: true, has_key: q.has_key || false }));
         this.admin.importFile.step = 2;
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
@@ -1281,6 +1281,14 @@ function QuizBApp() {
     async saveImportFile() {
       const sel = this.admin.importFile.questions.filter(q => q._sel);
       if (!sel.length) { this.showToast('Pilih minimal satu soal', 'error', '❌'); return; }
+
+      // Cek soal yang belum memiliki kunci jawaban
+      const noKey = sel.filter(q => !q.options.some(o => o.is_correct));
+      if (noKey.length > 0) {
+        const ok = confirm(`⚠️ ${noKey.length} soal belum memiliki kunci jawaban yang dipilih.\n\nSoal tersebut akan diimpor dengan kunci jawaban kosong. Lanjutkan?`);
+        if (!ok) return;
+      }
+
       this.admin.importFile.loading = true;
       try {
         const data = await api.post('question.import_save', {
@@ -1299,6 +1307,16 @@ function QuizBApp() {
 
     toggleAllImportFile(checked) {
       this.admin.importFile.questions = this.admin.importFile.questions.map(q => ({ ...q, _sel: checked }));
+    },
+
+    // Set kunci jawaban secara manual untuk soal tertentu di halaman analisis
+    setImportCorrect(qIdx, optIdx) {
+      const questions = this.admin.importFile.questions;
+      const q = { ...questions[qIdx] };
+      q.options = q.options.map((o, i) => ({ ...o, is_correct: i === optIdx ? 1 : 0 }));
+      q.has_key = true;
+      questions[qIdx] = q;
+      this.admin.importFile.questions = [...questions];
     },
 
     // ---- Import soal dari QuizB ----
