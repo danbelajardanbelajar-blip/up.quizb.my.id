@@ -1,0 +1,40 @@
+<!-- GOOGLE SETUP PAGE -->
+<div class="min-h-[80vh] flex items-center justify-center px-4 py-12">
+  <div class="w-full max-w-md animate-slide-up">
+    <div class="text-center mb-8">
+      <div class="w-14 h-14 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center shadow-xl mx-auto mb-4">
+        <span class="text-white font-bold text-2xl">Q</span>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Selesaikan Pendaftaran</h1>
+      <p class="text-gray-500 dark:text-gray-400 mt-1 text-sm">Pilih nama yang akan digunakan</p>
+    </div>
+
+    <div class="card p-8">
+      <form @submit.prevent="setGoogleName()" class="space-y-4">
+        <!-- Error -->
+        <div x-show="googleSetupForm.error" class="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
+          <span>⚠️</span><span x-text="googleSetupForm.error"></span>
+        </div>
+
+        <!-- Google Name -->
+        <div>
+          <label class="form-label" for="google-name">Nama dari Google</label>
+          <input id="google-name" type="text" x-model="googleSetupForm.googleName" class="form-input" readonly />
+        </div>
+
+        <!-- Custom Name -->
+        <div>
+          <label class="form-label" for="custom-name">Nama yang Ingin Digunakan</label>
+          <input id="custom-name" type="text" x-model="googleSetupForm.customName" class="form-input" placeholder="Masukkan nama Anda" required />
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Kosongkan untuk menggunakan nama dari Google</p>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" class="btn-primary w-full py-3 text-base" :disabled="googleSetupForm.loading">
+          <span x-show="googleSetupForm.loading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></span>
+          <span x-text="googleSetupForm.loading ? 'Menyimpan...' : 'Lanjutkan'"></span>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

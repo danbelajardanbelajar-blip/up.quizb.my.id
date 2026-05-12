@@ -130,6 +130,7 @@ function QuizBApp() {
     // Auth forms
     loginForm:    { email: '', password: '', loading: false, error: '' },
     registerForm: { name: '', email: '', password: '', password_confirm: '', loading: false, error: '' },
+    googleSetupForm: { googleName: '', customName: '', loading: false, error: '' },
 
     // Settings
     settings: { limit: 10, shuffleQuestions: true, shuffleOptions: true, loading: false, saving: false, error: '', success: '' },
@@ -250,6 +251,7 @@ function QuizBApp() {
         'settings':    '/settings',
         'login':       '/login',
         'register':    '/register',
+        'google-setup': '/google-setup',
         'admin':       '/admin',
         'classroom':   rest[0] ? '/classroom/' + rest[0] : '/classroom',
         'challenges':      '/challenges',
@@ -322,6 +324,7 @@ function QuizBApp() {
       if (route === '/history')            this.loadHistory();
       if (route === '/profile')            this.loadDashboard(); // reuse dashboard stats
       if (route === '/settings')           this.loadSettings();
+      if (route === '/google-setup')       this.loadGoogleSetup();
       if (route.startsWith('/result/'))    this.loadResult(params[0]);
       if (route.startsWith('/admin'))      this.loadAdminTab(this.admin.tab);
       if (route === '/classroom')          this.loadClassroom();
@@ -415,6 +418,31 @@ function QuizBApp() {
         this.showToast('Registrasi berhasil! Selamat datang 🎉', 'success', '🎉');
         // User baru → arahkan ke pilihan role dulu
         this.navigate(data.is_new_user ? '/onboarding' : '/dashboard');
+      } catch (e) {
+        f.error = e.message;
+      } finally {
+        f.loading = false;
+      }
+    },
+
+    loginWithGoogle() {
+      window.location.href = '/api/auth/google?mode=login';
+    },
+
+    registerWithGoogle() {
+      window.location.href = '/api/auth/google?mode=register';
+    },
+
+    async setGoogleName() {
+      const f = this.googleSetupForm;
+      const name = f.customName.trim() || f.googleName;
+      if (!name) { f.error = 'Nama wajib diisi'; return; }
+      f.loading = true; f.error = '';
+      try {
+        await api.post('auth.update_profile', { name });
+        this.user.name = name;
+        this.showToast('Nama berhasil disimpan!', 'success', '✅');
+        this.navigate('/onboarding');
       } catch (e) {
         f.error = e.message;
       } finally {
@@ -932,6 +960,15 @@ function QuizBApp() {
       this.settings.limit   = this.user.quiz_questions_limit || 10;
       this.settings.error   = '';
       this.settings.success = '';
+    },
+
+    async loadGoogleSetup() {
+      if (!this.user) return this.navigate('/login');
+      this.googleSetupForm.googleName = this.user.name || '';
+      this.googleSetupForm.customName = '';
+      this.googleSetupForm.error = '';
+      this.googleSetupForm.loading = false;
+      this._finishProgress();
     },
 
     async saveSettings(limit) {

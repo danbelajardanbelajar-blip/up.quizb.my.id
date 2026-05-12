@@ -319,6 +319,11 @@
       <?php include 'pages/register.html'; ?>
     </div>
 
+    <!-- GOOGLE SETUP PAGE -->
+    <div x-show="currentRoute === '/google-setup'">
+      <?php include 'pages/google-setup.html'; ?>
+    </div>
+
     <!-- PROFILE PAGE -->
     <div x-show="currentRoute === '/profile'">
       <?php include 'pages/profile.html'; ?>

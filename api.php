@@ -66,7 +66,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 if (in_array($method, ['POST', 'PUT', 'DELETE'])) {
     // Allow action=auth.login and auth.register without CSRF (first-time)
     $action = $_GET['action'] ?? '';
-    if (!in_array($action, ['auth.login', 'auth.register', 'auth.logout'])) {
+    if (!in_array($action, ['auth.login', 'auth.register', 'auth.logout', 'auth.google'])) {
         validateCsrfToken();
     }
 }
@@ -79,6 +79,7 @@ $action = $_GET['action'] ?? '';
 
 $routes = [
     'auth'        => __DIR__ . '/api/auth.php',
+    'quiz'        => __DIR__ . '/api/quiz.php',
     'quiz'        => __DIR__ . '/api/quiz.php',
     'category'       => __DIR__ . '/api/category.php',
     'category_group' => __DIR__ . '/api/category_group.php',
