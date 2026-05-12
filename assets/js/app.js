@@ -201,7 +201,7 @@ function QuizBApp() {
       // After loadUser: if the user IS authenticated and the original route was
       // a protected page (but we were bounced to /login because user hadn't loaded
       // yet), navigate back to the intended destination now.
-      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges', '/messages'];
+      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges', '/messages', '/google-setup', '/onboarding'];
       const intendedPath = (initialHash.replace(/^#/, '').split('?')[0]) || '/';
       if (this.user && protected_routes.some(r => intendedPath.startsWith(r))) {
         return this.handleRoute(initialHash);
