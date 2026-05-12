@@ -435,7 +435,7 @@ function QuizBApp() {
 
     async setGoogleName() {
       const f = this.googleSetupForm;
-      const name = f.customName.trim() || f.googleName;
+      const name = f.customName.trim();
       if (!name) { f.error = 'Nama wajib diisi'; return; }
       f.loading = true; f.error = '';
       try {

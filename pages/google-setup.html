@@ -28,17 +28,17 @@
         </div>
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <button type="button" class="btn-secondary w-full sm:w-auto" @click="googleSetupForm.customName = googleSetupForm.googleName">
+          <button type="button" class="btn-secondary w-full sm:w-auto" :disabled="!googleSetupForm.googleName" @click="googleSetupForm.customName = googleSetupForm.googleName">
             Samakan dengan nama akun Google
           </button>
-          <p class="text-sm text-slate-500 dark:text-slate-400">Nama harus diisi sebelum melanjutkan.</p>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Isi nama atau pilih gunakan nama Google sebelum melanjutkan.</p>
         </div>
 
         <div x-show="googleSetupForm.error" class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/60 dark:text-red-300">
           <span>⚠️ </span><span x-text="googleSetupForm.error"></span>
         </div>
 
-        <button type="submit" class="btn-primary w-full py-3 text-base" :disabled="googleSetupForm.loading">
+        <button type="submit" class="btn-primary w-full py-3 text-base" :disabled="googleSetupForm.loading || !googleSetupForm.customName.trim()">
           <span x-show="googleSetupForm.loading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></span>
           <span x-text="googleSetupForm.loading ? 'Menyimpan...' : 'Lanjutkan'"></span>
         </button>
