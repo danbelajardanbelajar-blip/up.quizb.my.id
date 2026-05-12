@@ -18,16 +18,23 @@
 
         <!-- Google Name -->
         <div>
-          <label class="form-label" for="google-name">Nama dari Google</label>
-          <input id="google-name" type="text" x-model="googleSetupForm.googleName" class="form-input" readonly />
+          <label class="form-label" for="google-name">Nama akun Google</label>
+          <div id="google-name" class="form-input bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-200">
+            <span x-text="googleSetupForm.googleName || 'Nama Google tidak tersedia'">Nama Google tidak tersedia</span>
+          </div>
         </div>
 
-        <!-- Custom Name -->
-        <div>
-          <label class="form-label" for="custom-name">Nama yang Ingin Digunakan</label>
-          <input id="custom-name" type="text" x-model="googleSetupForm.customName" class="form-input" placeholder="Masukkan nama Anda" required />
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Kosongkan untuk menggunakan nama dari Google</p>
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex-1">
+            <label class="form-label" for="custom-name">Nama yang ingin digunakan</label>
+            <input id="custom-name" type="text" x-model="googleSetupForm.customName" class="form-input" placeholder="Ketik nama Anda di sini" />
+          </div>
+          <button type="button" class="btn-secondary h-12 px-4 whitespace-nowrap" @click="googleSetupForm.customName = googleSetupForm.googleName">
+            Samakan dengan nama akun Google
+          </button>
         </div>
+
+        <p class="text-sm text-gray-500 dark:text-gray-400">Isi nama terlebih dahulu sebelum melanjutkan. Jika kosong, Anda tidak bisa melanjutkan.</p>
 
         <!-- Submit -->
         <button type="submit" class="btn-primary w-full py-3 text-base" :disabled="googleSetupForm.loading">

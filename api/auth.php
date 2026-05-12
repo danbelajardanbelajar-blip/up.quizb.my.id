@@ -326,12 +326,8 @@ function auth_google(): void {
                 DB::execute('UPDATE users SET google_id = ? WHERE id = ?', [$googleId, $user['id']]);
             }
             loginUser($user);
-            // Redirect to dashboard or setup if name not set properly
-            if (empty($user['name']) || $user['name'] === $email) {
-                header('Location: ' . APP_URL . '/#/google-setup');
-            } else {
-                header('Location: ' . APP_URL . '/#/dashboard');
-            }
+            // Always redirect Google-authenticated users to name setup
+            header('Location: ' . APP_URL . '/#/google-setup');
             exit;
         }
 
