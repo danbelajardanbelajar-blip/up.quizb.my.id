@@ -67,7 +67,7 @@ function QuizBApp() {
       isTeacher:   false,
       // Create assignment modal
       assignModal: { show: false, editId: null },
-      assignForm:  { title: '', quiz_id: '', mode: 'bebas', deadline: '', max_questions: '', shuffle_questions: null, shuffle_options: null, timer_per_question: '', duration_minutes: '' },
+      assignForm:  { title: '', quiz_id: '', mode: 'bebas', deadline: '', max_questions: '', shuffle_questions: null, shuffle_options: null, timer_per_question: '', duration_minutes: '', require_full_score: false },
       assignError: '',
       assignLoading: false,
       // Quiz list for assignment dropdown
@@ -890,6 +890,7 @@ function QuizBApp() {
         shuffle_options:     assign.shuffle_options,
         timer_per_question:  assign.timer_per_question != null ? assign.timer_per_question : '',
         duration_minutes:    assign.duration_minutes   != null ? assign.duration_minutes   : '',
+        require_full_score:  assign.require_full_score ? true : false,
       };
       this.classroom.assignError = '';
       this.classroom.assignModal.show = true;
@@ -916,6 +917,7 @@ function QuizBApp() {
           shuffle_options:    shuffleO,
           timer_per_question: timerPerQ,
           duration_minutes:   durMins,
+          require_full_score: f.require_full_score ? 1 : 0,
         });
         this.classroom.assignModal.show = false;
         this.showToast('Tugas berhasil diperbarui!', 'success', '✅');
@@ -929,7 +931,7 @@ function QuizBApp() {
 
     async openAssignModal(existingAssign = null) {
       this.classroom.assignModal.editId = null;
-      this.classroom.assignForm  = { title: '', quiz_id: '', mode: 'bebas', deadline: '', max_questions: '', shuffle_questions: null, shuffle_options: null, timer_per_question: '', duration_minutes: '' };
+      this.classroom.assignForm  = { title: '', quiz_id: '', mode: 'bebas', deadline: '', max_questions: '', shuffle_questions: null, shuffle_options: null, timer_per_question: '', duration_minutes: '', require_full_score: false };
       this.classroom.assignError = '';
       this.classroom.assignModal.show = true;
       // Load quiz list for dropdown if not already loaded
@@ -1012,6 +1014,7 @@ function QuizBApp() {
           ...(shuffleO  !== null ? { shuffle_options:    shuffleO  } : {}),
           ...(timerPerQ !== null ? { timer_per_question: timerPerQ } : {}),
           ...(durMins   !== null ? { duration_minutes:   durMins   } : {}),
+          require_full_score: f.require_full_score ? 1 : 0,
         });
         this.classroom.assignModal.show = false;
         this.showToast('Tugas berhasil dibuat!', 'success', '✅');

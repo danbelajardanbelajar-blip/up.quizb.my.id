@@ -28,6 +28,7 @@ function assignment_create(): void {
                         ? (int)(bool)$body['shuffle_questions'] : null;
     $shuffleOptions   = array_key_exists('shuffle_options', $body)
                         ? (int)(bool)$body['shuffle_options']   : null;
+    $requireFull      = isset($body['require_full_score']) ? (int)(bool)$body['require_full_score'] : 0;
 
     if ($classId <= 0) jsonError('Pilih kelas');
     if ($quizId  <= 0) jsonError('Pilih paket soal');
@@ -50,8 +51,8 @@ function assignment_create(): void {
         "INSERT INTO assignments
          (class_id, quiz_id, teacher_id, title, mode, deadline,
           max_questions, timer_per_question, duration_minutes,
-          shuffle_questions, shuffle_options)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          shuffle_questions, shuffle_options, require_full_score)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )->execute([
         $classId, $quizId, $user['id'], $title, $mode,
         $deadline ?: null,
@@ -60,6 +61,7 @@ function assignment_create(): void {
         $durationMins,
         $shuffleQuestions,
         $shuffleOptions,
+        $requireFull,
     ]);
     $newId = $pdo->lastInsertId();
 
@@ -114,7 +116,14 @@ function assignment_list(): void {
                 [$a['id'], $user['id']]
             );
             $a['my_submission'] = $sub;
-            $a['is_done']       = !empty($sub);
+            $a['is_done'] = false;
+            if (!empty($sub)) {
+                if (!empty($a['require_full_score'])) {
+                    $a['is_done'] = isset($sub['score']) && (int)$sub['score'] === 100;
+                } else {
+                    $a['is_done'] = true;
+                }
+            }
         }
         unset($a);
     }
@@ -162,6 +171,14 @@ function assignment_get(): void {
             [$id, $user['id']]
         );
         $assignment['my_submission'] = $sub;
+        $assignment['is_done'] = false;
+        if (!empty($sub)) {
+            if (!empty($assignment['require_full_score'])) {
+                $assignment['is_done'] = isset($sub['score']) && (int)$sub['score'] === 100;
+            } else {
+                $assignment['is_done'] = true;
+            }
+        }
     }
 
     // Pengajar: daftar submission
@@ -210,15 +227,18 @@ function assignment_update(): void {
     $shuffleO     = array_key_exists('shuffle_options', $body)
                     ? (strlen((string)$body['shuffle_options'])   ? (int)(bool)$body['shuffle_options']   : null)
                     : $assignment['shuffle_options'];
+    $requireFull  = array_key_exists('require_full_score', $body)
+                    ? (int)(bool)$body['require_full_score']
+                    : (int)$assignment['require_full_score'];
 
     DB::conn()->prepare(
         "UPDATE assignments SET title=?, mode=?, deadline=?, is_active=?,
                 max_questions=?, timer_per_question=?, duration_minutes=?,
-                shuffle_questions=?, shuffle_options=?
+                shuffle_questions=?, shuffle_options=?, require_full_score=?
          WHERE id=?"
     )->execute([$title, $mode, $deadline ?: null, $isActive,
                 $maxQ, $timerQ, $durMins,
-                $shuffleQ, $shuffleO,
+                $shuffleQ, $shuffleO, $requireFull,
                 $id]);
 
     jsonSuccess(DB::one("SELECT * FROM assignments WHERE id = ?", [$id]));
@@ -504,7 +524,7 @@ function assignment_my_dashboard(): void {
                 s.submitted_at,
                 (SELECT MAX(score) FROM attempts WHERE user_id = ? AND quiz_id = a.quiz_id) AS my_score,
                 CASE
-                    WHEN s.id IS NOT NULL THEN 'done'
+                    WHEN s.id IS NOT NULL AND (a.require_full_score = 0 OR (a.require_full_score = 1 AND IFNULL(att.score,0) = 100)) THEN 'done'
                     WHEN a.deadline IS NOT NULL AND a.deadline < NOW() THEN 'overdue'
                     ELSE 'pending'
                 END AS status
@@ -514,6 +534,7 @@ function assignment_my_dashboard(): void {
             INNER JOIN quizzes      q  ON q.id = a.quiz_id
             LEFT  JOIN assignment_submissions s
                    ON s.assignment_id = a.id AND s.user_id = ?
+            LEFT  JOIN attempts att ON att.id = s.attempt_id
             WHERE cm.user_id = ?
             ORDER BY
                 CASE

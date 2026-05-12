@@ -41,7 +41,15 @@
                   <span>Pengajar: <span class="font-medium text-gray-600 dark:text-gray-300" x-text="classroom.detail.teacher_name"></span></span>
                   <span x-show="classroom.isTeacher" class="px-2 py-0.5 bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 rounded-full text-xs font-semibold">Anda Pengajar</span>
                 </div>
-              </div>
+                  <!-- Require full score option -->
+                  <div class="mt-4">
+                    <label class="form-label">Harus dikerjakan sampai 100</label>
+                    <div class="flex items-center gap-3">
+                      <input type="checkbox" id="require_full_score" x-model="classroom.assignForm.require_full_score" class="form-checkbox" />
+                      <label for="require_full_score" class="text-sm text-gray-500">Jika dicentang, tugas hanya dianggap selesai jika skor 100%</label>
+                    </div>
+                  </div>
+                </div>
             </div>
             <!-- Join Code (for teacher) -->
             <div x-show="classroom.isTeacher" class="flex flex-col items-end gap-2">
@@ -110,8 +118,13 @@
                         <span x-show="assign.deadline">⏰ <span x-text="formatDate(assign.deadline)"></span></span>
                         <span x-show="classroom.isTeacher">👥 <span x-text="assign.submission_count || 0"></span> dikumpulkan</span>
                         <template x-if="!classroom.isTeacher">
-                          <span class="text-xs text-gray-500"> <span x-show="assign.my_score !== null">Skor kamu: <strong x-text="assign.my_score + '%'" class="text-primary-600"></strong></span></span>
-                          <button @click.prevent="openAssignmentAttempts(assign.id)" class="ml-2 text-xs text-primary-600 hover:underline">📜 Riwayat</button>
+                          <div class="flex items-center gap-2">
+                            <span class="text-xs text-gray-500"> <span x-show="assign.my_score !== null">Skor kamu: <strong x-text="assign.my_score + '%'" class="text-primary-600"></strong></span></span>
+                            <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                                  :class="assign.status === 'done' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : (assign.status === 'overdue' ? 'bg-red-100 text-red-500' : (assign.status === 'incomplete' ? 'bg-yellow-100 text-yellow-800' : 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'))"
+                                  x-text="assign.status === 'done' ? '✅ Selesai' : (assign.status === 'overdue' ? '⏰ Lewat Waktu' : (assign.status === 'incomplete' ? '⚠️ Belum Selesai' : '📌 Belum Dikerjakan'))"></span>
+                            <button @click.prevent="openAssignmentAttempts(assign.id)" class="ml-2 text-xs text-primary-600 hover:underline">📜 Riwayat</button>
+                          </div>
                         </template>
                         <template x-if="assign.shuffle_questions !== null">
                           <span :class="assign.shuffle_questions ? 'text-green-500' : 'text-gray-400'"
