@@ -947,6 +947,13 @@ function QuizBApp() {
             }
           }
 
+          // Sort quizzes alphabetically by title (A → Z), case-insensitive
+          try {
+            all.sort((a, b) => (a.title || '').toString().localeCompare((b.title || '').toString(), undefined, { sensitivity: 'base' }));
+          } catch (_) {
+            // Fallback: basic lower-case compare if localeCompare with options fails
+            all.sort((a, b) => (a.title || '').toString().toLowerCase().localeCompare((b.title || '').toString().toLowerCase()));
+          }
           this.classroom.quizListForAssign = all;
         } catch (e) {
           this.classroom.quizListForAssign = [];
