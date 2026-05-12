@@ -910,7 +910,17 @@ function QuizBApp() {
       if (!this.classroom.quizListForAssign.length) {
         this.classroom.quizListLoading = true;
         try {
-          const resp = await api.getFull('quiz.list', { limit: 50 });
+          // First, get total quizzes so we can request all of them in one call
+          let total = 0;
+          try {
+            const stats = await api.get('quiz.stats');
+            total = parseInt(stats.total_quizzes || 0, 10) || 0;
+          } catch (_) {
+            total = 0;
+          }
+          // Fallback to a safe large limit if stats unavailable
+          const limit = total > 0 ? total : 1000;
+          const resp = await api.getFull('quiz.list', { limit: limit, page: 1 });
           this.classroom.quizListForAssign = Array.isArray(resp.data) ? resp.data : [];
         } catch (e) {
           this.classroom.quizListForAssign = [];
