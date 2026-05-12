@@ -1,42 +1,43 @@
 <!-- GOOGLE SETUP PAGE -->
-<div class="min-h-[80vh] flex items-center justify-center px-4 py-12">
-  <div class="w-full max-w-md animate-slide-up">
-    <div class="text-center mb-8">
-      <div class="w-14 h-14 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center shadow-xl mx-auto mb-4">
-        <span class="text-white font-bold text-2xl">Q</span>
+<div class="min-h-[84vh] flex items-center justify-center px-4 py-12 bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+  <div class="w-full max-w-xl animate-slide-up">
+    <div class="mb-10 text-center">
+      <div class="mx-auto mb-5 w-20 h-20 rounded-[2.5rem] bg-gradient-to-br from-indigo-600 via-sky-500 to-cyan-400 shadow-2xl shadow-cyan-500/20 flex items-center justify-center">
+        <span class="text-4xl font-extrabold text-white">Q</span>
       </div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Selesaikan Pendaftaran</h1>
-      <p class="text-gray-500 dark:text-gray-400 mt-1 text-sm">Pilih nama yang akan digunakan</p>
+      <h1 class="text-3xl font-semibold text-slate-900 dark:text-white">Selesaikan Pendaftaran</h1>
+      <p class="mt-3 text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto">Tentukan nama akun yang akan digunakan untuk masuk ke QuizB. Pilih nama Google atau buat nama baru sesuai keinginan.</p>
     </div>
 
-    <div class="card p-8">
-      <form @submit.prevent="setGoogleName()" class="space-y-4">
-        <!-- Error -->
-        <div x-show="googleSetupForm.error" class="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
-          <span>⚠️</span><span x-text="googleSetupForm.error"></span>
+    <div class="card glass p-8 border-white/30 dark:border-slate-700/70 shadow-2xl shadow-slate-900/10">
+      <div class="mb-6 rounded-3xl bg-white/90 dark:bg-slate-900/90 p-5 border border-slate-200/80 dark:border-slate-700/80">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 text-xl">👤</div>
+          <div>
+            <p class="text-xs uppercase tracking-[0.24em] font-semibold text-indigo-600 dark:text-cyan-300">Nama akun Google</p>
+            <p id="google-name" class="mt-2 text-base font-medium text-slate-900 dark:text-white" x-text="googleSetupForm.googleName || 'Nama Google tidak tersedia'"></p>
+          </div>
         </div>
+      </div>
 
-        <!-- Google Name -->
+      <form @submit.prevent="setGoogleName()" class="space-y-5">
         <div>
-          <label class="form-label" for="google-name">Nama akun Google</label>
-          <div id="google-name" class="form-input bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-200">
-            <span x-text="googleSetupForm.googleName || 'Nama Google tidak tersedia'">Nama Google tidak tersedia</span>
-          </div>
+          <label class="form-label" for="custom-name">Nama yang ingin digunakan</label>
+          <input id="custom-name" type="text" x-model="googleSetupForm.customName" class="form-input" placeholder="Contoh: Budi Santoso" />
+          <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Biarkan kosong dan tekan tombol jika ingin menggunakan nama dari Google.</p>
         </div>
 
-        <div class="flex items-center justify-between gap-3">
-          <div class="flex-1">
-            <label class="form-label" for="custom-name">Nama yang ingin digunakan</label>
-            <input id="custom-name" type="text" x-model="googleSetupForm.customName" class="form-input" placeholder="Ketik nama Anda di sini" />
-          </div>
-          <button type="button" class="btn-secondary h-12 px-4 whitespace-nowrap" @click="googleSetupForm.customName = googleSetupForm.googleName">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <button type="button" class="btn-secondary w-full sm:w-auto" @click="googleSetupForm.customName = googleSetupForm.googleName">
             Samakan dengan nama akun Google
           </button>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Nama harus diisi sebelum melanjutkan.</p>
         </div>
 
-        <p class="text-sm text-gray-500 dark:text-gray-400">Isi nama terlebih dahulu sebelum melanjutkan. Jika kosong, Anda tidak bisa melanjutkan.</p>
+        <div x-show="googleSetupForm.error" class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/60 dark:text-red-300">
+          <span>⚠️ </span><span x-text="googleSetupForm.error"></span>
+        </div>
 
-        <!-- Submit -->
         <button type="submit" class="btn-primary w-full py-3 text-base" :disabled="googleSetupForm.loading">
           <span x-show="googleSetupForm.loading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></span>
           <span x-text="googleSetupForm.loading ? 'Menyimpan...' : 'Lanjutkan'"></span>
