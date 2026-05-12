@@ -910,7 +910,7 @@ function QuizBApp() {
       if (!this.classroom.quizListForAssign.length) {
         this.classroom.quizListLoading = true;
         try {
-          // First, get total quizzes so we can request all of them in one call
+          // Try to get total quizzes first
           let total = 0;
           try {
             const stats = await api.get('quiz.stats');
@@ -918,10 +918,36 @@ function QuizBApp() {
           } catch (_) {
             total = 0;
           }
-          // Fallback to a safe large limit if stats unavailable
-          const limit = total > 0 ? total : 1000;
-          const resp = await api.getFull('quiz.list', { limit: limit, page: 1 });
-          this.classroom.quizListForAssign = Array.isArray(resp.data) ? resp.data : [];
+
+          const perPage = 50; // server caps page size to 50
+          let all = [];
+
+          if (total > 0) {
+            // Compute number of pages and fetch them (in parallel)
+            const pages = Math.max(1, Math.ceil(total / perPage));
+            const promises = [];
+            for (let p = 1; p <= pages; p++) {
+              promises.push(api.getFull('quiz.list', { limit: perPage, page: p }));
+            }
+            const results = await Promise.all(promises);
+            for (const r of results) {
+              if (Array.isArray(r.data)) all = all.concat(r.data);
+            }
+          } else {
+            // Fallback: sequential fetch until a page returns less than perPage items
+            let page = 1;
+            while (true) {
+              const r = await api.getFull('quiz.list', { limit: perPage, page });
+              const items = Array.isArray(r.data) ? r.data : [];
+              all = all.concat(items);
+              if (items.length < perPage) break;
+              page++;
+              // safety: avoid infinite loop
+              if (page > 200) break;
+            }
+          }
+
+          this.classroom.quizListForAssign = all;
         } catch (e) {
           this.classroom.quizListForAssign = [];
         } finally {
