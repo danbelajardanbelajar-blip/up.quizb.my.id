@@ -91,14 +91,18 @@ function quiz_questions(): void {
 
     if ($assignmentId > 0) {
         $assignment = DB::one(
-            'SELECT max_questions, shuffle_questions, shuffle_options
+            'SELECT max_questions, shuffle_questions, shuffle_options, timer_per_question, duration_minutes
              FROM assignments WHERE id = ? AND quiz_id = ? AND is_active = 1',
             [$assignmentId, $quizId]
         );
         if ($assignment) {
-            if ($assignment['max_questions'] !== null)   $limit           = (int)$assignment['max_questions'];
+            if ($assignment['max_questions'] !== null)    $limit            = (int)$assignment['max_questions'];
             if ($assignment['shuffle_questions'] !== null) $shuffleQuestions = (bool)(int)$assignment['shuffle_questions'];
             if ($assignment['shuffle_options']   !== null) $shuffleOptions   = (bool)(int)$assignment['shuffle_options'];
+
+            // Expose timer_per_question and exam_duration (seconds) to client when playing from assignment
+            $quiz['timer_per_question'] = $assignment['timer_per_question'] !== null ? (int)$assignment['timer_per_question'] : null;
+            $quiz['exam_duration'] = $assignment['duration_minutes'] !== null ? ((int)$assignment['duration_minutes'] * 60) : null;
         }
     }
 
