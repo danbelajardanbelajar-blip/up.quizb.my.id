@@ -102,11 +102,12 @@ function class_get(): void {
     // Ambil tugas
     $assignments = DB::all(
         "SELECT a.*, q.title AS quiz_title, q.total_questions,
-                (SELECT COUNT(*) FROM assignment_submissions WHERE assignment_id = a.id) AS submission_count
+                (SELECT COUNT(*) FROM assignment_submissions WHERE assignment_id = a.id) AS submission_count,
+                (SELECT MAX(score) FROM attempts WHERE user_id = ? AND quiz_id = a.quiz_id) AS my_score
          FROM assignments a JOIN quizzes q ON q.id = a.quiz_id
          WHERE a.class_id = ? AND a.is_active = 1
          ORDER BY a.created_at DESC",
-        [$classId]
+        [$user['id'], $classId]
     );
 
     jsonSuccess([
@@ -275,17 +276,16 @@ function class_my_assignments(): void {
                 u.name AS teacher_name,
                 s.id AS submission_id,
                 s.submitted_at,
-                att.score AS my_score
+                (SELECT MAX(score) FROM attempts WHERE user_id = ? AND quiz_id = a.quiz_id) AS my_score
          FROM assignments a
          JOIN classes c ON c.id = a.class_id
          JOIN quizzes q ON q.id = a.quiz_id
          JOIN users u ON u.id = a.teacher_id
          JOIN class_members cm ON cm.class_id = c.id AND cm.user_id = ?
          LEFT JOIN assignment_submissions s ON s.assignment_id = a.id AND s.user_id = ?
-         LEFT JOIN attempts att ON att.id = s.attempt_id
          WHERE a.is_active = 1
          ORDER BY a.created_at DESC",
-        [$userId, $userId]
+        [$userId, $userId, $userId]
     );
 
     jsonSuccess($assignments);
