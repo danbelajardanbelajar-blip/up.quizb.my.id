@@ -491,8 +491,8 @@ function assignment_my_dashboard(): void {
     if ($role === 'pelajar') {
         // Ambil semua tugas aktif dari kelas yang diikuti pelajar,
         // lengkap dengan status submission
-        $rows = DB::all("
-            SELECT
+        $rows = DB::all(
+            "SELECT
                 a.id, a.title, a.deadline, a.mode,
                 a.timer_per_question, a.duration_minutes,
                 q.id     AS quiz_id,
@@ -502,7 +502,7 @@ function assignment_my_dashboard(): void {
                 cl.name  AS class_name,
                 s.id     AS submission_id,
                 s.submitted_at,
-                att.score AS my_score,
+                (SELECT MAX(score) FROM attempts WHERE user_id = ? AND quiz_id = a.quiz_id) AS my_score,
                 CASE
                     WHEN s.id IS NOT NULL THEN 'done'
                     WHEN a.deadline IS NOT NULL AND a.deadline < NOW() THEN 'overdue'
@@ -514,7 +514,6 @@ function assignment_my_dashboard(): void {
             INNER JOIN quizzes      q  ON q.id = a.quiz_id
             LEFT  JOIN assignment_submissions s
                    ON s.assignment_id = a.id AND s.user_id = ?
-            LEFT  JOIN attempts att ON att.id = s.attempt_id
             WHERE cm.user_id = ?
             ORDER BY
                 CASE
@@ -524,7 +523,7 @@ function assignment_my_dashboard(): void {
                 END,
                 a.deadline ASC,
                 a.created_at DESC
-        ", [$user['id'], $user['id']]);
+        ", [$user['id'], $user['id'], $user['id']]);
 
         foreach ($rows as &$r) {
             $r['id']             = (int)$r['id'];
@@ -576,4 +575,33 @@ function assignment_my_dashboard(): void {
 
         jsonSuccess(['assignments' => $rows, 'role' => 'pengajar']);
     }
+}
+
+// ============================================
+// GET /api?action=assignment.attempts&id=X
+// Return attempts by current user for assignment's quiz (student view)
+// ============================================
+function assignment_attempts(): void {
+    $user = requireAuth();
+    $id   = (int)($_GET['id'] ?? 0);
+    if ($id <= 0) jsonError('ID tidak valid');
+
+    $assignment = DB::one("SELECT * FROM assignments WHERE id = ?", [$id]);
+    if (!$assignment) jsonError('Tugas tidak ditemukan', 404);
+
+    // Pastikan user adalah anggota kelas atau guru/admin
+    $isTeacher = in_array($user['role'], ['pengajar','admin']) && (int)$assignment['teacher_id'] === $user['id'];
+    $isMember  = DB::one("SELECT id FROM class_members WHERE class_id = ? AND user_id = ?", [$assignment['class_id'], $user['id']]);
+    if (!$isTeacher && !$isMember && $user['role'] !== 'admin') jsonError('Anda tidak memiliki akses ke tugas ini', 403);
+
+    // Untuk pelajar: ambil semua attempt milik user untuk quiz assignment ini
+    $attempts = DB::all(
+        "SELECT id, score, correct_count, time_taken, completed_at, mode
+         FROM attempts
+         WHERE user_id = ? AND quiz_id = ?
+         ORDER BY completed_at DESC",
+        [$user['id'], $assignment['quiz_id']]
+    );
+
+    jsonSuccess(['assignment' => $assignment, 'attempts' => $attempts]);
 }

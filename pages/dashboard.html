@@ -96,9 +96,10 @@
               </div>
 
               <!-- Skor jika sudah selesai -->
-              <div x-show="a.status === 'done' && a.my_score !== null"
+              <div x-show="a.status === 'done'"
                    class="text-xs text-gray-500 dark:text-gray-400">
-                Skor kamu: <span class="font-bold text-primary-600 dark:text-primary-400" x-text="a.my_score + ' pts'"></span>
+                <span x-show="a.my_score !== null">Skor kamu: <span class="font-bold text-primary-600 dark:text-primary-400" x-text="a.my_score + ' pts'"></span></span>
+                <button @click.prevent="openAssignmentAttempts(a.id)" class="ml-3 text-xs text-primary-600 hover:underline">📜 Riwayat</button>
               </div>
 
               <!-- Tombol aksi -->
@@ -118,6 +119,45 @@
               </template>
             </div>
           </template>
+
+      <!-- Assignment Attempts Modal (student) -->
+      <div x-show="dashboardAttemptModal.show" @click.self="closeAssignmentAttempts()" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none">
+        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+          <div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
+            <div>
+              <h3 class="font-bold text-lg text-gray-900 dark:text-white" x-text="dashboardAttemptModal.assignment ? dashboardAttemptModal.assignment.title : 'Percobaan'">Percobaan</h3>
+              <p class="text-xs text-gray-400" x-text="dashboardAttemptModal.assignment ? dashboardAttemptModal.assignment.class_name : ''"></p>
+            </div>
+            <button @click="closeAssignmentAttempts()" class="text-gray-400 hover:text-gray-600">&times;</button>
+          </div>
+          <div class="p-4">
+            <div x-show="dashboardAttemptModal.loading" class="text-center py-6">
+              <div class="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-3"></div>
+              <div class="text-sm text-gray-500">Memuat percobaan…</div>
+            </div>
+            <div x-show="!dashboardAttemptModal.loading">
+              <div x-show="dashboardAttemptModal.error" class="text-red-500 text-sm mb-3" x-text="dashboardAttemptModal.error"></div>
+              <div x-show="dashboardAttemptModal.attempts.length === 0" class="text-center text-gray-400 py-6">
+                <p class="text-lg">Belum ada percobaan untuk quiz ini</p>
+              </div>
+              <div x-show="dashboardAttemptModal.attempts.length > 0" class="space-y-3">
+                <template x-for="att in dashboardAttemptModal.attempts" :key="att.id">
+                  <div class="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-gray-800">
+                    <div>
+                      <p class="font-semibold text-gray-800 dark:text-gray-100" x-text="'Skor: ' + (att.score !== null ? att.score + '%' : '-')"></p>
+                      <p class="text-xs text-gray-400" x-text="att.completed_at ? new Date(att.completed_at).toLocaleString('id-ID') : 'Belum selesai'"></p>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-sm font-bold" x-text="att.correct_count !== null ? att.correct_count + ' benar' : '-' "></p>
+                      <p class="text-xs text-gray-400" x-text="att.time_taken ? (Math.floor(att.time_taken/60) + 'm ' + (att.time_taken%60) + 's') : '-' "></p>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
         </div>
       </template>
 

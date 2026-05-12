@@ -42,6 +42,8 @@ function QuizBApp() {
     publicHistory:  { list: [], loading: true, loadingMore: false, total: 0, page: 1, limit: 50,
                       filterType: '', filterId: null, filterLabel: '' },
     dashboard:   { stats: null, userInfo: null, recent: [], loading: true, assignments: [], assignmentsRole: '', assignmentsLoading: false },
+    // Modal: attempts for an assignment (student)
+    dashboardAttemptModal: { show: false, loading: false, attempts: [], assignment: null, error: '' },
     history:     { list: [], loading: true, total: 0, page: 1 },
     result:      { data: null, loading: true, assignId: null, assignSubmitted: false, assignSubmitting: false, assignError: '', challengeId: null, challengeData: null, mode: null },
 
@@ -666,6 +668,30 @@ function QuizBApp() {
           this.dashboard.assignmentsLoading = false;
         }
       }
+    },
+
+    async openAssignmentAttempts(assignId) {
+      this.dashboardAttemptModal.show = true;
+      this.dashboardAttemptModal.loading = true;
+      this.dashboardAttemptModal.attempts = [];
+      this.dashboardAttemptModal.assignment = null;
+      this.dashboardAttemptModal.error = '';
+      try {
+        const data = await api.get('assignment.attempts', { id: parseInt(assignId) });
+        this.dashboardAttemptModal.assignment = data.assignment || null;
+        this.dashboardAttemptModal.attempts = Array.isArray(data.attempts) ? data.attempts : [];
+      } catch (e) {
+        this.dashboardAttemptModal.error = e.message;
+      } finally {
+        this.dashboardAttemptModal.loading = false;
+      }
+    },
+
+    closeAssignmentAttempts() {
+      this.dashboardAttemptModal.show = false;
+      this.dashboardAttemptModal.attempts = [];
+      this.dashboardAttemptModal.assignment = null;
+      this.dashboardAttemptModal.error = '';
     },
 
     async loadHistory(reset = false) {
