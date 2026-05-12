@@ -326,7 +326,11 @@ function auth_google(): void {
                 DB::execute('UPDATE users SET google_id = ? WHERE id = ?', [$googleId, $user['id']]);
             }
             loginUser($user);
-            // Always redirect Google-authenticated users to name setup
+            // Jika user sudah memiliki nama, tidak perlu kembali ke halaman google-setup
+            if (!empty(trim($user['name'] ?? ''))) {
+                header('Location: ' . APP_URL . '/#/dashboard');
+                exit;
+            }
             header('Location: ' . APP_URL . '/#/google-setup');
             exit;
         }
