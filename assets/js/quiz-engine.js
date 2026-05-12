@@ -383,12 +383,13 @@ function QuizEngine() {
           } catch (_) {}
         }
 
-        // Navigasi ke result, sertakan challenge ID jika ada
-        // Build result URL — sertakan mode & challenge ID sebagai query params
+        // Navigasi ke result, sertakan challenge ID dan assignment ID jika ada
+        // Build result URL — sertakan mode, challenge ID, dan assign sebagai query params
         let resultHash = `#/result/${result.attempt_id}`;
         const qp = [];
         if (this.mode && this.mode !== 'exam') qp.push(`mode=${this.mode}`);
         if (this.challengeId) qp.push(`cid=${this.challengeId}`);
+        if (this.assignmentId) qp.push(`assign=${this.assignmentId}`);
         if (qp.length) resultHash += '?' + qp.join('&');
         window.location.hash = resultHash;
 

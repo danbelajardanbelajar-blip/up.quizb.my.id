@@ -84,7 +84,7 @@
           </template>
         </div>
         <button @click="startQuiz()" class="btn-primary w-full py-3 text-base">Mulai Sekarang ▶</button>
-        <button @click="navigate('/quiz/'+quiz?.id)" class="mt-3 w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors">← Kembali</button>
+        <button @click="navigate('/quiz/'+quiz?.id + (assignmentId ? '?assign=' + assignmentId : ''))" class="mt-3 w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors">← Kembali</button>
       </div>
     </div>
   </div>
