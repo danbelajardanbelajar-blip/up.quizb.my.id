@@ -335,11 +335,7 @@ function auth_google(): void {
             exit;
         }
 
-        // New user
-        if ($mode === 'login') {
-            jsonError('Akun tidak ditemukan. Silakan daftar terlebih dahulu.', 404);
-        }
-
+        // New user: auto-register when Google account is not found
         DB::execute(
             'INSERT INTO users (name, email, google_id) VALUES (?, ?, ?)',
             [$name, $email, $googleId]
