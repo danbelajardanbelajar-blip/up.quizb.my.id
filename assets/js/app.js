@@ -313,9 +313,6 @@ function QuizBApp() {
         this.showToast('Akses ditolak', 'error', '🚫');
         return this.navigate('/');
       }
-      if (route === '/google-setup' && this.user?.name?.trim()) {
-        return this.navigate('/dashboard');
-      }
       // Load data per route
       if (route === '/')                   this.loadHome();
       if (route === '/categories')         this.loadCategories();
