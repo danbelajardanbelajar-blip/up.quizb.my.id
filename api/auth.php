@@ -208,6 +208,60 @@ function auth_update_profile(): void {
     jsonSuccess(['name' => $name, 'message' => 'Profil berhasil diperbarui']);
 }
 
+function ensureGoogleIdColumnExists(): void {
+    $column = DB::one("SHOW COLUMNS FROM users LIKE 'google_id'");
+    if (!$column) {
+        DB::execute("ALTER TABLE users ADD COLUMN google_id VARCHAR(255) UNIQUE DEFAULT NULL AFTER email");
+    }
+}
+
+function fetchGoogleJson(string $url, array $postFields = [], array $headers = []): array {
+    $options = [
+        'http' => [
+            'method'  => $postFields ? 'POST' : 'GET',
+            'header'  => array_merge([
+                'Accept: application/json',
+                'Content-Type: application/x-www-form-urlencoded',
+            ], $headers),
+            'content' => $postFields ? http_build_query($postFields) : null,
+            'timeout' => 10,
+            'ignore_errors' => true,
+        ],
+    ];
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        if ($postFields) {
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postFields));
+        }
+        if ($headers) {
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        }
+        $response = curl_exec($ch);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+        if ($response === false) {
+            jsonError('Gagal melakukan permintaan ke Google: ' . ($curlError ?: 'Unknown error'), 500);
+        }
+    } else {
+        $context = stream_context_create($options);
+        $response = @file_get_contents($url, false, $context);
+        if ($response === false) {
+            jsonError('Gagal melakukan permintaan ke Google, cURL tidak tersedia', 500);
+        }
+    }
+
+    $data = json_decode($response, true);
+    if (!is_array($data)) {
+        jsonError('Respon Google tidak valid: ' . substr($response ?? '', 0, 512), 500);
+    }
+    return $data;
+}
+
 function auth_google(): void {
     $mode = $_GET['mode'] ?? $_GET['state'] ?? 'login';
     if (!in_array($mode, ['login', 'register'])) {
@@ -217,7 +271,13 @@ function auth_google(): void {
     // Google OAuth configuration
     $clientId = GOOGLE_CLIENT_ID;
     $clientSecret = GOOGLE_CLIENT_SECRET;
-    $redirectUri = APP_URL . '/api.php?action=auth.google_callback';
+    $redirectUri = APP_URL . '/api/auth/google_callback';
+
+    if (!$clientId || !$clientSecret || str_starts_with($clientId, 'YOUR_') || str_starts_with($clientSecret, 'YOUR_')) {
+        jsonError('Google OAuth belum dikonfigurasi. Silakan isi GOOGLE_CLIENT_ID dan GOOGLE_CLIENT_SECRET pada config/db.php', 500);
+    }
+
+    ensureGoogleIdColumnExists();
 
     if (isset($_GET['code'])) {
         // Callback dari Google
@@ -231,87 +291,75 @@ function auth_google(): void {
             'grant_type' => 'authorization_code'
         ];
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $tokenUrl);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        $response = curl_exec($ch);
-        curl_close($ch);
-
-        $tokenData = json_decode($response, true);
-        if (!isset($tokenData['access_token'])) {
-            jsonError('Gagal mendapatkan token dari Google', 500);
+        $tokenData = fetchGoogleJson($tokenUrl, $postData);
+        if (empty($tokenData['access_token'])) {
+            $errorDetails = $tokenData['error_description'] ?? ($tokenData['error'] ?? 'Tidak ada access_token');
+            jsonError('Gagal mendapatkan token dari Google: ' . $errorDetails, 500);
         }
 
         // Get user info
         $userInfoUrl = 'https://www.googleapis.com/oauth2/v2/userinfo';
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $userInfoUrl);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $tokenData['access_token']]);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        $userResponse = curl_exec($ch);
-        curl_close($ch);
-
-        $googleUser = json_decode($userResponse, true);
-        if (!$googleUser || !isset($googleUser['id'])) {
-            jsonError('Gagal mendapatkan data user dari Google', 500);
+        $userResponse = fetchGoogleJson($userInfoUrl, [], ['Authorization: Bearer ' . $tokenData['access_token']]);
+        if (empty($userResponse['id'])) {
+            $errorDetails = $userResponse['error_description'] ?? ($userResponse['error'] ?? 'Data user tidak lengkap');
+            jsonError('Gagal mendapatkan data user dari Google: ' . $errorDetails, 500);
         }
 
-        $googleId = $googleUser['id'];
-        $email = $googleUser['email'];
-        $name = $googleUser['name'];
+        $googleId = $userResponse['id'];
+        $email = $userResponse['email'] ?? '';
+        $name = $userResponse['name'] ?? '';
+
+        if (!$email) {
+            jsonError('Google tidak menyediakan alamat email', 500);
+        }
 
         // Check if user exists
-        $user = DB::one('SELECT id, name, email, role FROM users WHERE google_id = ? OR email = ?', [$googleId, $email]);
+        $user = DB::one('SELECT id, name, email, role, google_id FROM users WHERE google_id = ? OR email = ?', [$googleId, $email]);
 
         if ($user) {
             // User exists, login
-            if ($user['google_id'] && $user['google_id'] != $googleId) {
+            if (!empty($user['google_id']) && $user['google_id'] != $googleId) {
                 jsonError('Email sudah terdaftar dengan akun lain', 409);
             }
             // Update google_id if not set
-            if (!$user['google_id']) {
+            if (empty($user['google_id'])) {
                 DB::execute('UPDATE users SET google_id = ? WHERE id = ?', [$googleId, $user['id']]);
             }
             loginUser($user);
             // Redirect to dashboard or setup if name not set properly
-            if (empty($user['name']) || $user['name'] == $email) {
+            if (empty($user['name']) || $user['name'] === $email) {
                 header('Location: ' . APP_URL . '/#/google-setup');
             } else {
                 header('Location: ' . APP_URL . '/#/dashboard');
             }
             exit;
-        } else {
-            // New user
-            if ($mode === 'login') {
-                jsonError('Akun tidak ditemukan. Silakan daftar terlebih dahulu.', 404);
-            }
-            // Create user
-            DB::execute(
-                'INSERT INTO users (name, email, google_id) VALUES (?, ?, ?)',
-                [$name, $email, $googleId]
-            );
-            $newUser = DB::one('SELECT id, name, email, role FROM users WHERE google_id = ?', [$googleId]);
-            loginUser($newUser);
-            // Redirect to name setup
-            header('Location: ' . APP_URL . '/#/google-setup');
-            exit;
         }
-    } else {
-        // Redirect to Google
-        $authUrl = 'https://accounts.google.com/o/oauth2/auth?' . http_build_query([
-            'client_id' => $clientId,
-            'redirect_uri' => $redirectUri,
-            'scope' => 'openid email profile',
-            'response_type' => 'code',
-            'state' => $mode
-        ]);
-        header('Location: ' . $authUrl);
+
+        // New user
+        if ($mode === 'login') {
+            jsonError('Akun tidak ditemukan. Silakan daftar terlebih dahulu.', 404);
+        }
+
+        DB::execute(
+            'INSERT INTO users (name, email, google_id) VALUES (?, ?, ?)',
+            [$name, $email, $googleId]
+        );
+        $newUser = DB::one('SELECT id, name, email, role FROM users WHERE google_id = ?', [$googleId]);
+        loginUser($newUser);
+        header('Location: ' . APP_URL . '/#/google-setup');
         exit;
     }
+
+    // Redirect to Google for authentication
+    $authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query([
+        'client_id' => $clientId,
+        'redirect_uri' => $redirectUri,
+        'scope' => 'openid email profile',
+        'response_type' => 'code',
+        'state' => $mode
+    ]);
+    header('Location: ' . $authUrl);
+    exit;
 }
 
 function auth_google_callback(): void {

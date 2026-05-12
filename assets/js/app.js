@@ -426,11 +426,11 @@ function QuizBApp() {
     },
 
     loginWithGoogle() {
-      window.location.href = '/api.php?action=auth.google&mode=login';
+      window.location.href = '/api/auth/google?mode=login';
     },
 
     registerWithGoogle() {
-      window.location.href = '/api.php?action=auth.google&mode=register';
+      window.location.href = '/api/auth/google?mode=register';
     },
 
     async setGoogleName() {
