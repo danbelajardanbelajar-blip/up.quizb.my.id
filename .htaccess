@@ -1,0 +1,11 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Jika ada pengunjung yang mengakses up.quizb.my.id secara langsung di browser
+  RewriteCond %{HTTP_HOST} ^(www\.)?up\.quizb\.my\.id$ [NC]
+
+  # Lempar (Redirect Permanen) mereka ke domain utama secara otomatis
+  RewriteRule ^(.*)$ https://quizb.my.id/$1 [R=301,L]
+</IfModule>
+
+# End of .htaccess
