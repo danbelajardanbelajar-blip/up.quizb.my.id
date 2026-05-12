@@ -209,7 +209,7 @@ function auth_update_profile(): void {
 }
 
 function auth_google(): void {
-    $mode = $_GET['mode'] ?? 'login';
+    $mode = $_GET['mode'] ?? $_GET['state'] ?? 'login';
     if (!in_array($mode, ['login', 'register'])) {
         jsonError('Mode tidak valid', 400);
     }
@@ -217,7 +217,7 @@ function auth_google(): void {
     // Google OAuth configuration
     $clientId = GOOGLE_CLIENT_ID;
     $clientSecret = GOOGLE_CLIENT_SECRET;
-    $redirectUri = APP_URL . '/api/auth/google_callback';
+    $redirectUri = APP_URL . '/api.php?action=auth.google_callback';
 
     if (isset($_GET['code'])) {
         // Callback dari Google
