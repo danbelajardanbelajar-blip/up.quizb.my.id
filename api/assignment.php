@@ -302,10 +302,28 @@ function assignment_submit(): void {
 
     // Cek sudah submit?
     $existing = DB::one(
-        "SELECT id FROM assignment_submissions WHERE assignment_id = ? AND user_id = ?",
+        "SELECT id, attempt_id FROM assignment_submissions WHERE assignment_id = ? AND user_id = ?",
         [$assignmentId, $user['id']]
     );
-    if ($existing) jsonError('Anda sudah mengumpulkan tugas ini');
+
+    if ($existing) {
+        // Jika tugas meminta full score, izinkan update jika skor lama < 100
+        if (!empty($assignment['require_full_score'])) {
+            $oldAttempt = DB::one("SELECT score FROM attempts WHERE id = ?", [$existing['attempt_id']]);
+            $oldScore = $oldAttempt && isset($oldAttempt['score']) ? (int)$oldAttempt['score'] : null;
+            if ($oldScore !== null && $oldScore === 100) {
+                jsonError('Anda sudah mengumpulkan tugas ini');
+            }
+            // Update existing submission record ke attempt baru
+            DB::conn()->prepare(
+                "UPDATE assignment_submissions SET attempt_id = ?, submitted_at = NOW() WHERE id = ?"
+            )->execute([$attemptId, $existing['id']]);
+            jsonSuccess(['message' => 'Tugas berhasil diperbarui', 'score' => $attempt['score']]);
+        }
+
+        // Jika tidak require full score, tolak submit ulang
+        jsonError('Anda sudah mengumpulkan tugas ini');
+    }
 
     DB::conn()->prepare(
         "INSERT INTO assignment_submissions (assignment_id, user_id, attempt_id) VALUES (?, ?, ?)"

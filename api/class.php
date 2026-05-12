@@ -105,11 +105,12 @@ function class_get(): void {
                 (SELECT COUNT(*) FROM assignment_submissions WHERE assignment_id = a.id) AS submission_count,
                 (SELECT MAX(score) FROM attempts WHERE user_id = ? AND quiz_id = a.quiz_id) AS my_score,
                 s.id AS submission_id, s.submitted_at, att.score AS my_submission_score,
-                CASE
-                  WHEN s.id IS NOT NULL AND (a.require_full_score = 0 OR (a.require_full_score = 1 AND IFNULL(att.score,0) = 100)) THEN 'done'
-                  WHEN a.deadline IS NOT NULL AND a.deadline < NOW() THEN 'overdue'
-                  ELSE 'pending'
-                END AS status
+                                CASE
+                                    WHEN s.id IS NOT NULL AND (a.require_full_score = 0 OR (a.require_full_score = 1 AND IFNULL(att.score,0) = 100)) THEN 'done'
+                                    WHEN s.id IS NOT NULL AND a.require_full_score = 1 AND IFNULL(att.score,0) < 100 THEN 'incomplete'
+                                    WHEN a.deadline IS NOT NULL AND a.deadline < NOW() THEN 'overdue'
+                                    ELSE 'pending'
+                                END AS status
          FROM assignments a JOIN quizzes q ON q.id = a.quiz_id
          LEFT JOIN assignment_submissions s ON s.assignment_id = a.id AND s.user_id = ?
          LEFT JOIN attempts att ON att.id = s.attempt_id
@@ -285,11 +286,12 @@ function class_my_assignments(): void {
                 s.id AS submission_id,
                 s.submitted_at,
                 (SELECT MAX(score) FROM attempts WHERE user_id = ? AND quiz_id = a.quiz_id) AS my_score,
-                CASE
-                  WHEN s.id IS NOT NULL AND (a.require_full_score = 0 OR (a.require_full_score = 1 AND IFNULL(att.score,0) = 100)) THEN 'done'
-                  WHEN a.deadline IS NOT NULL AND a.deadline < NOW() THEN 'overdue'
-                  ELSE 'pending'
-                END AS status
+                                CASE
+                                    WHEN s.id IS NOT NULL AND (a.require_full_score = 0 OR (a.require_full_score = 1 AND IFNULL(att.score,0) = 100)) THEN 'done'
+                                    WHEN s.id IS NOT NULL AND a.require_full_score = 1 AND IFNULL(att.score,0) < 100 THEN 'incomplete'
+                                    WHEN a.deadline IS NOT NULL AND a.deadline < NOW() THEN 'overdue'
+                                    ELSE 'pending'
+                                END AS status
          FROM assignments a
          JOIN classes c ON c.id = a.class_id
          JOIN quizzes q ON q.id = a.quiz_id
