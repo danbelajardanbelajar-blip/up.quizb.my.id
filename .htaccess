@@ -14,6 +14,8 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 # Route /api/auth/* shortcut paths to api.php
 RewriteRule ^api/auth/([^/]+)/?$ api.php?action=auth.$1 [QSA,L]
+# Allow assets folder to bypass the SPA router explicitly
+RewriteRule ^assets/ - [L]
 # Allow api.php to handle its own routes
 RewriteCond %{REQUEST_URI} !^/api\.php
 RewriteCond %{REQUEST_URI} !^/api/
