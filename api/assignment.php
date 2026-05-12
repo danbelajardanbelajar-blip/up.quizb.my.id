@@ -543,6 +543,7 @@ function assignment_my_dashboard(): void {
                 (SELECT MAX(score) FROM attempts WHERE user_id = ? AND quiz_id = a.quiz_id) AS my_score,
                 CASE
                     WHEN s.id IS NOT NULL AND (a.require_full_score = 0 OR (a.require_full_score = 1 AND IFNULL(att.score,0) = 100)) THEN 'done'
+                    WHEN s.id IS NOT NULL AND a.require_full_score = 1 AND IFNULL(att.score,0) < 100 THEN 'incomplete'
                     WHEN a.deadline IS NOT NULL AND a.deadline < NOW() THEN 'overdue'
                     ELSE 'pending'
                 END AS status
