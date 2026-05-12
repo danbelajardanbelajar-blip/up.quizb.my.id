@@ -258,14 +258,6 @@
           </div>
 
         </div>
-        <!-- Require full score option (per-assignment) -->
-        <div class="mt-4">
-          <label class="form-label">Harus dikerjakan sampai 100</label>
-          <div class="flex items-center gap-3">
-            <input type="checkbox" id="assign_require_full_score" x-model="classroom.assignForm.require_full_score" class="form-checkbox" />
-            <label for="assign_require_full_score" class="text-sm text-gray-500">Jika dicentang, tugas hanya dianggap selesai jika skor 100%</label>
-          </div>
-        </div>
       </div>
     </template>
   </div>
@@ -469,6 +461,14 @@
                 </button>
               </template>
             </div>
+          </div>
+        </div>
+        <!-- Require full score option (per-assignment) -->
+        <div class="border border-gray-100 dark:border-gray-800 rounded-xl p-4">
+          <label class="form-label mb-3">Harus dikerjakan sampai 100</label>
+          <div class="flex items-center gap-3">
+            <input type="checkbox" id="assign_require_full_score" x-model="classroom.assignForm.require_full_score" class="form-checkbox" />
+            <label for="assign_require_full_score" class="text-sm text-gray-500 dark:text-gray-400">Jika dicentang, tugas hanya dianggap selesai jika skor 100%</label>
           </div>
         </div>
       </div>
