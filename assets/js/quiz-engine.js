@@ -104,7 +104,31 @@ function QuizEngine() {
         // Gunakan exam_duration (dari setting user/assignment) atau fallback ke time_limit quiz
         this.timeLeft  = this.quiz.exam_duration || this.quiz.time_limit || this.quiz.duration || 600;
         // Gunakan timer_per_question dari setting (user/assignment), default 20
-        this.questionTimerDefault = this.quiz.timer_per_question || 20;
+        // Normalize to integer and ensure sensible minimum
+        let tpq = null;
+        if (this.quiz && this.quiz.timer_per_question != null) {
+          tpq = parseInt(this.quiz.timer_per_question, 10);
+          if (!Number.isFinite(tpq) || tpq <= 0) tpq = null;
+        }
+        this.questionTimerDefault = tpq || 20;
+
+        // If assignmentId provided, fetch authoritative assignment record (fallback)
+        // to avoid mismatches between quiz response and assignment data.
+        if (assignmentId) {
+          try {
+            const a = await api.get('assignment.get', { id: assignmentId });
+            if (a && a.timer_per_question != null) {
+              const atpq = parseInt(a.timer_per_question, 10);
+              if (Number.isFinite(atpq) && atpq > 0) this.questionTimerDefault = atpq;
+            }
+            if (a && a.duration_minutes != null) {
+              const dur = parseInt(a.duration_minutes, 10);
+              if (Number.isFinite(dur) && dur > 0) this.timeLeft = dur * 60;
+            }
+          } catch (_) {
+            // ignore — already have sane defaults
+          }
+        }
         this.answers   = {};
         this.flagged   = new Set();
         this.currentIndex = 0;
