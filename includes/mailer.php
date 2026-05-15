@@ -8,11 +8,31 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception as MailException;
 
-// Autoload PHPMailer dari public_html/vendor/phpmailer/src/
-$phpmailerBase = dirname(__DIR__, 2) . '/vendor/phpmailer/src/';
-require_once $phpmailerBase . 'Exception.php';
-require_once $phpmailerBase . 'PHPMailer.php';
-require_once $phpmailerBase . 'SMTP.php';
+$projectRoot = dirname(__DIR__, 2);
+$composerAutoload = $projectRoot . '/vendor/autoload.php';
+if (file_exists($composerAutoload)) {
+    require_once $composerAutoload;
+} else {
+    $phpmailerCandidates = [
+        $projectRoot . '/vendor/phpmailer/src/',
+        $projectRoot . '/vendor/phpmailer/phpmailer/src/',
+        dirname($projectRoot) . '/vendor/phpmailer/src/',
+        dirname($projectRoot) . '/vendor/phpmailer/phpmailer/src/',
+    ];
+    $phpmailerBase = null;
+    foreach ($phpmailerCandidates as $candidate) {
+        if (is_dir($candidate)) {
+            $phpmailerBase = rtrim($candidate, '/') . '/';
+            break;
+        }
+    }
+    if (!$phpmailerBase) {
+        throw new RuntimeException('PHPMailer library tidak ditemukan. Diperiksa pada: ' . implode(', ', $phpmailerCandidates));
+    }
+    require_once $phpmailerBase . 'Exception.php';
+    require_once $phpmailerBase . 'PHPMailer.php';
+    require_once $phpmailerBase . 'SMTP.php';
+}
 
 /**
  * Kirim email konfirmasi pendaftaran.

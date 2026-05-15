@@ -50,9 +50,23 @@ function auth_login(): void {
     ], 'Login berhasil');
 }
 
+function includeMailer(): void {
+    $mailerPath = __DIR__ . '/../includes/mailer.php';
+    if (!file_exists($mailerPath)) {
+        error_log('[Auth] Mailer helper tidak ditemukan: ' . $mailerPath);
+        jsonError('Mailer library tidak tersedia. Hubungi administrator.', 500);
+    }
+    try {
+        require_once $mailerPath;
+    } catch (\Throwable $e) {
+        error_log('[Auth] Gagal memuat mailer: ' . $e->getMessage());
+        jsonError('Mailer library tidak tersedia. Hubungi administrator.', 500);
+    }
+}
+
 function auth_register(): void {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
-    require_once __DIR__ . '/../includes/mailer.php';
+    includeMailer();
 
     $body  = getBody();
     $name  = sanitizeString($body['name']  ?? '');
@@ -365,7 +379,7 @@ function auth_google_callback(): void {
 // GET /api.php?action=auth.verify_email&token=XXX
 // ============================================
 function auth_verify_email(): void {
-    require_once __DIR__ . '/../includes/mailer.php';
+    includeMailer();
     $token = trim($_GET['token'] ?? $_POST['token'] ?? '');
     if (!$token || strlen($token) !== 64 || !ctype_xdigit($token)) {
         jsonError('Token tidak valid', 400);
@@ -419,7 +433,7 @@ function auth_verify_email(): void {
 // POST /api.php?action=auth.resend_verification
 // ============================================
 function auth_resend_verification(): void {
-    require_once __DIR__ . '/../includes/mailer.php';
+    includeMailer();
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
     $body  = getBody();
     $email = sanitizeString($body['email'] ?? '');
