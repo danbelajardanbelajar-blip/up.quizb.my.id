@@ -138,8 +138,8 @@
           <div class="flex items-center gap-1">
 
             <!-- Notifikasi -->
-            <div class="relative" x-data="{ open: false }">
-              <button @click="open=!open; if(open) loadNotifications()"
+          <div class="relative" x-data="{ isOpen: false }">
+            <button @click="isOpen=!isOpen; if(isOpen) loadNotifications()"
                       class="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Notifikasi">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
@@ -149,7 +149,7 @@
                       x-text="notif.unreadCount > 99 ? '99+' : notif.unreadCount"></span>
               </button>
               <!-- Dropdown -->
-              <div x-show="open" @click.outside="open=false" x-transition
+              <div x-show="isOpen" @click.outside="isOpen=false" x-transition
                    class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 z-50 flex flex-col overflow-hidden"
                    style="max-height:480px">
                 <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
@@ -163,7 +163,7 @@
                   <div x-show="notif.loading" class="flex justify-center py-8"><div class="w-5 h-5 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div></div>
                   <div x-show="!notif.loading && notif.list.length === 0" class="text-center py-10 text-gray-400"><p class="text-3xl mb-2">🔔</p><p class="text-xs">Tidak ada notifikasi</p></div>
                   <template x-for="n in notif.list" :key="n.id">
-                    <div @click="clickNotif(n); open=false"
+                    <div @click="clickNotif(n); isOpen=false"
                          class="flex items-start gap-3 px-4 py-3 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
                          :class="!n.is_read ? 'bg-primary-50/50 dark:bg-primary-900/10' : ''">
                       <div class="w-8 h-8 rounded-full flex items-center justify-center text-lg flex-shrink-0 mt-0.5"
@@ -202,23 +202,23 @@
 
         <!-- User menu (logged in) -->
         <template x-if="user">
-          <div class="relative" x-data="{ open: false }">
-            <button @click="open=!open" class="flex items-center gap-2 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          <div class="relative" x-data="{ isOpen: false }">
+            <button @click="isOpen=!isOpen" class="flex items-center gap-2 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
               <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-semibold text-sm" x-text="user.name.charAt(0).toUpperCase()"></div>
               <span class="text-sm font-medium text-gray-700 dark:text-gray-200" x-text="user.name.split(' ')[0]"></span>
               <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </button>
-            <div x-show="open" @click.outside="open=false" x-transition
+            <div x-show="isOpen" @click.outside="isOpen=false" x-transition
                  class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50">
-              <a href="#/dashboard" @click.prevent="navigate('/dashboard');open=false" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📊 Dashboard</a>
-              <a href="#/profile"   @click.prevent="navigate('/profile');open=false"   class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">👤 Profil</a>
-              <a href="#/history"   @click.prevent="navigate('/history');open=false"   class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📋 Histori</a>
-              <a href="#/settings"  @click.prevent="navigate('/settings');open=false"  class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">⚙️ Pengaturan</a>
+              <a href="#/dashboard" @click.prevent="navigate('/dashboard');isOpen=false" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📊 Dashboard</a>
+              <a href="#/profile"   @click.prevent="navigate('/profile');isOpen=false"   class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">👤 Profil</a>
+              <a href="#/history"   @click.prevent="navigate('/history');isOpen=false"   class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📋 Histori</a>
+              <a href="#/settings"  @click.prevent="navigate('/settings');isOpen=false"  class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">⚙️ Pengaturan</a>
               <template x-if="user && user.role === 'admin'">
-                <a href="#/admin" @click.prevent="navigate('/admin');open=false" class="flex items-center gap-2 px-4 py-2 text-sm text-purple-600 dark:text-purple-400 hover:bg-gray-50 dark:hover:bg-gray-700">⚙️ Admin Panel</a>
+                <a href="#/admin" @click.prevent="navigate('/admin');isOpen=false" class="flex items-center gap-2 px-4 py-2 text-sm text-purple-600 dark:text-purple-400 hover:bg-gray-50 dark:hover:bg-gray-700">⚙️ Admin Panel</a>
               </template>
               <hr class="my-1 border-gray-200 dark:border-gray-700"/>
-              <button @click="logout();open=false" class="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-gray-700">🚪 Keluar</button>
+              <button @click="logout();isOpen=false" class="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-gray-700">🚪 Keluar</button>
             </div>
           </div>
         </template>
@@ -527,7 +527,7 @@
       </template>
 
       <!-- Slot 5: Notifikasi (login) / Aktivitas (guest) — dengan panel slide-up -->
-      <div class="flex-1 relative" x-data="{ open: false }">
+        <div class="flex-1 relative" x-data="{ isOpen: false }">
 
         <!-- Guest: tombol Aktivitas -->
         <template x-if="!user">
@@ -543,9 +543,9 @@
 
         <!-- Login: tombol Notifikasi -->
         <template x-if="user">
-        <button @click="open=!open; open && loadNotifications()"
+        <button @click="isOpen=!isOpen; isOpen && loadNotifications()"
                 class="w-full h-full flex flex-col items-center justify-center gap-0.5 transition-colors relative"
-                :class="open ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'">
+                :class="isOpen ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'">
           <span class="relative inline-flex">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
@@ -560,7 +560,7 @@
 
         <!-- Notif slide-up panel (mobile) — hanya muncul saat login -->
         <template x-if="user">
-        <div x-show="open" @click.outside="open=false" x-transition:enter="transition ease-out duration-200"
+        <div x-show="isOpen" @click.outside="isOpen=false" x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
              x-transition:leave="transition ease-in duration-150"
              x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4"
@@ -573,7 +573,7 @@
                       class="text-xs text-primary-600 dark:text-primary-400 hover:underline">Baca semua</button>
               <button x-show="notif.list.some(n => n.is_read)" @click="clearReadNotif()"
                       class="text-xs text-gray-400 hover:text-red-500 hover:underline">Hapus yg dibaca</button>
-              <button @click="open=false" class="text-gray-400 hover:text-gray-600 text-lg leading-none ml-1">×</button>
+              <button @click="isOpen=false" class="text-gray-400 hover:text-gray-600 text-lg leading-none ml-1">×</button>
             </div>
           </div>
           <div class="overflow-y-auto flex-1">
@@ -585,7 +585,7 @@
               <p class="text-xs">Tidak ada notifikasi</p>
             </div>
             <template x-for="n in notif.list" :key="n.id">
-              <div @click="clickNotif(n); open=false"
+              <div @click="clickNotif(n); isOpen=false"
                    class="flex items-start gap-3 px-4 py-3 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
                    :class="!n.is_read ? 'bg-primary-50/50 dark:bg-primary-900/10' : ''">
                 <div class="w-8 h-8 rounded-full flex items-center justify-center text-lg flex-shrink-0 mt-0.5"
@@ -606,8 +606,8 @@
       </div>
 
       <!-- Profil -->
-      <div class="flex-1 relative" x-data="{ open: false }">
-        <button @click="user ? (open=!open) : navigate('/login')"
+      <div class="flex-1 relative" x-data="{ isOpen: false }">
+        <button @click="user ? (isOpen=!isOpen) : navigate('/login')"
                 class="w-full h-full flex flex-col items-center justify-center gap-0.5 transition-colors"
                 :class="(currentRoute==='/profile'||currentRoute==='/dashboard'||currentRoute==='/settings'||currentRoute==='/history') ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'">
           <template x-if="user">
@@ -623,7 +623,7 @@
         </button>
 
         <!-- Profile mini menu (mobile) -->
-        <div x-show="open" @click.outside="open=false"
+        <div x-show="isOpen" @click.outside="isOpen=false"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
              x-transition:leave="transition ease-in duration-150"
@@ -637,19 +637,19 @@
           </div>
           <!-- Navigasi utama (sama seperti desktop) -->
           <div class="pt-1">
-            <a @click.prevent="navigate(user ? '/dashboard' : '/');open=false" :href="user ? '#/dashboard' : '#/'"
+            <a @click.prevent="navigate(user ? '/dashboard' : '/');isOpen=false" :href="user ? '#/dashboard' : '#/'"
                class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                :class="(user ? currentRoute==='/dashboard' : currentRoute==='/') ? 'text-primary-600 dark:text-primary-400 font-medium' : ''">🏠 Beranda</a>
-            <a @click.prevent="navigate('/activity');open=false" href="#/activity"
+            <a @click.prevent="navigate('/activity');isOpen=false" href="#/activity"
                class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                :class="currentRoute==='/activity' ? 'text-primary-600 dark:text-primary-400 font-medium' : ''">🌐 Aktivitas</a>
             <template x-if="user">
-              <a @click.prevent="navigate('/classroom');open=false" href="#/classroom"
+              <a @click.prevent="navigate('/classroom');isOpen=false" href="#/classroom"
                  class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                  :class="currentRoute.startsWith('/classroom') ? 'text-primary-600 dark:text-primary-400 font-medium' : ''">🏫 Kelas</a>
             </template>
             <template x-if="user">
-              <a @click.prevent="navigate('/challenges');open=false" href="#/challenges"
+              <a @click.prevent="navigate('/challenges');isOpen=false" href="#/challenges"
                  class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                  :class="currentRoute==='/challenges' ? 'text-primary-600 dark:text-primary-400 font-medium' : ''">
                 <span>⚔️ Tantangan</span>
@@ -664,22 +664,22 @@
           <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
 
           <!-- Menu akun -->
-          <a @click.prevent="navigate('/dashboard');open=false" href="#/dashboard"
+          <a @click.prevent="navigate('/dashboard');isOpen=false" href="#/dashboard"
              class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📊 Dashboard</a>
-          <a @click.prevent="navigate('/profile');open=false" href="#/profile"
+          <a @click.prevent="navigate('/profile');isOpen=false" href="#/profile"
              class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">👤 Profil</a>
-          <a @click.prevent="navigate('/history');open=false" href="#/history"
+          <a @click.prevent="navigate('/history');isOpen=false" href="#/history"
              class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📋 Histori</a>
-          <a @click.prevent="navigate('/settings');open=false" href="#/settings"
+          <a @click.prevent="navigate('/settings');isOpen=false" href="#/settings"
              class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">⚙️ Pengaturan</a>
           <template x-if="user && user.role === 'admin'">
-            <a @click.prevent="navigate('/admin');open=false" href="#/admin"
+            <a @click.prevent="navigate('/admin');isOpen=false" href="#/admin"
                class="flex items-center gap-2 px-4 py-2.5 text-sm text-purple-600 dark:text-purple-400 hover:bg-gray-50 dark:hover:bg-gray-700">🛡️ Admin Panel</a>
           </template>
 
           <!-- Pemisah + Logout -->
           <div class="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
-            <button @click="logout();open=false"
+            <button @click="logout();isOpen=false"
                     class="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-gray-700 rounded-b-2xl transition-colors">
               🚪 Keluar
             </button>
@@ -692,21 +692,21 @@
 
 
         <!-- Profile mini menu -->
-        <div x-show="open" @click.outside="open=false" x-transition
+        <div x-show="isOpen" @click.outside="isOpen=false" x-transition
              class="absolute bottom-full right-0 mb-2 w-52 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 py-1 z-50"
              style="right: 0">
           <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
             <p class="font-semibold text-sm text-gray-900 dark:text-white" x-text="user?.name"></p>
             <p class="text-xs text-gray-400 truncate" x-text="user?.email"></p>
           </div>
-          <a @click.prevent="navigate('/dashboard');open=false" href="#/dashboard"
+          <a @click.prevent="navigate('/dashboard');isOpen=false" href="#/dashboard"
              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📊 Dashboard</a>
-          <a @click.prevent="navigate('/profile');open=false" href="#/profile"
+          <a @click.prevent="navigate('/profile');isOpen=false" href="#/profile"
              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">👤 Profil</a>
-          <a @click.prevent="navigate('/history');open=false" href="#/history"
+          <a @click.prevent="navigate('/history');isOpen=false" href="#/history"
              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📋 Histori</a>
-          <a @click.prevent="navigate('/settings');open=false" href="#/settings"
+          <a @click.prevent="navigate('/settings');isOpen=false" href="#/settings"
              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">⚙️ Pengaturan</a>
           <template x-if="user && user.role === 'admin'">
-            <a @click.prevent="navigate('/admin');open=false" href="#/admin"
+            <a @click.prevent="navigate('/admin');isOpen=false" href="#/admin"
                class="flex items-cen
