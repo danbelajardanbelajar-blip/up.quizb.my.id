@@ -1,7 +1,7 @@
 <!-- EMAIL SENT PAGE -->
 <div class="min-h-[80vh] flex items-center justify-center px-4 py-12"
      x-data="{
-       email: emailSentPage?.email || '',
+       email: window.emailSentPage?.email || '',
        resending: false,
        resent: false,
        resentError: '',
@@ -9,7 +9,7 @@
        _timer: null,
 
        init() {
-         this.email = emailSentPage?.email || '';
+         this.email = window.emailSentPage?.email || '';
        },
 
        startCountdown() {
