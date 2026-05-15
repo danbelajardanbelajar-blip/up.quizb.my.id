@@ -86,7 +86,7 @@ function QuizBApp() {
 
     // Admin state
     admin: {
-      tab: 'stats',
+      tab: 'content',
       stats: null,
       quizzes: [], quizzesTotal: 0, quizzesPage: 1, quizzesSearch: '', quizzesView: 'list',
       users:   [],   usersTotal: 0,   usersPage: 1,   usersSearch: '',
@@ -96,6 +96,7 @@ function QuizBApp() {
       // Daftar quiz khusus untuk dropdown di tab Soal — agar tidak menimpa
       // pagination admin.quizzes pada tab Quiz.
       quizPicker: [],
+      contentQuizzes: [], contentQuizCount: 0, contentSearch: '', contentOpenGroups: [], contentOpenCategories: [],
       groups: [],
       allCategories: [],
       groupAssign: { show: false, group: null, selected: [] },
@@ -1123,6 +1124,16 @@ function QuizBApp() {
           if (!this.admin.categories.length) {
             this.admin.categories = await api.get('admin.category_list');
           }
+        } else if (tab === 'content') {
+          this.admin.contentOpenGroups = [];
+          this.admin.contentOpenCategories = [];
+          this.admin.categories = await api.get('admin.category_list');
+          const groupsData = await api.get('admin.group_list');
+          this.admin.groups = groupsData.groups || [];
+          const quizData = await api.get('admin.quiz_list', { limit: 500, search: this.admin.contentSearch });
+          this.admin.contentQuizzes   = quizData.quizzes || [];
+          this.admin.contentQuizCount = quizData.total   || 0;
+          this.admin.contentOpenGroups = this.admin.groups.map(g => g.id);
         } else if (tab === 'users') {
           const data = await api.get('admin.user_list', { page: this.admin.usersPage, limit: 15, search: this.admin.usersSearch });
           this.admin.users      = data.users  || [];
@@ -1157,6 +1168,49 @@ function QuizBApp() {
         this.showToast(e.message, 'error', '❌');
       } finally {
         this.admin.loading = false;
+      }
+    },
+
+    async onAdminContentSearch(value) {
+      this.admin.contentSearch = value.trim();
+      await this.loadAdminTab('content');
+    },
+
+    getContentGroupCategories(group) {
+      if (!group || !group.categories) return [];
+      return group.categories.map(cat => {
+        const full = this.admin.categories.find(c => c.id === cat.id) || cat;
+        return { ...cat, quiz_count: full.quiz_count ?? 0, group_id: full.group_id ?? group.id };
+      });
+    },
+
+    filteredUnassignedCategories() {
+      return this.admin.categories.filter(cat => !cat.group_id || cat.group_id === 0);
+    },
+
+    getCategoryQuizCount(catId) {
+      return this.admin.contentQuizzes.filter(q => q.category_id === catId).length;
+    },
+
+    getQuizzesByCategory(catId) {
+      return this.admin.contentQuizzes.filter(q => q.category_id === catId);
+    },
+
+    toggleContentGroup(groupId) {
+      const idx = this.admin.contentOpenGroups.indexOf(groupId);
+      if (idx === -1) {
+        this.admin.contentOpenGroups.push(groupId);
+      } else {
+        this.admin.contentOpenGroups.splice(idx, 1);
+      }
+    },
+
+    toggleContentCategory(catId) {
+      const idx = this.admin.contentOpenCategories.indexOf(catId);
+      if (idx === -1) {
+        this.admin.contentOpenCategories.push(catId);
+      } else {
+        this.admin.contentOpenCategories.splice(idx, 1);
       }
     },
 
