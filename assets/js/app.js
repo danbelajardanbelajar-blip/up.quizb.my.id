@@ -171,60 +171,66 @@ function QuizBApp() {
 
     // ---- Lifecycle ----
     async init() {
-      // Dark mode
-      this.applyDark();
+      try {
+        // Dark mode
+        this.applyDark();
 
-      // Save the original intended hash BEFORE any redirect may change it.
-      const initialHash = window.location.hash || '#/';
+        // Save the original intended hash BEFORE any redirect may change it.
+        const initialHash = window.location.hash || '#/';
 
-      // Hash routing
-      this.handleRoute(initialHash);
-      window.addEventListener('hashchange', () => this.handleRoute(window.location.hash));
+        // Hash routing
+        this.handleRoute(initialHash);
+        window.addEventListener('hashchange', () => this.handleRoute(window.location.hash));
 
-      // Search events
-      window.addEventListener('search', (e) => this.onSearch(e.detail.q));
+        // Search events
+        window.addEventListener('search', (e) => this.onSearch(e.detail.q));
 
-      // Load current user
-      await this.loadUser();
-      // Sync settings state dengan data user
-      if (this.user) {
-        this.settings.limit            = this.user.quiz_questions_limit || 10;
-        this.settings.shuffleQuestions = this.user.shuffle_questions    ?? true;
-        this.settings.shuffleOptions   = this.user.shuffle_options      ?? true;
+        // Load current user
+        await this.loadUser();
+        // Sync settings state dengan data user
+        if (this.user) {
+          this.settings.limit            = this.user.quiz_questions_limit || 10;
+          this.settings.shuffleQuestions = this.user.shuffle_questions    ?? true;
+          this.settings.shuffleOptions   = this.user.shuffle_options      ?? true;
+        }
+
+        // Start challenge + notification polling for logged-in users
+        if (this.user) {
+          this.loadChallenges();
+          this.challenge.pollInterval = setInterval(() => this.loadChallenges(), 20000);
+          this.pollCounts();
+        }
+
+        // After loadUser: if the user IS authenticated and the original route was
+        // a protected page (but we were bounced to /login because user hadn't loaded
+        // yet), navigate back to the intended destination now.
+        const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges', '/messages', '/google-setup', '/onboarding'];
+        const intendedPath = (initialHash.replace(/^#/, '').split('?')[0]) || '/';
+        if (this.user && protected_routes.some(r => intendedPath.startsWith(r))) {
+          this.handleRoute(initialHash);
+        }
+
+        // ── Flash message dari PHP session (verify-email.php redirect) ──
+        if (window._phpFlash?.msg) {
+          const iconMap = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+          this.showToast(
+            window._phpFlash.msg,
+            window._phpFlash.type || 'success',
+            iconMap[window._phpFlash.type] || '✅'
+          );
+          window._phpFlash = null;
+        }
+
+        // Re-check protected route guards after user is loaded.
+        // We only re-run guard logic — NOT the full data loaders — so that
+        // params (e.g. /quiz/5) loaded above are not overwritten with undefined.
+        this._guardRoute(this.currentRoute);
+      } catch (e) {
+        console.error('App init failed', e);
+        this.showToast('Terjadi kesalahan saat memuat aplikasi', 'error', '❌');
+      } finally {
+        this.hidePageLoader();
       }
-
-      // Start challenge + notification polling for logged-in users
-      if (this.user) {
-        this.loadChallenges();
-        this.challenge.pollInterval = setInterval(() => this.loadChallenges(), 20000);
-        this.pollCounts();
-      }
-
-      // After loadUser: if the user IS authenticated and the original route was
-      // a protected page (but we were bounced to /login because user hadn't loaded
-      // yet), navigate back to the intended destination now.
-      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges', '/messages', '/google-setup', '/onboarding'];
-      const intendedPath = (initialHash.replace(/^#/, '').split('?')[0]) || '/';
-      if (this.user && protected_routes.some(r => intendedPath.startsWith(r))) {
-        return this.handleRoute(initialHash);
-      }
-
-      // ── Flash message dari PHP session (verify-email.php redirect) ──
-      if (window._phpFlash?.msg) {
-        const iconMap = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
-        this.showToast(
-          window._phpFlash.msg,
-          window._phpFlash.type || 'success',
-          iconMap[window._phpFlash.type] || '✅'
-        );
-        window._phpFlash = null;
-      }
-
-      // Re-check protected route guards after user is loaded.
-      // We only re-run guard logic — NOT the full data loaders — so that
-      // params (e.g. /quiz/5) loaded above are not overwritten with undefined.
-      this._guardRoute(this.currentRoute);
-      this.hidePageLoader();
     },
 
     hidePageLoader() {
@@ -282,6 +288,8 @@ function QuizBApp() {
         'public-history':  '/public-history',
         'assignment':  rest[0] ? '/assignment/' + rest.join('/') : '/assignment',
         'onboarding':  '/onboarding',
+        'email-sent':  '/email-sent',
+        'verify-error':'/verify-error',
         'messages':    '/messages',
         'search':      '/search',
         'about':       '/about',
