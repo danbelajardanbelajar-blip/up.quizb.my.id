@@ -213,6 +213,16 @@ function QuizBApp() {
       // We only re-run guard logic — NOT the full data loaders — so that
       // params (e.g. /quiz/5) loaded above are not overwritten with undefined.
       this._guardRoute(this.currentRoute);
+      this.hidePageLoader();
+    },
+
+    hidePageLoader() {
+      const loader = document.getElementById('page-loader');
+      if (!loader) return;
+      loader.classList.add('hidden');
+      setTimeout(() => {
+        if (loader.parentNode) loader.parentNode.removeChild(loader);
+      }, 300);
     },
 
     // Lightweight guard re-check (used after async loadUser).

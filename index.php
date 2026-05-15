@@ -45,6 +45,18 @@
 </head>
 <body class="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans min-h-screen transition-colors duration-300">
 
+  <!-- Page Loader -->
+  <div id="page-loader" class="fixed inset-0 z-[99999] flex items-center justify-center bg-white text-primary-600" style="background:#f8fafc;color:#4f46e5;">
+    <div class="flex flex-col items-center gap-4 px-6 py-6 rounded-[28px] shadow-2xl border border-slate-200/80 bg-white">
+      <div class="loader-ring"></div>
+      <div class="text-center">
+        <p class="text-xl font-semibold">QuizB sedang dimuat</p>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Silakan tunggu sebentar, kami menyiapkan kontennya.</p>
+      </div>
+    </div>
+  </div>
+  <noscript><style>#page-loader{display:none!important;}</style></noscript>
+
   <!-- Toast Notification -->
   <div x-show="toast.show" x-transition:enter="transition ease-out duration-300"
        x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
