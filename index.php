@@ -1,3 +1,13 @@
+<?php
+// Bootstrap flash message dari session (diset oleh verify-email.php)
+require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/includes/auth.php';
+startSecureSession();
+$flashType  = $_SESSION['flash_type']  ?? '';
+$flashMsg   = $_SESSION['flash_msg']   ?? '';
+$isNewUser  = !empty($_SESSION['is_new_user']);
+unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user']);
+?>
 <!DOCTYPE html>
 <html lang="id" x-data="QuizBApp()" x-init="init()" :class="{ 'dark': darkMode }">
 <head>
@@ -331,6 +341,16 @@
       <?php include 'pages/register.html'; ?>
     </div>
 
+    <!-- EMAIL SENT PAGE (setelah register) -->
+    <div x-show="currentRoute === '/email-sent'">
+      <?php include 'pages/email-sent.html'; ?>
+    </div>
+
+    <!-- VERIFY ERROR PAGE (token tidak valid) -->
+    <div x-show="currentRoute === '/verify-error'">
+      <?php include 'pages/verify-error.html'; ?>
+    </div>
+
     <!-- GOOGLE SETUP PAGE -->
     <div x-show="currentRoute === '/google-setup'">
       <?php include 'pages/google-setup.html'; ?>
@@ -436,6 +456,15 @@
 
   <!-- Alpine.js CDN -->
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- Flash message dari PHP session (diset oleh verify-email.php) -->
+  <script>
+    window._phpFlash = {
+      type: <?= json_encode($flashType) ?>,
+      msg:  <?= json_encode($flashMsg) ?>,
+      isNewUser: <?= $isNewUser ? 'true' : 'false' ?>
+    };
+  </script>
 
   <!-- App Scripts -->
   <script src="assets/js/utils.js"></script>

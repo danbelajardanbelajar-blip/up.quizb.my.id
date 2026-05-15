@@ -1,0 +1,31 @@
+<!-- VERIFY ERROR PAGE -->
+<div class="min-h-[80vh] flex items-center justify-center px-4 py-12"
+     x-data="{
+       reason: new URLSearchParams(window.location.hash.split('?')[1] || '').get('reason') || 'invalid'
+     }">
+  <div class="w-full max-w-md animate-slide-up text-center">
+
+    <!-- Icon -->
+    <div class="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-3xl flex items-center justify-center mx-auto mb-6">
+      <span class="text-4xl">❌</span>
+    </div>
+
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-3">Link Tidak Valid</h1>
+
+    <p class="text-gray-500 dark:text-gray-400 text-sm mb-6"
+       x-text="reason === 'used'
+         ? 'Link konfirmasi ini sudah pernah digunakan atau telah kedaluwarsa.'
+         : 'Link konfirmasi tidak valid. Pastikan kamu mengklik link yang benar dari email.'">
+    </p>
+
+    <div class="space-y-3">
+      <button @click="navigate('/register')" class="btn-primary w-full py-3">
+        Daftar Ulang
+      </button>
+      <button @click="navigate('/login')" class="btn-secondary w-full py-3">
+        Masuk ke Akun
+      </button>
+    </div>
+
+  </div>
+</div>

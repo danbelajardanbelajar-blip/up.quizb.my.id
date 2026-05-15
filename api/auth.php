@@ -3,6 +3,8 @@
 // api/auth.php — Auth Endpoints
 // ============================================
 
+require_once __DIR__ . '/../includes/mailer.php';
+
 function auth_login(): void {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
 
@@ -27,6 +29,12 @@ function auth_login(): void {
     if (!$user || !password_verify($pass, $user['password_hash'])) {
         jsonError('Email atau password salah', 401);
     }
+
+    // Akun belum verifikasi email
+    if (!$user['is_active'] && empty($user['email_verified_at'])) {
+        jsonError('Akun belum diverifikasi. Silakan cek email kamu untuk link konfirmasi.', 403);
+    }
+
     if (!$user['is_active']) jsonError('Akun dinonaktifkan', 403);
 
     unset($_SESSION[$key]);
@@ -57,38 +65,30 @@ function auth_register(): void {
     $exists = DB::one('SELECT id FROM users WHERE email = ?', [$email]);
     if ($exists) jsonError('Email sudah terdaftar', 409);
 
+    // Generate token verifikasi (32 bytes = 64 karakter hex)
+    $token     = bin2hex(random_bytes(32));
+    $tokenHash = hash('sha256', $token);   // simpan hash-nya di DB
+
     $hash = password_hash($pass, PASSWORD_BCRYPT, ['cost' => 12]);
     DB::execute(
-        'INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)',
-        [$name, $email, $hash]
+        'INSERT INTO users (name, email, password_hash, is_active, email_verification_token) VALUES (?, ?, ?, 0, ?)',
+        [$name, $email, $hash, $tokenHash]
     );
 
-    $user = DB::one('SELECT id, name, email, role FROM users WHERE email = ?', [$email]);
-    loginUser($user);
-
-    // — Broadcast notifikasi "pengguna baru" ke semua user aktif lain (kecuali si pendaftar)
-    $newUserId = (int)$user['id'];
-    $others = DB::all(
-        "SELECT id FROM users WHERE id != ? AND is_active = 1",
-        [$newUserId]
-    );
-    foreach ($others as $other) {
-        pushNotification(
-            (int)$other['id'],
-            'new_user',
-            '👤 ' . $name . ' bergabung',
-            $name . ' baru saja mendaftar di QuizB.',
-            '/public-history?user_id=' . $newUserId
-        );
+    // Kirim email konfirmasi
+    try {
+        sendVerificationEmail($email, $name, $token);
+    } catch (\Throwable $e) {
+        // Jika gagal kirim email, hapus user agar bisa daftar ulang
+        DB::execute('DELETE FROM users WHERE email = ?', [$email]);
+        error_log('[Register] Gagal kirim email ke ' . $email . ': ' . $e->getMessage());
+        jsonError('Gagal mengirim email konfirmasi. Periksa koneksi server atau coba lagi.', 500);
     }
 
     jsonSuccess([
-        'id'          => (int)$user['id'],
-        'name'        => $user['name'],
-        'email'       => $user['email'],
-        'role'        => $user['role'],
-        'csrf_token'  => generateCsrfToken(),
-        'is_new_user' => true,
+        'email_sent' => true,
+        'email'      => $email,
+        'message'    => 'Registrasi berhasil! Cek email kamu untuk link konfirmasi.',
     ], 'Registrasi berhasil');
 }
 
@@ -356,4 +356,342 @@ function auth_google(): void {
 function auth_google_callback(): void {
     // Handle Google OAuth callback
     auth_google();
+}
+
+// ============================================
+// Verifikasi token dari link email
+// GET /api.php?action=auth.verify_email&token=XXX
+// ============================================
+function auth_verify_email(): void {
+    $token = trim($_GET['token'] ?? $_POST['token'] ?? '');
+
+    if (!$token || strlen($token) !== 64 || !ctype_xdigit($token)) {
+        jsonError('Token tidak valid', 400);
+    }
+
+    $tokenHash = hash('sha256', $token);
+
+    $user = DB::one(
+        "SELECT id, name, email, role, email_verification_token, is_active
+         FROM users
+         WHERE email_verification_token = ?",
+        [$tokenHash]
+    );
+
+    if (!$user) {
+        jsonError('Link konfirmasi tidak valid atau sudah digunakan.', 400);
+    }
+
+    if ($user['is_active']) {
+        // Sudah aktif — tetap login saja
+        loginUser($user);
+        jsonSuccess([
+            'id'          => (int)$user['id'],
+            'name'        => $user['name'],
+            'email'       => $user['email'],
+            'role'        => $user['role'],
+            'is_new_user' => true,
+            'csrf_token'  => generateCsrfToken(),
+        ], 'Email sudah terverifikasi. Login berhasil.');
+    }
+
+    // Aktifkan akun & hapus token
+    DB::execute(
+        "UPDATE users
+         SET is_active = 1,
+             email_verified_at = NOW(),
+             email_verification_token = NULL,
+             updated_at = NOW()
+         WHERE id = ?",
+        [(int)$user['id']]
+    );
+
+    $verified = DB::one('SELECT id, name, email, role FROM users WHERE id = ?', [(int)$user['id']]);
+    loginUser($verified);
+
+    // Broadcast notifikasi pengguna baru
+    $newUserId = (int)$verified['id'];
+    $others = DB::all("SELECT id FROM users WHERE id != ? AND is_active = 1", [$newUserId]);
+    foreach ($others as $other) {
+        pushNotification(
+            (int)$other['id'], 'new_user',
+            '👤 ' . $verified['name'] . ' bergabung',
+            $verified['name'] . ' baru saja mendaftar di ' . APP_NAME . '.',
+            '/public-history?user_id=' . $newUserId
+        );
+    }
+
+    jsonSuccess([
+        'id'          => (int)$verified['id'],
+        'name'        => $verified['name'],
+        'email'       => $verified['email'],
+        'role'        => $verified['role'],
+        'is_new_user' => true,
+        'csrf_token'  => generateCsrfToken(),
+    ], 'Email berhasil dikonfirmasi! Selamat datang 🎉');
+}
+
+// ============================================
+// Kirim ulang email verifikasi
+// POST /api.php?action=auth.resend_verification
+// ============================================
+function auth_resend_verification(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+
+    $body  = getBody();
+    $email = sanitizeString($body['email'] ?? '');
+    if (!$email) jsonError('Email wajib diisi');
+
+    $user = DB::one(
+        "SELECT id, name, email, is_active, email_verified_at FROM users WHERE email = ?",
+        [$email]
+    );
+
+    // Selalu kembalikan sukses (keamanan — jangan bocorkan apakah email terdaftar)
+    if (!$user || $user['is_active']) {
+        jsonSuccess(null, 'Jika email terdaftar dan belum diverifikasi, kami akan mengirim ulang konfirmasi.');
+    }
+
+    // Rate limit 60 detik
+    $rlKey = 'resend_email_' . md5($email);
+    if (!empty($_SESSION[$rlKey]) && (time() - $_SESSION[$rlKey]) < 60) {
+        jsonError('Tunggu 60 detik sebelum mengirim ulang.', 429);
+    }
+    $_SESSION[$rlKey] = time();
+
+    $token     = bin2hex(random_bytes(32));
+    $tokenHash = hash('sha256', $token);
+
+    DB::execute(
+        "UPDATE users SET email_verification_token = ?, updated_at = NOW() WHERE id = ?",
+        [$tokenHash, $user['id']]
+    );
+
+    try {
+        sendVerificationEmail($user['email'], $user['name'], $token);
+    } catch (\Throwable $e) {
+        error_log('[Resend] Gagal kirim email ke ' . $email . ': ' . $e->getMessage());
+        jsonError('Gagal mengirim email. Coba lagi beberapa saat.', 500);
+    }
+
+    jsonSuccess(null, 'Email konfirmasi berhasil dikirim ulang. Cek inbox kamu.');
+}
+
+function auth_google_callback(): void {
+    // Handle Google OAuth callback
+    auth_google();
+}
+
+// ============================================
+// Verifikasi token dari link email
+// GET /api.php?action=auth.verify_email&token=XXX
+// ============================================
+function auth_verify_email(): void {
+    $token = trim($_GET['token'] ?? $_POST['token'] ?? '');
+
+    if (!$token || strlen($token) !== 64) {
+        jsonError('Token tidak valid', 400);
+    }
+
+    $tokenHash = hash('sha256', $token);
+
+    $user = DB::one(
+        "SELECT id, name, email, role, email_verification_token, is_active
+         FROM users
+         WHERE email_verification_token = ?",
+        [$tokenHash]
+    );
+
+    if (!$user) {
+        jsonError('Link konfirmasi tidak valid atau sudah digunakan.', 400);
+    }
+
+    if ($user['is_active']) {
+        // Sudah aktif sebelumnya — tetap login saja
+        loginUser($user);
+        jsonSuccess([
+            'id'         => (int)$user['id'],
+            'name'       => $user['name'],
+            'email'      => $user['email'],
+            'role'       => $user['role'],
+            'is_new_user'=> true,
+            'csrf_token' => generateCsrfToken(),
+        ], 'Email sudah terverifikasi. Login berhasil.');
+    }
+
+    // Aktifkan akun & hapus token
+    DB::execute(
+        "UPDATE users
+         SET is_active = 1,
+             email_verified_at = NOW(),
+             email_verification_token = NULL,
+             updated_at = NOW()
+         WHERE id = ?",
+        [$user['id']]
+    );
+
+    // Ambil ulang data user yang sudah ter-update
+    $verified = DB::one('SELECT id, name, email, role FROM users WHERE id = ?', [$user['id']]);
+
+    // Auto-login
+    loginUser($verified);
+
+    // Broadcast notifikasi "pengguna baru" ke semua user aktif lain
+    $newUserId = (int)$verified['id'];
+    $others = DB::all(
+        "SELECT id FROM users WHERE id != ? AND is_active = 1",
+        [$newUserId]
+    );
+    foreach ($others as $other) {
+        pushNotification(
+            (int)$other['id'],
+            'new_user',
+            '👤 ' . $verified['name'] . ' bergabung',
+            $verified['name'] . ' baru saja mendaftar di ' . APP_NAME . '.',
+            '/public-history?user_id=' . $newUserId
+        );
+    }
+
+    jsonSuccess([
+        'id'          => (int)$verified['id'],
+        'name'        => $verified['name'],
+        'email'       => $verified['email'],
+        'role'        => $verified['role'],
+        'is_new_user' => true,
+        'csrf_token'  => generateCsrfToken(),
+    ], 'Email berhasil dikonfirmasi! Selamat datang 🎉');
+}
+
+// ============================================
+// Kirim ulang email verifikasi
+// POST /api.php?action=auth.resend_verification
+// ============================================
+function auth_resend_verification(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+
+    $body  = getBody();
+    $email = sanitizeString($body['email'] ?? '');
+    if (!$email) jsonError('Email wajib diisi');
+
+    $user = DB::one(
+        "SELECT id, name, email, is_active, email_verified_at FROM users WHERE email = ?",
+        [$email]
+    );
+
+    // Selalu kembalikan pesan sukses (keamanan — jangan bocorkan apakah email terdaftar)
+    if (!$user || $user['is_active']) {
+        jsonSuccess(null, 'Jika email terdaftar dan belum diverifikasi, kami akan mengirim ulang konfirmasi.');
+    }
+
+    // Rate limit: simpan waktu terakhir kirim di session
+    $rlKey = 'resend_email_' . md5($email);
+    if (!empty($_SESSION[$rlKey]) && (time() - $_SESSION[$rlKey]) < 60) {
+        jsonError('Tunggu 60 detik sebelum mengirim ulang.', 429);
+    }
+    $_SESSION[$rlKey] = time();
+
+    // Generate token baru
+    $token     = bin2hex(random_bytes(32));
+    $tokenHash = hash('sha256', $token);
+
+    DB::execute(
+        "UPDATE users SET email_verification_token = ?, updated_at = NOW() WHERE id = ?",
+        [$tokenHash, $user['id']]
+    );
+
+    try {
+        sendVerificationEmail($user['email'], $user['name'], $token);
+    } catch (\Throwable $e) {
+        error_log('[Resend] Gagal kirim email ke ' . $email . ': ' . $e->getMessage());
+        jsonError('Gagal mengirim email. Coba lagi beberapa saat.', 500);
+    }
+
+    jsonSuccess(null, 'Email konfirmasi berhasil dikirim ulang. Cek inbox kamu.');
+}
+
+function auth_google_callback(): void {
+    auth_google();
+}
+
+// ============================================
+// Verifikasi token dari link email
+// GET /api.php?action=auth.verify_email&token=XXX
+// ============================================
+function auth_verify_email(): void {
+    $token = trim($_GET['token'] ?? $_POST['token'] ?? '');
+    if (!$token || strlen($token) !== 64 || !ctype_xdigit($token)) {
+        jsonError('Token tidak valid', 400);
+    }
+    $tokenHash = hash('sha256', $token);
+    $user = DB::one(
+        "SELECT id, name, email, role, email_verification_token, is_active FROM users WHERE email_verification_token = ?",
+        [$tokenHash]
+    );
+    if (!$user) {
+        jsonError('Link konfirmasi tidak valid atau sudah digunakan.', 400);
+    }
+    if ($user['is_active']) {
+        loginUser($user);
+        jsonSuccess([
+            'id'          => (int)$user['id'],
+            'name'        => $user['name'],
+            'email'       => $user['email'],
+            'role'        => $user['role'],
+            'is_new_user' => true,
+            'csrf_token'  => generateCsrfToken(),
+        ], 'Email sudah terverifikasi. Login berhasil.');
+    }
+    DB::execute(
+        "UPDATE users SET is_active = 1, email_verified_at = NOW(), email_verification_token = NULL, updated_at = NOW() WHERE id = ?",
+        [(int)$user['id']]
+    );
+    $verified = DB::one('SELECT id, name, email, role FROM users WHERE id = ?', [(int)$user['id']]);
+    loginUser($verified);
+    $newUserId = (int)$verified['id'];
+    $others = DB::all("SELECT id FROM users WHERE id != ? AND is_active = 1", [$newUserId]);
+    foreach ($others as $o) {
+        pushNotification((int)$o['id'], 'new_user',
+            '👤 ' . $verified['name'] . ' bergabung',
+            $verified['name'] . ' baru saja mendaftar di ' . APP_NAME . '.',
+            '/public-history?user_id=' . $newUserId
+        );
+    }
+    jsonSuccess([
+        'id'          => (int)$verified['id'],
+        'name'        => $verified['name'],
+        'email'       => $verified['email'],
+        'role'        => $verified['role'],
+        'is_new_user' => true,
+        'csrf_token'  => generateCsrfToken(),
+    ], 'Email berhasil dikonfirmasi! Selamat datang 🎉');
+}
+
+// ============================================
+// Kirim ulang email verifikasi
+// POST /api.php?action=auth.resend_verification
+// ============================================
+function auth_resend_verification(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $body  = getBody();
+    $email = sanitizeString($body['email'] ?? '');
+    if (!$email) jsonError('Email wajib diisi');
+    $user = DB::one("SELECT id, name, email, is_active FROM users WHERE email = ?", [$email]);
+    if (!$user || $user['is_active']) {
+        jsonSuccess(null, 'Jika email terdaftar dan belum diverifikasi, kami akan mengirim ulang konfirmasi.');
+    }
+    $rlKey = 'resend_email_' . md5($email);
+    if (!empty($_SESSION[$rlKey]) && (time() - $_SESSION[$rlKey]) < 60) {
+        jsonError('Tunggu 60 detik sebelum mengirim ulang.', 429);
+    }
+    $_SESSION[$rlKey] = time();
+    $token     = bin2hex(random_bytes(32));
+    $tokenHash = hash('sha256', $token);
+    DB::execute("UPDATE users SET email_verification_token = ?, updated_at = NOW() WHERE id = ?", [$tokenHash, $user['id']]);
+    try {
+        sendVerificationEmail($user['email'], $user['name'], $token);
+    } catch (\Throwable $e) {
+        error_log('[Resend] Gagal kirim email ke ' . $email . ': ' . $e->getMessage());
+        jsonError('Gagal mengirim email. Coba lagi beberapa saat.', 500);
+    }
+    jsonSuccess(null, 'Email konfirmasi berhasil dikirim ulang. Cek inbox kamu.');
 }

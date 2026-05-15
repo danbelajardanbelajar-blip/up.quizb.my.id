@@ -1,0 +1,107 @@
+<!-- EMAIL SENT PAGE -->
+<div class="min-h-[80vh] flex items-center justify-center px-4 py-12"
+     x-data="{
+       email: emailSentPage?.email || '',
+       resending: false,
+       resent: false,
+       resentError: '',
+       countdown: 0,
+       _timer: null,
+
+       init() {
+         this.email = emailSentPage?.email || '';
+       },
+
+       startCountdown() {
+         this.countdown = 60;
+         clearInterval(this._timer);
+         this._timer = setInterval(() => {
+           this.countdown--;
+           if (this.countdown <= 0) clearInterval(this._timer);
+         }, 1000);
+       },
+
+       async resend() {
+         if (this.resending || this.countdown > 0) return;
+         this.resending = true;
+         this.resentError = '';
+         this.resent = false;
+         try {
+           await api.post('auth.resend_verification', { email: this.email });
+           this.resent = true;
+           this.startCountdown();
+         } catch(e) {
+           this.resentError = e.message;
+         } finally {
+           this.resending = false;
+         }
+       }
+     }">
+  <div class="w-full max-w-md animate-slide-up text-center">
+
+    <!-- Icon -->
+    <div class="w-20 h-20 bg-gradient-to-br from-primary-500 to-primary-700 rounded-3xl flex items-center justify-center shadow-xl mx-auto mb-6">
+      <span class="text-4xl">📧</span>
+    </div>
+
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-3">Cek Email Kamu!</h1>
+    <p class="text-gray-500 dark:text-gray-400 text-sm mb-2">
+      Kami telah mengirim link konfirmasi ke:
+    </p>
+    <p class="font-semibold text-primary-600 dark:text-primary-400 text-base mb-6"
+       x-text="email || 'email kamu'"></p>
+
+    <div class="card p-6 text-left mb-6">
+      <p class="text-gray-700 dark:text-gray-300 text-sm mb-4">
+        Klik link di email tersebut untuk mengaktifkan akun dan mulai menggunakan QuizB.
+      </p>
+      <ul class="space-y-2 text-sm text-gray-500 dark:text-gray-400">
+        <li class="flex items-start gap-2">
+          <span class="text-green-500 mt-0.5">✓</span>
+          <span>Cek folder <strong>Inbox</strong> atau <strong>Spam/Junk</strong></span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-500 mt-0.5">✓</span>
+          <span>Link berlaku selama <strong>24 jam</strong></span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-500 mt-0.5">✓</span>
+          <span>Pengirim: <strong>admin@quizb.my.id</strong></span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Resend Section -->
+    <div class="space-y-3">
+      <p class="text-sm text-gray-500 dark:text-gray-400">Tidak menerima email?</p>
+
+      <!-- Berhasil kirim ulang -->
+      <div x-show="resent" x-cloak
+           class="flex items-center justify-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-600 dark:text-green-400">
+        <span>✅</span><span>Email konfirmasi berhasil dikirim ulang!</span>
+      </div>
+
+      <!-- Error kirim ulang -->
+      <div x-show="resentError" x-cloak
+           class="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
+        <span>⚠️</span><span x-text="resentError"></span>
+      </div>
+
+      <!-- Tombol Kirim Ulang -->
+      <button @click="resend()"
+              :disabled="resending || countdown > 0"
+              class="btn-secondary w-full py-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+        <span x-show="resending" class="inline-block w-4 h-4 border-2 border-gray-400/30 border-t-gray-600 rounded-full animate-spin mr-2"></span>
+        <span x-show="!resending && countdown <= 0">🔄 Kirim Ulang Email</span>
+        <span x-show="!resending && countdown > 0" x-text="'Kirim ulang dalam ' + countdown + 's'"></span>
+        <span x-show="resending">Mengirim...</span>
+      </button>
+
+      <button @click="navigate('/register')"
+              class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+        ← Kembali ke halaman daftar
+      </button>
+    </div>
+
+  </div>
+</div>

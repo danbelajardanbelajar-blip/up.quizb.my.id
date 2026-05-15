@@ -209,6 +209,17 @@ function QuizBApp() {
         return this.handleRoute(initialHash);
       }
 
+      // ── Flash message dari PHP session (verify-email.php redirect) ──
+      if (window._phpFlash?.msg) {
+        const iconMap = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+        this.showToast(
+          window._phpFlash.msg,
+          window._phpFlash.type || 'success',
+          iconMap[window._phpFlash.type] || '✅'
+        );
+        window._phpFlash = null;
+      }
+
       // Re-check protected route guards after user is loaded.
       // We only re-run guard logic — NOT the full data loaders — so that
       // params (e.g. /quiz/5) loaded above are not overwritten with undefined.
@@ -423,13 +434,15 @@ function QuizBApp() {
       if (f.password.length < 6)               { f.error = 'Password minimal 6 karakter'; return; }
       f.loading = true; f.error = '';
       try {
-        // API auth.register returns flat: { id, name, email, role, csrf_token }
         const data = await api.post('auth.register', { name: f.name, email: f.email, password: f.password });
-        this.user = { id: data.id, name: data.name, email: data.email, role: data.role };
-        api._csrfToken = data.csrf_token || null;
-        this.showToast('Registrasi berhasil! Selamat datang 🎉', 'success', '🎉');
-        // User baru → arahkan ke pilihan role dulu
-        this.navigate(data.is_new_user ? '/onboarding' : '/dashboard');
+        // Tidak ada auto-login — user harus verifikasi email dulu
+        if (data.email_sent) {
+          window.emailSentPage = { email: data.email || f.email };
+          this.showToast('Cek email kamu untuk link konfirmasi 📧', 'success', '📧');
+          this.navigate('/email-sent');
+          // Reset form
+          f.name = ''; f.email = ''; f.password = ''; f.password_confirm = '';
+        }
       } catch (e) {
         f.error = e.message;
       } finally {
