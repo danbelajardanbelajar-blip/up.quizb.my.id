@@ -1379,38 +1379,4 @@
                   <td class="px-4 py-3 text-right tabular-nums text-gray-600 dark:text-gray-300"
                       x-text="att.correct_count ?? '—'"></td>
                   <td class="px-4 py-3 text-right tabular-nums text-xs text-gray-500"
-                      x-text="att.time_taken ? Math.floor(att.time_taken/60) + 'm ' + (att.time_taken%60) + 's' : '—'"></td>
-                  <td class="px-5 py-3 text-right text-xs text-gray-400"
-                      x-text="formatDateTime(att.completed_at)"></td>
-                </tr>
-              </template>
-              <tr x-show="admin.userHistory.allAttempts.length === 0 && !admin.userHistory.loading">
-                <td colspan="6" class="px-5 py-12 text-center text-gray-400 text-sm">Pengguna ini belum pernah mengerjakan quiz</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Pagination + Footer -->
-        <div class="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex-shrink-0">
-          <span class="text-xs text-gray-400"
-                x-text="admin.userHistory.allAttempts.length + ' percobaan total'"></span>
-          <div x-show="admin.userHistory.allAttempts.length > admin.userHistory.perPage" class="flex items-center gap-2">
-            <button @click="admin.userHistory.page--"
-                    :disabled="admin.userHistory.page <= 1"
-                    class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">← Prev</button>
-            <span class="text-xs text-gray-500 dark:text-gray-400"
-                  x-text="'Hal. ' + admin.userHistory.page + ' / ' + Math.max(1, Math.ceil(admin.userHistory.allAttempts.length / admin.userHistory.perPage))"></span>
-            <button @click="admin.userHistory.page++"
-                    :disabled="admin.userHistory.page * admin.userHistory.perPage >= admin.userHistory.allAttempts.length"
-                    class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">Next →</button>
-          </div>
-          <button @click="admin.userHistory.show = false"
-                  class="text-sm px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Tutup</button>
-        </div>
-
-      </div>
-    </div>
-  </template>
-
-</div>
+      
