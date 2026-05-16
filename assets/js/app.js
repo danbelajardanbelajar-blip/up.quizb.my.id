@@ -99,6 +99,7 @@ function QuizBApp() {
       contentQuizzes: [], contentQuizCount: 0, contentSearch: '', contentOpenGroups: [], contentOpenCategories: [],
       groups: [],
       allCategories: [],
+      questionsSourceTab: 'quizzes',
       groupAssign: { show: false, group: null, selected: [] },
       // Review Soal
       review: { data: [], expandedId: null, attempts: {}, search: '', page: 1, perPage: 15 },
@@ -1125,14 +1126,18 @@ function QuizBApp() {
             this.admin.categories = await api.get('admin.category_list');
           }
         } else if (tab === 'content') {
-          this.admin.contentOpenGroups = [];
+          this.admin.contentOpenGroups     = [];
           this.admin.contentOpenCategories = [];
-          this.admin.categories = await api.get('admin.category_list');
-          const groupsData = await api.get('admin.group_list');
-          this.admin.groups = groupsData.groups || [];
-          const quizData = await api.get('admin.quiz_list', { limit: 500, search: this.admin.contentSearch });
-          this.admin.contentQuizzes   = quizData.quizzes || [];
-          this.admin.contentQuizCount = quizData.total   || 0;
+          const [cats, groupsData, quizData] = await Promise.all([
+            api.get('admin.category_list'),
+            api.get('admin.group_list'),
+            api.get('admin.quiz_list', { limit: 500, search: this.admin.contentSearch }),
+          ]);
+          this.admin.categories        = cats;
+          this.admin.allCategories     = groupsData.all_categories || cats;  // untuk modal assign
+          this.admin.groups            = groupsData.groups || [];
+          this.admin.contentQuizzes    = quizData.quizzes || [];
+          this.admin.contentQuizCount  = quizData.total   || 0;
           this.admin.contentOpenGroups = this.admin.groups.map(g => g.id);
         } else if (tab === 'users') {
           const data = await api.get('admin.user_list', { page: this.admin.usersPage, limit: 15, search: this.admin.usersSearch });
@@ -1179,8 +1184,9 @@ function QuizBApp() {
     getContentGroupCategories(group) {
       if (!group || !group.categories) return [];
       return group.categories.map(cat => {
+        // Merge data lengkap dari admin.categories (termasuk group_id yang benar)
         const full = this.admin.categories.find(c => c.id === cat.id) || cat;
-        return { ...cat, quiz_count: full.quiz_count ?? 0, group_id: full.group_id ?? group.id };
+        return { ...full, ...cat, quiz_count: full.quiz_count ?? 0, group_id: group.id };
       });
     },
 
@@ -1313,6 +1319,12 @@ function QuizBApp() {
       this.admin.modal = { show: true, type };
       this.admin.form  = { ...data };
       this.admin.formError = '';
+      // Pastikan groups sudah dimuat untuk dropdown di form kategori
+      if ((type === 'category_create' || type === 'category_edit') && !this.admin.groups.length) {
+        api.get('admin.group_list').then(d => {
+          this.admin.groups = d.groups || [];
+        }).catch(() => {});
+      }
     },
 
     closeAdminModal() {
@@ -1344,8 +1356,11 @@ function QuizBApp() {
             const newQuiz = await api.post('admin.quiz_create', f);
             this.showToast('Quiz berhasil dibuat', 'success', '✅');
             this.closeAdminModal();
+            const calledFromContent = this.admin.tab === 'content';
             await this.loadAdminTab('quizzes');
             await this.openQuizQuestions(newQuiz);
+            // Jika dibuat dari tab Konten, set sourceTab agar tombol back kembali ke Konten
+            if (calledFromContent) this.admin.questionsSourceTab = 'content';
             return;
           } else {
             await api.put('admin.quiz_update', f.id, f);
@@ -1430,7 +1445,8 @@ function QuizBApp() {
         });
         this.admin.groupAssign.show = false;
         this.showToast('Kategori berhasil diperbarui', 'success', '✅');
-        await this.loadAdminTab('groups');
+        // Reload tab yang sedang aktif (content atau tab lain)
+        await this.loadAdminTab(this.admin.tab);
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
@@ -1610,6 +1626,7 @@ function QuizBApp() {
 
     // ---- Quiz questions sub-view ----
     async openQuizQuestions(quiz) {
+      this.admin.questionsSourceTab  = 'quizzes';   // default; openContentQuizQuestions override di bawah
       this.admin.questionsQuizId     = quiz.id;
       this.admin.questionsQuizTitle  = quiz.title;
       this.admin.questionsQuizFilter = quiz.id;
@@ -1633,6 +1650,28 @@ function QuizBApp() {
         this.showToast(e.message, 'error', '❌');
       } finally {
         this.admin.loading = false;
+      }
+    },
+
+    // ---- Buka Kelola Soal dari tab Content ----
+    async openContentQuizQuestions(quiz) {
+      this.admin.tab = 'quizzes';
+      await this.openQuizQuestions(quiz);
+      // Override setelah openQuizQuestions (yang default-nya set ke 'quizzes')
+      this.admin.questionsSourceTab = 'content';
+    },
+
+    // ---- Kembali dari halaman soal ke tab sumber ----
+    async backFromQuestions() {
+      if (this.admin.questionsSourceTab === 'content') {
+        this.admin.quizzesView = 'list';
+        this.admin.questionsSearch = '';
+        this.admin.questionsPage = 1;
+        await this.loadAdminTab('content');
+      } else {
+        this.admin.quizzesView = 'list';
+        this.admin.questionsSearch = '';
+        this.admin.questionsPage = 1;
       }
     },
 
@@ -2383,4 +2422,6 @@ function quizHistorySection() {
         || (mode ? mode.charAt(0).toUpperCase() + mode.slice(1) : 'Bebas');
     },
   };
+}
+;
 }

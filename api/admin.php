@@ -220,7 +220,17 @@ function admin_quiz_delete(): void {
 
 function admin_category_list(): void {
     requireAdmin();
-    $cats = DB::all("SELECT * FROM categories ORDER BY name ASC");
+    $cats = DB::all(
+        "SELECT id, name, slug, description, icon, color, quiz_count,
+                COALESCE(group_id, 0) AS group_id
+         FROM categories ORDER BY name ASC"
+    );
+    foreach ($cats as &$c) {
+        $c['id']         = (int)$c['id'];
+        $c['quiz_count'] = (int)$c['quiz_count'];
+        $c['group_id']   = (int)$c['group_id'];
+    }
+    unset($c);
     jsonSuccess($cats);
 }
 
@@ -229,21 +239,35 @@ function admin_category_create(): void {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
     $body = getJsonBody();
 
-    $name = sanitizeString($body['name'] ?? '');
-    $slug = sanitizeString($body['slug'] ?? preg_replace('/[^a-z0-9]+/', '-', strtolower($name)));
-    $desc = sanitizeString($body['description'] ?? '');
-    $icon = sanitizeString($body['icon'] ?? '📚');
-    $color= sanitizeString($body['color'] ?? '#6366f1');
+    $name    = sanitizeString($body['name'] ?? '');
+    $slug    = sanitizeString($body['slug'] ?? preg_replace('/[^a-z0-9]+/', '-', strtolower($name)));
+    $desc    = sanitizeString($body['description'] ?? '');
+    $icon    = sanitizeString($body['icon'] ?? '📚');
+    $color   = sanitizeString($body['color'] ?? '#6366f1');
+    $groupId = isset($body['group_id']) && (int)$body['group_id'] > 0
+               ? (int)$body['group_id'] : null;
 
     if (strlen($name) < 2) jsonError('Nama minimal 2 karakter');
 
-    $exists = DB::one("SELECT id FROM categories WHERE slug = ?", [$slug]);
-    if ($exists) jsonError('Slug sudah digunakan');
+    // Pastikan slug unik
+    $slugBase  = $slug;
+    $slugCount = 1;
+    while (DB::one("SELECT id FROM categories WHERE slug = ?", [$slug])) {
+        $slug = $slugBase . '-' . $slugCount++;
+    }
 
     $pdo = DB::conn();
-    $pdo->prepare("INSERT INTO categories (name, slug, description, icon, color) VALUES (?,?,?,?,?)")
-        ->execute([$name, $slug, $desc, $icon, $color]);
-    $cat = DB::one("SELECT * FROM categories WHERE id = ?", [$pdo->lastInsertId()]);
+    $pdo->prepare("INSERT INTO categories (name, slug, description, icon, color, group_id) VALUES (?,?,?,?,?,?)")
+        ->execute([$name, $slug, $desc, $icon, $color, $groupId]);
+    $newId = $pdo->lastInsertId();
+
+    $cat = DB::one(
+        "SELECT id, name, slug, description, icon, color, quiz_count, COALESCE(group_id,0) AS group_id
+         FROM categories WHERE id = ?", [$newId]
+    );
+    $cat['id']         = (int)$cat['id'];
+    $cat['quiz_count'] = (int)$cat['quiz_count'];
+    $cat['group_id']   = (int)$cat['group_id'];
     jsonSuccess($cat, 201);
 }
 
@@ -257,15 +281,32 @@ function admin_category_update(): void {
     $existing = DB::one("SELECT * FROM categories WHERE id = ?", [$id]);
     if (!$existing) jsonError('Kategori tidak ditemukan', 404);
 
-    $name  = sanitizeString($body['name'] ?? $existing['name']);
-    $slug  = sanitizeString($body['slug'] ?? $existing['slug']);
-    $desc  = sanitizeString($body['description'] ?? $existing['description']);
-    $icon  = sanitizeString($body['icon'] ?? $existing['icon']);
-    $color = sanitizeString($body['color'] ?? $existing['color']);
+    $name    = sanitizeString($body['name']  ?? $existing['name']);
+    $slug    = sanitizeString($body['slug']  ?? $existing['slug']);
+    $desc    = sanitizeString($body['description'] ?? $existing['description']);
+    $icon    = sanitizeString($body['icon']  ?? $existing['icon']);
+    $color   = sanitizeString($body['color'] ?? $existing['color']);
 
-    DB::conn()->prepare("UPDATE categories SET name=?, slug=?, description=?, icon=?, color=? WHERE id=?")
-        ->execute([$name, $slug, $desc, $icon, $color, $id]);
-    jsonSuccess(DB::one("SELECT * FROM categories WHERE id = ?", [$id]));
+    // group_id: null = tanpa rumpun, 0 atau '' = tanpa rumpun, angka positif = assign ke rumpun
+    if (array_key_exists('group_id', $body)) {
+        $groupId = (int)$body['group_id'] > 0 ? (int)$body['group_id'] : null;
+    } else {
+        $groupId = isset($existing['group_id']) && (int)$existing['group_id'] > 0
+                   ? (int)$existing['group_id'] : null;
+    }
+
+    DB::conn()->prepare(
+        "UPDATE categories SET name=?, slug=?, description=?, icon=?, color=?, group_id=? WHERE id=?"
+    )->execute([$name, $slug, $desc, $icon, $color, $groupId, $id]);
+
+    $cat = DB::one(
+        "SELECT id, name, slug, description, icon, color, quiz_count, COALESCE(group_id,0) AS group_id
+         FROM categories WHERE id = ?", [$id]
+    );
+    $cat['id']         = (int)$cat['id'];
+    $cat['quiz_count'] = (int)$cat['quiz_count'];
+    $cat['group_id']   = (int)$cat['group_id'];
+    jsonSuccess($cat);
 }
 
 function admin_category_delete(): void {
@@ -414,10 +455,15 @@ function admin_group_list(): void {
         $g['order_num']      = (int)$g['order_num'];
         $g['category_count'] = (int)$g['category_count'];
         $g['categories']     = DB::all(
-            "SELECT id, name, icon, color FROM categories WHERE group_id = ? ORDER BY name",
+            "SELECT id, name, slug, icon, color, quiz_count, group_id
+             FROM categories WHERE group_id = ? ORDER BY name",
             [$g['id']]
         );
-        foreach ($g['categories'] as &$c) { $c['id'] = (int)$c['id']; }
+        foreach ($g['categories'] as &$c) {
+            $c['id']         = (int)$c['id'];
+            $c['quiz_count'] = (int)($c['quiz_count'] ?? 0);
+            $c['group_id']   = (int)$c['group_id'];
+        }
         unset($c);
     }
     unset($g);
