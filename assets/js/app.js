@@ -1126,13 +1126,14 @@ function QuizBApp() {
             this.admin.categories = await api.get('admin.category_list');
           }
         } else if (tab === 'content') {
+          this.admin.contentSearch          = '';
           this.admin.contentOpenGroups      = [];
           this.admin.contentOpenCategories  = [];
           this.admin.contentCategoryFilter  = null;
           const [cats, groupsData, quizData] = await Promise.all([
             api.get('admin.category_list'),
             api.get('admin.group_list'),
-            api.get('admin.quiz_list', { limit: 500, search: this.admin.contentSearch }),
+            api.get('admin.quiz_list', { limit: 500, search: '' }),
           ]);
           this.admin.categories        = cats;
           this.admin.allCategories     = groupsData.all_categories || cats;  // untuk modal assign
