@@ -719,23 +719,3 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
     </div>
   </nav>
 
-
-        <!-- Profile mini menu -->
-        <div x-show="isOpen" @click.outside="isOpen=false" x-transition
-             class="absolute bottom-full right-0 mb-2 w-52 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 py-1 z-50"
-             style="right: 0">
-          <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-            <p class="font-semibold text-sm text-gray-900 dark:text-white" x-text="user?.name"></p>
-            <p class="text-xs text-gray-400 truncate" x-text="user?.email"></p>
-          </div>
-          <a @click.prevent="navigate('/dashboard');isOpen=false" href="#/dashboard"
-             class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📊 Dashboard</a>
-          <a @click.prevent="navigate('/profile');isOpen=false" href="#/profile"
-             class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">👤 Profil</a>
-          <a @click.prevent="navigate('/history');isOpen=false" href="#/history"
-             class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📋 Histori</a>
-          <a @click.prevent="navigate('/settings');isOpen=false" href="#/settings"
-             class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">⚙️ Pengaturan</a>
-          <template x-if="user && user.role === 'admin'">
-            <a @click.prevent="navigate('/admin');isOpen=false" href="#/admin"
-               class="flex items-cen
