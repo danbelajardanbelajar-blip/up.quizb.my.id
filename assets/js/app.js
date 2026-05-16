@@ -97,6 +97,7 @@ function QuizBApp() {
       // pagination admin.quizzes pada tab Quiz.
       quizPicker: [],
       contentQuizzes: [], contentQuizCount: 0, contentSearch: '', contentCategoryFilter: null, contentOpenGroups: [], contentOpenCategories: [],
+      contentSelectedQuiz: null, contentQuizQuestions: [], contentQuestionsLoading: false,
       groups: [],
       allCategories: [],
       questionsSourceTab: 'quizzes',
@@ -1130,6 +1131,9 @@ function QuizBApp() {
           this.admin.contentOpenGroups      = [];
           this.admin.contentOpenCategories  = [];
           this.admin.contentCategoryFilter  = null;
+          this.admin.contentSelectedQuiz    = null;
+          this.admin.contentQuizQuestions   = [];
+          this.admin.contentQuestionsLoading = false;
           const [cats, groupsData, quizData] = await Promise.all([
             api.get('admin.category_list'),
             api.get('admin.group_list'),
@@ -1257,6 +1261,27 @@ function QuizBApp() {
       return this.admin.contentQuizzes.filter(q => Number(q.category_id) === Number(catId));
     },
 
+    // Pilih quiz di panel kiri → muat soal ke panel kanan
+    async selectContentQuiz(quiz) {
+      if (this.admin.contentSelectedQuiz?.id === quiz.id) return; // sudah dipilih
+      this.admin.contentSelectedQuiz   = quiz;
+      this.admin.contentQuizQuestions  = [];
+      this.admin.contentQuestionsLoading = true;
+      try {
+        this.admin.contentQuizQuestions = await api.get('question.list', { quiz_id: quiz.id });
+      } catch (e) {
+        this.showToast('Gagal memuat soal: ' + e.message, 'error', '❌');
+      } finally {
+        this.admin.contentQuestionsLoading = false;
+      }
+    },
+
+    // Kembali dari soal ke daftar quiz (panel kanan)
+    backToContentQuizList() {
+      this.admin.contentSelectedQuiz   = null;
+      this.admin.contentQuizQuestions  = [];
+    },
+
     toggleContentGroup(groupId) {
       const idx = this.admin.contentOpenGroups.indexOf(groupId);
       if (idx === -1) {
@@ -1271,12 +1296,16 @@ function QuizBApp() {
       if (idx === -1) {
         this.admin.contentOpenCategories.push(catId);
         // Sinkronkan panel kanan agar langsung menampilkan quiz kategori ini
-        this.admin.contentCategoryFilter = catId;
+        this.admin.contentCategoryFilter  = catId;
+        this.admin.contentSelectedQuiz    = null;  // kembali ke daftar quiz saat ganti kategori
+        this.admin.contentQuizQuestions   = [];
       } else {
         this.admin.contentOpenCategories.splice(idx, 1);
         // Bersihkan filter panel kanan jika kategori ini yang aktif
         if (Number(this.admin.contentCategoryFilter) === Number(catId)) {
           this.admin.contentCategoryFilter = null;
+          this.admin.contentSelectedQuiz   = null;
+          this.admin.contentQuizQuestions  = [];
         }
       }
     },
