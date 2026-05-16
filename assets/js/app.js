@@ -1,5 +1,5 @@
-// ============================================
-// assets/js/app.js — Main Alpine.js App
+﻿// ============================================
+// assets/js/app.js â€” Main Alpine.js App
 // v2.1: Fix auth mapping, classroom state, quiz search
 // ============================================
 
@@ -13,21 +13,21 @@ function QuizBApp() {
     mobileMenu: false,
     mobileSearch: false,
     search: { q: '', results: [], loading: false, total: 0 },
-    pageTransition: { show: false }, // legacy — progress bar used instead
-    pageTitle: 'QuizB — Platform Kuis Modern',
-    toast: { show: false, message: '', type: 'success', icon: '✅' },
+    pageTransition: { show: false }, // legacy â€” progress bar used instead
+    pageTitle: 'QuizB â€” Platform Kuis Modern',
+    toast: { show: false, message: '', type: 'success', icon: 'âœ…' },
     _toastTimer: null,
 
-    // Nav items — dinamis di getter, tapi definisikan base dulu
+    // Nav items â€” dinamis di getter, tapi definisikan base dulu
     get navItems() {
       const base = [
-        { href: this.user ? '/dashboard' : '/', label: '🏠 Beranda' },
-        { href: '/activity',                    label: '🌐 Aktivitas' },
+        { href: this.user ? '/dashboard' : '/', label: 'ًںڈ  Beranda' },
+        { href: '/activity',                    label: 'ًںŒگ Aktivitas' },
       ];
       if (this.user) {
-        base.push({ href: '/classroom', label: '🏫 Kelas' });
+        base.push({ href: '/classroom', label: 'ًںڈ« Kelas' });
         const badge = this.challenge.pendingCount > 0 ? ' (' + this.challenge.pendingCount + ')' : '';
-        base.push({ href: '/challenges', label: '⚔️ Tantangan' + badge });
+        base.push({ href: '/challenges', label: 'âڑ”ï¸ڈ Tantangan' + badge });
       }
       return base;
     },
@@ -93,7 +93,7 @@ function QuizBApp() {
       categories: [],
       questions: [], questionsQuizId: null, questionsQuizTitle: '',
       questionsAll: [], questionsTotal: 0, questionsPage: 1, questionsSearch: '', questionsQuizFilter: 0,
-      // Daftar quiz khusus untuk dropdown di tab Soal — agar tidak menimpa
+      // Daftar quiz khusus untuk dropdown di tab Soal â€” agar tidak menimpa
       // pagination admin.quizzes pada tab Quiz.
       quizPicker: [],
       contentQuizzes: [], contentQuizCount: 0, contentSearch: '', contentOpenGroups: [], contentOpenCategories: [],
@@ -212,24 +212,24 @@ function QuizBApp() {
           this.handleRoute(initialHash);
         }
 
-        // ── Flash message dari PHP session (verify-email.php redirect) ──
+        // â”€â”€ Flash message dari PHP session (verify-email.php redirect) â”€â”€
         if (window._phpFlash?.msg) {
-          const iconMap = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+          const iconMap = { success: 'âœ…', error: 'â‌Œ', warning: 'âڑ ï¸ڈ', info: 'â„¹ï¸ڈ' };
           this.showToast(
             window._phpFlash.msg,
             window._phpFlash.type || 'success',
-            iconMap[window._phpFlash.type] || '✅'
+            iconMap[window._phpFlash.type] || 'âœ…'
           );
           window._phpFlash = null;
         }
 
         // Re-check protected route guards after user is loaded.
-        // We only re-run guard logic — NOT the full data loaders — so that
+        // We only re-run guard logic â€” NOT the full data loaders â€” so that
         // params (e.g. /quiz/5) loaded above are not overwritten with undefined.
         this._guardRoute(this.currentRoute);
       } catch (e) {
         console.error('App init failed', e);
-        this.showToast('Terjadi kesalahan saat memuat aplikasi', 'error', '❌');
+        this.showToast('Terjadi kesalahan saat memuat aplikasi', 'error', 'â‌Œ');
       } finally {
         this.hidePageLoader();
       }
@@ -250,18 +250,18 @@ function QuizBApp() {
       const admin_routes     = ['/admin'];
       if (route === '/onboarding' && !this.user) return this.navigate('/login');
       if (protected_routes.some(r => route.startsWith(r)) && !this.user) {
-        this.showToast('Silakan login untuk mengakses halaman ini', 'warning', '⚠️');
+        this.showToast('Silakan login untuk mengakses halaman ini', 'warning', 'âڑ ï¸ڈ');
         return this.navigate('/login');
       }
       if (admin_routes.some(r => route.startsWith(r)) && this.user?.role !== 'admin') {
-        this.showToast('Akses ditolak', 'error', '🚫');
+        this.showToast('Akses ditolak', 'error', 'ًںڑ«');
         return this.navigate('/');
       }
     },
 
     // ---- Router ----
     handleRoute(hash) {
-      // Strip query string from hash for routing (e.g. #/play/5?assign=3 → /play/5)
+      // Strip query string from hash for routing (e.g. #/play/5?assign=3 â†’ /play/5)
       const hashClean = hash.replace(/^#/, '').split('?')[0] || '/';
       const path = hashClean;
       const segments = path.split('/').filter(Boolean);
@@ -306,7 +306,7 @@ function QuizBApp() {
     },
 
     navigate(path) {
-      // Thin progress bar — no backdrop-blur, no GPU lag
+      // Thin progress bar â€” no backdrop-blur, no GPU lag
       const bar = document.getElementById('nav-progress');
       if (bar) {
         bar.style.transition = 'none';
@@ -339,11 +339,11 @@ function QuizBApp() {
 
       if (route === '/onboarding' && !this.user) return this.navigate('/login');
       if (protected_routes.some(r => route.startsWith(r)) && !this.user) {
-        this.showToast('Silakan login untuk mengakses halaman ini', 'warning', '⚠️');
+        this.showToast('Silakan login untuk mengakses halaman ini', 'warning', 'âڑ ï¸ڈ');
         return this.navigate('/login');
       }
       if (admin_routes.some(r => route.startsWith(r)) && this.user?.role !== 'admin') {
-        this.showToast('Akses ditolak', 'error', '🚫');
+        this.showToast('Akses ditolak', 'error', 'ًںڑ«');
         return this.navigate('/');
       }
       // Load data per route
@@ -428,7 +428,7 @@ function QuizBApp() {
         const data = await api.post('auth.login', { email: f.email, password: f.password });
         this.user = { id: data.id, name: data.name, email: data.email, role: data.role };
         api._csrfToken = data.csrf_token || null;
-        this.showToast(`Selamat datang, ${this.user.name}!`, 'success', '👋');
+        this.showToast(`Selamat datang, ${this.user.name}!`, 'success', 'ًں‘‹');
         this.navigate('/dashboard');
       } catch (e) {
         f.error = e.message;
@@ -445,10 +445,10 @@ function QuizBApp() {
       f.loading = true; f.error = '';
       try {
         const data = await api.post('auth.register', { name: f.name, email: f.email, password: f.password });
-        // Tidak ada auto-login — user harus verifikasi email dulu
+        // Tidak ada auto-login â€” user harus verifikasi email dulu
         if (data.email_sent) {
           window.emailSentPage = { email: data.email || f.email };
-          this.showToast('Cek email kamu untuk link konfirmasi 📧', 'success', '📧');
+          this.showToast('Cek email kamu untuk link konfirmasi ًں“§', 'success', 'ًں“§');
           this.navigate('/email-sent');
           // Reset form
           f.name = ''; f.email = ''; f.password = ''; f.password_confirm = '';
@@ -476,7 +476,7 @@ function QuizBApp() {
       try {
         await api.post('auth.update_profile', { name });
         this.user.name = name;
-        this.showToast('Nama berhasil disimpan!', 'success', '✅');
+        this.showToast('Nama berhasil disimpan!', 'success', 'âœ…');
         this.navigate('/onboarding');
       } catch (e) {
         f.error = e.message;
@@ -489,7 +489,7 @@ function QuizBApp() {
       try { await api.post('auth.logout'); } catch {}
       this.user = null;
       api._csrfToken = null;
-      this.showToast('Sampai jumpa!', 'info', '👋');
+      this.showToast('Sampai jumpa!', 'info', 'ًں‘‹');
       this.navigate('/');
     },
 
@@ -508,7 +508,7 @@ function QuizBApp() {
         this.home.stats      = stats  || {};
         this.home.groups     = Array.isArray(groups)  ? groups  : [];
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.home.loading = false;
       }
@@ -519,7 +519,7 @@ function QuizBApp() {
       try {
         this.categories.list = await api.get('category.list');
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.categories.loading = false;
       }
@@ -550,7 +550,7 @@ function QuizBApp() {
         this.quizzes.list  = Array.isArray(resp.data) ? resp.data : [];
         this.quizzes.total = resp.meta?.total || 0;
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.quizzes.loading = false;
       }
@@ -561,9 +561,9 @@ function QuizBApp() {
       try {
         const quiz = await api.get('quiz.get', { id });
         this.quizDetail.quiz = quiz;
-        this.pageTitle = (quiz?.title || 'Quiz') + ' — QuizB';
+        this.pageTitle = (quiz?.title || 'Quiz') + ' â€” QuizB';
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.quizDetail.loading = false;
       }
@@ -575,7 +575,7 @@ function QuizBApp() {
         const resp = await api.getFull('leaderboard.global', { limit: 50 });
         this.leaderboard.list = Array.isArray(resp.data) ? resp.data : [];
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.leaderboard.loading = false;
       }
@@ -590,7 +590,7 @@ function QuizBApp() {
         this.activity.total = resp.meta?.total || 0;
         this.activity.page  = 1;
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.activity.loading = false;
       }
@@ -607,7 +607,7 @@ function QuizBApp() {
         this.activity.total = resp.meta?.total || this.activity.total;
         this.activity.page  = nextPage;
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.activity.loadingMore = false;
       }
@@ -651,7 +651,7 @@ function QuizBApp() {
         this.publicHistory.total       = resp.meta?.total || 0;
         this.publicHistory.filterLabel = resp.filter?.label || this.publicHistory.filterLabel;
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.publicHistory.loading = false;
       }
@@ -669,7 +669,7 @@ function QuizBApp() {
         this.publicHistory.total = resp.meta?.total || this.publicHistory.total;
       } catch (e) {
         this.publicHistory.page--;          // rollback page jika gagal
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.publicHistory.loadingMore = false;
       }
@@ -684,7 +684,7 @@ function QuizBApp() {
         this.dashboard.stats    = data.stats  || null;
         this.dashboard.recent   = data.recent || [];
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.dashboard.loading = false;
       }
@@ -735,7 +735,7 @@ function QuizBApp() {
         this.history.list  = Array.isArray(resp.data) ? resp.data : [];
         this.history.total = resp.meta?.total || 0;
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.history.loading = false;
       }
@@ -775,7 +775,7 @@ function QuizBApp() {
           } catch (_) {}
         }
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.result.loading = false;
       }
@@ -790,10 +790,10 @@ function QuizBApp() {
           attempt_id:    parseInt(attemptId),
         });
         this.result.assignSubmitted = true;
-        this.showToast('Tugas berhasil dikumpulkan! 🎉', 'success', '✅');
+        this.showToast('Tugas berhasil dikumpulkan! ًںژ‰', 'success', 'âœ…');
       } catch (e) {
         this.result.assignError = e.message;
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.result.assignSubmitting = false;
       }
@@ -807,7 +807,7 @@ function QuizBApp() {
         const data = await api.get('class.list');
         this.classroom.list = Array.isArray(data) ? data : [];
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.classroom.loading = false;
       }
@@ -824,9 +824,9 @@ function QuizBApp() {
         this.classroom.members     = data.members || [];
         this.classroom.assignments = data.assignments || [];
         this.classroom.isTeacher   = data.is_teacher || false;
-        this.pageTitle = (data.class?.name || 'Kelas') + ' — QuizB';
+        this.pageTitle = (data.class?.name || 'Kelas') + ' â€” QuizB';
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.classroom.detailLoading = false;
       }
@@ -846,11 +846,11 @@ function QuizBApp() {
           this.navigate('/classroom');
           setTimeout(() => this.openCreateClassModal(), 600);
         } else {
-          // role = 'user' → ke beranda
+          // role = 'user' â†’ ke beranda
           this.navigate('/');
         }
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       }
     },
 
@@ -874,7 +874,7 @@ function QuizBApp() {
       try {
         const data = await api.post('class.join', { join_code: code });
         this.classroom.joinModal.show = false;
-        this.showToast('Berhasil bergabung ke kelas!', 'success', '🎉');
+        this.showToast('Berhasil bergabung ke kelas!', 'success', 'ًںژ‰');
         await this.loadClassroom();
       } catch (e) {
         this.classroom.joinError = e.message;
@@ -891,7 +891,7 @@ function QuizBApp() {
       try {
         await api.post('class.create', { name: f.name, description: f.description });
         this.classroom.createModal.show = false;
-        this.showToast('Kelas berhasil dibuat!', 'success', '🎉');
+        this.showToast('Kelas berhasil dibuat!', 'success', 'ًںژ‰');
         await this.loadClassroom();
       } catch (e) {
         this.classroom.createError = e.message;
@@ -904,10 +904,10 @@ function QuizBApp() {
       if (!confirm('Keluarkan anggota ini dari kelas?')) return;
       try {
         await api.delete('class.kick', classId, { user_id: userId });
-        this.showToast('Anggota dikeluarkan', 'success', '✅');
+        this.showToast('Anggota dikeluarkan', 'success', 'âœ…');
         await this.loadClassroomDetail(classId);
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       }
     },
 
@@ -953,7 +953,7 @@ function QuizBApp() {
           require_full_score: f.require_full_score ? 1 : 0,
         });
         this.classroom.assignModal.show = false;
-        this.showToast('Tugas berhasil diperbarui!', 'success', '✅');
+        this.showToast('Tugas berhasil diperbarui!', 'success', 'âœ…');
         await this.loadClassroomDetail(classId);
       } catch (e) {
         this.classroom.assignError = e.message;
@@ -1008,7 +1008,7 @@ function QuizBApp() {
             }
           }
 
-          // Sort quizzes alphabetically by title (A → Z), case-insensitive
+          // Sort quizzes alphabetically by title (A â†’ Z), case-insensitive
           try {
             all.sort((a, b) => (a.title || '').toString().localeCompare((b.title || '').toString(), undefined, { sensitivity: 'base' }));
           } catch (_) {
@@ -1050,7 +1050,7 @@ function QuizBApp() {
           require_full_score: f.require_full_score ? 1 : 0,
         });
         this.classroom.assignModal.show = false;
-        this.showToast('Tugas berhasil dibuat!', 'success', '✅');
+        this.showToast('Tugas berhasil dibuat!', 'success', 'âœ…');
         await this.loadClassroomDetail(classId);
       } catch (e) {
         this.classroom.assignError = e.message;
@@ -1090,7 +1090,7 @@ function QuizBApp() {
         this.settings.limit = val;
         if (this.user) this.user.quiz_questions_limit = val;
         this.settings.success = 'Pengaturan berhasil disimpan!';
-        this.showToast('Pengaturan disimpan', 'success', '✅');
+        this.showToast('Pengaturan disimpan', 'success', 'âœ…');
       } catch (e) {
         this.settings.error = e.message;
       } finally {
@@ -1102,10 +1102,10 @@ function QuizBApp() {
       if (!confirm('Hapus tugas ini?')) return;
       try {
         await api.delete('assignment.delete', assignId);
-        this.showToast('Tugas dihapus', 'success', '🗑️');
+        this.showToast('Tugas dihapus', 'success', 'ًں—‘ï¸ڈ');
         await this.loadClassroomDetail(classId);
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       }
     },
 
@@ -1170,7 +1170,7 @@ function QuizBApp() {
           this.admin.review.attempts   = {};
         }
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.admin.loading = false;
       }
@@ -1247,8 +1247,8 @@ function QuizBApp() {
 
     sortIcon(tab, key) {
       const s = this.admin.sort?.[tab];
-      if (!s || s.key !== key) return '↕';
-      return s.dir === 'asc' ? '↑' : '↓';
+      if (!s || s.key !== key) return 'â†•';
+      return s.dir === 'asc' ? 'â†‘' : 'â†“';
     },
 
     get selectedAdminQuestionsCount() {
@@ -1267,10 +1267,10 @@ function QuizBApp() {
         for (const id of ids) {
           await api.post('question.delete', { id });
         }
-        this.showToast(`${ids.length} soal berhasil dihapus`, 'success', '🗑️');
+        this.showToast(`${ids.length} soal berhasil dihapus`, 'success', 'ًں—‘ï¸ڈ');
         await this.reloadQuizQuestions();
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       }
     },
 
@@ -1296,7 +1296,7 @@ function QuizBApp() {
         state.data  = resp.data  || [];
         state.total = resp.meta?.total || 0;
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         state.loading = false;
       }
@@ -1309,7 +1309,7 @@ function QuizBApp() {
       try {
         this.admin.questions = await api.get('question.list', { quiz_id: quizId });
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.admin.loading = false;
       }
@@ -1340,10 +1340,10 @@ function QuizBApp() {
       try {
         if (type === 'group_create') {
           await api.post('admin.group_create', f);
-          this.showToast('Rumpun berhasil dibuat', 'success', '✅');
+          this.showToast('Rumpun berhasil dibuat', 'success', 'âœ…');
         } else if (type === 'group_edit') {
           await api.put('admin.group_update', f.id, f);
-          this.showToast('Rumpun berhasil diperbarui', 'success', '✅');
+          this.showToast('Rumpun berhasil diperbarui', 'success', 'âœ…');
         } else if (type === 'quiz_create' || type === 'quiz_edit') {
           // Jika kategori baru perlu dibuat terlebih dahulu
           if (f._newCat && f._newCatName && f._newCatName.trim().length >= 2) {
@@ -1354,7 +1354,7 @@ function QuizBApp() {
           if (!f.category_id) { this.admin.formError = 'Pilih atau buat kategori terlebih dahulu'; this.admin.loading = false; return; }
           if (type === 'quiz_create') {
             const newQuiz = await api.post('admin.quiz_create', f);
-            this.showToast('Quiz berhasil dibuat', 'success', '✅');
+            this.showToast('Quiz berhasil dibuat', 'success', 'âœ…');
             this.closeAdminModal();
             const calledFromContent = this.admin.tab === 'content';
             await this.loadAdminTab('quizzes');
@@ -1364,24 +1364,24 @@ function QuizBApp() {
             return;
           } else {
             await api.put('admin.quiz_update', f.id, f);
-            this.showToast('Quiz berhasil diperbarui', 'success', '✅');
+            this.showToast('Quiz berhasil diperbarui', 'success', 'âœ…');
           }
         } else if (type === 'category_create') {
           await api.post('admin.category_create', f);
-          this.showToast('Kategori berhasil dibuat', 'success', '✅');
+          this.showToast('Kategori berhasil dibuat', 'success', 'âœ…');
         } else if (type === 'category_edit') {
           await api.put('admin.category_update', f.id, f);
-          this.showToast('Kategori berhasil diperbarui', 'success', '✅');
+          this.showToast('Kategori berhasil diperbarui', 'success', 'âœ…');
         } else if (type === 'user_edit') {
           await api.put('admin.user_update', f.id, f);
-          this.showToast('User berhasil diperbarui', 'success', '✅');
+          this.showToast('User berhasil diperbarui', 'success', 'âœ…');
         } else if (type === 'question_create') {
           await api.post('question.create', f);
-          this.showToast('Soal berhasil ditambahkan', 'success', '✅');
+          this.showToast('Soal berhasil ditambahkan', 'success', 'âœ…');
           await this.reloadQuizQuestions();
         } else if (type === 'question_edit') {
           await api.post('question.update', f);
-          this.showToast('Soal berhasil diperbarui', 'success', '✅');
+          this.showToast('Soal berhasil diperbarui', 'success', 'âœ…');
           await this.reloadQuizQuestions();
         }
         this.closeAdminModal();
@@ -1404,14 +1404,14 @@ function QuizBApp() {
         if (type === 'user')     await api.delete('admin.user_delete', id);
         if (type === 'question') {
           await api.post('question.delete', { id });
-          this.showToast('Soal berhasil dihapus', 'success', '🗑️');
+          this.showToast('Soal berhasil dihapus', 'success', 'ًں—‘ï¸ڈ');
           await this.reloadQuizQuestions();
           return;
         }
-        this.showToast('Berhasil dihapus', 'success', '🗑️');
+        this.showToast('Berhasil dihapus', 'success', 'ًں—‘ï¸ڈ');
         await this.loadAdminTab(this.admin.tab);
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       }
     },
 
@@ -1444,11 +1444,11 @@ function QuizBApp() {
           category_ids: selected,
         });
         this.admin.groupAssign.show = false;
-        this.showToast('Kategori berhasil diperbarui', 'success', '✅');
+        this.showToast('Kategori berhasil diperbarui', 'success', 'âœ…');
         // Reload tab yang sedang aktif (content atau tab lain)
         await this.loadAdminTab(this.admin.tab);
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.admin.loading = false;
       }
@@ -1458,7 +1458,7 @@ function QuizBApp() {
 
     openImportFileModal() {
       if (!this.admin.questionsQuizFilter) {
-        this.showToast('Pilih filter quiz terlebih dahulu sebagai tujuan import', 'error', '❌');
+        this.showToast('Pilih filter quiz terlebih dahulu sebagai tujuan import', 'error', 'â‌Œ');
         return;
       }
       this.admin.importFile = { show: true, loading: false, step: 1, questions: [], quizId: this.admin.questionsQuizFilter };
@@ -1467,7 +1467,7 @@ function QuizBApp() {
     async parseImportFile() {
       const fileInput = document.getElementById('import-file-input');
       if (!fileInput || !fileInput.files[0]) {
-        this.showToast('Pilih file terlebih dahulu', 'error', '❌');
+        this.showToast('Pilih file terlebih dahulu', 'error', 'â‌Œ');
         return;
       }
       this.admin.importFile.loading = true;
@@ -1476,13 +1476,13 @@ function QuizBApp() {
         fd.append('file', fileInput.files[0]);
         const data = await api.upload('question.import_file_parse', fd);
         if (!data.questions || data.questions.length === 0) {
-          this.showToast('Tidak ada soal yang terbaca. Periksa format file.', 'error', '❌');
+          this.showToast('Tidak ada soal yang terbaca. Periksa format file.', 'error', 'â‌Œ');
           return;
         }
         this.admin.importFile.questions = data.questions.map(q => ({ ...q, _sel: true, has_key: q.has_key || false }));
         this.admin.importFile.step = 2;
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.admin.importFile.loading = false;
       }
@@ -1490,12 +1490,12 @@ function QuizBApp() {
 
     async saveImportFile() {
       const sel = this.admin.importFile.questions.filter(q => q._sel);
-      if (!sel.length) { this.showToast('Pilih minimal satu soal', 'error', '❌'); return; }
+      if (!sel.length) { this.showToast('Pilih minimal satu soal', 'error', 'â‌Œ'); return; }
 
       // Cek soal yang belum memiliki kunci jawaban
       const noKey = sel.filter(q => !q.options.some(o => o.is_correct));
       if (noKey.length > 0) {
-        const ok = confirm(`⚠️ ${noKey.length} soal belum memiliki kunci jawaban yang dipilih.\n\nSoal tersebut akan diimpor dengan kunci jawaban kosong. Lanjutkan?`);
+        const ok = confirm(`âڑ ï¸ڈ ${noKey.length} soal belum memiliki kunci jawaban yang dipilih.\n\nSoal tersebut akan diimpor dengan kunci jawaban kosong. Lanjutkan?`);
         if (!ok) return;
       }
 
@@ -1506,10 +1506,10 @@ function QuizBApp() {
           questions: sel.map(({ question_text, explanation, options }) => ({ question_text, explanation, options })),
         });
         this.admin.importFile.show = false;
-        this.showToast(`${data.imported} soal berhasil diimpor`, 'success', '✅');
+        this.showToast(`${data.imported} soal berhasil diimpor`, 'success', 'âœ…');
         await this.reloadQuizQuestions();
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.admin.importFile.loading = false;
       }
@@ -1533,7 +1533,7 @@ function QuizBApp() {
 
     async openImportQuizbModal() {
       if (!this.admin.questionsQuizFilter) {
-        this.showToast('Pilih filter quiz terlebih dahulu sebagai tujuan import', 'error', '❌');
+        this.showToast('Pilih filter quiz terlebih dahulu sebagai tujuan import', 'error', 'â‌Œ');
         return;
       }
       this.admin.importQuizb = {
@@ -1548,7 +1548,7 @@ function QuizBApp() {
         const data = await api.get('question.browse_quizb');
         this.admin.importQuizb.themes = data.themes || [];
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
         this.admin.importQuizb.show = false;
       } finally {
         this.admin.importQuizb.loading = false;
@@ -1586,7 +1586,7 @@ function QuizBApp() {
         this.admin.importQuizb.questions   = data.questions || [];
         this.admin.importQuizb.selectedIds = (data.questions || []).map(q => q.id);
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.admin.importQuizb.loading = false;
       }
@@ -1606,7 +1606,7 @@ function QuizBApp() {
 
     async saveImportQuizb() {
       const ids = this.admin.importQuizb.selectedIds;
-      if (!ids.length) { this.showToast('Pilih minimal satu soal', 'error', '❌'); return; }
+      if (!ids.length) { this.showToast('Pilih minimal satu soal', 'error', 'â‌Œ'); return; }
       this.admin.importQuizb.loading = true;
       try {
         const data = await api.post('question.import_quizb', {
@@ -1614,10 +1614,10 @@ function QuizBApp() {
           question_ids: ids,
         });
         this.admin.importQuizb.show = false;
-        this.showToast(`${data.imported} soal berhasil diimpor dari QuizB`, 'success', '✅');
+        this.showToast(`${data.imported} soal berhasil diimpor dari QuizB`, 'success', 'âœ…');
         await this.reloadQuizQuestions();
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.admin.importQuizb.loading = false;
       }
@@ -1647,7 +1647,7 @@ function QuizBApp() {
         this.admin.questionsAll   = (qData.questions || []).map(q => ({ ...q, _sel: false }));
         this.admin.questionsTotal = qData.total     || 0;
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.admin.loading = false;
       }
@@ -1732,7 +1732,7 @@ function QuizBApp() {
 
     // User history modal
     async loadUserHistory(u) {
-      // Reset — jika user berbeda, ambil ulang semua data
+      // Reset â€” jika user berbeda, ambil ulang semua data
       const uh = this.admin.userHistory;
       if (!uh.show || uh.user?.id !== u.id) {
         uh.user        = u;
@@ -1743,11 +1743,11 @@ function QuizBApp() {
       uh.show    = true;
       uh.loading = true;
       try {
-        // Ambil SEMUA data sekaligus — sort & paginate sepenuhnya di client
+        // Ambil SEMUA data sekaligus â€” sort & paginate sepenuhnya di client
         const resp     = await api.getFull('admin.user_history', { user_id: u.id, page: 1, limit: 9999 });
         uh.allAttempts = resp.data || [];
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         uh.loading = false;
       }
@@ -1762,8 +1762,8 @@ function QuizBApp() {
 
     sortIconUH(key) {
       const s = this.admin.userHistory.sort;
-      if (s.key !== key) return '↕';
-      return s.dir === 'asc' ? '↑' : '↓';
+      if (s.key !== key) return 'â†•';
+      return s.dir === 'asc' ? 'â†‘' : 'â†“';
     },
 
     sortedUserHistory() {
@@ -1788,7 +1788,7 @@ function QuizBApp() {
     async exportUserHistoryExcel(u) {
       this.admin.userHistory.exporting = true;
       try {
-        // Gunakan allAttempts yang sudah ada — tidak perlu fetch ulang
+        // Gunakan allAttempts yang sudah ada â€” tidak perlu fetch ulang
         const uh  = this.admin.userHistory;
         const s   = uh.sort;
         let rows  = uh.allAttempts;
@@ -1823,9 +1823,9 @@ function QuizBApp() {
         a.download = 'riwayat_' + (u.name || 'user').replace(/\s+/g, '_') + '.csv';
         a.click();
         URL.revokeObjectURL(url);
-        this.showToast('File berhasil diunduh (' + rows.length + ' baris)', 'success', '✅');
+        this.showToast('File berhasil diunduh (' + rows.length + ' baris)', 'success', 'âœ…');
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.admin.userHistory.exporting = false;
       }
@@ -1879,7 +1879,7 @@ function QuizBApp() {
         this.challenge.outgoing     = data.outgoing      || [];
         this.challenge.pendingCount = data.pending_count || 0;
       } catch (_) {
-        // silently fail (polling — jangan ganggu UX)
+        // silently fail (polling â€” jangan ganggu UX)
       } finally {
         this.challenge.loading = false;
       }
@@ -1888,10 +1888,10 @@ function QuizBApp() {
     async acceptChallenge(challengeId, quizId) {
       try {
         await api.post('challenge.accept', { challenge_id: parseInt(challengeId) });
-        this.showToast('Tantangan diterima! Mulai bermain.', 'success', '⚔️');
+        this.showToast('Tantangan diterima! Mulai bermain.', 'success', 'âڑ”ï¸ڈ');
         this.navigate('/play/' + quizId + '?mode=challenge&cid=' + challengeId);
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       }
     },
 
@@ -1904,7 +1904,7 @@ function QuizBApp() {
         this.assignmentView.results = data;
         this.assignmentView.assignment = data.assignment;
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       } finally {
         this.assignmentView.loading = false;
       }
@@ -1920,7 +1920,7 @@ function QuizBApp() {
           this.assignmentView.monitor    = data;
           this.assignmentView.assignment = data.assignment;
         } catch (e) {
-          this.showToast(e.message, 'error', '❌');
+          this.showToast(e.message, 'error', 'â‌Œ');
         } finally {
           this.assignmentView.loading = false;
         }
@@ -1936,19 +1936,19 @@ function QuizBApp() {
           assignment_id: parseInt(assignmentId),
           student_id:    parseInt(studentId),
         });
-        this.showToast(studentName + ' berhasil dihentikan', 'success', '⛔');
+        this.showToast(studentName + ' berhasil dihentikan', 'success', 'â›”');
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       }
     },
 
     async declineChallenge(challengeId) {
       try {
         await api.post('challenge.decline', { challenge_id: parseInt(challengeId) });
-        this.showToast('Tantangan ditolak.', 'info', '🚫');
+        this.showToast('Tantangan ditolak.', 'info', 'ًںڑ«');
         await this.loadChallenges();
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       }
     },
 
@@ -1957,14 +1957,14 @@ function QuizBApp() {
       if (!confirm('Hapus tantangan ini? Data tidak bisa dikembalikan.')) return;
       try {
         await api.delete('challenge.delete', challengeId);
-        this.showToast('Tantangan berhasil dihapus.', 'success', '🗑️');
+        this.showToast('Tantangan berhasil dihapus.', 'success', 'ًں—‘ï¸ڈ');
         // Hapus dari array lokal tanpa fetch ulang agar lebih cepat
         if (section === 'incoming')  this.challenge.incoming  = this.challenge.incoming.filter(c => c.id !== challengeId);
         if (section === 'received')  this.challenge.received  = this.challenge.received.filter(c => c.id !== challengeId);
         if (section === 'outgoing')  this.challenge.outgoing  = this.challenge.outgoing.filter(c => c.id !== challengeId);
         this.challenge.pendingCount = this.challenge.incoming.length;
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       }
     },
 
@@ -2011,7 +2011,7 @@ function QuizBApp() {
       }
       this.notif.show = false;
 
-      // Notif new_user → buka public-history dengan filter user yang baru daftar
+      // Notif new_user â†’ buka public-history dengan filter user yang baru daftar
       if (n.type === 'new_user' && n.link) {
         const m = n.link.match(/user_id=(\d+)/);
         if (m) {
@@ -2112,7 +2112,7 @@ function QuizBApp() {
       this.msgs.sending = true;
       this.msgs.input   = '';
 
-      // Optimistic update — tampilkan pesan langsung tanpa tunggu server
+      // Optimistic update â€” tampilkan pesan langsung tanpa tunggu server
       const tempId = 'temp_' + Date.now();
       const tempMsg = {
         id:          tempId,
@@ -2140,7 +2140,7 @@ function QuizBApp() {
         // Hapus pesan temp jika gagal, kembalikan input
         this.msgs.chat = this.msgs.chat.filter(m => m.id !== tempId);
         this.msgs.input = body;
-        this.showToast(e.message || 'Gagal mengirim pesan', 'error', '❌');
+        this.showToast(e.message || 'Gagal mengirim pesan', 'error', 'â‌Œ');
       } finally {
         this.msgs.sending = false;
       }
@@ -2152,7 +2152,7 @@ function QuizBApp() {
         await api.delete('message.delete', msgId);
         this.msgs.chat = this.msgs.chat.filter(m => m.id !== msgId);
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       }
     },
 
@@ -2185,7 +2185,7 @@ function QuizBApp() {
         }
         await this.openThread(th);
       } catch (e) {
-        this.showToast(e.message, 'error', '❌');
+        this.showToast(e.message, 'error', 'â‌Œ');
       }
     },
 
@@ -2245,7 +2245,7 @@ function QuizBApp() {
     formatRelative(dateStr) { return this.formatTimeAgo(dateStr); },
 
     formatDateTime(dateStr) {
-      if (!dateStr) return '—';
+      if (!dateStr) return 'â€”';
       const d   = new Date(dateStr);
       const now = new Date();
       const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
@@ -2296,201 +2296,7 @@ function QuizBApp() {
     },
 
     // ---- Toast ----
-    showToast(message, type = 'success', icon = '✅') {
-      clearTimeout(this._toastTimer);
-      this.toast = { show: true, message, type, icon };
-      this._toastTimer = setTimeout(() => { this.toast.show = false; }, 3500);
-    },
-
-    formatModeLabel(mode) {
-      return {
-        exam: 'Ujian',
-        instant: 'Instan',
-        end: 'Akhir',
-        challenge: 'Tantangan'
-      }[mode] || (mode ? mode.charAt(0).toUpperCase() + mode.slice(1) : 'Bebas');
-    },
-  }
-}
-
-function globalTicker() {
-  return {
-    currentItem: null,
-    visible: false,
-    _items: [],
-    _idx: 0,
-    _timer: null,
-
-    async init() {
-      try {
-        const data = await api.get('attempt.quiz_global_history');
-        this._items = Array.isArray(data) ? data : (data?.data || []);
-      } catch (_) {}
-      if (!this._items.length) return;
-      this.currentItem = this._items[0];
-      this.visible = true;
-      if (this._items.length > 1) this._startTicker();
-    },
-
-    _startTicker() {
-      this._timer = setInterval(() => {
-        this.visible = false;
-        setTimeout(() => {
-          this._idx = (this._idx + 1) % this._items.length;
-          this.currentItem = this._items[this._idx];
-          this.visible = true;
-        }, 420);
-      }, 4500);
-    },
-
-    formatModeLabel(mode) {
-      return { exam: 'Ujian', instant: 'Instan', end: 'Akhir', challenge: 'Tantangan' }[mode]
-        || (mode ? mode.charAt(0).toUpperCase() + mode.slice(1) : 'Bebas');
-    },
-
-    formatTimeAgo(dateStr) {
-      if (!dateStr) return '';
-      const diff = Date.now() - new Date(dateStr).getTime();
-      const m = Math.floor(diff / 60000);
-      if (m < 1)  return 'baru saja';
-      if (m < 60) return `${m}m lalu`;
-      const h = Math.floor(m / 60);
-      if (h < 24) return `${h}j lalu`;
-      return `${Math.floor(h / 24)}h lalu`;
-    },
-  };
-}
-
-function quizHistorySection() {
-  return {
-    history: [],
-    loading: true,
-    currentIndex: 0,
-    visible: true,
-    _ticker: null,
-
-    async init() {
-      await this.loadHistory();
-      if (this.history.length > 1) this.startTicker();
-    },
-
-    async loadHistory() {
-      this.loading = true;
-      try {
-        const data = await api.get('attempt.quiz_global_history');
-        this.history = Array.isArray(data) ? data : (data?.data || []);
-      } catch (e) {
-        console.error('Failed to load history:', e);
-        this.history = [];
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    startTicker() {
-      this._ticker = setInterval(() => {
-        // fade out
-        this.visible = false;
-        setTimeout(() => {
-          this.currentIndex = (this.currentIndex + 1) % this.history.length;
-          // fade in
-          this.visible = true;
-        }, 350);
-      }, 4000);
-    },
-
-    get currentItem() {
-      return this.history.length > 0 ? this.history[this.currentIndex] : null;
-    },
-
-    clearMsgPoll() {
-      if (this.msgs.pollInterval) {
-        clearInterval(this.msgs.pollInterval);
-        this.msgs.pollInterval = null;
-      }
-    },
-
-    _scrollChatBottom() {
-      const el = document.getElementById('chat-messages') || this.$refs?.chatBox;
-      if (el) el.scrollTop = el.scrollHeight;
-    },
-
-    // ---- Date helpers ----
-    sameDay(d1, d2) {
-      const a = new Date(d1), b = new Date(d2);
-      return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-    },
-
-    formatTime(dt) {
-      if (!dt) return '';
-      return new Date(dt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    },
-
-    formatDayLabel(dt) {
-      if (!dt) return '';
-      const d = new Date(dt);
-      const now = new Date();
-      const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
-      if (this.sameDay(d, now))       return 'Hari ini';
-      if (this.sameDay(d, yesterday)) return 'Kemarin';
-      return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-    },
-
-    formatRelative(dateStr) { return this.formatTimeAgo(dateStr); },
-
-    formatDateTime(dateStr) {
-      if (!dateStr) return '—';
-      const d   = new Date(dateStr);
-      const now = new Date();
-      const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
-      const time = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-      if (d.toDateString() === now.toDateString())       return 'Hari ini, ' + time;
-      if (d.toDateString() === yesterday.toDateString()) return 'Kemarin, '  + time;
-      return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' }) + ', ' + time;
-    },
-
-    // SEARCH PAGE
-    // ============================================================
-    async loadSearch(q) {
-      this.search.q = q;
-      if (!q || q.trim().length < 2) {
-        this.search.results = [];
-        this.search.total   = 0;
-        return;
-      }
-      this.search.loading = true;
-      try {
-        const data = await api.get('quiz.list', { search: q.trim(), limit: 20, page: 1 });
-        this.search.results = Array.isArray(data) ? data : (data?.data || []);
-        this.search.total   = data?.total || this.search.results.length;
-      } catch (e) {
-        this.search.results = [];
-      } finally {
-        this.search.loading = false;
-      }
-    },
-
-    // ---- Search ----
-    onSearch: debounce(async function(q) {
-      if (!q || q.length < 2) return;
-      this.quizzes.search = q;
-      this.quizzes.page = 1;
-      this.navigate('/quizzes');
-      await this.loadQuizzes(true);
-    }, 300),
-
-    // ---- Dark Mode ----
-    toggleDark() {
-      this.darkMode = !this.darkMode;
-      store.set('darkMode', this.darkMode);
-      this.applyDark();
-    },
-    applyDark() {
-      document.documentElement.classList.toggle('dark', this.darkMode);
-    },
-
-    // ---- Toast ----
-    showToast(message, type = 'success', icon = '✅') {
+    showToast(message, type = 'success', icon = 'âœ…') {
       clearTimeout(this._toastTimer);
       this.toast = { show: true, message, type, icon };
       this._toastTimer = setTimeout(() => { this.toast.show = false; }, 3500);
@@ -2617,3 +2423,4 @@ function quizHistorySection() {
     },
   };
 }
+
