@@ -76,24 +76,28 @@ function admin_quiz_list(): void {
     $search = trim($_GET['search'] ?? '');
     $where  = ''; $params = [];
     if ($search !== '') {
-        $where    = "WHERE (q.title LIKE ? OR c.name LIKE ?)";
+        $where    = "WHERE (q.title LIKE ? OR c.name LIKE ? OR g.name LIKE ?)";
         $like     = '%' . $search . '%';
-        $params   = [$like, $like];
+        $params   = [$like, $like, $like];
     }
 
     $total = (int)(DB::one(
         "SELECT COUNT(*) AS cnt
-         FROM quizzes q LEFT JOIN categories c ON q.category_id = c.id $where",
+         FROM quizzes q
+         LEFT JOIN categories c ON q.category_id = c.id
+         LEFT JOIN category_groups g ON c.group_id = g.id
+         $where",
         $params
     )['cnt'] ?? 0);
 
     $quizzes = DB::all(
-        "SELECT q.*, c.name AS category_name,
+        "SELECT q.*, c.name AS category_name, g.name AS group_name,
                 u.name AS creator_name,
                 (SELECT COUNT(*) FROM questions WHERE quiz_id = q.id) AS question_count,
                 (SELECT COUNT(*) FROM attempts WHERE quiz_id = q.id) AS attempt_count
          FROM quizzes q
          LEFT JOIN categories c ON q.category_id = c.id
+         LEFT JOIN category_groups g ON c.group_id = g.id
          LEFT JOIN users u ON q.created_by = u.id
          $where
          ORDER BY q.created_at DESC

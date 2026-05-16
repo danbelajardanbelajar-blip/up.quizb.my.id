@@ -96,7 +96,7 @@ function QuizBApp() {
       // Daftar quiz khusus untuk dropdown di tab Soal — agar tidak menimpa
       // pagination admin.quizzes pada tab Quiz.
       quizPicker: [],
-      contentQuizzes: [], contentQuizCount: 0, contentSearch: '', contentOpenGroups: [], contentOpenCategories: [],
+      contentQuizzes: [], contentQuizCount: 0, contentSearch: '', contentCategoryFilter: null, contentOpenGroups: [], contentOpenCategories: [],
       groups: [],
       allCategories: [],
       questionsSourceTab: 'quizzes',
@@ -1126,8 +1126,9 @@ function QuizBApp() {
             this.admin.categories = await api.get('admin.category_list');
           }
         } else if (tab === 'content') {
-          this.admin.contentOpenGroups     = [];
-          this.admin.contentOpenCategories = [];
+          this.admin.contentOpenGroups      = [];
+          this.admin.contentOpenCategories  = [];
+          this.admin.contentCategoryFilter  = null;
           const [cats, groupsData, quizData] = await Promise.all([
             api.get('admin.category_list'),
             api.get('admin.group_list'),
@@ -1181,17 +1182,70 @@ function QuizBApp() {
       await this.loadAdminTab('content');
     },
 
+    getVisibleContentGroups() {
+      const search = this.admin.contentSearch.trim().toLowerCase();
+      if (!search) return this.admin.groups;
+      return this.admin.groups.filter(group => {
+        if (group.name?.toLowerCase().includes(search) || (group.description || '').toLowerCase().includes(search)) {
+          return true;
+        }
+        return this.getContentGroupCategories(group).length > 0;
+      });
+    },
+
     getContentGroupCategories(group) {
       if (!group || !group.categories) return [];
-      return group.categories.map(cat => {
-        // Merge data lengkap dari admin.categories (termasuk group_id yang benar)
+      const categories = group.categories.map(cat => {
         const full = this.admin.categories.find(c => c.id === cat.id) || cat;
         return { ...full, ...cat, quiz_count: full.quiz_count ?? 0, group_id: group.id };
+      });
+      const search = this.admin.contentSearch.trim().toLowerCase();
+      if (!search) return categories;
+      if (group.name?.toLowerCase().includes(search) || (group.description || '').toLowerCase().includes(search)) {
+        return categories;
+      }
+      return categories.filter(cat => {
+        const catMatch = cat.name?.toLowerCase().includes(search) || cat.slug?.toLowerCase().includes(search);
+        if (catMatch) return true;
+        return this.getQuizzesByCategory(cat.id).some(quiz => {
+          return quiz.title?.toLowerCase().includes(search)
+            || (quiz.category_name || '').toLowerCase().includes(search)
+            || (quiz.group_name || '').toLowerCase().includes(search);
+        });
       });
     },
 
     filteredUnassignedCategories() {
-      return this.admin.categories.filter(cat => !cat.group_id || cat.group_id === 0);
+      const cats = this.admin.categories.filter(cat => !cat.group_id || cat.group_id === 0);
+      const search = this.admin.contentSearch.trim().toLowerCase();
+      if (!search) return cats;
+      return cats.filter(cat => {
+        const catMatch = cat.name?.toLowerCase().includes(search) || cat.slug?.toLowerCase().includes(search);
+        if (catMatch) return true;
+        return this.getQuizzesByCategory(cat.id).some(quiz => {
+          return quiz.title?.toLowerCase().includes(search)
+            || (quiz.category_name || '').toLowerCase().includes(search)
+            || (quiz.group_name || '').toLowerCase().includes(search);
+        });
+      });
+    },
+
+    getFilteredQuizzes() {
+      let quizzes = Array.isArray(this.admin.contentQuizzes) ? [...this.admin.contentQuizzes] : [];
+      if (this.admin.contentCategoryFilter) {
+        quizzes = quizzes.filter(q => q.category_id === this.admin.contentCategoryFilter);
+      }
+      const search = this.admin.contentSearch.trim().toLowerCase();
+      if (!search) return quizzes;
+      return quizzes.filter(quiz => {
+        return quiz.title?.toLowerCase().includes(search)
+          || (quiz.category_name || '').toLowerCase().includes(search)
+          || (quiz.group_name || '').toLowerCase().includes(search);
+      });
+    },
+
+    setContentCategoryFilter(catId) {
+      this.admin.contentCategoryFilter = this.admin.contentCategoryFilter === catId ? null : catId;
     },
 
     getCategoryQuizCount(catId) {
