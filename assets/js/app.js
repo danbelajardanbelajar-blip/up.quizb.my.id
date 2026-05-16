@@ -1233,7 +1233,7 @@ function QuizBApp() {
     getFilteredQuizzes() {
       let quizzes = Array.isArray(this.admin.contentQuizzes) ? [...this.admin.contentQuizzes] : [];
       if (this.admin.contentCategoryFilter) {
-        quizzes = quizzes.filter(q => q.category_id === this.admin.contentCategoryFilter);
+        quizzes = quizzes.filter(q => Number(q.category_id) === Number(this.admin.contentCategoryFilter));
       }
       const search = this.admin.contentSearch.trim().toLowerCase();
       if (!search) return quizzes;
@@ -1245,15 +1245,15 @@ function QuizBApp() {
     },
 
     setContentCategoryFilter(catId) {
-      this.admin.contentCategoryFilter = this.admin.contentCategoryFilter === catId ? null : catId;
+      this.admin.contentCategoryFilter = Number(this.admin.contentCategoryFilter) === Number(catId) ? null : catId;
     },
 
     getCategoryQuizCount(catId) {
-      return this.admin.contentQuizzes.filter(q => q.category_id === catId).length;
+      return this.admin.contentQuizzes.filter(q => Number(q.category_id) === Number(catId)).length;
     },
 
     getQuizzesByCategory(catId) {
-      return this.admin.contentQuizzes.filter(q => q.category_id === catId);
+      return this.admin.contentQuizzes.filter(q => Number(q.category_id) === Number(catId));
     },
 
     toggleContentGroup(groupId) {
