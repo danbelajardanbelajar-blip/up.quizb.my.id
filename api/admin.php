@@ -71,7 +71,10 @@ function admin_fix_correct_answers(): void {
 
 function admin_quiz_list(): void {
     requireAdmin();
-    [$page, $limit, $offset] = getPaginationParams();
+    // Izinkan limit besar untuk content tab (bulk load), default 15 untuk tab quiz biasa
+    $page   = max(1, (int)($_GET['page']  ?? 1));
+    $limit  = min(1000, max(1, (int)($_GET['limit'] ?? 15)));
+    $offset = ($page - 1) * $limit;
 
     $search = trim($_GET['search'] ?? '');
     $where  = ''; $params = [];
@@ -91,10 +94,12 @@ function admin_quiz_list(): void {
     )['cnt'] ?? 0);
 
     $quizzes = DB::all(
-        "SELECT q.*, c.name AS category_name, g.name AS group_name,
+        "SELECT q.id, q.title, q.slug, q.category_id, q.difficulty, q.time_limit,
+                q.passing_score, q.is_published, q.max_attempts, q.created_at,
+                c.name AS category_name, g.name AS group_name,
                 u.name AS creator_name,
                 (SELECT COUNT(*) FROM questions WHERE quiz_id = q.id) AS question_count,
-                (SELECT COUNT(*) FROM attempts WHERE quiz_id = q.id) AS attempt_count
+                (SELECT COUNT(*) FROM attempts  WHERE quiz_id = q.id) AS attempt_count
          FROM quizzes q
          LEFT JOIN categories c ON q.category_id = c.id
          LEFT JOIN category_groups g ON c.group_id = g.id
@@ -104,6 +109,16 @@ function admin_quiz_list(): void {
          LIMIT ? OFFSET ?",
         [...$params, $limit, $offset]
     );
+
+    // Pastikan field numerik bertipe integer agar perbandingan JS === bekerja benar
+    foreach ($quizzes as &$q) {
+        $q['id']          = (int)$q['id'];
+        $q['category_id'] = (int)$q['category_id'];
+        $q['is_published']= (int)$q['is_published'];
+        $q['time_limit']  = (int)$q['time_limit'];
+        $q['passing_score'] = (int)$q['passing_score'];
+    }
+    unset($q);
 
     jsonSuccess([
         'quizzes' => $quizzes,
