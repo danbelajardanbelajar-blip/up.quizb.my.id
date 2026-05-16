@@ -1140,7 +1140,7 @@ function QuizBApp() {
           this.admin.groups            = groupsData.groups || [];
           this.admin.contentQuizzes    = quizData.quizzes || [];
           this.admin.contentQuizCount  = quizData.total   || 0;
-          this.admin.contentOpenGroups = this.admin.groups.map(g => g.id);
+          this.admin.contentOpenGroups = [];
         } else if (tab === 'users') {
           const data = await api.get('admin.user_list', { page: this.admin.usersPage, limit: 15, search: this.admin.usersSearch });
           this.admin.users      = data.users  || [];
@@ -1270,8 +1270,14 @@ function QuizBApp() {
       const idx = this.admin.contentOpenCategories.indexOf(catId);
       if (idx === -1) {
         this.admin.contentOpenCategories.push(catId);
+        // Sinkronkan panel kanan agar langsung menampilkan quiz kategori ini
+        this.admin.contentCategoryFilter = catId;
       } else {
         this.admin.contentOpenCategories.splice(idx, 1);
+        // Bersihkan filter panel kanan jika kategori ini yang aktif
+        if (Number(this.admin.contentCategoryFilter) === Number(catId)) {
+          this.admin.contentCategoryFilter = null;
+        }
       }
     },
 
@@ -2478,4 +2484,3 @@ function quizHistorySection() {
     },
   };
 }
-

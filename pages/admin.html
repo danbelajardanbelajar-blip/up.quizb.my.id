@@ -105,25 +105,26 @@
             </div>
             <div x-show="admin.contentOpenGroups.includes(group.id)" class="mt-3 space-y-3 pl-4 border-l border-gray-200 dark:border-gray-700">
               <template x-for="cat in getContentGroupCategories(group)" :key="cat.id">
-                <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-3 bg-white dark:bg-gray-950">
+                <div class="rounded-lg border p-3 bg-white dark:bg-gray-950 transition-colors"
+                     :class="Number(admin.contentCategoryFilter) === Number(cat.id)
+                               ? 'border-primary-400 dark:border-primary-600 ring-1 ring-primary-300 dark:ring-primary-700'
+                               : 'border-gray-200 dark:border-gray-800'">
                   <div class="flex items-center justify-between gap-3">
-                    <div>
+                    <div class="flex-1 min-w-0">
                       <div class="flex flex-wrap items-center gap-2">
-                        <button @click="toggleContentCategory(cat.id)" class="flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-100">
+                        <button @click="toggleContentCategory(cat.id)" class="flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
                           <span x-text="admin.contentOpenCategories.includes(cat.id) ? '▾' : '▸'"></span>
                           <span x-text="cat.name"></span>
                         </button>
-                        <button @click.stop="setContentCategoryFilter(cat.id)" class="text-xs text-primary-600 hover:underline"
-                                x-text="admin.contentCategoryFilter === cat.id ? 'Batal filter' : 'Lihat'"></button>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" x-text="getCategoryQuizCount(cat.id) + ' quiz'"></p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400" x-text="getCategoryQuizCount(cat.id) + ' quiz'"></p>
                       </div>
                     </div>
-                    <div class="flex gap-2 text-xs">
+                    <div class="flex gap-2 text-xs flex-shrink-0">
                       <button @click.stop="openAdminModal('category_edit', cat)" class="text-blue-500 hover:underline">Edit</button>
                       <button @click.stop="deleteAdminItem('category', cat.id)" class="text-red-500 hover:underline">Hapus</button>
                     </div>
                   </div>
-                  <div x-show="admin.contentOpenCategories.includes(cat.id)" class="mt-3 space-y-2 pl-4">
+                  <div x-show="admin.contentOpenCategories.includes(cat.id)" class="mt-3 space-y-2 pl-4 border-l border-primary-200 dark:border-primary-800">
                     <template x-for="quiz in getQuizzesByCategory(cat.id)" :key="quiz.id">
                       <div class="flex items-center justify-between gap-3 rounded-md px-3 py-2 bg-gray-50 dark:bg-gray-900">
                         <div class="text-sm truncate flex-1" :title="quiz.title" x-text="quiz.title"></div>
@@ -134,80 +135,114 @@
                         </div>
                       </div>
                     </template>
-                    <div x-show="getQuizzesByCategory(cat.id).length === 0" class="text-xs text-gray-500">Belum ada quiz dalam kategori ini</div>
+                    <div x-show="getQuizzesByCategory(cat.id).length === 0" class="text-xs text-gray-500 italic py-1">Belum ada quiz dalam kategori ini</div>
                   </div>
                 </div>
               </template>
-              <div x-show="getContentGroupCategories(group).length === 0" class="text-sm text-gray-500">Rumpun ini belum memiliki kategori.</div>
+              <div x-show="getContentGroupCategories(group).length === 0" class="text-sm text-gray-500 italic py-1">Rumpun ini belum memiliki kategori.</div>
             </div>
           </div>
         </template>
 
-        <div class="mt-4">
+        <div class="mt-4" x-show="filteredUnassignedCategories().length > 0 || !admin.contentSearch">
           <div class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Kategori Tanpa Rumpun</div>
           <template x-for="cat in filteredUnassignedCategories()" :key="cat.id">
-            <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-3 mb-3 bg-white dark:bg-gray-950">
+            <div class="rounded-lg border p-3 mb-2 bg-white dark:bg-gray-950 cursor-pointer transition-colors"
+                 :class="Number(admin.contentCategoryFilter) === Number(cat.id)
+                           ? 'border-primary-400 dark:border-primary-600 ring-1 ring-primary-300 dark:ring-primary-700'
+                           : 'border-gray-200 dark:border-gray-800'"
+                 @click="toggleContentCategory(cat.id)">
               <div class="flex items-center justify-between gap-3">
-                <div>
-                  <p class="font-medium text-sm" x-text="cat.name"></p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" x-text="getCategoryQuizCount(cat.id) + ' quiz'"></p>
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                  <span class="text-gray-500" x-text="admin.contentOpenCategories.includes(cat.id) ? '▾' : '▸'"></span>
+                  <div>
+                    <p class="font-medium text-sm text-gray-800 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400" x-text="cat.name"></p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5" x-text="getCategoryQuizCount(cat.id) + ' quiz'"></p>
+                  </div>
                 </div>
-                <div class="flex gap-2 text-xs">
+                <div class="flex gap-2 text-xs flex-shrink-0">
                   <button @click.stop="openAdminModal('category_edit', cat)" class="text-blue-500 hover:underline">Edit</button>
                   <button @click.stop="deleteAdminItem('category', cat.id)" class="text-red-500 hover:underline">Hapus</button>
                 </div>
               </div>
+              <div x-show="admin.contentOpenCategories.includes(cat.id)" class="mt-3 space-y-2 pl-4 border-l border-primary-200 dark:border-primary-800">
+                <template x-for="quiz in getQuizzesByCategory(cat.id)" :key="quiz.id">
+                  <div class="flex items-center justify-between gap-3 rounded-md px-3 py-2 bg-gray-50 dark:bg-gray-900">
+                    <div class="text-sm truncate flex-1" :title="quiz.title" x-text="quiz.title"></div>
+                    <div class="flex gap-2 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                      <button @click.stop="openContentQuizQuestions(quiz)" class="hover:text-primary-600 font-medium text-primary-500">Soal</button>
+                      <button @click.stop="openAdminModal('quiz_edit', quiz)" class="hover:text-blue-500">Edit</button>
+                      <button @click.stop="deleteAdminItem('quiz', quiz.id)" class="hover:text-red-500">Hapus</button>
+                    </div>
+                  </div>
+                </template>
+                <div x-show="getQuizzesByCategory(cat.id).length === 0" class="text-xs text-gray-500 italic py-1">Belum ada quiz dalam kategori ini</div>
+              </div>
             </div>
           </template>
-          <div x-show="filteredUnassignedCategories().length === 0" class="text-sm text-gray-500">Semua kategori sudah berada dalam rumpun.</div>
+          <div x-show="filteredUnassignedCategories().length === 0" class="text-sm text-gray-500 italic">Semua kategori sudah berada dalam rumpun.</div>
         </div>
       </div>
 
       <div class="card p-4 overflow-hidden">
+        <!-- Header panel kanan -->
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
           <div>
             <p class="text-sm text-gray-500 dark:text-gray-400">Daftar Quiz</p>
-            <h3 class="font-semibold text-gray-900 dark:text-white">Semua quiz</h3>
+            <h3 class="font-semibold text-gray-900 dark:text-white"
+                x-text="admin.contentCategoryFilter
+                  ? (admin.categories.find(c => Number(c.id) === Number(admin.contentCategoryFilter))?.name || 'Kategori')
+                  : 'Pilih kategori'">
+            </h3>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2" x-show="admin.contentCategoryFilter">
             <span class="badge badge-primary text-sm" x-text="getFilteredQuizzes().length + ' quiz'"></span>
-            <span class="badge badge-secondary text-xs" x-show="admin.contentCategoryFilter">
-              Filter: <span x-text="admin.categories.find(c => c.id === admin.contentCategoryFilter)?.name || 'Kategori'"></span>
-            </span>
-            <button x-show="admin.contentCategoryFilter" @click="admin.contentCategoryFilter = null" class="text-xs text-gray-500 hover:text-gray-700">Reset</button>
+            <button @click="admin.contentCategoryFilter = null; admin.contentOpenCategories = []"
+                    class="text-xs text-gray-500 hover:text-red-500 transition-colors">✕ Reset</button>
           </div>
         </div>
-        <div class="overflow-x-auto">
-          <table class="data-table w-full">
-            <thead><tr>
-              <th class="text-left">Judul Quiz</th>
-              <th class="text-left">Kategori</th>
-              <th class="text-left">Status</th>
-              <th class="text-right">Aksi</th>
-            </tr></thead>
-            <tbody>
-              <template x-for="quiz in getFilteredQuizzes()" :key="quiz.id">
-                <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/50">
-                  <td class="max-w-xs truncate" :title="quiz.title" x-text="quiz.title"></td>
-                  <td class="text-sm text-gray-500 dark:text-gray-400" x-text="quiz.category_name || 'Tidak Ada'"></td>
-                  <td>
-                    <span class="badge text-xs" :class="quiz.is_published ? 'badge-success' : 'badge-warning'"
-                          x-text="quiz.is_published ? 'Aktif' : 'Draft'"></span>
-                  </td>
-                  <td class="text-right">
-                    <div class="flex items-center justify-end gap-2">
-                      <button @click="openContentQuizQuestions(quiz)" class="text-xs text-primary-600 dark:text-primary-400 hover:underline font-medium">Kelola Soal</button>
-                      <button @click="openAdminModal('quiz_edit', quiz)" class="text-xs text-blue-500 hover:underline">Edit</button>
-                      <button @click="deleteAdminItem('quiz', quiz.id)" class="text-xs text-red-500 hover:underline">Hapus</button>
-                    </div>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
+
+        <!-- Placeholder: belum ada kategori yang dipilih -->
+        <div x-show="!admin.contentCategoryFilter"
+             class="flex flex-col items-center justify-center py-16 text-center text-gray-400 dark:text-gray-600">
+          <div class="text-5xl mb-4">📂</div>
+          <p class="font-medium text-gray-600 dark:text-gray-400 text-sm">Pilih kategori untuk melihat quiz</p>
+          <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Klik nama kategori di panel kiri</p>
         </div>
-        <div x-show="getFilteredQuizzes().length === 0" class="text-center py-10 text-gray-500"
-             x-text="admin.contentCategoryFilter ? 'Tidak ada quiz untuk kategori terpilih.' : 'Tidak ada quiz untuk ditampilkan.'"></div>
+
+        <!-- Tabel quiz — hanya tampil setelah kategori dipilih -->
+        <div x-show="admin.contentCategoryFilter">
+          <div class="overflow-x-auto">
+            <table class="data-table w-full">
+              <thead><tr>
+                <th class="text-left">Judul Quiz</th>
+                <th class="text-left">Status</th>
+                <th class="text-right">Aksi</th>
+              </tr></thead>
+              <tbody>
+                <template x-for="quiz in getFilteredQuizzes()" :key="quiz.id">
+                  <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/50">
+                    <td class="max-w-xs truncate" :title="quiz.title" x-text="quiz.title"></td>
+                    <td>
+                      <span class="badge text-xs" :class="quiz.is_published ? 'badge-success' : 'badge-warning'"
+                            x-text="quiz.is_published ? 'Aktif' : 'Draft'"></span>
+                    </td>
+                    <td class="text-right">
+                      <div class="flex items-center justify-end gap-2">
+                        <button @click="openContentQuizQuestions(quiz)" class="text-xs text-primary-600 dark:text-primary-400 hover:underline font-medium">Kelola Soal</button>
+                        <button @click="openAdminModal('quiz_edit', quiz)" class="text-xs text-blue-500 hover:underline">Edit</button>
+                        <button @click="deleteAdminItem('quiz', quiz.id)" class="text-xs text-red-500 hover:underline">Hapus</button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <div x-show="getFilteredQuizzes().length === 0" class="text-center py-10 text-gray-500 text-sm italic">
+            Tidak ada quiz untuk kategori ini.
+          </div>
+        </div>
       </div>
     </div>
   </div>
