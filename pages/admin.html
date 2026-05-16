@@ -193,11 +193,12 @@
       <div class="card p-4 overflow-hidden">
         <!-- Header panel kanan -->
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
-          <!-- Header dinamis: berubah sesuai state -->
+          <!-- Header dinamis -->
           <div>
             <p class="text-sm text-gray-500 dark:text-gray-400"
-               x-text="admin.contentSelectedQuiz ? 'Daftar Soal' : 'Daftar Quiz'"></p>
-            <h3 class="font-semibold text-gray-900 dark:text-white"
+               x-text="admin.contentSelectedQuiz ? 'Kelola Soal' : 'Daftar Quiz'"></p>
+            <h3 class="font-semibold text-gray-900 dark:text-white truncate max-w-xs"
+                :title="admin.contentSelectedQuiz?.title"
                 x-text="admin.contentSelectedQuiz
                   ? admin.contentSelectedQuiz.title
                   : (admin.contentCategoryFilter
@@ -205,28 +206,23 @@
                       : 'Pilih kategori')">
             </h3>
           </div>
-          <div class="flex items-center gap-2">
-            <!-- Tombol kembali ke daftar quiz (dari view soal) -->
-            <button x-show="admin.contentSelectedQuiz"
-                    @click="backToContentQuizList()"
-                    class="flex items-center gap-1 text-xs text-gray-500 hover:text-primary-600 transition-colors">
-              ← Daftar Quiz
-            </button>
-            <!-- Badge + reset saat di daftar quiz -->
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <!-- Saat lihat soal: kembali + jumlah soal -->
+            <template x-if="admin.contentSelectedQuiz">
+              <div class="flex items-center gap-2">
+                <button @click="backToContentQuizList()"
+                        class="flex items-center gap-1 text-xs px-2 py-1 rounded border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-primary-600 hover:border-primary-400 transition-colors">
+                  ← Quiz
+                </button>
+                <span class="badge badge-secondary text-xs" x-text="admin.questionsTotal + ' soal'"></span>
+              </div>
+            </template>
+            <!-- Saat lihat daftar quiz: badge + reset -->
             <template x-if="!admin.contentSelectedQuiz && admin.contentCategoryFilter">
               <div class="flex items-center gap-2">
                 <span class="badge badge-primary text-sm" x-text="getFilteredQuizzes().length + ' quiz'"></span>
-                <button @click="admin.contentCategoryFilter = null; admin.contentOpenCategories = []; admin.contentSelectedQuiz = null; admin.contentQuizQuestions = []"
+                <button @click="admin.contentCategoryFilter = null; admin.contentOpenCategories = []; admin.contentSelectedQuiz = null;"
                         class="text-xs text-gray-500 hover:text-red-500 transition-colors">✕ Reset</button>
-              </div>
-            </template>
-            <!-- Badge jumlah soal saat view soal -->
-            <template x-if="admin.contentSelectedQuiz">
-              <div class="flex items-center gap-2">
-                <span class="badge badge-secondary text-xs"
-                      x-text="admin.contentQuestionsLoading ? '...' : (admin.contentQuizQuestions.length + ' soal')"></span>
-                <button @click="openContentQuizQuestions(admin.contentSelectedQuiz)"
-                        class="text-xs text-primary-600 hover:underline font-medium">Edit Lengkap</button>
               </div>
             </template>
           </div>
@@ -276,45 +272,97 @@
           </div>
         </div>
 
-        <!-- STATE 3: Daftar soal — quiz dipilih -->
+        <!-- STATE 3: Kelola Soal — full CRUD inline, tanpa pindah halaman -->
         <div x-show="admin.contentSelectedQuiz">
-          <!-- Loading -->
-          <div x-show="admin.contentQuestionsLoading" class="flex items-center justify-center py-12 text-gray-400">
-            <svg class="animate-spin h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-            </svg>
-            Memuat soal...
-          </div>
-          <!-- Daftar soal -->
-          <div x-show="!admin.contentQuestionsLoading" class="space-y-3">
-            <template x-for="(q, idx) in admin.contentQuizQuestions" :key="q.id">
-              <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-3 bg-white dark:bg-gray-950">
-                <div class="flex items-start gap-3">
-                  <span class="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center mt-0.5"
-                        x-text="idx + 1"></span>
-                  <div class="flex-1 min-w-0">
-                    <p class="text-sm text-gray-800 dark:text-gray-100" x-text="q.question_text"></p>
-                    <div class="mt-2 space-y-1">
-                      <template x-for="opt in q.options" :key="opt.id">
-                        <div class="flex items-center gap-2 text-xs"
-                             :class="opt.is_correct ? 'text-green-600 dark:text-green-400 font-medium' : 'text-gray-500 dark:text-gray-400'">
-                          <span x-text="opt.is_correct ? '✓' : '○'"></span>
-                          <span x-text="opt.option_text"></span>
-                        </div>
-                      </template>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </template>
-            <!-- Kosong -->
-            <div x-show="admin.contentQuizQuestions.length === 0 && !admin.contentQuestionsLoading"
-                 class="text-center py-12 text-gray-400 text-sm italic">
-              Quiz ini belum memiliki soal.
-              <button @click="openContentQuizQuestions(admin.contentSelectedQuiz)"
-                      class="block mx-auto mt-2 text-primary-600 hover:underline font-medium text-sm">+ Tambah Soal</button>
+          <!-- Toolbar soal -->
+          <div class="flex flex-wrap items-center gap-2 mb-3">
+            <div class="relative flex-1 min-w-[160px]">
+              <span class="absolute inset-y-0 left-2.5 flex items-center text-gray-400 pointer-events-none text-xs">🔍</span>
+              <input type="search"
+                     :value="admin.questionsSearch"
+                     @input="onAdminQuestionSearch($event.target.value)"
+                     placeholder="Cari soal..."
+                     class="form-input pl-8 py-1.5 text-sm w-full" />
             </div>
+            <button @click="openImportFileModal()" class="btn-secondary text-xs px-2.5 py-1.5">📥 File</button>
+            <button @click="openImportQuizbModal()" class="btn-secondary text-xs px-2.5 py-1.5">🌐 QuizB</button>
+            <button @click="deleteSelectedQuestions()"
+                    :disabled="selectedAdminQuestionsCount === 0"
+                    class="btn-danger text-xs px-2.5 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">🗑️</button>
+            <button @click="admin.form = buildQuestionForm(); openAdminModal('question_create')"
+                    class="btn-primary text-xs px-3 py-1.5">+ Soal</button>
+          </div>
+          <div x-show="selectedAdminQuestionsCount > 0" class="text-xs text-gray-500 mb-2">
+            <span class="font-semibold" x-text="selectedAdminQuestionsCount"></span> soal terpilih.
+            <button @click="toggleSelectAllQuestions(false)" class="underline ml-1">Bersihkan</button>
+          </div>
+
+          <!-- Tabel soal -->
+          <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+            <table class="data-table w-full">
+              <thead>
+                <tr>
+                  <th class="w-8 text-center px-2">
+                    <input type="checkbox"
+                           @change="toggleSelectAllQuestions($event.target.checked)"
+                           :checked="admin.questionsAll.length > 0 && admin.questionsAll.every(q => q._sel)"
+                           class="accent-primary-600" />
+                  </th>
+                  <th class="text-left">Teks Soal</th>
+                  <th class="w-40 text-left hidden sm:table-cell">Jawaban Benar</th>
+                  <th class="w-20 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="q in sortedAdmin('questions', admin.questionsAll)" :key="q.id">
+                  <tr>
+                    <td class="text-center px-2">
+                      <input type="checkbox" x-model="q._sel" class="accent-primary-600" />
+                    </td>
+                    <td>
+                      <p class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate max-w-[280px]"
+                         x-text="q.question_text" :title="q.question_text"></p>
+                      <p x-show="q.explanation"
+                         class="text-xs text-gray-400 italic truncate max-w-[280px] mt-0.5"
+                         x-text="'💡 ' + q.explanation"></p>
+                    </td>
+                    <td class="hidden sm:table-cell">
+                      <template x-for="opt in q.options" :key="opt.id">
+                        <p x-show="opt.is_correct"
+                           class="text-xs text-green-600 dark:text-green-400 font-medium truncate max-w-[160px]"
+                           x-text="'✅ ' + opt.option_text"></p>
+                      </template>
+                    </td>
+                    <td class="text-right">
+                      <div class="flex items-center justify-end gap-2">
+                        <button @click="openAdminModal('question_edit', {...q, options: q.options.map(o=>({...o}))})"
+                                class="text-xs text-blue-500 hover:underline">Edit</button>
+                        <button @click="deleteAdminItem('question', q.id)"
+                                class="text-xs text-red-500 hover:underline">Hapus</button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Empty state -->
+          <div x-show="admin.questionsAll.length === 0 && !admin.loading" class="text-center py-10 text-gray-400">
+            <p class="text-3xl mb-2">❓</p>
+            <p class="text-sm">Quiz ini belum memiliki soal</p>
+            <button @click="admin.form = buildQuestionForm(); openAdminModal('question_create')"
+                    class="mt-3 btn-primary text-sm px-4 py-2">+ Tambah Soal Pertama</button>
+          </div>
+
+          <!-- Pagination soal -->
+          <div x-show="admin.questionsTotal > 20" class="flex items-center justify-center gap-2 mt-4">
+            <button @click="admin.questionsPage--; reloadQuizQuestions()" :disabled="admin.questionsPage <= 1"
+                    class="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">← Prev</button>
+            <span class="text-xs text-gray-500 px-2"
+                  x-text="'Hal. ' + admin.questionsPage + ' / ' + Math.max(1, Math.ceil(admin.questionsTotal/20))"></span>
+            <button @click="admin.questionsPage++; reloadQuizQuestions()" :disabled="admin.questionsPage*20 >= admin.questionsTotal"
+                    class="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">Next →</button>
           </div>
         </div>
       </div>
