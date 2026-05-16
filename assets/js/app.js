@@ -2403,6 +2403,200 @@ function quizHistorySection() {
       return this.history.length > 0 ? this.history[this.currentIndex] : null;
     },
 
+    clearMsgPoll() {
+      if (this.msgs.pollInterval) {
+        clearInterval(this.msgs.pollInterval);
+        this.msgs.pollInterval = null;
+      }
+    },
+
+    _scrollChatBottom() {
+      const el = document.getElementById('chat-messages') || this.$refs?.chatBox;
+      if (el) el.scrollTop = el.scrollHeight;
+    },
+
+    // ---- Date helpers ----
+    sameDay(d1, d2) {
+      const a = new Date(d1), b = new Date(d2);
+      return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    },
+
+    formatTime(dt) {
+      if (!dt) return '';
+      return new Date(dt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    },
+
+    formatDayLabel(dt) {
+      if (!dt) return '';
+      const d = new Date(dt);
+      const now = new Date();
+      const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+      if (this.sameDay(d, now))       return 'Hari ini';
+      if (this.sameDay(d, yesterday)) return 'Kemarin';
+      return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    },
+
+    formatRelative(dateStr) { return this.formatTimeAgo(dateStr); },
+
+    formatDateTime(dateStr) {
+      if (!dateStr) return '—';
+      const d   = new Date(dateStr);
+      const now = new Date();
+      const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+      const time = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      if (d.toDateString() === now.toDateString())       return 'Hari ini, ' + time;
+      if (d.toDateString() === yesterday.toDateString()) return 'Kemarin, '  + time;
+      return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' }) + ', ' + time;
+    },
+
+    // SEARCH PAGE
+    // ============================================================
+    async loadSearch(q) {
+      this.search.q = q;
+      if (!q || q.trim().length < 2) {
+        this.search.results = [];
+        this.search.total   = 0;
+        return;
+      }
+      this.search.loading = true;
+      try {
+        const data = await api.get('quiz.list', { search: q.trim(), limit: 20, page: 1 });
+        this.search.results = Array.isArray(data) ? data : (data?.data || []);
+        this.search.total   = data?.total || this.search.results.length;
+      } catch (e) {
+        this.search.results = [];
+      } finally {
+        this.search.loading = false;
+      }
+    },
+
+    // ---- Search ----
+    onSearch: debounce(async function(q) {
+      if (!q || q.length < 2) return;
+      this.quizzes.search = q;
+      this.quizzes.page = 1;
+      this.navigate('/quizzes');
+      await this.loadQuizzes(true);
+    }, 300),
+
+    // ---- Dark Mode ----
+    toggleDark() {
+      this.darkMode = !this.darkMode;
+      store.set('darkMode', this.darkMode);
+      this.applyDark();
+    },
+    applyDark() {
+      document.documentElement.classList.toggle('dark', this.darkMode);
+    },
+
+    // ---- Toast ----
+    showToast(message, type = 'success', icon = '✅') {
+      clearTimeout(this._toastTimer);
+      this.toast = { show: true, message, type, icon };
+      this._toastTimer = setTimeout(() => { this.toast.show = false; }, 3500);
+    },
+
+    formatModeLabel(mode) {
+      return {
+        exam: 'Ujian',
+        instant: 'Instan',
+        end: 'Akhir',
+        challenge: 'Tantangan'
+      }[mode] || (mode ? mode.charAt(0).toUpperCase() + mode.slice(1) : 'Bebas');
+    },
+  }
+}
+
+function globalTicker() {
+  return {
+    currentItem: null,
+    visible: false,
+    _items: [],
+    _idx: 0,
+    _timer: null,
+
+    async init() {
+      try {
+        const data = await api.get('attempt.quiz_global_history');
+        this._items = Array.isArray(data) ? data : (data?.data || []);
+      } catch (_) {}
+      if (!this._items.length) return;
+      this.currentItem = this._items[0];
+      this.visible = true;
+      if (this._items.length > 1) this._startTicker();
+    },
+
+    _startTicker() {
+      this._timer = setInterval(() => {
+        this.visible = false;
+        setTimeout(() => {
+          this._idx = (this._idx + 1) % this._items.length;
+          this.currentItem = this._items[this._idx];
+          this.visible = true;
+        }, 420);
+      }, 4500);
+    },
+
+    formatModeLabel(mode) {
+      return { exam: 'Ujian', instant: 'Instan', end: 'Akhir', challenge: 'Tantangan' }[mode]
+        || (mode ? mode.charAt(0).toUpperCase() + mode.slice(1) : 'Bebas');
+    },
+
+    formatTimeAgo(dateStr) {
+      if (!dateStr) return '';
+      const diff = Date.now() - new Date(dateStr).getTime();
+      const m = Math.floor(diff / 60000);
+      if (m < 1)  return 'baru saja';
+      if (m < 60) return `${m}m lalu`;
+      const h = Math.floor(m / 60);
+      if (h < 24) return `${h}j lalu`;
+      return `${Math.floor(h / 24)}h lalu`;
+    },
+  };
+}
+
+function quizHistorySection() {
+  return {
+    history: [],
+    loading: true,
+    currentIndex: 0,
+    visible: true,
+    _ticker: null,
+
+    async init() {
+      await this.loadHistory();
+      if (this.history.length > 1) this.startTicker();
+    },
+
+    async loadHistory() {
+      this.loading = true;
+      try {
+        const data = await api.get('attempt.quiz_global_history');
+        this.history = Array.isArray(data) ? data : (data?.data || []);
+      } catch (e) {
+        console.error('Failed to load history:', e);
+        this.history = [];
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    startTicker() {
+      this._ticker = setInterval(() => {
+        // fade out
+        this.visible = false;
+        setTimeout(() => {
+          this.currentIndex = (this.currentIndex + 1) % this.history.length;
+          // fade in
+          this.visible = true;
+        }, 350);
+      }, 4000);
+    },
+
+    get currentItem() {
+      return this.history.length > 0 ? this.history[this.currentIndex] : null;
+    },
+
     formatTimeAgo(dateStr) {
       const now = new Date();
       const date = new Date(dateStr);
@@ -2422,6 +2616,4 @@ function quizHistorySection() {
         || (mode ? mode.charAt(0).toUpperCase() + mode.slice(1) : 'Bebas');
     },
   };
-}
-;
 }
