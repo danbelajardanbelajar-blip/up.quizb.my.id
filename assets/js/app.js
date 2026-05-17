@@ -1,4 +1,4 @@
-﻿// ============================================
+// ============================================
 // assets/js/app.js — Main Alpine.js App
 // v2.1: Fix auth mapping, classroom state, quiz search
 // ============================================
@@ -9,6 +9,7 @@ function QuizBApp() {
     currentRoute: '/',
     routeParams: [],
     user: null,
+    _userLoaded: false, // Flag: true setelah loadUser() selesai — guard route tidak boleh aktif sebelum ini
     darkMode: store.get('darkMode', false),
     mobileMenu: false,
     mobileSearch: false,
@@ -181,15 +182,22 @@ function QuizBApp() {
         // Save the original intended hash BEFORE any redirect may change it.
         const initialHash = window.location.hash || '#/';
 
-        // Hash routing
-        this.handleRoute(initialHash);
+        // Daftarkan hashchange listener SEBELUM handle route pertama kali
         window.addEventListener('hashchange', () => this.handleRoute(window.location.hash));
 
         // Search events
         window.addEventListener('search', (e) => this.onSearch(e.detail.q));
 
+        // Handle route awal — _userLoaded masih false, jadi guard TIDAK aktif.
+        // Hanya load data halaman yang dijalankan, tanpa redirect paksa ke /login.
+        this.handleRoute(initialHash);
+
         // Load current user
         await this.loadUser();
+
+        // Tandai bahwa user sudah selesai di-load — guard boleh aktif mulai sekarang
+        this._userLoaded = true;
+
         // Sync settings state dengan data user
         if (this.user) {
           this.settings.limit            = this.user.quiz_questions_limit || 10;
@@ -204,15 +212,6 @@ function QuizBApp() {
           this.pollCounts();
         }
 
-        // After loadUser: if the user IS authenticated and the original route was
-        // a protected page (but we were bounced to /login because user hadn't loaded
-        // yet), navigate back to the intended destination now.
-        const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges', '/messages', '/google-setup', '/onboarding'];
-        const intendedPath = (initialHash.replace(/^#/, '').split('?')[0]) || '/';
-        if (this.user && protected_routes.some(r => intendedPath.startsWith(r))) {
-          this.handleRoute(initialHash);
-        }
-
         // —— Flash message dari PHP session (verify-email.php redirect) ——
         if (window._phpFlash?.msg) {
           const iconMap = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
@@ -224,9 +223,10 @@ function QuizBApp() {
           window._phpFlash = null;
         }
 
-        // Re-check protected route guards after user is loaded.
-        // We only re-run guard logic — NOT the full data loaders — so that
-        // params (e.g. /quiz/5) loaded above are not overwritten with undefined.
+        // Re-check semua guard setelah user selesai di-load.
+        // _guardRoute akan menangani:
+        //   - user BELUM login → akses protected route → redirect /login
+        //   - user SUDAH login → akses /login atau /register → redirect /dashboard
         this._guardRoute(this.currentRoute);
       } catch (e) {
         console.error('App init failed', e);
@@ -249,6 +249,12 @@ function QuizBApp() {
     _guardRoute(route) {
       const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges', '/messages'];
       const admin_routes     = ['/admin'];
+      const auth_only_routes = ['/login', '/register']; // halaman yang tidak boleh diakses user yg sudah login
+
+      // User sudah login → jangan ke halaman login / register
+      if (this.user && auth_only_routes.some(r => route.startsWith(r))) {
+        return this.navigate('/dashboard');
+      }
       if (route === '/onboarding' && !this.user) return this.navigate('/login');
       if (protected_routes.some(r => route.startsWith(r)) && !this.user) {
         this.showToast('Silakan login untuk mengakses halaman ini', 'warning', '⚠️');
@@ -334,18 +340,26 @@ function QuizBApp() {
     },
 
     onRouteChange(route, params) {
-      // Guard protected routes
-      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges', '/messages'];
-      const admin_routes     = ['/admin'];
+      // Guard protected routes — hanya aktif setelah _userLoaded = true
+      // Sebelum user selesai di-load, skip semua guard agar tidak ada redirect paksa
+      if (this._userLoaded) {
+        const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges', '/messages'];
+        const admin_routes     = ['/admin'];
+        const auth_only_routes = ['/login', '/register'];
 
-      if (route === '/onboarding' && !this.user) return this.navigate('/login');
-      if (protected_routes.some(r => route.startsWith(r)) && !this.user) {
-        this.showToast('Silakan login untuk mengakses halaman ini', 'warning', '⚠️');
-        return this.navigate('/login');
-      }
-      if (admin_routes.some(r => route.startsWith(r)) && this.user?.role !== 'admin') {
-        this.showToast('Akses ditolak', 'error', '⛔');
-        return this.navigate('/');
+        // User sudah login → jangan ke halaman login / register
+        if (this.user && auth_only_routes.some(r => route.startsWith(r))) {
+          return this.navigate('/dashboard');
+        }
+        if (route === '/onboarding' && !this.user) return this.navigate('/login');
+        if (protected_routes.some(r => route.startsWith(r)) && !this.user) {
+          this.showToast('Silakan login untuk mengakses halaman ini', 'warning', '⚠️');
+          return this.navigate('/login');
+        }
+        if (admin_routes.some(r => route.startsWith(r)) && this.user?.role !== 'admin') {
+          this.showToast('Akses ditolak', 'error', '⛔');
+          return this.navigate('/');
+        }
       }
       // Load data per route
       if (route === '/')                   this.loadHome();
