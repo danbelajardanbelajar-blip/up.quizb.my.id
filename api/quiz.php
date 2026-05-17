@@ -123,7 +123,9 @@ function quiz_questions(): void {
         if ($shuffleOptions   === null) $shuffleOptions   = true;
     }
 
-    if ($limit < 1) $limit = 10;
+    // Nilai 0 dari assignment berarti "tampilkan SEMUA soal" — jangan override ke 10.
+    // Hanya nilai negatif atau null sisa yang perlu di-default-kan.
+    if ($limit === null || $limit < 0) $limit = 10;
 
     // ---- Ambil semua soal ----
     $allQuestions = DB::all(
@@ -136,7 +138,8 @@ function quiz_questions(): void {
     if ($shuffleQuestions) {
         shuffle($allQuestions);
     }
-    if (count($allQuestions) > $limit) {
+    // limit=0 berarti "tampilkan semua soal", jangan dipotong
+    if ($limit > 0 && count($allQuestions) > $limit) {
         $allQuestions = array_slice($allQuestions, 0, $limit);
     }
     // Jika tidak diacak, kembalikan ke urutan order_num asli

@@ -43,8 +43,9 @@ function attempt_submit(): void {
     }
 
     // Ambil hanya soal yang ditampilkan ke user.
-    // Jika question_ids dikirim → filter ke soal tersebut.
-    // Jika tidak (klien lama) → fallback ke semua soal.
+    // Jika question_ids dikirim → filter ke soal tersebut (WAJIB untuk penilaian akurat).
+    // Jika tidak dikirim (klien lama) → fallback ke soal yang ada di answerMap saja,
+    // BUKAN semua soal quiz — karena soal yang tidak dikerjakan tidak boleh dihitung salah.
     if (!empty($displayedQIds)) {
         $placeholders = implode(',', array_fill(0, count($displayedQIds), '?'));
         $questions = DB::all(
@@ -52,23 +53,35 @@ function attempt_submit(): void {
              WHERE q.quiz_id = ? AND q.id IN ($placeholders)",
             array_merge([$quizId], $displayedQIds)
         );
-    } else {
+    } elseif (!empty($answerMap)) {
+        // Fallback: hanya soal yang memang dijawab oleh pelajar
+        $answeredIds  = array_keys($answerMap);
+        $placeholders = implode(',', array_fill(0, count($answeredIds), '?'));
         $questions = DB::all(
-            'SELECT q.id, q.points FROM questions q WHERE q.quiz_id = ?',
-            [$quizId]
+            "SELECT q.id, q.points FROM questions q
+             WHERE q.quiz_id = ? AND q.id IN ($placeholders)",
+            array_merge([$quizId], $answeredIds)
         );
+    } else {
+        // Tidak ada jawaban sama sekali
+        $questions = [];
     }
 
     if (empty($questions)) {
         jsonError('Quiz tidak memiliki soal yang valid untuk disubmit', 400);
     }
 
+    // Ambil kunci jawaban HANYA untuk soal yang ditampilkan (bukan seluruh quiz)
+    // Ini mencegah bug di mana soal dengan is_correct duplikat menyebabkan kunci salah
+    $shownQIds      = array_column($questions, 'id');
+    $placeholders   = implode(',', array_fill(0, count($shownQIds), '?'));
     $correctOptions = DB::all(
-        "SELECT o.id AS option_id, o.question_id
+        "SELECT o.question_id,
+                MIN(o.id) AS option_id
          FROM options o
-         INNER JOIN questions q ON q.id = o.question_id
-         WHERE q.quiz_id = ? AND o.is_correct = 1",
-        [$quizId]
+         WHERE o.question_id IN ($placeholders) AND o.is_correct = 1
+         GROUP BY o.question_id",
+        $shownQIds
     );
 
     // Cast ke int: PDO mengembalikan string, perbandingan === dengan int akan selalu false
@@ -89,11 +102,14 @@ function attempt_submit(): void {
         $qId              = (int)$q['id'];
         $selectedOptionId = (int)($answerMap[$qId] ?? 0);
         $correctOptionId  = (int)($correctMap[$qId] ?? -1);
-        $isCorrect = ($selectedOptionId > 0 && $correctOptionId === $selectedOptionId) ? 1 : 0;
+        // is_correct: hanya true jika pelajar memilih jawaban DAN jawaban itu benar
+        // Soal tidak dijawab ($selectedOptionId = 0) → is_correct = 0, tapi TIDAK dihitung sebagai wrongCount
+        $isCorrect = ($selectedOptionId > 0 && $correctOptionId > 0 && $correctOptionId === $selectedOptionId) ? 1 : 0;
         if ($isCorrect) {
             $earnedPoints += $pts;
             $correctCount++;
         } elseif ($selectedOptionId > 0) {
+            // Hanya hitung salah jika soal dijawab tapi salah
             $wrongCount++;
         }
         $answerRows[] = [$qId, $selectedOptionId ?: null, $isCorrect];
