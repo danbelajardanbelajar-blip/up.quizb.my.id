@@ -114,10 +114,18 @@
                 </button>
               </template>
               <template x-if="a.status !== 'pending'">
-                <button @click="navigate('/classroom/' + a.class_id)"
-                        class="w-full text-sm py-2 mt-auto rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                  Lihat Kelas
-                </button>
+                <div class="flex flex-col gap-2 mt-auto">
+                  <button @click="a.mode === 'bebas'
+                              ? navigate('/quiz/' + a.quiz_id + '?assign=' + a.id)
+                              : navigate('/play/' + a.quiz_id + '?mode=' + a.mode + '&assign=' + a.id)"
+                          class="w-full btn-primary text-sm py-2">
+                    🔄 Kerjakan
+                  </button>
+                  <button @click="navigate('/classroom/' + a.class_id)"
+                          class="w-full text-sm py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    Lihat Kelas
+                  </button>
+                </div>
               </template>
             </div>
           </template>
