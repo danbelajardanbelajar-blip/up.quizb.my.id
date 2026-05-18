@@ -97,7 +97,19 @@
                   <div class="flex items-center gap-2">
                     <span class="w-7 h-7 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 flex items-center justify-center text-xs font-bold flex-shrink-0"
                           x-text="s.student_name.charAt(0).toUpperCase()"></span>
-                    <span class="font-medium text-gray-800 dark:text-gray-200" x-text="s.student_name"></span>
+                    <div class="flex flex-col min-w-0">
+                      <button @click.stop="openPublicHistory('user', s.user_id, s.student_name)"
+                              class="font-medium text-gray-800 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors text-left truncate">
+                        <span x-text="s.student_name"></span>
+                      </button>
+                      <template x-if="user && user.id !== s.user_id">
+                        <button @click.stop="startNewChat({ id: s.user_id, name: s.student_name }); navigate('/messages')"
+                                class="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-800/40 transition-colors w-fit mt-0.5">
+                          <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                          Kirim Pesan
+                        </button>
+                      </template>
+                    </div>
                   </div>
                 </td>
                 <td class="px-4 py-3 text-center">
