@@ -271,128 +271,166 @@ function _applyAnswerHint(array &$question, string $hint): void {
     unset($opt);
 }
 
-function _parseTextQuestions(string $text): array {
-    // NEW STRATEGY: Detect patterns of [question] + [5 option lines]
-    // This works for files where options are short, consecutive lines
+function _isQuestionLine(string $line): bool {
+    // Baris soal biasanya:
+    // 1. Berakhir dengan tanda "..." atau "?" atau "؟" (tanda pertanyaan Arab/Indonesia)
+    // 2. Mengandung kata tanya dalam bahasa Indonesia atau Arab
+    $line = rtrim($line);
+
+    // Tanda akhir pertanyaan / pilihan soal umum
+    if (preg_match('/[.…]{2,}\s*$/', $line))         return true;
+    if (str_ends_with($line, '?'))                     return true;
+    if (str_ends_with($line, '؟'))                    return true;
+    if (str_ends_with($line, ':'))                     return true;
+
+    // Kata tanya Indonesia
+    if (preg_match('/\b(apa(?:kah)?|siapa(?:kah)?|bagaimana|dimana|di mana|kemana|mengapa|kapan|berapa|manakah|yang mana|pilih(?:lah)?|tentukan|sebutkan|jelaskan|tuliskan)\b/iu', $line)) return true;
+
+    // Kata tanya Arab common (transliterasi: مَنْ مَا كَيْفَ أَيْنَ مَتَى كَمْ)
+    if (preg_match('/[\x{0645}\x{0646}][\x{0020}]/u', $line)) return false; // too broad
     
-    $lines = [];
+    return false;
+}
+
+function _isOptionLine(string $line): bool {
+    // Diawali huruf Latin A-E atau huruf Arab أ ب ت ث ج
+    if (preg_match('/^[A-Ea-e][).\s:-]/u', $line)) return true;
+    // Huruf Arab sebagai label opsi: أ. ب. ت. ث. ج.
+    if (preg_match('/^[أبتثج][).\s]/u', $line))    return true;
+    return false;
+}
+
+/**
+ * Parser utama: bekerja dengan array baris/paragraf.
+ * Strategi: soal dideteksi dari baris yang berakhir dengan tanda pertanyaan,
+ * kemudian dikumpulkan pilihan jawaban dari baris berikutnya.
+ */
+function _parseTextQuestions(string $text): array {
+    $rawLines = [];
     foreach (preg_split('/\r\n|\r|\n/', trim($text)) as $line) {
         $trimmed = trim(preg_replace('/\s+/', ' ', $line));
         if ($trimmed !== '') {
-            $lines[] = $trimmed;
+            $rawLines[] = $trimmed;
         }
     }
-    
-    if (count($lines) < 6) {
+
+    if (count($rawLines) < 6) {
         return _parseTextQuestionsLineByLine($text);
     }
-    
+
+    return _parseParagraphArray($rawLines);
+}
+
+/**
+ * Core parser: terima array paragraf, hasilkan soal.
+ */
+function _parseParagraphArray(array $lines): array {
+    $total     = count($lines);
     $questions = [];
-    $i = 0;
-    
-    while ($i < count($lines)) {
-        // Check if next 5 lines could be options
-        if ($i + 5 <= count($lines)) {
-            $potentialOptions = array_slice($lines, $i, 5);
-            
-            // Heuristic: options are typically shorter (< 150 chars each)
-            // and have reasonable average length
-            $avgLength = array_sum(array_map('strlen', $potentialOptions)) / 5;
-            $isOptionGroup = true;
-            
-            foreach ($potentialOptions as $opt) {
-                if (strlen($opt) > 150) {
-                    $isOptionGroup = false;
-                    break;
-                }
+    $cur       = null;      // soal sedang dibangun
+    $pendingWacana = [];    // baris wacana/konteks sebelum soal
+
+    $flushCur = function () use (&$cur, &$questions) {
+        if ($cur && count($cur['options']) >= 2) {
+            $questions[] = $cur;
+        }
+        $cur = null;
+    };
+
+    for ($i = 0; $i < $total; $i++) {
+        $line = $lines[$i];
+
+        // ── Pilihan jawaban (jika sedang dalam soal) ──────────────────────
+        if ($cur !== null && _isOptionLine($line)) {
+            // Strip label (A. / أ. dll)
+            $optText = trim(preg_replace('/^[A-Ea-eأبتثج][).\s:-]+/u', '', $line));
+
+            // Tandai kunci jawaban jika ada marker
+            $correct = 0;
+            if (preg_match('/\*|\[?(?:benar|correct|✓)\]?/iu', $optText)) {
+                $correct  = 1;
+                $optText  = trim(preg_replace('/\*|\[?(?:benar|correct|✓)\]?/iu', '', $optText));
             }
-            
-            // Also check: no line should start with question indicators
-            foreach ($potentialOptions as $opt) {
-                if (preg_match('/^(?:No\.?\s*)?(\d+)[\).\s:-]+/i', $opt) || 
-                    strpos($opt, 'Jawaban') !== false || 
-                    strpos($opt, 'Kunci') !== false) {
-                    $isOptionGroup = false;
-                    break;
-                }
+            if ($optText !== '') {
+                $cur['options'][] = [
+                    'option_text' => $optText,
+                    'is_correct'  => $correct,
+                    'label'       => chr(65 + count($cur['options'])),
+                ];
             }
-            
-            if ($isOptionGroup && $avgLength > 5 && $avgLength < 100) {
-                // Found 5 potential options!
-                // Gather the question: all non-empty lines before this, back to previous option group
-                $questionStart = $i - 1;
-                
-                // Find where the question actually starts
-                $questionLines = [];
-                for ($j = $questionStart; $j >= 0; $j--) {
-                    if (strlen($lines[$j]) > 200) {
-                        // Very long line - likely a paragraph before questions
-                        if (!empty($questionLines)) break;
-                        $questionLines[] = $lines[$j];
-                    } elseif (strlen($lines[$j]) > 30) {
-                        // Medium length - likely question
-                        $questionLines[] = $lines[$j];
-                    } else {
-                        // Short line - might be end of options from previous question
-                        if (!empty($questionLines)) break;
-                    }
+            continue;
+        }
+
+        // ── Soal baru dimulai (baris berakhir tanda tanya / titik-titik) ──
+        if (_isQuestionLine($line)) {
+            // Simpan soal sebelumnya jika ada
+            $flushCur();
+
+            // Gabungkan wacana sebelum soal sebagai bagian dari question_text
+            // Batasi: ambil max 3 baris wacana terdekat (baris panjang)
+            $context = '';
+            if (!empty($pendingWacana)) {
+                // Hanya ambil baris konteks yang panjang (>50 char) — teks wacana
+                $ctx = array_filter($pendingWacana, fn($l) => strlen($l) > 50);
+                if (!empty($ctx)) {
+                    // Ambil 3 baris terakhir saja
+                    $ctx = array_slice(array_values($ctx), -3);
+                    $context = implode(' ', $ctx) . ' ';
                 }
-                
-                if (!empty($questionLines)) {
-                    $questionLines = array_reverse($questionLines);
-                    $questionText = implode(' ', $questionLines);
-                    
-                    // Parse options from the 5 lines
-                    $options = [];
-                    foreach ($potentialOptions as $idx => $optLine) {
-                        // Try to extract option letter if present
-                        $optText = $optLine;
-                        $label = chr(65 + $idx);
-                        
-                        if (preg_match('/^([A-Ea-e])[\).\s:-]+(.+)$/', $optLine, $m)) {
-                            $label = strtoupper($m[1]);
-                            $optText = trim($m[2]);
-                        }
-                        
-                        // Check for correct indicator
-                        $correct = 0;
-                        if (preg_match('/\*|[\[\(]?(?:benar|correct|✓)[\]\)]?/i', $optText)) {
-                            $correct = 1;
-                            $optText = trim(preg_replace('/\*|[\[\(]?(?:benar|correct|✓)[\]\)]?/i', '', $optText));
-                        }
-                        
-                        $options[] = [
-                            'option_text' => $optText,
-                            'is_correct'  => $correct,
-                            'label'       => $label,
-                        ];
-                    }
-                    
-                    if (!empty($options)) {
-                        $questions[] = [
-                            'question_text' => $questionText,
-                            'explanation'   => '',
-                            'options'       => $options,
-                        ];
-                    }
+                $pendingWacana = [];
+            }
+
+            $cur = [
+                'question_text' => $context . $line,
+                'explanation'   => '',
+                'options'       => [],
+            ];
+            continue;
+        }
+
+        // ── Baris pilihan tanpa label (hanya jika sudah dalam soal & punya ≥1 opsi berlabel) ──
+        if ($cur !== null && count($cur['options']) >= 1) {
+            // Jika baris ini tampak seperti kelanjutan opsi (pendek, belum ada soal baru)
+            $prevOpts = count($cur['options']);
+            if ($prevOpts < 5 && strlen($line) <= 120 && !_isQuestionLine($line)) {
+                $optText = $line;
+                $correct = 0;
+                if (preg_match('/\*|\[?(?:benar|correct|✓)\]?/iu', $optText)) {
+                    $correct  = 1;
+                    $optText  = trim(preg_replace('/\*|\[?(?:benar|correct|✓)\]?/iu', '', $optText));
                 }
-                
-                // Skip the options we just processed
-                $i += 5;
+                if ($optText !== '') {
+                    $cur['options'][] = [
+                        'option_text' => $optText,
+                        'is_correct'  => $correct,
+                        'label'       => chr(65 + count($cur['options'])),
+                    ];
+                }
                 continue;
             }
+            // Baris ini bukan opsi → soal sudah selesai, simpan
+            $flushCur();
         }
-        
-        $i++;
+
+        // ── Baris yang bukan soal dan bukan opsi → simpan sebagai wacana ──
+        if ($cur === null) {
+            $pendingWacana[] = $line;
+            // Batasi buffer wacana agar tidak terlalu besar
+            if (count($pendingWacana) > 10) {
+                array_shift($pendingWacana);
+            }
+        }
     }
-    
-    // If we found reasonable number of questions, use them
-    if (count($questions) >= 5) {
-        return _fixCorrect($questions);
+
+    // Simpan soal terakhir
+    $flushCur();
+
+    // Jika terlalu sedikit soal terdeteksi, fallback ke line-by-line
+    if (count($questions) < 3) {
+        return _parseTextQuestionsLineByLine(implode("\n", []));
     }
-    
-    // Fallback to line-by-line parsing if detection failed
-    return _parseTextQuestionsLineByLine($text);
+
+    return _fixCorrect($questions);
 }
 
 function _parseTextQuestionsLineByLine(string $text): array {
@@ -431,9 +469,9 @@ function _parseTextQuestionsLineByLine(string $text): array {
         if ($cur && preg_match('/^([A-Ea-e])[\).\s:-]+(.+)$/', $line, $m)) {
             $opt = trim($m[2]);
             $correct = false;
-            if (preg_match('/\*|[\[\(]?(?:benar|correct)[\]\)]?/i', $opt)) {
+            if (preg_match('/\*|\[?\(?(benar|correct)\)?\]?/i', $opt)) {
                 $correct = true;
-                $opt = trim(preg_replace('/\*|[\[\(]?(?:benar|correct)[\]\)]?/i', '', $opt));
+                $opt = trim(preg_replace('/\*|\[?\(?(benar|correct)\)?\]?/i', '', $opt));
             }
             $cur['options'][] = [
                 'option_text' => $opt,
@@ -445,12 +483,12 @@ function _parseTextQuestionsLineByLine(string $text): array {
         }
 
         // Options without letter in options-mode
-        if ($cur && $inOptions && !preg_match('/^(?:Jawaban|Kunci|Answer|Key|Penjelasan|Pembahasan|Explanation)[:\s-]+/i', $line)) {
+        if ($cur && $inOptions && !preg_match('/^(?:Jawaban|Kunci|Answer|Key|Penjelasan|Pembahasan|Explanation)[\s:-]+/i', $line)) {
             $opt = $line;
             $correct = false;
-            if (preg_match('/\*|[\[\(]?(?:benar|correct)[\]\)]?/i', $opt)) {
+            if (preg_match('/\*|\[?\(?(benar|correct)\)?\]?/i', $opt)) {
                 $correct = true;
-                $opt = trim(preg_replace('/\*|[\[\(]?(?:benar|correct)[\]\)]?/i', '', $opt));
+                $opt = trim(preg_replace('/\*|\[?\(?(benar|correct)\)?\]?/i', '', $opt));
             }
             $cur['options'][] = [
                 'option_text' => $opt,
@@ -496,7 +534,12 @@ function _parseDocx(string $path): array {
         }
     }
 
-    return _parseTextQuestions(implode("\n", $paragraphs));
+    // Gunakan _parseParagraphArray langsung (lebih akurat dari join ke string)
+    $questions = _parseParagraphArray($paragraphs);
+    if (!empty($questions)) return $questions;
+
+    // Fallback: join ke string dan parse
+    return _parseTextQuestionsLineByLine(implode("\n", $paragraphs));
 }
 
 function _parseDoc(string $path): array {
