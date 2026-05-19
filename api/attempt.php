@@ -235,6 +235,25 @@ function attempt_result(): void {
     $canView = false;
     if ($sessionUserId && (int)$attempt['user_id'] === (int)$sessionUserId) $canView = true;
     if (isset($myAttempts[$attemptId])) $canView = true;
+
+    // Admin selalu boleh lihat
+    if (!$canView && $sessionUserId) {
+        $viewer = DB::one("SELECT id, role FROM users WHERE id = ?", [$sessionUserId]);
+        if ($viewer && $viewer['role'] === 'admin') {
+            $canView = true;
+        } elseif ($viewer && $viewer['role'] === 'pengajar') {
+            // Pengajar boleh lihat jika pemilik attempt adalah anggota salah satu kelasnya
+            $inClass = DB::one(
+                "SELECT cm.id FROM class_members cm
+                 JOIN classes c ON c.id = cm.class_id
+                 WHERE cm.user_id = ? AND c.teacher_id = ?
+                 LIMIT 1",
+                [$attempt['user_id'], $sessionUserId]
+            );
+            if ($inClass) $canView = true;
+        }
+    }
+
     if (!$canView) jsonError('Akses ditolak', 403);
 
     // Ambil jawaban lengkap dengan opsi
@@ -260,6 +279,11 @@ function attempt_result(): void {
     $attempt['passed']          = $attempt['score'] >= $passingScore;
     $attempt['total_questions'] = $shownCount;
     $attempt['wrong_count']     = $shownCount - $correctCount;
+    // Cast numerik ke int agar perbandingan === di JavaScript tidak kena type mismatch
+    $attempt['id']      = (int)$attempt['id'];
+    $attempt['user_id'] = (int)$attempt['user_id'];
+    $attempt['quiz_id'] = (int)$attempt['quiz_id'];
+    $attempt['score']   = (int)$attempt['score'];
 
     // Ambil semua opsi per soal untuk tampilan review
     // PENTING: cast ke tipe yang benar agar JSON tidak mengirim string "0"/"1"

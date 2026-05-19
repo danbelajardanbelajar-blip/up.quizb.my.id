@@ -107,8 +107,8 @@
     <template x-for="item in publicHistory.list" :key="item.id">
       <div class="card p-4 sm:p-5 flex items-start gap-4 hover:shadow-md transition-shadow duration-200">
 
-        <!-- Score circle — disembunyikan di mode 'user' (profil orang lain) -->
-        <template x-if="publicHistory.filterType !== 'user'">
+        <!-- Score circle — tampil selalu kecuali mode 'user' untuk pelajar/tamu biasa -->
+        <template x-if="publicHistory.filterType !== 'user' || user?.role === 'admin' || user?.role === 'pengajar'">
           <div class="w-12 h-12 rounded-xl flex flex-col items-center justify-center font-bold text-sm flex-shrink-0 border"
                :class="{
                  'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400': item.badge === 'perfect',
@@ -121,8 +121,8 @@
           </div>
         </template>
 
-        <!-- Ikon quiz (mode 'user') -->
-        <template x-if="publicHistory.filterType === 'user'">
+        <!-- Ikon quiz (mode 'user' untuk pelajar/tamu biasa) -->
+        <template x-if="publicHistory.filterType === 'user' && user?.role !== 'admin' && user?.role !== 'pengajar'">
           <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 bg-primary-50 dark:bg-primary-900/20">
             <span x-text="item.category_icon || '📝'"></span>
           </div>
@@ -208,6 +208,27 @@
             <span x-text="formatRelative(item.completed_at)"></span>
           </div>
 
+          <!-- Row 3: detail skor + tombol review (admin/pengajar saat lihat user lain) -->
+          <template x-if="publicHistory.filterType === 'user' && (user?.role === 'admin' || user?.role === 'pengajar')">
+            <div class="flex flex-wrap items-center justify-between gap-2 mt-2.5">
+              <div class="flex flex-wrap items-center gap-3 text-xs text-gray-400">
+                <span class="inline-flex items-center gap-1">
+                  <span class="text-green-500 font-semibold" x-text="item.correct_answers"></span>
+                  <span>/ <span x-text="item.total_questions"></span> benar</span>
+                </span>
+                <span class="text-gray-300 dark:text-gray-600">•</span>
+                <span x-text="formatTime(item.time_taken || 0)"></span>
+              </div>
+              <button @click.stop="navigate('/result/' + item.id)"
+                      class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-800/40 text-xs font-semibold transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                Review Jawaban
+              </button>
+            </div>
+          </template>
 
         </div>
       </div>
