@@ -1596,6 +1596,7 @@ function QuizBApp() {
     async saveImportFile() {
       const sel = this.admin.importFile.questions.filter(q => q._sel);
       if (!sel.length) { this.showToast('Pilih minimal satu soal', 'error', '❌'); return; }
+      if (!this.admin.importFile.quizId) { this.showToast('Pilih quiz tujuan import terlebih dahulu', 'error', '❌'); return; }
 
       // Cek soal yang belum memiliki kunci jawaban
       const noKey = sel.filter(q => !q.options.some(o => o.is_correct));
@@ -1636,10 +1637,15 @@ function QuizBApp() {
 
     // ---- Import soal dari QuizB ----
 
-    async openImportQuizbModal() {
-      if (!this.admin.questionsQuizFilter) {
-        this.showToast('Pilih filter quiz terlebih dahulu sebagai tujuan import', 'error', '❌');
-        return;
+    async openImportQuizbModal(quizId = null) {
+      const targetQuizId = quizId || this.admin.questionsQuizFilter || this.admin.contentSelectedQuiz?.id || null;
+      if (!targetQuizId && !this.admin.quizPicker.length) {
+        try {
+          const d = await api.get('admin.quiz_list', { limit: 500 });
+          this.admin.quizPicker = d.quizzes || [];
+        } catch (e) {
+          this.showToast('Gagal memuat daftar quiz: ' + e.message, 'error', '❌');
+        }
       }
       this.admin.importQuizb = {
         show: true, loading: true,
@@ -1647,7 +1653,7 @@ function QuizBApp() {
         subthemes: [], selectedSubthemeId: null,
         titles: [], selectedTitleId: null, selectedTitleName: '',
         questions: [], selectedIds: [],
-        quizId: this.admin.questionsQuizFilter,
+        quizId: targetQuizId,
       };
       try {
         const data = await api.get('question.browse_quizb');
@@ -1712,6 +1718,7 @@ function QuizBApp() {
     async saveImportQuizb() {
       const ids = this.admin.importQuizb.selectedIds;
       if (!ids.length) { this.showToast('Pilih minimal satu soal', 'error', '❌'); return; }
+      if (!this.admin.importQuizb.quizId) { this.showToast('Pilih quiz tujuan import terlebih dahulu', 'error', '❌'); return; }
       this.admin.importQuizb.loading = true;
       try {
         const data = await api.post('question.import_quizb', {
@@ -2032,6 +2039,67 @@ function QuizBApp() {
       };
       await doFetch();
       this.assignmentView.monitorInterval = setInterval(doFetch, 5000);
+    },
+
+    exportResultsToExcel() {
+      const results = this.assignmentView.results;
+      const assignment = this.assignmentView.assignment;
+      if (!results || !results.submissions) return;
+
+      const title = assignment?.title || 'Hasil Tugas';
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
+
+      // === Sheet 1: Ringkasan ===
+      const summaryData = [
+        ['Judul Tugas', title],
+        ['Tanggal Export', now.toLocaleString('id-ID')],
+        [''],
+        ['Total Siswa', results.total_members],
+        ['Sudah Mengumpulkan', results.submitted],
+        ['Belum Mengumpulkan', results.not_submitted],
+        ['Rata-rata Skor', results.avg_score || '—'],
+      ];
+
+      // === Sheet 2: Detail Siswa ===
+      const headers = ['No', 'Nama Siswa', 'Skor', 'Jawaban Benar', 'Waktu (menit)', 'Waktu (detik)', 'Status', 'Waktu Kumpul'];
+      const rows = results.submissions.map((s, idx) => {
+        const submitted = !!s.submitted_at;
+        const mins = s.time_taken ? Math.floor(s.time_taken / 60) : null;
+        const secs = s.time_taken ? s.time_taken % 60 : null;
+        const waktuKumpul = s.submitted_at
+          ? new Date(s.submitted_at).toLocaleString('id-ID')
+          : '—';
+        return [
+          idx + 1,
+          s.student_name,
+          submitted ? s.score : '—',
+          submitted && s.correct_count !== null ? s.correct_count : '—',
+          mins !== null ? mins : '—',
+          secs !== null ? secs : '—',
+          submitted ? 'Sudah Kumpul' : 'Belum Kumpul',
+          waktuKumpul,
+        ];
+      });
+
+      const wb = XLSX.utils.book_new();
+
+      // Sheet Ringkasan
+      const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+      wsSummary['!cols'] = [{ wch: 25 }, { wch: 30 }];
+      XLSX.utils.book_append_sheet(wb, wsSummary, 'Ringkasan');
+
+      // Sheet Detail
+      const wsDetail = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      wsDetail['!cols'] = [
+        { wch: 5 }, { wch: 28 }, { wch: 8 }, { wch: 15 },
+        { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 22 },
+      ];
+      XLSX.utils.book_append_sheet(wb, wsDetail, 'Detail Siswa');
+
+      const fileName = `Hasil_Tugas_${title.replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_')}_${dateStr}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      this.showToast('File Excel berhasil diunduh!', 'success', '📊');
     },
 
     async forceStopStudent(assignmentId, studentId, studentName) {

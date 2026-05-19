@@ -64,6 +64,8 @@
         <button @click="openAdminModal('group_create', { icon: '📚', color: '#6366f1', order_num: admin.groups.length + 1 })" class="btn-secondary text-sm px-4 py-2">+ Rumpun</button>
         <button @click="openAdminModal('category_create', { icon: '📂', color: '#6366f1' })" class="btn-secondary text-sm px-4 py-2">+ Kategori</button>
         <button @click="openAdminModal('quiz_create',{is_published:1,difficulty:'medium',time_limit:600,passing_score:60})" class="btn-primary text-sm px-4 py-2">+ Quiz</button>
+        <button @click="openImportFileModal()" class="btn-secondary text-sm px-4 py-2">📥 Import Soal</button>
+        <button @click="openImportQuizbModal()" class="btn-secondary text-sm px-4 py-2">🌐 Import QuizB</button>
       </div>
     </div>
 
@@ -1123,15 +1125,28 @@
               </div>
             </div>
 
-            <div>
-              <label class="form-label">Pilih File</label>
-              <input id="import-file-input" type="file" accept=".doc,.docx,.xlsx,.xls,.csv,.pdf"
-                     class="block w-full text-sm text-gray-600 dark:text-gray-300
-                            file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0
-                            file:text-sm file:font-semibold
-                            file:bg-primary-50 file:text-primary-700
-                            dark:file:bg-primary-900/30 dark:file:text-primary-400
-                            hover:file:bg-primary-100 cursor-pointer" />
+            <div class="space-y-3">
+              <div x-show="!admin.importFile.quizId">
+                <label class="form-label">Quiz Tujuan</label>
+                <select x-model.number="admin.importFile.quizId"
+                        class="form-input w-full text-sm py-2">
+                  <option value="">-- Pilih Quiz Tujuan --</option>
+                  <template x-for="quiz in (admin.contentQuizzes.length ? admin.contentQuizzes : admin.quizPicker)" :key="quiz.id">
+                    <option :value="quiz.id" x-text="quiz.title + ' (' + (quiz.category_name || 'Kategori tanpa nama') + ')'"/>
+                  </template>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Pilih quiz tujuan import jika belum memilih quiz di panel konten.</p>
+              </div>
+              <div>
+                <label class="form-label">Pilih File</label>
+                <input id="import-file-input" type="file" accept=".doc,.docx,.xlsx,.xls,.csv,.pdf"
+                       class="block w-full text-sm text-gray-600 dark:text-gray-300
+                              file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0
+                              file:text-sm file:font-semibold
+                              file:bg-primary-50 file:text-primary-700
+                              dark:file:bg-primary-900/30 dark:file:text-primary-400
+                              hover:file:bg-primary-100 cursor-pointer" />
+              </div>
             </div>
           </div>
 
@@ -1282,6 +1297,23 @@
 
           <!-- Cascade selects -->
           <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+            <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+            <div class="grid sm:grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
+              <div x-show="!admin.importQuizb.quizId">
+                <label class="form-label text-xs">Quiz Tujuan</label>
+                <select x-model.number="admin.importQuizb.quizId"
+                        class="form-input text-sm py-2 w-full">
+                  <option value="">-- Pilih Quiz Tujuan --</option>
+                  <template x-for="quiz in (admin.contentQuizzes.length ? admin.contentQuizzes : admin.quizPicker)" :key="quiz.id">
+                    <option :value="quiz.id" x-text="quiz.title + ' (' + (quiz.category_name || 'Kategori tanpa nama') + ')'" />
+                  </template>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Pilih quiz tujuan import jika belum memilih quiz langsung dari panel konten.</p>
+              </div>
+              <div x-show="admin.importQuizb.quizId" class="text-sm text-gray-500">
+                Quiz tujuan: <span class="font-semibold" x-text="(admin.contentQuizzes.concat(admin.quizPicker).find(q => Number(q.id) === Number(admin.importQuizb.quizId)) || {}).title || 'Quiz tidak ditemukan'"></span>
+              </div>
+            </div>
             <div class="grid sm:grid-cols-3 gap-3">
               <div>
                 <label class="form-label text-xs">Tema</label>
@@ -1319,6 +1351,7 @@
                 </select>
               </div>
             </div>
+          </div>
           </div>
 
           <!-- Questions panel -->
