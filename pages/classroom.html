@@ -49,8 +49,33 @@
           <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-bold text-lg shadow-lg">
             <span x-text="cls.name.charAt(0).toUpperCase()"></span>
           </div>
-          <span class="badge text-xs" :class="cls.is_active ? 'badge-success' : 'badge-warning'"
-                x-text="cls.is_active ? 'Aktif' : 'Nonaktif'"></span>
+          <div class="flex items-center gap-2">
+            <span class="badge text-xs" :class="cls.is_active ? 'badge-success' : 'badge-warning'"
+                  x-text="cls.is_active ? 'Aktif' : 'Nonaktif'"></span>
+            <!-- Menu ⋯ hanya untuk pengajar/admin pemilik kelas -->
+            <template x-if="user?.role === 'pengajar' || user?.role === 'admin'">
+              <div class="relative" x-data="{ menuOpen: false }">
+                <button @click.stop="menuOpen = !menuOpen"
+                        class="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        title="Opsi kelas">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z"/>
+                  </svg>
+                </button>
+                <div x-show="menuOpen" @click.outside="menuOpen=false" x-transition
+                     class="absolute right-0 top-8 w-40 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-20">
+                  <button @click.stop="menuOpen=false; openEditClassModal(cls)"
+                          class="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    ✏️ Edit Kelas
+                  </button>
+                  <button @click.stop="menuOpen=false; openDeleteClassModal(cls)"
+                          class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-gray-700 transition-colors">
+                    🗑️ Hapus Kelas
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
         </div>
 
         <!-- Name & Desc -->
@@ -142,6 +167,87 @@
         <button @click="createClass()" class="flex-1 btn-primary py-2" :disabled="classroom.createLoading">
           <span x-show="classroom.createLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></span>
           Buat Kelas
+        </button>
+      </div>
+    </div>
+  </div>
+  </template>
+
+  <!-- === EDIT CLASS MODAL === -->
+  <template x-if="classroom.editModal.show">
+  <div @keydown.escape.window="classroom.editModal.show=false"
+       class="modal-overlay">
+    <div class="modal-box p-6">
+      <h2 class="font-bold text-lg text-gray-900 dark:text-white mb-5">✏️ Edit Kelas</h2>
+      <div class="space-y-4">
+        <div>
+          <label class="form-label">Nama Kelas *</label>
+          <input x-model="classroom.editForm.name" class="form-input" placeholder="Contoh: Matematika 10A"
+                 @keydown.enter="updateClass()" />
+        </div>
+        <div>
+          <label class="form-label">Deskripsi</label>
+          <textarea x-model="classroom.editForm.description" class="form-input" rows="2" placeholder="Deskripsi singkat..."></textarea>
+        </div>
+        <div>
+          <label class="form-label">Status</label>
+          <div class="flex items-center gap-3 mt-1">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" :value="1" x-model.number="classroom.editForm.is_active" class="accent-primary-600" />
+              <span class="text-sm text-gray-700 dark:text-gray-300">Aktif</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" :value="0" x-model.number="classroom.editForm.is_active" class="accent-primary-600" />
+              <span class="text-sm text-gray-700 dark:text-gray-300">Nonaktif</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div x-show="classroom.editError" class="mt-3 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-sm text-red-600 dark:text-red-400" x-text="classroom.editError"></div>
+      <div class="flex gap-3 mt-6">
+        <button @click="classroom.editModal.show=false"
+                class="flex-1 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
+          Batal
+        </button>
+        <button @click="updateClass()" class="flex-1 btn-primary py-2" :disabled="classroom.editLoading">
+          <span x-show="classroom.editLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></span>
+          Simpan Perubahan
+        </button>
+      </div>
+    </div>
+  </div>
+  </template>
+
+  <!-- === DELETE CLASS MODAL === -->
+  <template x-if="classroom.deleteModal.show">
+  <div @keydown.escape.window="classroom.deleteModal.show=false"
+       class="modal-overlay">
+    <div class="modal-box p-6 max-w-sm">
+      <!-- Ikon peringatan -->
+      <div class="flex flex-col items-center text-center mb-5">
+        <div class="w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-3">
+          <svg class="w-7 h-7 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+        </div>
+        <h2 class="font-bold text-lg text-gray-900 dark:text-white">Hapus Kelas?</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Kelas <span class="font-semibold text-gray-800 dark:text-gray-200" x-text='"«" + classroom.deleteModal.cls?.name + "»"'></span>
+          beserta semua tugas dan data anggotanya akan dihapus permanen dan tidak bisa dipulihkan.
+        </p>
+      </div>
+      <div x-show="classroom.deleteModal.error" class="mb-3 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-sm text-red-600 dark:text-red-400" x-text="classroom.deleteModal.error"></div>
+      <div class="flex gap-3">
+        <button @click="classroom.deleteModal.show=false"
+                class="flex-1 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
+          Batal
+        </button>
+        <button @click="confirmDeleteClass()"
+                class="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors"
+                :disabled="classroom.deleteModal.loading">
+          <span x-show="classroom.deleteModal.loading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></span>
+          Ya, Hapus
         </button>
       </div>
     </div>

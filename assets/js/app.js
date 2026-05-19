@@ -62,6 +62,13 @@ function QuizBApp() {
       createForm:   { name: '', description: '' },
       createError:  '',
       createLoading: false,
+      // Edit class modal
+      editModal:    { show: false },
+      editForm:     { id: null, name: '', description: '', is_active: 1 },
+      editError:    '',
+      editLoading:  false,
+      // Delete class modal
+      deleteModal:  { show: false, cls: null, loading: false, error: '' },
       // Detail page state
       members:     [],
       assignments: [],
@@ -912,6 +919,50 @@ function QuizBApp() {
         this.classroom.createError = e.message;
       } finally {
         this.classroom.createLoading = false;
+      }
+    },
+
+    openEditClassModal(cls) {
+      this.classroom.editForm  = { id: cls.id, name: cls.name, description: cls.description || '', is_active: cls.is_active };
+      this.classroom.editError = '';
+      this.classroom.editModal.show = true;
+    },
+
+    async updateClass() {
+      const f = this.classroom.editForm;
+      if (!f.name || f.name.length < 3) { this.classroom.editError = 'Nama kelas minimal 3 karakter'; return; }
+      this.classroom.editLoading = true;
+      this.classroom.editError   = '';
+      try {
+        await api.put('class.update', f.id, { name: f.name, description: f.description, is_active: f.is_active });
+        this.classroom.editModal.show = false;
+        this.showToast('Kelas berhasil diperbarui!', 'success', '✅');
+        await this.loadClassroom();
+      } catch (e) {
+        this.classroom.editError = e.message;
+      } finally {
+        this.classroom.editLoading = false;
+      }
+    },
+
+    openDeleteClassModal(cls) {
+      this.classroom.deleteModal = { show: true, cls, loading: false, error: '' };
+    },
+
+    async confirmDeleteClass() {
+      const dm = this.classroom.deleteModal;
+      if (!dm.cls) return;
+      dm.loading = true;
+      dm.error   = '';
+      try {
+        await api.delete('class.delete', dm.cls.id);
+        dm.show = false;
+        this.showToast('Kelas "' + dm.cls.name + '" berhasil dihapus', 'success', '🗑️');
+        await this.loadClassroom();
+      } catch (e) {
+        dm.error = e.message;
+      } finally {
+        dm.loading = false;
       }
     },
 
