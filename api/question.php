@@ -1481,27 +1481,64 @@ function _parseTextQuestions(string $text): array {
 
 
 function _parseParagraphArray(array $lines): array {
+    // Normalize paragraphs so combined option blocks like
+    // "A.جاكرتاB.الأسرةC.التعارفD.المدرسةE.التعلم" are split into separate lines.
+    $splitOptionParagraph = static function (string $line): array {
+        // Detect Arabic or Latin option markers anywhere in the line.
+        if (!preg_match_all('/([أا]|ب|ت|ث|ج|[A-Ea-e])\./u', $line, $matches, PREG_OFFSET_CAPTURE)) {
+            return [$line];
+        }
+        if (count($matches[0]) <= 1) {
+            return [$line];
+        }
+        $parts = [];
+        $last  = 0;
+        foreach ($matches[0] as $match) {
+            $pos = $match[1];
+            if ($pos > $last) {
+                $segment = trim(substr($line, $last, $pos - $last));
+                if ($segment !== '') {
+                    $parts[] = $segment;
+                }
+            }
+            $last = $pos;
+        }
+        $lastPart = trim(substr($line, $last));
+        if ($lastPart !== '') {
+            $parts[] = $lastPart;
+        }
+        return $parts;
+    };
+
+    $normalized = [];
+    foreach ($lines as $line) {
+        foreach ($splitOptionParagraph($line) as $part) {
+            $normalized[] = $part;
+        }
+    }
+    $lines = $normalized;
     $total = count($lines);
 
     /*
-     * Pemetaan huruf Arab ke indeks opsi (0=A, 1=B, 2=C, 3=D, 4=E):
-     *   أ (U+0623) / ا (U+0627) → A
-     *   ب (U+0628)              → B
-     *   ت (U+062A)              → C
-     *   ث (U+062B)              → D
-     *   ج (U+062C)              → E   ← setelah ini, soal baru dimulai
+     * Pemetaan huruf Arab / Latin ke indeks opsi (0=A, 1=B, 2=C, 3=D, 4=E):
+     *   أ (U+0623) / ا (U+0627) / A/a → A
+     *   ب (U+0628) / B/b            → B
+     *   ت (U+062A) / C/c            → C
+     *   ث (U+062B) / D/d            → D
+     *   ج (U+062C) / E/e            → E   ← setelah ini, soal baru dimulai
      */
-    $ARAB = ["\u{0623}"=>0,"\u{0627}"=>0,"\u{0628}"=>1,"\u{062A}"=>2,"\u{062B}"=>3,"\u{062C}"=>4];
+    $ARAB = ["\u{0623}"=>0,"\u{0627}"=>0,"\u{0628}"=>1,"\u{062A}"=>2,"\u{062B}"=>3,"\u{062C}"=>4,
+             'A'=>0,'a'=>0,'B'=>1,'b'=>1,'C'=>2,'c'=>2,'D'=>3,'d'=>3,'E'=>4,'e'=>4];
 
-    // Kembalikan indeks opsi Arab (0-4) atau -1
+    // Kembalikan indeks opsi Arab / Latin (0-4) atau -1
     $arabIdx = static function (string $l) use ($ARAB): int {
-        if (!preg_match('/^([\x{0600}-\x{06FF}])\.\s/u', $l, $m)) return -1;
+        if (!preg_match('/^([أابتثجA-Ea-e])\.\s*/u', $l, $m)) return -1;
         return $ARAB[$m[1]] ?? -1;
     };
 
-    // Strip label Arab dari baris opsi
+    // Strip label Arab / Latin dari baris opsi
     $stripArab = static function (string $l): string {
-        return trim(preg_replace('/^[\x{0600}-\x{06FF}]\.\s*/u', '', $l));
+        return trim(preg_replace('/^[أابتثجA-Ea-e]\.\s*/u', '', $l));
     };
 
     // Apakah baris ini penanda akhir soal (berakhir .... / ? / ؟ / !)
