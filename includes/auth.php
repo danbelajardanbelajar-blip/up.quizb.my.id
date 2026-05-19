@@ -5,8 +5,19 @@
 
 function startSecureSession(): void {
     if (session_status() === PHP_SESSION_NONE) {
+        // Session disimpan di MySQL — tidak tergantung file system server.
+        // Cookie browser diset 1 tahun; session aktif selama user tidak
+        // logout atau menghapus cookies/cache browser.
+        require_once __DIR__ . '/session_handler.php';
+
+        $handler = new DatabaseSessionHandler(DB::conn());
+        session_set_save_handler($handler, true);
+
+        // Cookie 1 tahun — server-side tidak pernah expire sendiri
+        // (GC hanya bersihkan session yang 365 hari tidak aktif)
+        $cookieLifetime = 86400 * 365; // 1 tahun
         session_set_cookie_params([
-            'lifetime' => 86400 * 7,
+            'lifetime' => $cookieLifetime,
             'path'     => '/',
             'secure'   => isset($_SERVER['HTTPS']),
             'httponly' => true,
