@@ -34,7 +34,9 @@
     </div>
 
     <template x-for="item in activity.list" :key="item.id">
-      <div class="card p-4 sm:p-5 flex items-start gap-4 hover:shadow-md transition-shadow duration-200">
+      <div class="card p-4 sm:p-5 flex items-start gap-4 hover:shadow-md transition-shadow duration-200"
+           :class="user?.role === 'admin' ? 'cursor-pointer hover:ring-2 hover:ring-primary-400/40' : ''"
+           @click="user?.role === 'admin' && navigate('/result/' + item.id)">
 
         <!-- Avatar -->
         <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm"
@@ -47,7 +49,7 @@
           <!-- Name + action -->
           <p class="text-sm text-gray-800 dark:text-gray-200 leading-snug flex flex-wrap items-baseline gap-x-1 gap-y-0.5">
             <!-- Nama user — klik → public history by user + tombol pesan -->
-            <button @click="openPublicHistory('user', item.user_id, item.user_name)"
+            <button @click.stop="openPublicHistory('user', item.user_id, item.user_name)"
                     class="font-semibold hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors">
               <span x-text="item.user_name"></span>
             </button>
@@ -62,7 +64,7 @@
             </template>
             <span class="text-gray-500 dark:text-gray-400 text-xs">menyelesaikan</span>
             <!-- Judul quiz — klik → public history by quiz -->
-            <button @click="openPublicHistory('quiz', item.quiz_id, item.quiz_title)"
+            <button @click.stop="openPublicHistory('quiz', item.quiz_id, item.quiz_title)"
                     class="font-semibold text-primary-600 dark:text-primary-400 hover:underline truncate max-w-[180px] sm:max-w-xs inline-block align-bottom"
                     x-text="item.quiz_title"></button>
           </p>
@@ -83,7 +85,7 @@
             </span>
             <span class="text-xs text-gray-300 dark:text-gray-600">•</span>
             <!-- Mode — klik → public history by mode -->
-            <button @click="openPublicHistory('mode', item.mode, {exam:'Ujian',instant:'Instan',end:'Akhir',challenge:'Tantangan'}[item.mode] || item.mode)"
+            <button @click.stop="openPublicHistory('mode', item.mode, {exam:'Ujian',instant:'Instan',end:'Akhir',challenge:'Tantangan'}[item.mode] || item.mode)"
                     class="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full transition-colors"
                     :class="{
                       'bg-blue-50 dark:bg-blue-900/20 text-blue-500 hover:bg-blue-100':         item.mode === 'exam',
@@ -128,6 +130,10 @@
           </div>
           <span class="text-xs mt-1 block"
                 x-text="item.badge === 'perfect' ? '🏆' : (item.badge === 'good' ? '🎯' : (item.badge === 'ok' ? '👍' : '📖'))"></span>
+          <!-- Indikator review untuk admin -->
+          <template x-if="user?.role === 'admin'">
+            <span class="text-[10px] text-primary-400 dark:text-primary-500 mt-0.5 block">🔍 review</span>
+          </template>
         </div>
 
       </div>
