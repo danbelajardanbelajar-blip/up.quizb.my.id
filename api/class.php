@@ -272,6 +272,38 @@ function class_kick(): void {
 }
 
 // ============================================
+// POST /api?action=class.leave&id=X
+// Pelajar keluar dari kelas
+// ============================================
+function class_leave(): void {
+    $user    = requireAuth();
+    $classId = (int)($_GET['id'] ?? 0);
+    if (!in_array($_SERVER['REQUEST_METHOD'], ['POST', 'DELETE'])) jsonError('Method not allowed', 405);
+    if ($classId <= 0) jsonError('ID kelas tidak valid');
+
+    $class = DB::one("SELECT id, name, teacher_id FROM classes WHERE id = ?", [$classId]);
+    if (!$class) jsonError('Kelas tidak ditemukan', 404);
+
+    // Pengajar tidak bisa keluar dari kelas miliknya sendiri
+    if ((int)$class['teacher_id'] === $user['id']) {
+        jsonError('Pengajar tidak dapat keluar dari kelas milik sendiri. Hapus kelas jika tidak diperlukan.', 403);
+    }
+
+    $member = DB::one(
+        "SELECT id FROM class_members WHERE class_id = ? AND user_id = ?",
+        [$classId, $user['id']]
+    );
+    if (!$member) jsonError('Anda bukan anggota kelas ini', 404);
+
+    DB::execute(
+        "DELETE FROM class_members WHERE class_id = ? AND user_id = ?",
+        [$classId, $user['id']]
+    );
+
+    jsonSuccess(['message' => 'Berhasil keluar dari kelas ' . $class['name']]);
+}
+
+// ============================================
 // GET /api?action=class.my_assignments
 // Pelajar: lihat semua tugas di kelas yang diikuti
 // ============================================

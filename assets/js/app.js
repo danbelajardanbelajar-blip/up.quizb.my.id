@@ -69,6 +69,8 @@ function QuizBApp() {
       editLoading:  false,
       // Delete class modal
       deleteModal:  { show: false, cls: null, loading: false, error: '' },
+      // Leave class modal (pelajar)
+      leaveModal:   { show: false, loading: false, error: '' },
       // Detail page state
       members:     [],
       assignments: [],
@@ -963,6 +965,22 @@ function QuizBApp() {
         dm.error = e.message;
       } finally {
         dm.loading = false;
+      }
+    },
+
+    async leaveClass(classId) {
+      const lm = this.classroom.leaveModal;
+      lm.loading = true;
+      lm.error   = '';
+      try {
+        await api.delete('class.leave', classId);
+        lm.show = false;
+        this.showToast('Berhasil keluar dari kelas', 'success', '👋');
+        this.navigate('/classroom');
+      } catch (e) {
+        lm.error = e.message;
+      } finally {
+        lm.loading = false;
       }
     },
 
