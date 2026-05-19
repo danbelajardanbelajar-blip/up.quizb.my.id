@@ -2102,6 +2102,138 @@ function QuizBApp() {
       this.showToast('File Excel berhasil diunduh!', 'success', '📊');
     },
 
+    async exportClassroomToExcel(classId) {
+      if (!classId) return;
+      this.showToast('Menyiapkan data...', 'info', '⏳');
+      try {
+        const data = await api.get('assignment.class_report', { class_id: classId });
+        const { class: cls, members, assignments, scores } = data;
+
+        if (!assignments || assignments.length === 0) {
+          this.showToast('Belum ada tugas di kelas ini', 'warning', '📋');
+          return;
+        }
+
+        const now     = new Date();
+        const dateStr = now.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
+        const safe    = s => (s || '').replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_');
+        const fmtTime = s => s ? (Math.floor(s / 60) + 'm ' + (s % 60) + 's') : '—';
+
+        const wb = XLSX.utils.book_new();
+
+        // ── Sheet 1: Rekap Nilai (pivot table siswa × tugas) ──────────────────
+        const rekapHeader = [
+          'No', 'Nama Siswa', 'Email',
+          ...assignments.map(a => a.title),
+          'Rata-rata', 'Total Tugas Dikerjakan'
+        ];
+
+        const rekapRows = members.map((m, idx) => {
+          const memberScores = assignments.map(a => {
+            const s = (scores[m.id] || {})[a.id];
+            return s && s.submitted_at ? s.score : null;
+          });
+          const doneScores = memberScores.filter(v => v !== null);
+          const avg = doneScores.length > 0
+            ? Math.round(doneScores.reduce((a, b) => a + b, 0) / doneScores.length)
+            : null;
+
+          return [
+            idx + 1,
+            m.name,
+            m.email,
+            ...memberScores.map(v => v !== null ? v : '—'),
+            avg !== null ? avg : '—',
+            `${doneScores.length} / ${assignments.length}`,
+          ];
+        });
+
+        const wsRekap = XLSX.utils.aoa_to_sheet([
+          [`Rekap Nilai Kelas: ${cls.name}`],
+          [`Diekspor: ${now.toLocaleString('id-ID')}`],
+          [],
+          rekapHeader,
+          ...rekapRows,
+        ]);
+
+        // Lebar kolom rekap
+        wsRekap['!cols'] = [
+          { wch: 5 }, { wch: 28 }, { wch: 28 },
+          ...assignments.map(() => ({ wch: 18 })),
+          { wch: 12 }, { wch: 22 },
+        ];
+        XLSX.utils.book_append_sheet(wb, wsRekap, 'Rekap Nilai');
+
+        // ── Sheet 2: Detail Lengkap (semua kolom per tugas) ───────────────────
+        const detailHeader = [
+          'No', 'Nama Siswa', 'Email',
+          'Nama Tugas', 'Mode', 'Deadline',
+          'Skor', 'Jawaban Benar', 'Waktu Pengerjaan', 'Waktu Kumpul', 'Status'
+        ];
+
+        const detailRows = [];
+        let no = 1;
+        for (const a of assignments) {
+          for (const m of members) {
+            const s = (scores[m.id] || {})[a.id];
+            const submitted = s && s.submitted_at;
+            detailRows.push([
+              no++,
+              m.name,
+              m.email,
+              a.title,
+              { bebas: 'Bebas', instant: 'Instan', end: 'Akhir', exam: 'Ujian' }[a.mode] || a.mode,
+              a.deadline ? new Date(a.deadline).toLocaleString('id-ID') : '—',
+              submitted ? s.score : '—',
+              submitted && s.correct_count !== null ? s.correct_count : '—',
+              submitted ? fmtTime(s.time_taken) : '—',
+              submitted ? new Date(s.submitted_at).toLocaleString('id-ID') : '—',
+              submitted ? 'Sudah Kumpul' : 'Belum Kumpul',
+            ]);
+          }
+        }
+
+        const wsDetail = XLSX.utils.aoa_to_sheet([detailHeader, ...detailRows]);
+        wsDetail['!cols'] = [
+          { wch: 5 }, { wch: 28 }, { wch: 28 }, { wch: 28 }, { wch: 10 }, { wch: 20 },
+          { wch: 8 }, { wch: 15 }, { wch: 18 }, { wch: 22 }, { wch: 15 },
+        ];
+        XLSX.utils.book_append_sheet(wb, wsDetail, 'Detail Lengkap');
+
+        // ── Sheet 3+: Satu sheet per tugas ───────────────────────────────────
+        for (const a of assignments) {
+          const sheetName = a.title.replace(/[\\\/\?\*\[\]]/g, '').substring(0, 31);
+          const header = ['No', 'Nama Siswa', 'Email', 'Skor', 'Jawaban Benar', 'Waktu', 'Waktu Kumpul', 'Status'];
+          const rows = members.map((m, idx) => {
+            const s = (scores[m.id] || {})[a.id];
+            const submitted = s && s.submitted_at;
+            return [
+              idx + 1,
+              m.name,
+              m.email,
+              submitted ? s.score : '—',
+              submitted && s.correct_count !== null ? s.correct_count : '—',
+              submitted ? fmtTime(s.time_taken) : '—',
+              submitted ? new Date(s.submitted_at).toLocaleString('id-ID') : '—',
+              submitted ? 'Sudah Kumpul' : 'Belum Kumpul',
+            ];
+          });
+          const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+          ws['!cols'] = [
+            { wch: 5 }, { wch: 28 }, { wch: 28 }, { wch: 8 },
+            { wch: 15 }, { wch: 16 }, { wch: 22 }, { wch: 15 },
+          ];
+          XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        }
+
+        const fileName = `Nilai_Kelas_${safe(cls.name)}_${dateStr}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+        this.showToast('File Excel kelas berhasil diunduh!', 'success', '📊');
+      } catch (e) {
+        this.showToast(e.message || 'Gagal mengekspor data', 'error', '❌');
+      }
+    },
+
     async forceStopStudent(assignmentId, studentId, studentName) {
       if (!confirm('Hentikan paksa pekerjaan ' + studentName + '?')) return;
       try {

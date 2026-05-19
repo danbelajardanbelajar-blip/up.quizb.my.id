@@ -44,13 +44,21 @@
                 
                 </div>
             </div>
-            <!-- Join Code (for teacher) -->
+            <!-- Join Code + Export (for teacher) -->
             <div x-show="classroom.isTeacher" class="flex flex-col items-end gap-2">
               <div class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-xl text-center">
                 <div class="text-xs text-gray-400 mb-1">Kode Join Kelas</div>
                 <div class="font-mono font-bold text-xl text-primary-600 dark:text-primary-400 tracking-widest" x-text="classroom.detail.join_code"></div>
               </div>
               <p class="text-xs text-gray-400">Bagikan kode ini ke siswa</p>
+              <button @click="exportClassroomToExcel(classroom.detail.id)"
+                      class="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold shadow transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                Export Nilai Excel
+              </button>
             </div>
           </div>
 

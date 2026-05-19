@@ -618,6 +618,85 @@ function assignment_my_dashboard(): void {
 }
 
 // ============================================
+// GET /api?action=assignment.class_report&class_id=X
+// Pengajar unduh rekap nilai semua tugas × semua siswa dalam 1 kelas
+// ============================================
+function assignment_class_report(): void {
+    $user    = requireAuth();
+    $classId = (int)($_GET['class_id'] ?? 0);
+    if ($classId <= 0) jsonError('class_id diperlukan');
+
+    // Verifikasi kepemilikan kelas
+    $class = DB::one("SELECT * FROM classes WHERE id = ?", [$classId]);
+    if (!$class) jsonError('Kelas tidak ditemukan', 404);
+    if ((int)$class['teacher_id'] !== $user['id'] && $user['role'] !== 'admin') {
+        jsonError('Bukan kelas milik Anda', 403);
+    }
+
+    // Semua anggota kelas (siswa, bukan pengajar)
+    $members = DB::all(
+        "SELECT u.id, u.name, u.email
+         FROM class_members cm
+         JOIN users u ON u.id = cm.user_id
+         WHERE cm.class_id = ?
+         ORDER BY u.name ASC",
+        [$classId]
+    );
+
+    // Semua tugas aktif di kelas ini
+    $assignments = DB::all(
+        "SELECT a.id, a.title, a.mode, a.deadline, a.created_at,
+                q.title AS quiz_title
+         FROM assignments a
+         JOIN quizzes q ON q.id = a.quiz_id
+         WHERE a.class_id = ? AND a.is_active = 1
+         ORDER BY a.created_at ASC",
+        [$classId]
+    );
+
+    if (empty($assignments)) {
+        jsonSuccess([
+            'class'       => $class,
+            'members'     => $members,
+            'assignments' => [],
+            'scores'      => [],
+        ]);
+        return;
+    }
+
+    // Ambil semua submission untuk kelas ini sekaligus (satu query)
+    $assignmentIds = array_column($assignments, 'id');
+    $placeholders  = implode(',', array_fill(0, count($assignmentIds), '?'));
+
+    $rows = DB::all(
+        "SELECT s.assignment_id, s.user_id,
+                att.score, att.correct_count, att.time_taken, s.submitted_at
+         FROM assignment_submissions s
+         JOIN attempts att ON att.id = s.attempt_id
+         WHERE s.assignment_id IN ($placeholders)",
+        $assignmentIds
+    );
+
+    // Index: scores[user_id][assignment_id] = { score, correct_count, time_taken, submitted_at }
+    $scores = [];
+    foreach ($rows as $r) {
+        $scores[$r['user_id']][$r['assignment_id']] = [
+            'score'         => $r['score'] !== null ? (int)$r['score'] : null,
+            'correct_count' => $r['correct_count'] !== null ? (int)$r['correct_count'] : null,
+            'time_taken'    => $r['time_taken'] !== null ? (int)$r['time_taken'] : null,
+            'submitted_at'  => $r['submitted_at'],
+        ];
+    }
+
+    jsonSuccess([
+        'class'       => $class,
+        'members'     => $members,
+        'assignments' => $assignments,
+        'scores'      => $scores,
+    ]);
+}
+
+// ============================================
 // GET /api?action=assignment.attempts&id=X
 // Return attempts by current user for assignment's quiz (student view)
 // ============================================
