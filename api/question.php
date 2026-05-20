@@ -2195,116 +2195,8 @@ function _parseXlsx(string $path): array {
 
 
 
-    $headerMap = _detectTableHeaderColumns($rows[0]);
-    $start     = $headerMap['hasHeader'] ? 1 : 0;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    $questions = [];
-
-
-
-
-    for ($i = $start; $i < count($rows); $i++) {
-
-
-
-
-        $r = $rows[$i];
-
-
-
-
-        $q = trim($r[0] ?? '');
-
-
-
-
-        if (!$q) continue;
-
-
-
-
-        $letters  = ['A', 'B', 'C', 'D', 'E'];
-
-
-
-
-        $correct  = strtoupper(trim($r[5] ?? 'A'));
-
-
-
-
-        $expl     = trim($r[6] ?? '');
-
-
-
-
-        $opts     = [];
-
-
-
-
-        for ($j = 1; $j <= 5; $j++) {
-
-
-
-
-            $ot = trim($r[$j] ?? '');
-
-
-
-
-            if ($ot) $opts[] = ['option_text' => $ot, 'is_correct' => ($correct === $letters[$j-1]) ? 1 : 0];
-
-
-
-
-        }
-
-
-
-
-        if (!empty($opts)) $questions[] = ['question_text' => $q, 'explanation' => $expl, 'options' => $opts];
-
-
-
-
-    }
-
-
-
-
-    return _fixCorrect($questions);
-
-
-
-
+    return _parseRowsToQuestions($rows, _detectTableHeaderColumns($rows[0]));
 }
-
-
-
-
-
-
-
-
 
 function _fixCorrect(array $questions): array {
 
@@ -2434,13 +2326,80 @@ function _detectTableHeaderColumns(array $headerRow): array {
     return $map;
 }
 
+/**
+ * Ubah array baris mentah (dari CSV atau XLSX) menjadi array soal,
+ * dengan menghormati pemetaan kolom dari _detectTableHeaderColumns.
+ *
+ * Format default (tanpa header yang dikenali):
+ *   Kolom 0 = Soal
+ *   Kolom 1 = Opsi A
+ *   Kolom 2 = Opsi B
+ *   Kolom 3 = Opsi C
+ *   Kolom 4 = Opsi D
+ *   Kolom 5 = Opsi E
+ *   Kolom 6 = Kunci (huruf: A/B/C/D/E)
+ *   Kolom 7 = Penjelasan
+ *
+ * Jika header terdeteksi, gunakan indeks kolom dari $headerMap.
+ */
+function _parseRowsToQuestions(array $rows, array $headerMap): array {
+    $letters  = ['A', 'B', 'C', 'D', 'E'];
+    $hasHdr   = $headerMap['hasHeader'];
+    $start    = $hasHdr ? 1 : 0;
 
+    if ($hasHdr && $headerMap['question'] !== null) {
+        // Header terdeteksi: gunakan indeks kolom yang dipetakan
+        $colQ    = $headerMap['question'];
+        $colOpts = [];
+        for ($j = 0; $j < 5; $j++) {
+            $colOpts[$j] = $headerMap['options'][$j] ?? null;
+        }
+        // Isi kolom opsi yang tidak terdeteksi secara berurutan setelah kolom soal
+        $nextCol = $colQ + 1;
+        for ($j = 0; $j < 5; $j++) {
+            if ($colOpts[$j] === null) {
+                $colOpts[$j] = $nextCol++;
+            }
+        }
+        $colCorrect = $headerMap['correct'] !== null ? $headerMap['correct'] : $nextCol;
+        $colExpl    = $headerMap['explanation'] !== null ? $headerMap['explanation'] : ($colCorrect + 1);
+    } else {
+        // Tidak ada header yang dikenali — gunakan posisi kolom default
+        $colQ       = 0;
+        $colOpts    = [1, 2, 3, 4, 5];
+        $colCorrect = 6;
+        $colExpl    = 7;
+    }
 
+    $questions = [];
+    for ($i = $start; $i < count($rows); $i++) {
+        $r = $rows[$i];
 
+        $q = trim($r[$colQ] ?? '');
+        if ($q === '') continue;
 
+        $correctLetter = strtoupper(trim($r[$colCorrect] ?? ''));
+        $expl          = trim($r[$colExpl] ?? '');
 
+        $opts = [];
+        for ($j = 0; $j < 5; $j++) {
+            $colIdx = $colOpts[$j];
+            $ot = trim($r[$colIdx] ?? '');
+            if ($ot === '') continue;
+            $opts[] = [
+                'option_text' => $ot,
+                'is_correct'  => ($correctLetter === $letters[$j]) ? 1 : 0,
+                'label'       => $letters[$j],
+            ];
+        }
 
+        if (!empty($opts)) {
+            $questions[] = ['question_text' => $q, 'explanation' => $expl, 'options' => $opts];
+        }
+    }
 
+    return _fixCorrect($questions);
+}
 
 function _parseCsv(string $path): array {
 
@@ -2597,137 +2556,8 @@ function _parseCsv(string $path): array {
 
 
 
-    // Lewati header jika baris pertama berisi kata seperti "soal", "question", dll.
-
-
-
-
-    $headerMap = _detectTableHeaderColumns($rows[0]);
-    $start     = $headerMap['hasHeader'] ? 1 : 0;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    $questions = [];
-
-
-
-
-    $letters   = ['A', 'B', 'C', 'D', 'E'];
-
-
-
-
-    for ($i = $start; $i < count($rows); $i++) {
-
-
-
-
-        $r = $rows[$i];
-
-
-
-
-        $q = trim($r[0] ?? '');
-
-
-
-
-        if (!$q) continue;
-
-
-
-
-
-
-
-
-
-        $correct = strtoupper(trim($r[5] ?? 'A'));
-
-
-
-
-        $expl    = trim($r[6] ?? '');
-
-
-
-
-        $opts    = [];
-
-
-
-
-        for ($j = 1; $j <= 5; $j++) {
-
-
-
-
-            $ot = trim($r[$j] ?? '');
-
-
-
-
-            if ($ot !== '') {
-
-
-
-
-                $opts[] = ['option_text' => $ot, 'is_correct' => ($correct === $letters[$j - 1]) ? 1 : 0];
-
-
-
-
-            }
-
-
-
-
-        }
-
-
-
-
-        if (!empty($opts)) {
-
-
-
-
-            $questions[] = ['question_text' => $q, 'explanation' => $expl, 'options' => $opts];
-
-
-
-
-        }
-
-
-
-
-    }
-
-
-
-
-    return _fixCorrect($questions);
-
-
-
-
+    // Gunakan _parseRowsToQuestions yang menghormati pemetaan kolom dari header
+    return _parseRowsToQuestions($rows, _detectTableHeaderColumns($rows[0]));
 }
 
 
@@ -3389,392 +3219,5 @@ function question_browse_quizb(): void {
 
 
                         'SELECT id, title FROM quiz_titles
-
-
-
-
-                         WHERE subtheme_id = ? AND deleted_at IS NULL ORDER BY title LIMIT 200'
-
-
-
-
-                    );
-
-
-
-
-                    $t->execute([$sub['id']]);
-
-
-
-
-                    $sub['titles'] = $t->fetchAll();
-
-
-
-
-                }
-
-
-
-
-                unset($sub);
-
-
-
-
-                $th['subthemes'] = $subs;
-
-
-
-
-            }
-
-
-
-
-            unset($th);
-
-
-
-
-            jsonSuccess(['themes' => $themes]);
-
-
-
-
-        }
-
-
-
-
-    } catch (Exception $e) {
-
-
-
-
-        jsonError('Koneksi ke QuizB gagal: ' . $e->getMessage(), 500);
-
-
-
-
-    }
-
-
-
-
-}
-
-
-
-
-
-
-
-
-
-// ============================================
-
-
-
-
-// question_import_quizb
-
-
-
-
-// ============================================
-
-
-
-
-
-
-
-
-
-function question_import_quizb(): void {
-
-
-
-
-    requireAdmin();
-
-
-
-
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
-
-
-
-
-    $body   = getBody();
-
-
-
-
-    $quizId = (int)($body['quiz_id'] ?? 0);
-
-
-
-
-    $qIds   = array_map('intval', $body['question_ids'] ?? []);
-
-
-
-
-    if (!$quizId) jsonError('Quiz ID diperlukan');
-
-
-
-
-    if (empty($qIds)) jsonError('Pilih minimal satu soal');
-
-
-
-
-
-
-
-
-
-    try {
-
-
-
-
-        $pdo = _quizbPdo();
-
-
-
-
-        $maxOrder = (int)(DB::one(
-
-
-
-
-            'SELECT COALESCE(MAX(order_num), 0) AS m FROM questions WHERE quiz_id = ?', [$quizId]
-
-
-
-
-        )['m'] ?? 0);
-
-
-
-
-
-
-
-
-
-        $imported = 0;
-
-
-
-
-        foreach ($qIds as $qid) {
-
-
-
-
-            $sq = $pdo->prepare('SELECT text, explanation FROM questions WHERE id = ?');
-
-
-
-
-            $sq->execute([$qid]);
-
-
-
-
-            $qRow = $sq->fetch();
-
-
-
-
-            if (!$qRow) continue;
-
-
-
-
-
-
-
-
-
-            $sc = $pdo->prepare('SELECT text AS option_text, is_correct FROM choices WHERE question_id = ? ORDER BY id');
-
-
-
-
-            $sc->execute([$qid]);
-
-
-
-
-            $opts = $sc->fetchAll();
-
-
-
-
-            if (empty($opts)) continue;
-
-
-
-
-
-
-
-
-
-            $maxOrder++;
-
-
-
-
-            DB::execute(
-
-
-
-
-                'INSERT INTO questions (quiz_id, question_text, type, points, order_num, explanation) VALUES (?,?,?,?,?,?)',
-
-
-
-
-                [$quizId, $qRow['text'], 'multiple', 10, $maxOrder, $qRow['explanation'] ?? '']
-
-
-
-
-            );
-
-
-
-
-            $newQid = (int)DB::lastId();
-
-
-
-
-            foreach ($opts as $i => $o) {
-
-
-
-
-                DB::execute(
-
-
-
-
-                    'INSERT INTO options (question_id, option_text, is_correct, order_num) VALUES (?,?,?,?)',
-
-
-
-
-                    [$newQid, $o['option_text'], (int)$o['is_correct'], $i + 1]
-
-
-
-
-                );
-
-
-
-
-            }
-
-
-
-
-            $imported++;
-
-
-
-
-        }
-
-
-
-
-        DB::execute(
-
-
-
-
-            'UPDATE quizzes SET total_questions = (SELECT COUNT(*) FROM questions WHERE quiz_id = ?) WHERE id = ?',
-
-
-
-
-            [$quizId, $quizId]
-
-
-
-
-        );
-
-
-
-
-
-
-
-
-
-        // — Broadcast notifikasi soal baru
-
-
-
-
-        if ($imported > 0) {
-
-
-
-
-            $adminUser = getCurrentUser();
-
-
-
-
-            broadcastNewQuestion($quizId, (int)($adminUser['id'] ?? 0));
-
-
-
-
-        }
-
-
-
-
-
-
-
-
-
-        jsonSuccess(['imported' => $imported], "$imported soal berhasil diimpor dari QuizB");
-
-
-
-
-    } catch (Exception $e) {
-
-
-
-
-        jsonError('Gagal import dari QuizB: ' . $e->getMessage(), 500);
-
-
-
-
-    }
-
-
-
-
-}
-
-
 
 
