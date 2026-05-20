@@ -2403,70 +2403,87 @@ function _parseRowsToQuestions(array $rows, array $headerMap): array {
 
 function _parseCsv(string $path): array {
 
-
-
-
-    // Deteksi encoding: coba baca sebagai UTF-8, fallback strip BOM
-
-
-
-
-    $handle = fopen($path, 'r');
-
-
-
-
-    if (!$handle) return [];
-
-
-
-
-
-
-
-
-
-    // Strip UTF-8 BOM jika ada
-
-
-
-
-    $bom = fread($handle, 3);
-
-
-
-
-    if ($bom !== "\xEF\xBB\xBF") rewind($handle);
-
-
-
-
-
-
-
-
-
-    $rows = [];
-
-
-
-
-    while (($row = fgetcsv($handle, 0, ',')) !== false) {
-
-
-
-
-        // Coba separator koma dulu, nanti fallback ke titik koma
-
-
-
-
-        $rows[] = $row;
-
-
-
-
+    // Baca file dan strip UTF-8 BOM
+    $raw = file_get_contents($path);
+    if (!$raw) return [];
+    if (str_starts_with($raw, "\xEF\xBB\xBF")) {
+        $raw = substr($raw, 3);
     }
+
+    // Pilih separator terbaik berdasarkan konsistensi jumlah kolom
+    $sep = _detectCsvSeparator($raw);
+
+    // Parse baris menggunakan separator terpilih
+    $rows = [];
+    $tmp = tmpfile();
+    fwrite($tmp, $raw);
+    rewind($tmp);
+    while (($row = fgetcsv($tmp, 0, $sep)) !== false) {
+        $rows[] = $row;
+    }
+    fclose($tmp);
+
+    if (empty($rows)) return [];
+
+    // Gunakan _parseRowsToQuestions yang menghormati pemetaan kolom dari header
+    return _parseRowsToQuestions($rows, _detectTableHeaderColumns($rows[0]));
+}
+
+/**
+ * Tentukan separator CSV (koma atau titik koma) dengan membandingkan
+ * konsistensi jumlah kolom yang dihasilkan oleh masing-masing separator.
+ *
+ * Strategi:
+ *  1. Coba parse dengan ',' dan ';'.
+ *  2. Hitung distribusi jumlah kolom per baris.
+ *  3. Pilih separator yang menghasilkan distribusi paling seragam
+ *     (nilai mode tertinggi, dengan bobot ke arah jumlah kolom yang
+ *     sesuai format soal: 3–9 kolom).
+ */
+function _detectCsvSeparator(string $raw): string {
+    $candidates = [',', ';'];
+    $scores     = [];
+
+    foreach ($candidates as $sep) {
+        $tmp = tmpfile();
+        fwrite($tmp, $raw);
+        rewind($tmp);
+
+        $colCounts = [];
+        while (($row = fgetcsv($tmp, 0, $sep)) !== false) {
+            $n = count($row);
+            // Abaikan baris kosong / baris tunggal kosong
+            if ($n === 1 && trim($row[0]) === '') continue;
+            $colCounts[] = $n;
+        }
+        fclose($tmp);
+
+        if (empty($colCounts)) {
+            $scores[$sep] = 0;
+            continue;
+        }
+
+        // Hitung mode (jumlah kolom yang paling sering muncul)
+        $freq = array_count_values($colCounts);
+        arsort($freq);
+        $mode     = (int) array_key_first($freq);
+        $modeFreq = $freq[$mode];
+        $total    = count($colCounts);
+
+        // Konsistensi: proporsi baris yang sesuai mode
+        $consistency = $modeFreq / $total;
+
+        // Bonus kecil jika mode ada di rentang kolom format soal (3–9)
+        $rangeBonus = ($mode >= 3 && $mode <= 9) ? 0.05 : 0.0;
+
+        $scores[$sep] = $consistency + $rangeBonus;
+    }
+
+    // Pilih separator dengan skor tertinggi; jika seri, pilih koma
+    arsort($scores);
+    return (string) array_key_first($scores);
+}
+
 
 
 
