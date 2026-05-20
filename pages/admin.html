@@ -286,6 +286,13 @@
                      placeholder="Cari soal..."
                      class="form-input pl-8 py-1.5 text-sm w-full" />
             </div>
+            <label class="flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors">
+              <input type="checkbox"
+                     @change="toggleSelectAllQuestions($event.target.checked)"
+                     :checked="admin.questionsAll.length > 0 && admin.questionsAll.every(q => q._sel)"
+                     class="accent-primary-600" />
+              <span>Semua</span>
+            </label>
             <button @click="openImportFileModal()" class="btn-secondary text-xs px-2.5 py-1.5">📥 File</button>
             <button @click="openImportQuizbModal()" class="btn-secondary text-xs px-2.5 py-1.5">🌐 QuizB</button>
             <button @click="deleteSelectedQuestions()"
@@ -299,54 +306,67 @@
             <button @click="toggleSelectAllQuestions(false)" class="underline ml-1">Bersihkan</button>
           </div>
 
-          <!-- Tabel soal -->
-          <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
-            <table class="data-table w-full">
-              <thead>
-                <tr>
-                  <th class="w-8 text-center px-2">
-                    <input type="checkbox"
-                           @change="toggleSelectAllQuestions($event.target.checked)"
-                           :checked="admin.questionsAll.length > 0 && admin.questionsAll.every(q => q._sel)"
-                           class="accent-primary-600" />
-                  </th>
-                  <th class="text-left">Teks Soal</th>
-                  <th class="w-40 text-left hidden sm:table-cell">Jawaban Benar</th>
-                  <th class="w-20 text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                <template x-for="q in sortedAdmin('questions', admin.questionsAll)" :key="q.id">
-                  <tr>
-                    <td class="text-center px-2">
-                      <input type="checkbox" x-model="q._sel" class="accent-primary-600" />
-                    </td>
-                    <td>
-                      <p class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate max-w-[280px]"
-                         x-text="q.question_text" :title="q.question_text"></p>
-                      <p x-show="q.explanation"
-                         class="text-xs text-gray-400 italic truncate max-w-[280px] mt-0.5"
-                         x-text="'💡 ' + q.explanation"></p>
-                    </td>
-                    <td class="hidden sm:table-cell">
-                      <template x-for="opt in q.options" :key="opt.id">
-                        <p x-show="opt.is_correct"
-                           class="text-xs text-green-600 dark:text-green-400 font-medium truncate max-w-[160px]"
-                           x-text="'✅ ' + opt.option_text"></p>
-                      </template>
-                    </td>
-                    <td class="text-right">
-                      <div class="flex items-center justify-end gap-2">
-                        <button @click="openAdminModal('question_edit', {...q, options: q.options.map(o=>({...o}))})"
-                                class="text-xs text-blue-500 hover:underline">Edit</button>
-                        <button @click="deleteAdminItem('question', q.id)"
-                                class="text-xs text-red-500 hover:underline">Hapus</button>
-                      </div>
-                    </td>
-                  </tr>
-                </template>
-              </tbody>
-            </table>
+          <!-- Daftar soal dalam format card -->
+          <div class="space-y-3">
+            <template x-for="(q, idx) in sortedAdmin('questions', admin.questionsAll)" :key="q.id">
+              <div class="border border-gray-200 dark:border-gray-800 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors">
+                <!-- Header dengan checkbox dan nomor -->
+                <div class="flex items-start gap-3 mb-3">
+                  <input type="checkbox" x-model="q._sel" class="accent-primary-600 mt-1 flex-shrink-0" />
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="inline-block px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-medium text-gray-600 dark:text-gray-400">
+                        Soal <span x-text="idx + 1"></span>
+                      </span>
+                      <span class="inline-block px-2 py-0.5 rounded-full bg-primary-50 dark:bg-primary-900/30 text-xs font-medium text-primary-600 dark:text-primary-400">
+                        <span x-text="q.points"></span> poin
+                      </span>
+                    </div>
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white break-words"
+                       x-text="q.question_text"></p>
+                    <p x-show="q.explanation"
+                       class="text-xs text-gray-500 dark:text-gray-400 italic mt-2"
+                       x-text="'💡 Penjelasan: ' + q.explanation"></p>
+                  </div>
+                </div>
+
+                <!-- Pilihan jawaban -->
+                <div class="ml-7 space-y-1.5 mb-3">
+                  <template x-for="opt in q.options" :key="opt.id">
+                    <div class="flex items-start gap-2 p-2 rounded-lg"
+                         :class="opt.is_correct
+                           ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                           : 'bg-gray-50 dark:bg-gray-800/50'">
+                      <span class="flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold"
+                            :class="opt.is_correct
+                              ? 'border-green-500 bg-green-500 text-white'
+                              : 'border-gray-300 dark:border-gray-600 text-gray-400'">
+                        <span x-text="String.fromCharCode(65 + (q.options.indexOf(opt)))"></span>
+                      </span>
+                      <span class="flex-1 text-sm break-words"
+                            :class="opt.is_correct
+                              ? 'text-green-700 dark:text-green-300 font-medium'
+                              : 'text-gray-700 dark:text-gray-300'">
+                        <span x-text="opt.option_text"></span>
+                        <span x-show="opt.is_correct" class="ml-2 text-xs font-semibold">✓ Jawaban Benar</span>
+                      </span>
+                    </div>
+                  </template>
+                </div>
+
+                <!-- Aksi -->
+                <div class="flex items-center justify-end gap-2 ml-7 pt-2 border-t border-gray-100 dark:border-gray-800">
+                  <button @click="openAdminModal('question_edit', {...q, options: q.options.map(o=>({...o}))})"
+                          class="text-xs px-3 py-1.5 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
+                    ✏️ Edit
+                  </button>
+                  <button @click="deleteAdminItem('question', q.id)"
+                          class="text-xs px-3 py-1.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                    🗑️ Hapus
+                  </button>
+                </div>
+              </div>
+            </template>
           </div>
 
           <!-- Empty state -->
@@ -465,6 +485,13 @@
                  placeholder="Cari teks soal..."
                  class="form-input pl-9 py-2 text-sm w-full" />
         </div>
+        <label class="flex items-center gap-2 text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors flex-shrink-0">
+          <input type="checkbox"
+                 @change="toggleSelectAllQuestions($event.target.checked)"
+                 :checked="admin.questionsAll.length > 0 && admin.questionsAll.every(q => q._sel)"
+                 class="accent-primary-600" />
+          <span>Semua</span>
+        </label>
         <div class="flex items-center gap-2 flex-shrink-0 ml-auto flex-wrap">
           <button @click="openImportFileModal()" class="btn-secondary text-sm px-3 py-2 flex items-center gap-1.5">📥 Import File</button>
           <button @click="openImportQuizbModal()" class="btn-secondary text-sm px-3 py-2 flex items-center gap-1.5">🌐 Import QuizB</button>
@@ -482,58 +509,68 @@
         <button @click="toggleSelectAllQuestions(false)" class="underline ml-2">Bersihkan pilihan</button>
       </div>
 
-      <!-- Questions table -->
-      <div class="card overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th class="w-10 text-center">
-                  <input type="checkbox"
-                         @change="toggleSelectAllQuestions($event.target.checked)"
-                         :checked="admin.questionsAll.length > 0 && admin.questionsAll.every(q => q._sel)"
-                         class="accent-primary-600" />
-                </th>
-                <th @click="sortAdmin('questions','question_text')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">
-                  Teks Soal <span class="text-gray-400 text-xs" x-text="sortIcon('questions','question_text')"></span>
-                </th>
-                <th class="w-52">Jawaban Benar</th>
-                <th class="w-24">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              <template x-for="(q, idx) in sortedAdmin('questions', admin.questionsAll)" :key="q.id">
-                <tr>
-                  <td class="text-center">
-                    <input type="checkbox" x-model="q._sel" class="accent-primary-600" />
-                  </td>
-                  <td>
-                    <p class="text-sm font-medium text-gray-800 dark:text-gray-100 max-w-lg truncate"
-                       x-text="q.question_text" :title="q.question_text"></p>
-                    <p x-show="q.explanation"
-                       class="text-xs text-gray-400 italic truncate max-w-lg mt-0.5"
-                       x-text="'💡 ' + q.explanation"></p>
-                  </td>
-                  <td>
-                    <template x-for="opt in q.options" :key="opt.id">
-                      <p x-show="opt.is_correct"
-                         class="text-xs text-green-600 dark:text-green-400 font-medium truncate max-w-[200px]"
-                         x-text="'✅ ' + opt.option_text"></p>
-                    </template>
-                  </td>
-                  <td>
-                    <div class="flex items-center gap-2">
-                      <button @click="openAdminModal('question_edit', {...q, options: q.options.map(o=>({...o}))})"
-                              class="text-xs text-blue-500 hover:underline">Edit</button>
-                      <button @click="deleteAdminItem('question', q.id)"
-                              class="text-xs text-red-500 hover:underline">Hapus</button>
-                    </div>
-                  </td>
-                </tr>
+      <!-- Questions display in card format -->
+      <div class="space-y-3">
+        <template x-for="(q, idx) in sortedAdmin('questions', admin.questionsAll)" :key="q.id">
+          <div class="border border-gray-200 dark:border-gray-800 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors">
+            <!-- Header dengan checkbox dan nomor -->
+            <div class="flex items-start gap-3 mb-3">
+              <input type="checkbox" x-model="q._sel" class="accent-primary-600 mt-1 flex-shrink-0" />
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="inline-block px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-medium text-gray-600 dark:text-gray-400">
+                    Soal <span x-text="idx + 1"></span>
+                  </span>
+                  <span class="inline-block px-2 py-0.5 rounded-full bg-primary-50 dark:bg-primary-900/30 text-xs font-medium text-primary-600 dark:text-primary-400">
+                    <span x-text="q.points"></span> poin
+                  </span>
+                </div>
+                <p class="text-sm font-semibold text-gray-900 dark:text-white break-words"
+                   x-text="q.question_text"></p>
+                <p x-show="q.explanation"
+                   class="text-xs text-gray-500 dark:text-gray-400 italic mt-2"
+                   x-text="'💡 Penjelasan: ' + q.explanation"></p>
+              </div>
+            </div>
+
+            <!-- Pilihan jawaban -->
+            <div class="ml-7 space-y-1.5 mb-3">
+              <template x-for="opt in q.options" :key="opt.id">
+                <div class="flex items-start gap-2 p-2 rounded-lg"
+                     :class="opt.is_correct
+                       ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                       : 'bg-gray-50 dark:bg-gray-800/50'">
+                  <span class="flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold"
+                        :class="opt.is_correct
+                          ? 'border-green-500 bg-green-500 text-white'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-400'">
+                    <span x-text="String.fromCharCode(65 + (q.options.indexOf(opt)))"></span>
+                  </span>
+                  <span class="flex-1 text-sm break-words"
+                        :class="opt.is_correct
+                          ? 'text-green-700 dark:text-green-300 font-medium'
+                          : 'text-gray-700 dark:text-gray-300'">
+                    <span x-text="opt.option_text"></span>
+                    <span x-show="opt.is_correct" class="ml-2 text-xs font-semibold">✓ Jawaban Benar</span>
+                  </span>
+                </div>
               </template>
-            </tbody>
-          </table>
-        </div>
+            </div>
+
+            <!-- Aksi -->
+            <div class="flex items-center justify-end gap-2 ml-7 pt-2 border-t border-gray-100 dark:border-gray-800">
+              <button @click="openAdminModal('question_edit', {...q, options: q.options.map(o=>({...o}))})"
+                      class="text-xs px-3 py-1.5 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
+                ✏️ Edit
+              </button>
+              <button @click="deleteAdminItem('question', q.id)"
+                      class="text-xs px-3 py-1.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                🗑️ Hapus
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
         <div x-show="admin.questionsAll.length === 0 && !admin.loading" class="text-center py-12 text-gray-400">
           <p class="text-4xl mb-3">❓</p>
           <p class="text-sm" x-show="admin.questionsSearch">Tidak ada soal yang cocok dengan pencarian</p>
