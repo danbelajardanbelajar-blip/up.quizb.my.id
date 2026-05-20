@@ -2488,94 +2488,6 @@ function _detectCsvSeparator(string $raw): string {
 
 
 
-    fclose($handle);
-
-
-
-
-
-
-
-
-
-    // Jika semua baris hanya 1 kolom, kemungkinan separator titik koma
-
-
-
-
-    $allSingle = !empty($rows) && count(array_filter($rows, fn($r) => count($r) > 1)) === 0;
-
-
-
-
-    if ($allSingle) {
-
-
-
-
-        $handle = fopen($path, 'r');
-
-
-
-
-        $bom    = fread($handle, 3);
-
-
-
-
-        if ($bom !== "\xEF\xBB\xBF") rewind($handle);
-
-
-
-
-        $rows = [];
-
-
-
-
-        while (($row = fgetcsv($handle, 0, ';')) !== false) {
-
-
-
-
-            $rows[] = $row;
-
-
-
-
-        }
-
-
-
-
-        fclose($handle);
-
-
-
-
-    }
-
-
-
-
-
-
-
-
-
-    if (empty($rows)) return [];
-
-
-
-
-
-
-
-
-
-    // Gunakan _parseRowsToQuestions yang menghormati pemetaan kolom dari header
-    return _parseRowsToQuestions($rows, _detectTableHeaderColumns($rows[0]));
-}
 
 
 
@@ -3235,6 +3147,26 @@ function question_browse_quizb(): void {
 
 
 
-                        'SELECT id, title FROM quiz_titles
+                        'SELECT id, title FROM quiz_titles WHERE subtheme_id = ? AND deleted_at IS NULL ORDER BY sort_order, title'
+                    );
 
+                    $t->execute([$sub['id']]);
+                    $sub['titles'] = $t->fetchAll();
 
+                }
+
+                unset($sub);
+
+            }
+
+            unset($th);
+
+            jsonSuccess(['themes' => $themes]);
+
+        }
+
+    } catch (PDOException $e) {
+        jsonError('Koneksi ke QuizB database gagal: ' . $e->getMessage(), 503);
+    }
+
+}
