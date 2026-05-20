@@ -2616,7 +2616,16 @@ function QuizBApp() {
       return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
     },
 
-    formatRelative(dateStr) { return this.formatTimeAgo(dateStr); },
+    formatRelative(dateStr) {
+      if (!dateStr) return '';
+      const diff = Date.now() - new Date(dateStr).getTime();
+      const m = Math.floor(diff / 60000);
+      if (m < 1)  return 'baru saja';
+      if (m < 60) return `${m}m lalu`;
+      const h = Math.floor(m / 60);
+      if (h < 24) return `${h}j lalu`;
+      return `${Math.floor(h / 24)}h lalu`;
+    },
 
     formatDateTime(dateStr) {
       if (!dateStr) return '—';

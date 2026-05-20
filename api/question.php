@@ -2406,7 +2406,7 @@ function _parseCsv(string $path): array {
     // Baca file dan strip UTF-8 BOM
     $raw = file_get_contents($path);
     if (!$raw) return [];
-    if (str_starts_with($raw, "\xEF\xBB\xBF")) {
+    if (substr($raw, 0, 3) === "\xEF\xBB\xBF") {
         $raw = substr($raw, 3);
     }
 
