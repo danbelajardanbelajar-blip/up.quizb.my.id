@@ -2195,17 +2195,18 @@ function _parseXlsx(string $path): array {
 
 
 
-    $start = 0;
+    $headerMap = _detectTableHeaderColumns($rows[0]);
+    $start     = $headerMap['hasHeader'] ? 1 : 0;
 
 
 
 
-    $cell0 = strtolower(trim($rows[0][0] ?? ''));
 
 
 
 
-    if (in_array($cell0, ['soal', 'pertanyaan', 'question', 'no', 'nomor'])) $start = 1;
+
+
 
 
 
@@ -2365,6 +2366,72 @@ function _fixCorrect(array $questions): array {
 
 
 
+}
+
+function _detectTableHeaderColumns(array $headerRow): array {
+    $map = [
+        'question'    => null,
+        'options'     => [],
+        'correct'     => null,
+        'explanation' => null,
+        'hasHeader'   => false,
+    ];
+
+    foreach ($headerRow as $idx => $value) {
+        $key = strtolower(trim((string)$value));
+        if ($key === '') continue;
+
+        if (preg_match('/^(?:no|nomor|number)$/i', $key)) {
+            $map['hasHeader'] = true;
+            continue;
+        }
+
+        if (in_array($key, ['soal', 'pertanyaan', 'question', 'question_text', 'text', 'pertanyaan soal', 'question text'], true)) {
+            $map['question']  = $idx;
+            $map['hasHeader'] = true;
+            continue;
+        }
+
+        if (preg_match('/^a(?:[\.\)]|\s|$)/i', $key) || preg_match('/^(?:opsi a|pilihan a|option a)$/i', $key)) {
+            $map['options'][0] = $idx;
+            $map['hasHeader'] = true;
+            continue;
+        }
+        if (preg_match('/^b(?:[\.\)]|\s|$)/i', $key) || preg_match('/^(?:opsi b|pilihan b|option b)$/i', $key)) {
+            $map['options'][1] = $idx;
+            $map['hasHeader'] = true;
+            continue;
+        }
+        if (preg_match('/^c(?:[\.\)]|\s|$)/i', $key) || preg_match('/^(?:opsi c|pilihan c|option c)$/i', $key)) {
+            $map['options'][2] = $idx;
+            $map['hasHeader'] = true;
+            continue;
+        }
+        if (preg_match('/^d(?:[\.\)]|\s|$)/i', $key) || preg_match('/^(?:opsi d|pilihan d|option d)$/i', $key)) {
+            $map['options'][3] = $idx;
+            $map['hasHeader'] = true;
+            continue;
+        }
+        if (preg_match('/^e(?:[\.\)]|\s|$)/i', $key) || preg_match('/^(?:opsi e|pilihan e|option e)$/i', $key)) {
+            $map['options'][4] = $idx;
+            $map['hasHeader'] = true;
+            continue;
+        }
+
+        if (preg_match('/^(?:kunci|jawaban|answer|key)$/i', $key)) {
+            $map['correct'] = $idx;
+            $map['hasHeader'] = true;
+            continue;
+        }
+
+        if (preg_match('/^(?:penjelasan|pembahasan|explanation|discussion|review)$/i', $key)) {
+            $map['explanation'] = $idx;
+            $map['hasHeader'] = true;
+            continue;
+        }
+    }
+
+    return $map;
 }
 
 
@@ -2535,17 +2602,18 @@ function _parseCsv(string $path): array {
 
 
 
-    $start = 0;
+    $headerMap = _detectTableHeaderColumns($rows[0]);
+    $start     = $headerMap['hasHeader'] ? 1 : 0;
 
 
 
 
-    $cell0 = strtolower(trim($rows[0][0] ?? ''));
 
 
 
 
-    if (in_array($cell0, ['soal', 'pertanyaan', 'question', 'no', 'nomor', ''])) $start = 1;
+
+
 
 
 
