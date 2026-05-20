@@ -158,7 +158,8 @@
             <span class="text-2xl">🎯</span>
             <p class="text-sm font-bold text-gray-900 dark:text-white">Mode Ujian</p>
             <p class="text-xs text-gray-500 dark:text-gray-400">Kerjakan bebas, bisa kembali & tandai soal. Mode standar.</p>
-            <p class="text-xs text-blue-600 dark:text-blue-400 font-medium mt-0.5" x-text="'⏱ ' + Math.floor((quizDetail.quiz?.time_limit||600)/60) + ' mnt'"></p>
+            <p class="text-xs text-blue-600 dark:text-blue-400 font-medium mt-0.5"
+               x-text="'⏱ ' + (() => { const s = 20 * Math.min(user?.quiz_questions_limit || 10, quizDetail.quiz?.total_questions || 10); return s >= 60 ? Math.floor(s/60) + ' mnt ' + (s%60 ? (s%60) + 'd' : '') : s + ' detik'; })()"></p>
           </button>
 
           <!-- Challenge -->

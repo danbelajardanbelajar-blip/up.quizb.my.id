@@ -51,7 +51,7 @@
             <div class="text-xs text-gray-400">Soal</div>
           </div>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
-            <div class="font-bold text-lg" x-text="formatTime(quiz?.time_limit||600)"></div>
+            <div class="font-bold text-lg" x-text="formatTime(mode === 'exam' ? 20 * questions.length : (quiz?.time_limit||600))"></div>
             <div class="text-xs text-gray-400">Waktu</div>
           </div>
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">

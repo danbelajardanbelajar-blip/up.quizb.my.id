@@ -101,8 +101,14 @@ function QuizEngine() {
         const data = await api.get('quiz.questions', params);
         this.quiz      = data.quiz;
         this.questions = data.questions;
-        // Gunakan exam_duration (dari setting user/assignment) atau fallback ke time_limit quiz
-        this.timeLeft  = this.quiz.exam_duration || this.quiz.time_limit || this.quiz.duration || 600;
+        // Untuk mode EXAM: 20 detik per soal × jumlah soal
+        // Untuk mode lain (challenge, dll): gunakan exam_duration/time_limit sebagai fallback
+        if (this.mode === 'exam') {
+          const SECS_PER_QUESTION = 20;
+          this.timeLeft = SECS_PER_QUESTION * (this.questions.length || 10);
+        } else {
+          this.timeLeft = this.quiz.exam_duration || this.quiz.time_limit || this.quiz.duration || 600;
+        }
         // Gunakan timer_per_question dari setting (user/assignment), default 20
         // Normalize to integer and ensure sensible minimum
         let tpq = null;
@@ -347,7 +353,10 @@ function QuizEngine() {
       this.stopBgMusic();            // 🔇 hentikan musik saat submit
       this.loading = true;
       try {
-        const timeTaken = (this.quiz.exam_duration || this.quiz.time_limit || this.quiz.duration || 600) - this.timeLeft;
+        const initialTime = this.mode === 'exam'
+          ? 20 * (this.questions.length || 10)
+          : (this.quiz.exam_duration || this.quiz.time_limit || this.quiz.duration || 600);
+        const timeTaken = initialTime - this.timeLeft;
         const payload = {
           quiz_id:      this.quiz.id,
           mode:         this.mode || 'exam',
