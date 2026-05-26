@@ -713,3 +713,86 @@ function admin_quiz_attempts(): void {
 
     jsonPaginated($rows, $total, $page, $limit);
 }
+
+// ============================================
+// Export Quiz — Download Soal Lengkap
+// ============================================
+
+function admin_quiz_export(): void {
+    requireAdmin();
+
+    $quizId = (int)($_GET['id'] ?? 0);
+    if ($quizId <= 0) jsonError('Quiz ID diperlukan', 400);
+
+    // Ambil data quiz
+    $quiz = DB::one(
+        "SELECT q.id, q.title, q.description, q.difficulty, q.time_limit, q.passing_score,
+                q.total_questions, c.name AS category_name
+         FROM quizzes q
+         LEFT JOIN categories c ON q.category_id = c.id
+         WHERE q.id = ?",
+        [$quizId]
+    );
+
+    if (!$quiz) jsonError('Quiz tidak ditemukan', 404);
+
+    // Ambil semua soal beserta opsinya
+    $questions = DB::all(
+        "SELECT q.id, q.question_text, q.type, q.points, q.explanation, q.order_num
+         FROM questions q
+         WHERE q.quiz_id = ?
+         ORDER BY q.order_num ASC",
+        [$quizId]
+    );
+
+    // Dekode HTML entities untuk setiap soal
+    foreach ($questions as &$q) {
+        $q['question_text'] = html_entity_decode($q['question_text'], ENT_QUOTES, 'UTF-8');
+        $q['explanation'] = html_entity_decode($q['explanation'] ?? '', ENT_QUOTES, 'UTF-8');
+
+        // Ambil opsi untuk soal ini
+        $options = DB::all(
+            "SELECT id, option_text, is_correct, order_num
+             FROM options
+             WHERE question_id = ?
+             ORDER BY order_num ASC",
+            [$q['id']]
+        );
+
+        // Dekode HTML entities untuk opsi
+        foreach ($options as &$opt) {
+            $opt['option_text'] = html_entity_decode($opt['option_text'], ENT_QUOTES, 'UTF-8');
+            $opt['is_correct'] = (bool)(int)$opt['is_correct'];
+        }
+        unset($opt);
+
+        // Tambahkan label A/B/C/D/E/F
+        $labels = ['A', 'B', 'C', 'D', 'E', 'F'];
+        foreach ($options as $idx => &$opt) {
+            $opt['label'] = $labels[$idx] ?? chr(65 + $idx);
+        }
+        unset($opt);
+
+        $q['options'] = $options;
+        $q['question_number'] = (int)$q['order_num'];
+    }
+    unset($q);
+
+    // Kelompokkan data untuk response
+    $exportData = [
+        'quiz' => [
+            'id' => (int)$quiz['id'],
+            'title' => $quiz['title'],
+            'description' => $quiz['description'],
+            'category_name' => $quiz['category_name'],
+            'difficulty' => $quiz['difficulty'],
+            'time_limit' => (int)$quiz['time_limit'],
+            'passing_score' => (int)$quiz['passing_score'],
+            'total_questions' => count($questions),
+        ],
+        'questions' => $questions,
+        'exported_at' => date('Y-m-d H:i:s'),
+    ];
+
+    jsonSuccess($exportData);
+}

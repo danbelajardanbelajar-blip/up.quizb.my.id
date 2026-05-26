@@ -295,6 +295,7 @@
             </label>
             <button @click="openImportFileModal()" class="btn-secondary text-xs px-2.5 py-1.5">📥 File</button>
             <button @click="openImportQuizbModal()" class="btn-secondary text-xs px-2.5 py-1.5">🌐 QuizB</button>
+            <button @click="downloadQuizQuestions()" class="btn-secondary text-xs px-2.5 py-1.5">📥 Download</button>
             <button @click="deleteSelectedQuestions()"
                     :disabled="selectedAdminQuestionsCount === 0"
                     class="btn-danger text-xs px-2.5 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">🗑️</button>

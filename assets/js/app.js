@@ -1448,6 +1448,142 @@ function QuizBApp() {
       }
     },
 
+    // ---- Download Quiz Questions as PDF ----
+    async downloadQuizQuestions() {
+      if (!this.admin.contentSelectedQuiz?.id) {
+        this.showToast('Pilih quiz terlebih dahulu', 'warning', '⚠️');
+        return;
+      }
+
+      const quizId = this.admin.contentSelectedQuiz.id;
+      const quizTitle = this.admin.contentSelectedQuiz.title;
+
+      try {
+        this.admin.loading = true;
+        const response = await api.get('admin.quiz_export', { id: quizId });
+        const exportData = response;
+
+        // Generate PDF using html2pdf library
+        if (typeof html2pdf === 'undefined') {
+          // Fallback: download as JSON if html2pdf not available
+          this.downloadAsJSON(exportData, quizTitle);
+          this.showToast('Download JSON berhasil (library PDF tidak tersedia)', 'success', '📥');
+          return;
+        }
+
+        // Create HTML content for PDF
+        const htmlContent = this.generatePDFContent(exportData);
+
+        // Configure html2pdf options
+        const opt = {
+          margin: 10,
+          filename: `${quizTitle.replace(/[^a-z0-9]/gi, '_')}_soal.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
+        };
+
+        // Generate and download PDF
+        html2pdf().set(opt).from(htmlContent).save();
+        this.showToast('Download PDF berhasil', 'success', '📥');
+      } catch (e) {
+        console.error('Download error:', e);
+        this.showToast(e.message || 'Gagal mendownload soal', 'error', '❌');
+      } finally {
+        this.admin.loading = false;
+      }
+    },
+
+    // Generate HTML content for PDF
+    generatePDFContent(exportData) {
+      const { quiz, questions } = exportData;
+
+      let html = `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <!-- Header -->
+          <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 15px;">
+            <h1 style="margin: 0; color: #1f2937;">${quiz.title}</h1>
+            <p style="margin: 5px 0; color: #6b7280; font-size: 14px;">${quiz.category_name || 'Kategori tidak ditentukan'}</p>
+          </div>
+
+          <!-- Quiz Info -->
+          <div style="margin-bottom: 20px; padding: 10px; background-color: #f3f4f6; border-radius: 5px;">
+            <table style="width: 100%; font-size: 12px;">
+              <tr>
+                <td style="width: 50%;"><strong>Total Soal:</strong> ${quiz.total_questions}</td>
+                <td style="width: 50%;"><strong>Tingkat Kesulitan:</strong> ${quiz.difficulty === 'easy' ? 'Mudah' : quiz.difficulty === 'medium' ? 'Sedang' : 'Sulit'}</td>
+              </tr>
+              <tr>
+                <td><strong>Waktu Limit:</strong> ${Math.ceil(quiz.time_limit / 60)} menit</td>
+                <td><strong>Nilai Kelulusan:</strong> ${quiz.passing_score}%</td>
+              </tr>
+            </table>
+          </div>
+
+          ${quiz.description ? `<div style="margin-bottom: 20px; padding: 10px; background-color: #f0f9ff; border-left: 4px solid #3b82f6;"><strong>Deskripsi:</strong><br/>${quiz.description}</div>` : ''}
+
+          <!-- Questions -->
+          <div style="page-break-after: always;"></div>
+      `;
+
+      questions.forEach((q, idx) => {
+        html += `
+          <div style="margin-bottom: 25px; page-break-inside: avoid;">
+            <div style="margin-bottom: 8px;">
+              <h3 style="margin: 0; color: #1f2937; font-size: 14px;">
+                <strong>Soal ${idx + 1}${q.points ? ` (${q.points} poin)` : ''}</strong>
+              </h3>
+              <div style="margin-top: 8px; padding: 8px; background-color: #f9fafb; border-left: 3px solid #3b82f6;">
+                ${q.question_text}
+              </div>
+            </div>
+
+            <!-- Options -->
+            <div style="margin-left: 15px;">
+              ${q.options.map((opt, oIdx) => `
+                <div style="margin-bottom: 5px; font-size: 12px;">
+                  <strong>${opt.label}.</strong> ${opt.option_text}
+                  ${opt.is_correct ? '<span style="color: #10b981; margin-left: 10px;"><strong>✓ Jawaban Benar</strong></span>' : ''}
+                </div>
+              `).join('')}
+            </div>
+
+            <!-- Explanation -->
+            ${q.explanation ? `
+              <div style="margin-top: 10px; padding: 8px; background-color: #fef3c7; border-left: 3px solid #f59e0b; font-size: 12px;">
+                <strong>Penjelasan:</strong><br/>
+                ${q.explanation}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      });
+
+      html += `
+          <!-- Footer -->
+          <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #d1d5db; text-align: center; font-size: 11px; color: #9ca3af;">
+            <p>Diunduh pada: ${new Date().toLocaleString('id-ID')}</p>
+          </div>
+        </div>
+      `;
+
+      return html;
+    },
+
+    // Fallback: Download as JSON
+    downloadAsJSON(data, filename) {
+      const jsonStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${filename.replace(/[^a-z0-9]/gi, '_')}_soal.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    },
+
     // ---- Review attempts per quiz ----
     async toggleReviewExpand(quizId) {
       if (this.admin.review.expandedId === quizId) {

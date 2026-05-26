@@ -1481,64 +1481,27 @@ function _parseTextQuestions(string $text): array {
 
 
 function _parseParagraphArray(array $lines): array {
-    // Normalize paragraphs so combined option blocks like
-    // "A.جاكرتاB.الأسرةC.التعارفD.المدرسةE.التعلم" are split into separate lines.
-    $splitOptionParagraph = static function (string $line): array {
-        // Detect Arabic or Latin option markers anywhere in the line.
-        if (!preg_match_all('/([أا]|ب|ت|ث|ج|[A-Ea-e])\./u', $line, $matches, PREG_OFFSET_CAPTURE)) {
-            return [$line];
-        }
-        if (count($matches[0]) <= 1) {
-            return [$line];
-        }
-        $parts = [];
-        $last  = 0;
-        foreach ($matches[0] as $match) {
-            $pos = $match[1];
-            if ($pos > $last) {
-                $segment = trim(substr($line, $last, $pos - $last));
-                if ($segment !== '') {
-                    $parts[] = $segment;
-                }
-            }
-            $last = $pos;
-        }
-        $lastPart = trim(substr($line, $last));
-        if ($lastPart !== '') {
-            $parts[] = $lastPart;
-        }
-        return $parts;
-    };
-
-    $normalized = [];
-    foreach ($lines as $line) {
-        foreach ($splitOptionParagraph($line) as $part) {
-            $normalized[] = $part;
-        }
-    }
-    $lines = $normalized;
     $total = count($lines);
 
     /*
-     * Pemetaan huruf Arab / Latin ke indeks opsi (0=A, 1=B, 2=C, 3=D, 4=E):
-     *   أ (U+0623) / ا (U+0627) / A/a → A
-     *   ب (U+0628) / B/b            → B
-     *   ت (U+062A) / C/c            → C
-     *   ث (U+062B) / D/d            → D
-     *   ج (U+062C) / E/e            → E   ← setelah ini, soal baru dimulai
+     * Pemetaan huruf Arab ke indeks opsi (0=A, 1=B, 2=C, 3=D, 4=E):
+     *   أ (U+0623) / ا (U+0627) → A
+     *   ب (U+0628)              → B
+     *   ت (U+062A)              → C
+     *   ث (U+062B)              → D
+     *   ج (U+062C)              → E   ← setelah ini, soal baru dimulai
      */
-    $ARAB = ["\u{0623}"=>0,"\u{0627}"=>0,"\u{0628}"=>1,"\u{062A}"=>2,"\u{062B}"=>3,"\u{062C}"=>4,
-             'A'=>0,'a'=>0,'B'=>1,'b'=>1,'C'=>2,'c'=>2,'D'=>3,'d'=>3,'E'=>4,'e'=>4];
+    $ARAB = ["\u{0623}"=>0,"\u{0627}"=>0,"\u{0628}"=>1,"\u{062A}"=>2,"\u{062B}"=>3,"\u{062C}"=>4];
 
-    // Kembalikan indeks opsi Arab / Latin (0-4) atau -1
+    // Kembalikan indeks opsi Arab (0-4) atau -1
     $arabIdx = static function (string $l) use ($ARAB): int {
-        if (!preg_match('/^([أابتثجA-Ea-e])\.\s*/u', $l, $m)) return -1;
+        if (!preg_match('/^([\x{0600}-\x{06FF}])\.\s/u', $l, $m)) return -1;
         return $ARAB[$m[1]] ?? -1;
     };
 
-    // Strip label Arab / Latin dari baris opsi
+    // Strip label Arab dari baris opsi
     $stripArab = static function (string $l): string {
-        return trim(preg_replace('/^[أابتثجA-Ea-e]\.\s*/u', '', $l));
+        return trim(preg_replace('/^[\x{0600}-\x{06FF}]\.\s*/u', '', $l));
     };
 
     // Apakah baris ini penanda akhir soal (berakhir .... / ? / ؟ / !)
@@ -2195,8 +2158,115 @@ function _parseXlsx(string $path): array {
 
 
 
-    return _parseRowsToQuestions($rows, _detectTableHeaderColumns($rows[0]));
+    $start = 0;
+
+
+
+
+    $cell0 = strtolower(trim($rows[0][0] ?? ''));
+
+
+
+
+    if (in_array($cell0, ['soal', 'pertanyaan', 'question', 'no', 'nomor'])) $start = 1;
+
+
+
+
+
+
+
+
+
+    $questions = [];
+
+
+
+
+    for ($i = $start; $i < count($rows); $i++) {
+
+
+
+
+        $r = $rows[$i];
+
+
+
+
+        $q = trim($r[0] ?? '');
+
+
+
+
+        if (!$q) continue;
+
+
+
+
+        $letters  = ['A', 'B', 'C', 'D', 'E'];
+
+
+
+
+        $correct  = strtoupper(trim($r[5] ?? 'A'));
+
+
+
+
+        $expl     = trim($r[6] ?? '');
+
+
+
+
+        $opts     = [];
+
+
+
+
+        for ($j = 1; $j <= 5; $j++) {
+
+
+
+
+            $ot = trim($r[$j] ?? '');
+
+
+
+
+            if ($ot) $opts[] = ['option_text' => $ot, 'is_correct' => ($correct === $letters[$j-1]) ? 1 : 0];
+
+
+
+
+        }
+
+
+
+
+        if (!empty($opts)) $questions[] = ['question_text' => $q, 'explanation' => $expl, 'options' => $opts];
+
+
+
+
+    }
+
+
+
+
+    return _fixCorrect($questions);
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 function _fixCorrect(array $questions): array {
 
@@ -2260,234 +2330,300 @@ function _fixCorrect(array $questions): array {
 
 }
 
-function _detectTableHeaderColumns(array $headerRow): array {
-    $map = [
-        'question'    => null,
-        'options'     => [],
-        'correct'     => null,
-        'explanation' => null,
-        'hasHeader'   => false,
-    ];
 
-    foreach ($headerRow as $idx => $value) {
-        $key = strtolower(trim((string)$value));
-        if ($key === '') continue;
 
-        if (preg_match('/^(?:no|nomor|number)$/i', $key)) {
-            $map['hasHeader'] = true;
-            continue;
-        }
 
-        if (in_array($key, ['soal', 'pertanyaan', 'question', 'question_text', 'text', 'pertanyaan soal', 'question text'], true)) {
-            $map['question']  = $idx;
-            $map['hasHeader'] = true;
-            continue;
-        }
 
-        if (preg_match('/^a(?:[\.\)]|\s|$)/i', $key) || preg_match('/^(?:opsi a|pilihan a|option a)$/i', $key)) {
-            $map['options'][0] = $idx;
-            $map['hasHeader'] = true;
-            continue;
-        }
-        if (preg_match('/^b(?:[\.\)]|\s|$)/i', $key) || preg_match('/^(?:opsi b|pilihan b|option b)$/i', $key)) {
-            $map['options'][1] = $idx;
-            $map['hasHeader'] = true;
-            continue;
-        }
-        if (preg_match('/^c(?:[\.\)]|\s|$)/i', $key) || preg_match('/^(?:opsi c|pilihan c|option c)$/i', $key)) {
-            $map['options'][2] = $idx;
-            $map['hasHeader'] = true;
-            continue;
-        }
-        if (preg_match('/^d(?:[\.\)]|\s|$)/i', $key) || preg_match('/^(?:opsi d|pilihan d|option d)$/i', $key)) {
-            $map['options'][3] = $idx;
-            $map['hasHeader'] = true;
-            continue;
-        }
-        if (preg_match('/^e(?:[\.\)]|\s|$)/i', $key) || preg_match('/^(?:opsi e|pilihan e|option e)$/i', $key)) {
-            $map['options'][4] = $idx;
-            $map['hasHeader'] = true;
-            continue;
-        }
 
-        if (preg_match('/^(?:kunci|jawaban|answer|key)$/i', $key)) {
-            $map['correct'] = $idx;
-            $map['hasHeader'] = true;
-            continue;
-        }
 
-        if (preg_match('/^(?:penjelasan|pembahasan|explanation|discussion|review)$/i', $key)) {
-            $map['explanation'] = $idx;
-            $map['hasHeader'] = true;
-            continue;
-        }
-    }
 
-    return $map;
-}
-
-/**
- * Ubah array baris mentah (dari CSV atau XLSX) menjadi array soal,
- * dengan menghormati pemetaan kolom dari _detectTableHeaderColumns.
- *
- * Format default (tanpa header yang dikenali):
- *   Kolom 0 = Soal
- *   Kolom 1 = Opsi A
- *   Kolom 2 = Opsi B
- *   Kolom 3 = Opsi C
- *   Kolom 4 = Opsi D
- *   Kolom 5 = Opsi E
- *   Kolom 6 = Kunci (huruf: A/B/C/D/E)
- *   Kolom 7 = Penjelasan
- *
- * Jika header terdeteksi, gunakan indeks kolom dari $headerMap.
- */
-function _parseRowsToQuestions(array $rows, array $headerMap): array {
-    $letters  = ['A', 'B', 'C', 'D', 'E'];
-    $hasHdr   = $headerMap['hasHeader'];
-    $start    = $hasHdr ? 1 : 0;
-
-    if ($hasHdr && $headerMap['question'] !== null) {
-        // Header terdeteksi: gunakan indeks kolom yang dipetakan
-        $colQ    = $headerMap['question'];
-        $colOpts = [];
-        for ($j = 0; $j < 5; $j++) {
-            $colOpts[$j] = $headerMap['options'][$j] ?? null;
-        }
-        // Isi kolom opsi yang tidak terdeteksi secara berurutan setelah kolom soal
-        $nextCol = $colQ + 1;
-        for ($j = 0; $j < 5; $j++) {
-            if ($colOpts[$j] === null) {
-                $colOpts[$j] = $nextCol++;
-            }
-        }
-        $colCorrect = $headerMap['correct'] !== null ? $headerMap['correct'] : $nextCol;
-        $colExpl    = $headerMap['explanation'] !== null ? $headerMap['explanation'] : ($colCorrect + 1);
-    } else {
-        // Tidak ada header yang dikenali — gunakan posisi kolom default
-        $colQ       = 0;
-        $colOpts    = [1, 2, 3, 4, 5];
-        $colCorrect = 6;
-        $colExpl    = 7;
-    }
-
-    $questions = [];
-    for ($i = $start; $i < count($rows); $i++) {
-        $r = $rows[$i];
-
-        $q = trim($r[$colQ] ?? '');
-        if ($q === '') continue;
-
-        $correctLetter = strtoupper(trim($r[$colCorrect] ?? ''));
-        $expl          = trim($r[$colExpl] ?? '');
-
-        $opts = [];
-        for ($j = 0; $j < 5; $j++) {
-            $colIdx = $colOpts[$j];
-            $ot = trim($r[$colIdx] ?? '');
-            if ($ot === '') continue;
-            $opts[] = [
-                'option_text' => $ot,
-                'is_correct'  => ($correctLetter === $letters[$j]) ? 1 : 0,
-                'label'       => $letters[$j],
-            ];
-        }
-
-        if (!empty($opts)) {
-            $questions[] = ['question_text' => $q, 'explanation' => $expl, 'options' => $opts];
-        }
-    }
-
-    return _fixCorrect($questions);
-}
 
 function _parseCsv(string $path): array {
 
-    // Baca file dan strip UTF-8 BOM
-    $raw = file_get_contents($path);
-    if (!$raw) return [];
-    if (substr($raw, 0, 3) === "\xEF\xBB\xBF") {
-        $raw = substr($raw, 3);
-    }
 
-    // Pilih separator terbaik berdasarkan konsistensi jumlah kolom
-    $sep = _detectCsvSeparator($raw);
 
-    // Parse baris menggunakan separator terpilih
+
+    // Deteksi encoding: coba baca sebagai UTF-8, fallback strip BOM
+
+
+
+
+    $handle = fopen($path, 'r');
+
+
+
+
+    if (!$handle) return [];
+
+
+
+
+
+
+
+
+
+    // Strip UTF-8 BOM jika ada
+
+
+
+
+    $bom = fread($handle, 3);
+
+
+
+
+    if ($bom !== "\xEF\xBB\xBF") rewind($handle);
+
+
+
+
+
+
+
+
+
     $rows = [];
-    $tmp = tmpfile();
-    fwrite($tmp, $raw);
-    rewind($tmp);
-    while (($row = fgetcsv($tmp, 0, $sep)) !== false) {
+
+
+
+
+    while (($row = fgetcsv($handle, 0, ',')) !== false) {
+
+
+
+
+        // Coba separator koma dulu, nanti fallback ke titik koma
+
+
+
+
         $rows[] = $row;
+
+
+
+
     }
-    fclose($tmp);
+
+
+
+
+    fclose($handle);
+
+
+
+
+
+
+
+
+
+    // Jika semua baris hanya 1 kolom, kemungkinan separator titik koma
+
+
+
+
+    $allSingle = !empty($rows) && count(array_filter($rows, fn($r) => count($r) > 1)) === 0;
+
+
+
+
+    if ($allSingle) {
+
+
+
+
+        $handle = fopen($path, 'r');
+
+
+
+
+        $bom    = fread($handle, 3);
+
+
+
+
+        if ($bom !== "\xEF\xBB\xBF") rewind($handle);
+
+
+
+
+        $rows = [];
+
+
+
+
+        while (($row = fgetcsv($handle, 0, ';')) !== false) {
+
+
+
+
+            $rows[] = $row;
+
+
+
+
+        }
+
+
+
+
+        fclose($handle);
+
+
+
+
+    }
+
+
+
+
+
+
+
+
 
     if (empty($rows)) return [];
 
-    // Gunakan _parseRowsToQuestions yang menghormati pemetaan kolom dari header
-    return _parseRowsToQuestions($rows, _detectTableHeaderColumns($rows[0]));
-}
 
-/**
- * Tentukan separator CSV (koma atau titik koma) dengan membandingkan
- * konsistensi jumlah kolom yang dihasilkan oleh masing-masing separator.
- *
- * Strategi:
- *  1. Coba parse dengan ',' dan ';'.
- *  2. Hitung distribusi jumlah kolom per baris.
- *  3. Pilih separator yang menghasilkan distribusi paling seragam
- *     (nilai mode tertinggi, dengan bobot ke arah jumlah kolom yang
- *     sesuai format soal: 3–9 kolom).
- */
-function _detectCsvSeparator(string $raw): string {
-    $candidates = [',', ';'];
-    $scores     = [];
 
-    foreach ($candidates as $sep) {
-        $tmp = tmpfile();
-        fwrite($tmp, $raw);
-        rewind($tmp);
 
-        $colCounts = [];
-        while (($row = fgetcsv($tmp, 0, $sep)) !== false) {
-            $n = count($row);
-            // Abaikan baris kosong / baris tunggal kosong
-            if ($n === 1 && trim($row[0]) === '') continue;
-            $colCounts[] = $n;
+
+
+
+
+
+    // Lewati header jika baris pertama berisi kata seperti "soal", "question", dll.
+
+
+
+
+    $start = 0;
+
+
+
+
+    $cell0 = strtolower(trim($rows[0][0] ?? ''));
+
+
+
+
+    if (in_array($cell0, ['soal', 'pertanyaan', 'question', 'no', 'nomor', ''])) $start = 1;
+
+
+
+
+
+
+
+
+
+    $questions = [];
+
+
+
+
+    $letters   = ['A', 'B', 'C', 'D', 'E'];
+
+
+
+
+    for ($i = $start; $i < count($rows); $i++) {
+
+
+
+
+        $r = $rows[$i];
+
+
+
+
+        $q = trim($r[0] ?? '');
+
+
+
+
+        if (!$q) continue;
+
+
+
+
+
+
+
+
+
+        $correct = strtoupper(trim($r[5] ?? 'A'));
+
+
+
+
+        $expl    = trim($r[6] ?? '');
+
+
+
+
+        $opts    = [];
+
+
+
+
+        for ($j = 1; $j <= 5; $j++) {
+
+
+
+
+            $ot = trim($r[$j] ?? '');
+
+
+
+
+            if ($ot !== '') {
+
+
+
+
+                $opts[] = ['option_text' => $ot, 'is_correct' => ($correct === $letters[$j - 1]) ? 1 : 0];
+
+
+
+
+            }
+
+
+
+
         }
-        fclose($tmp);
 
-        if (empty($colCounts)) {
-            $scores[$sep] = 0;
-            continue;
+
+
+
+        if (!empty($opts)) {
+
+
+
+
+            $questions[] = ['question_text' => $q, 'explanation' => $expl, 'options' => $opts];
+
+
+
+
         }
 
-        // Hitung mode (jumlah kolom yang paling sering muncul)
-        $freq = array_count_values($colCounts);
-        arsort($freq);
-        $mode     = (int) array_key_first($freq);
-        $modeFreq = $freq[$mode];
-        $total    = count($colCounts);
 
-        // Konsistensi: proporsi baris yang sesuai mode
-        $consistency = $modeFreq / $total;
 
-        // Bonus kecil jika mode ada di rentang kolom format soal (3–9)
-        $rangeBonus = ($mode >= 3 && $mode <= 9) ? 0.05 : 0.0;
 
-        $scores[$sep] = $consistency + $rangeBonus;
     }
 
-    // Pilih separator dengan skor tertinggi; jika seri, pilih koma
-    arsort($scores);
-    return (string) array_key_first($scores);
+
+
+
+    return _fixCorrect($questions);
+
+
+
+
 }
-
-
-
-
-
 
 
 
@@ -3147,26 +3283,393 @@ function question_browse_quizb(): void {
 
 
 
-                        'SELECT id, title FROM quiz_titles WHERE subtheme_id = ? AND deleted_at IS NULL ORDER BY sort_order, title'
+                        'SELECT id, title FROM quiz_titles
+
+
+
+
+                         WHERE subtheme_id = ? AND deleted_at IS NULL ORDER BY title LIMIT 200'
+
+
+
+
                     );
 
+
+
+
                     $t->execute([$sub['id']]);
+
+
+
+
                     $sub['titles'] = $t->fetchAll();
+
+
+
 
                 }
 
+
+
+
                 unset($sub);
+
+
+
+
+                $th['subthemes'] = $subs;
+
+
+
 
             }
 
+
+
+
             unset($th);
+
+
+
 
             jsonSuccess(['themes' => $themes]);
 
+
+
+
         }
 
-    } catch (PDOException $e) {
-        jsonError('Koneksi ke QuizB database gagal: ' . $e->getMessage(), 503);
+
+
+
+    } catch (Exception $e) {
+
+
+
+
+        jsonError('Koneksi ke QuizB gagal: ' . $e->getMessage(), 500);
+
+
+
+
     }
 
+
+
+
 }
+
+
+
+
+
+
+
+
+
+// ============================================
+
+
+
+
+// question_import_quizb
+
+
+
+
+// ============================================
+
+
+
+
+
+
+
+
+
+function question_import_quizb(): void {
+
+
+
+
+    requireAdmin();
+
+
+
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+
+
+
+
+    $body   = getBody();
+
+
+
+
+    $quizId = (int)($body['quiz_id'] ?? 0);
+
+
+
+
+    $qIds   = array_map('intval', $body['question_ids'] ?? []);
+
+
+
+
+    if (!$quizId) jsonError('Quiz ID diperlukan');
+
+
+
+
+    if (empty($qIds)) jsonError('Pilih minimal satu soal');
+
+
+
+
+
+
+
+
+
+    try {
+
+
+
+
+        $pdo = _quizbPdo();
+
+
+
+
+        $maxOrder = (int)(DB::one(
+
+
+
+
+            'SELECT COALESCE(MAX(order_num), 0) AS m FROM questions WHERE quiz_id = ?', [$quizId]
+
+
+
+
+        )['m'] ?? 0);
+
+
+
+
+
+
+
+
+
+        $imported = 0;
+
+
+
+
+        foreach ($qIds as $qid) {
+
+
+
+
+            $sq = $pdo->prepare('SELECT text, explanation FROM questions WHERE id = ?');
+
+
+
+
+            $sq->execute([$qid]);
+
+
+
+
+            $qRow = $sq->fetch();
+
+
+
+
+            if (!$qRow) continue;
+
+
+
+
+
+
+
+
+
+            $sc = $pdo->prepare('SELECT text AS option_text, is_correct FROM choices WHERE question_id = ? ORDER BY id');
+
+
+
+
+            $sc->execute([$qid]);
+
+
+
+
+            $opts = $sc->fetchAll();
+
+
+
+
+            if (empty($opts)) continue;
+
+
+
+
+
+
+
+
+
+            $maxOrder++;
+
+
+
+
+            DB::execute(
+
+
+
+
+                'INSERT INTO questions (quiz_id, question_text, type, points, order_num, explanation) VALUES (?,?,?,?,?,?)',
+
+
+
+
+                [$quizId, $qRow['text'], 'multiple', 10, $maxOrder, $qRow['explanation'] ?? '']
+
+
+
+
+            );
+
+
+
+
+            $newQid = (int)DB::lastId();
+
+
+
+
+            foreach ($opts as $i => $o) {
+
+
+
+
+                DB::execute(
+
+
+
+
+                    'INSERT INTO options (question_id, option_text, is_correct, order_num) VALUES (?,?,?,?)',
+
+
+
+
+                    [$newQid, $o['option_text'], (int)$o['is_correct'], $i + 1]
+
+
+
+
+                );
+
+
+
+
+            }
+
+
+
+
+            $imported++;
+
+
+
+
+        }
+
+
+
+
+        DB::execute(
+
+
+
+
+            'UPDATE quizzes SET total_questions = (SELECT COUNT(*) FROM questions WHERE quiz_id = ?) WHERE id = ?',
+
+
+
+
+            [$quizId, $quizId]
+
+
+
+
+        );
+
+
+
+
+
+
+
+
+
+        // — Broadcast notifikasi soal baru
+
+
+
+
+        if ($imported > 0) {
+
+
+
+
+            $adminUser = getCurrentUser();
+
+
+
+
+            broadcastNewQuestion($quizId, (int)($adminUser['id'] ?? 0));
+
+
+
+
+        }
+
+
+
+
+
+
+
+
+
+        jsonSuccess(['imported' => $imported], "$imported soal berhasil diimpor dari QuizB");
+
+
+
+
+    } catch (Exception $e) {
+
+
+
+
+        jsonError('Gagal import dari QuizB: ' . $e->getMessage(), 500);
+
+
+
+
+    }
+
+
+
+
+}
+
+
+
+
