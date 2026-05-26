@@ -1448,8 +1448,8 @@ function QuizBApp() {
       }
     },
 
-    // ---- Download Quiz Questions as PDF ----
-    async downloadQuizQuestions() {
+    // ---- Export Quiz Questions (PDF/Excel/Word) ----
+    async exportQuizQuestions(format = 'pdf') {
       if (!this.admin.contentSelectedQuiz?.id) {
         this.showToast('Pilih quiz terlebih dahulu', 'warning', '⚠️');
         return;
@@ -1463,35 +1463,297 @@ function QuizBApp() {
         const response = await api.get('admin.quiz_export', { id: quizId });
         const exportData = response;
 
-        // Generate PDF using html2pdf library
-        if (typeof html2pdf === 'undefined') {
-          // Fallback: download as JSON if html2pdf not available
-          this.downloadAsJSON(exportData, quizTitle);
-          this.showToast('Download JSON berhasil (library PDF tidak tersedia)', 'success', '📥');
-          return;
+        if (format === 'pdf') {
+          await this.exportQuizAsPDF(exportData, quizTitle);
+        } else if (format === 'excel') {
+          await this.exportQuizAsExcel(exportData, quizTitle);
+        } else if (format === 'word') {
+          await this.exportQuizAsWord(exportData, quizTitle);
         }
-
-        // Create HTML content for PDF
-        const htmlContent = this.generatePDFContent(exportData);
-
-        // Configure html2pdf options
-        const opt = {
-          margin: 10,
-          filename: `${quizTitle.replace(/[^a-z0-9]/gi, '_')}_soal.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2 },
-          jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
-        };
-
-        // Generate and download PDF
-        html2pdf().set(opt).from(htmlContent).save();
-        this.showToast('Download PDF berhasil', 'success', '📥');
       } catch (e) {
-        console.error('Download error:', e);
-        this.showToast(e.message || 'Gagal mendownload soal', 'error', '❌');
+        console.error('Export error:', e);
+        this.showToast(e.message || `Gagal export soal sebagai ${format.toUpperCase()}`, 'error', '❌');
       } finally {
         this.admin.loading = false;
       }
+    },
+
+    // ---- Export as PDF ----
+    async exportQuizAsPDF(exportData, quizTitle) {
+      // Generate PDF using html2pdf library
+      if (typeof html2pdf === 'undefined') {
+        // Fallback: download as JSON if html2pdf not available
+        this.exportAsJSON(exportData, quizTitle);
+        this.showToast('Export JSON berhasil (library PDF tidak tersedia)', 'success', '📥');
+        return;
+      }
+
+      // Create HTML content for PDF
+      const htmlContent = this.generatePDFContent(exportData);
+
+      // Configure html2pdf options
+      const opt = {
+        margin: 10,
+        filename: `${quizTitle.replace(/[^a-z0-9]/gi, '_')}_soal.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
+      };
+
+      // Generate and download PDF
+      html2pdf().set(opt).from(htmlContent).save();
+      this.showToast('Export PDF berhasil', 'success', '📄');
+    },
+
+    // ---- Export as Excel ----
+    async exportQuizAsExcel(exportData, quizTitle) {
+      if (typeof XLSX === 'undefined') {
+        this.showToast('Library Excel tidak tersedia', 'error', '❌');
+        return;
+      }
+
+      const { quiz, questions } = exportData;
+      const filename = `${quizTitle.replace(/[^a-z0-9]/gi, '_')}_soal`;
+
+      // Prepare sheets
+      const sheets = {};
+
+      // Sheet 1: Quiz Info
+      const infoSheet = [
+        ['INFORMASI QUIZ'],
+        [],
+        ['Judul', quiz.title],
+        ['Kategori', quiz.category_name || '-'],
+        ['Total Soal', quiz.total_questions],
+        ['Tingkat Kesulitan', quiz.difficulty === 'easy' ? 'Mudah' : quiz.difficulty === 'medium' ? 'Sedang' : 'Sulit'],
+        ['Waktu Limit (menit)', Math.ceil(quiz.time_limit / 60)],
+        ['Nilai Kelulusan (%)', quiz.passing_score],
+        ['Deskripsi', quiz.description || '-'],
+        ['Diekspor pada', new Date().toLocaleString('id-ID')],
+      ];
+      sheets['Info'] = infoSheet;
+
+      // Sheet 2: Soal & Jawaban
+      const questionsSheet = [];
+      questionsSheet.push([
+        'No. Soal', 'Soal', 'Poin', 'Opsi A', 'Opsi B', 'Opsi C', 'Opsi D', 'Opsi E', 
+        'Jawaban Benar', 'Penjelasan'
+      ]);
+
+      questions.forEach((q, idx) => {
+        const options = ['', '', '', '', ''];
+        const labels = ['A', 'B', 'C', 'D', 'E'];
+        let correctLabel = '';
+
+        q.options.forEach((opt, oIdx) => {
+          if (oIdx < 5) {
+            options[oIdx] = opt.option_text;
+            if (opt.is_correct) {
+              correctLabel = opt.label;
+            }
+          }
+        });
+
+        questionsSheet.push([
+          idx + 1,
+          q.question_text,
+          q.points || '-',
+          options[0] || '',
+          options[1] || '',
+          options[2] || '',
+          options[3] || '',
+          options[4] || '',
+          correctLabel,
+          q.explanation || '-'
+        ]);
+      });
+      sheets['Soal'] = questionsSheet;
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+
+      // Add sheets
+      Object.keys(sheets).forEach(sheetName => {
+        const ws = XLSX.utils.aoa_to_sheet(sheets[sheetName]);
+        
+        // Set column widths
+        const maxWidth = 50;
+        const colWidths = [];
+        sheets[sheetName].forEach(row => {
+          row.forEach((cell, idx) => {
+            const cellLength = String(cell || '').length;
+            colWidths[idx] = Math.min(Math.max(colWidths[idx] || 0, cellLength + 2), maxWidth);
+          });
+        });
+        ws['!cols'] = colWidths.map(w => ({ wch: w }));
+
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      });
+
+      // Save file
+      XLSX.writeFile(wb, `${filename}.xlsx`);
+      this.showToast('Export Excel berhasil', 'success', '📊');
+    },
+
+    // ---- Export as Word ----
+    async exportQuizAsWord(exportData, quizTitle) {
+      const { Document, Packer, Paragraph, Table, TableCell, WidthType, BorderStyle, UnderlineType, TextRun, AlignmentType } = window.docx;
+
+      if (!Document) {
+        this.showToast('Library Word tidak tersedia', 'error', '❌');
+        return;
+      }
+
+      const { quiz, questions } = exportData;
+      const filename = `${quizTitle.replace(/[^a-z0-9]/gi, '_')}_soal`;
+
+      const children = [];
+
+      // Title
+      children.push(
+        new Paragraph({
+          text: quiz.title,
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 200 },
+          style: 'Title',
+          thematicBreak: false,
+        })
+      );
+
+      // Category info
+      children.push(
+        new Paragraph({
+          text: `Kategori: ${quiz.category_name || '-'}`,
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 400 },
+        })
+      );
+
+      // Quiz info table
+      const infoTable = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              {
+                height: { value: 200, rule: 'atLeast' },
+                cells: [
+                  new TableCell({
+                    children: [new Paragraph('Total Soal:')],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(String(quiz.total_questions))],
+                    width: { size: 20, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph('Tingkat Kesulitan:')],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(quiz.difficulty === 'easy' ? 'Mudah' : quiz.difficulty === 'medium' ? 'Sedang' : 'Sulit')],
+                    width: { size: 20, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              },
+              {
+                height: { value: 200, rule: 'atLeast' },
+                cells: [
+                  new TableCell({
+                    children: [new Paragraph('Waktu Limit:')],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(`${Math.ceil(quiz.time_limit / 60)} menit`)],
+                    width: { size: 20, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph('Nilai Kelulusan:')],
+                    width: { size: 30, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(`${quiz.passing_score}%`)],
+                    width: { size: 20, type: WidthType.PERCENTAGE },
+                  }),
+                ],
+              },
+            ],
+          }),
+        ],
+      });
+
+      if (quiz.description) {
+        children.push(new Paragraph(''));
+        children.push(new Paragraph({
+          text: new TextRun({
+            text: `Deskripsi: ${quiz.description}`,
+            italic: true,
+          }),
+          spacing: { after: 400 },
+        }));
+      }
+
+      // Questions
+      questions.forEach((q, idx) => {
+        children.push(new Paragraph({
+          text: `Soal ${idx + 1}${q.points ? ` (${q.points} poin)` : ''}`,
+          style: 'Heading2',
+          spacing: { before: 200, after: 100 },
+        }));
+
+        children.push(new Paragraph({
+          text: q.question_text,
+          spacing: { after: 200 },
+        }));
+
+        // Options
+        q.options.forEach(opt => {
+          children.push(new Paragraph({
+            text: `${opt.label}. ${opt.option_text}${opt.is_correct ? ' ✓ (Jawaban Benar)' : ''}`,
+            spacing: { after: 100 },
+            style: opt.is_correct ? 'ListBullet' : 'ListNumber',
+          }));
+        });
+
+        // Explanation
+        if (q.explanation) {
+          children.push(new Paragraph({
+            text: new TextRun({
+              text: `Penjelasan: ${q.explanation}`,
+              italic: true,
+            }),
+            spacing: { after: 300, before: 100 },
+          }));
+        }
+
+        children.push(new Paragraph(''));
+      });
+
+      // Footer
+      children.push(new Paragraph({
+        text: `Diekspor pada: ${new Date().toLocaleString('id-ID')}`,
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 400 },
+        style: 'Normal',
+      }));
+
+      const doc = new Document({ children });
+
+      Packer.toBlob(doc).then(blob => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${filename}.docx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        this.showToast('Export Word berhasil', 'success', '📝');
+      }).catch(e => {
+        console.error('Word export error:', e);
+        this.showToast('Gagal membuat file Word', 'error', '❌');
+      });
     },
 
     // Generate HTML content for PDF
@@ -1562,7 +1824,7 @@ function QuizBApp() {
       html += `
           <!-- Footer -->
           <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #d1d5db; text-align: center; font-size: 11px; color: #9ca3af;">
-            <p>Diunduh pada: ${new Date().toLocaleString('id-ID')}</p>
+            <p>Diekspor pada: ${new Date().toLocaleString('id-ID')}</p>
           </div>
         </div>
       `;
@@ -1570,8 +1832,8 @@ function QuizBApp() {
       return html;
     },
 
-    // Fallback: Download as JSON
-    downloadAsJSON(data, filename) {
+    // Fallback: Export as JSON
+    exportAsJSON(data, filename) {
       const jsonStr = JSON.stringify(data, null, 2);
       const blob = new Blob([jsonStr], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
