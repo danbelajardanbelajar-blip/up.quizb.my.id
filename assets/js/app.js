@@ -1597,9 +1597,7 @@ function QuizBApp() {
 
     // ---- Export as Word ----
     async exportQuizAsWord(exportData, quizTitle) {
-      const { Document, Packer, Paragraph, Table, TableCell, WidthType, BorderStyle, UnderlineType, TextRun, AlignmentType } = window.docx;
-
-      if (!Document) {
+      if (typeof JSZip === 'undefined') {
         this.showToast('Library Word tidak tersedia', 'error', '❌');
         return;
       }
@@ -1607,140 +1605,40 @@ function QuizBApp() {
       const { quiz, questions } = exportData;
       const filename = `${quizTitle.replace(/[^a-z0-9]/gi, '_')}_soal`;
 
-      const children = [];
+      try {
+        // Generate HTML content untuk Word
+        const htmlContent = this.generateWordContent(exportData);
 
-      // Title
-      children.push(
-        new Paragraph({
-          text: quiz.title,
-          alignment: AlignmentType.CENTER,
-          spacing: { after: 200 },
-          style: 'Title',
-          thematicBreak: false,
-        })
-      );
+        // Create DOCX structure using JSZip
+        const zip = new JSZip();
 
-      // Category info
-      children.push(
-        new Paragraph({
-          text: `Kategori: ${quiz.category_name || '-'}`,
-          alignment: AlignmentType.CENTER,
-          spacing: { after: 400 },
-        })
-      );
+        // Add document.xml
+        zip.folder('word').file('document.xml', htmlContent);
 
-      // Quiz info table
-      const infoTable = new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        rows: [
-          new Table({
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            rows: [
-              {
-                height: { value: 200, rule: 'atLeast' },
-                cells: [
-                  new TableCell({
-                    children: [new Paragraph('Total Soal:')],
-                    width: { size: 30, type: WidthType.PERCENTAGE },
-                  }),
-                  new TableCell({
-                    children: [new Paragraph(String(quiz.total_questions))],
-                    width: { size: 20, type: WidthType.PERCENTAGE },
-                  }),
-                  new TableCell({
-                    children: [new Paragraph('Tingkat Kesulitan:')],
-                    width: { size: 30, type: WidthType.PERCENTAGE },
-                  }),
-                  new TableCell({
-                    children: [new Paragraph(quiz.difficulty === 'easy' ? 'Mudah' : quiz.difficulty === 'medium' ? 'Sedang' : 'Sulit')],
-                    width: { size: 20, type: WidthType.PERCENTAGE },
-                  }),
-                ],
-              },
-              {
-                height: { value: 200, rule: 'atLeast' },
-                cells: [
-                  new TableCell({
-                    children: [new Paragraph('Waktu Limit:')],
-                    width: { size: 30, type: WidthType.PERCENTAGE },
-                  }),
-                  new TableCell({
-                    children: [new Paragraph(`${Math.ceil(quiz.time_limit / 60)} menit`)],
-                    width: { size: 20, type: WidthType.PERCENTAGE },
-                  }),
-                  new TableCell({
-                    children: [new Paragraph('Nilai Kelulusan:')],
-                    width: { size: 30, type: WidthType.PERCENTAGE },
-                  }),
-                  new TableCell({
-                    children: [new Paragraph(`${quiz.passing_score}%`)],
-                    width: { size: 20, type: WidthType.PERCENTAGE },
-                  }),
-                ],
-              },
-            ],
-          }),
-        ],
-      });
+        // Add _rels/.rels
+        const relsContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+        zip.folder('_rels').file('.rels', relsContent);
 
-      if (quiz.description) {
-        children.push(new Paragraph(''));
-        children.push(new Paragraph({
-          text: new TextRun({
-            text: `Deskripsi: ${quiz.description}`,
-            italic: true,
-          }),
-          spacing: { after: 400 },
-        }));
-      }
+        // Add [Content_Types].xml
+        const contentTypesContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`;
+        zip.file('[Content_Types].xml', contentTypesContent);
 
-      // Questions
-      questions.forEach((q, idx) => {
-        children.push(new Paragraph({
-          text: `Soal ${idx + 1}${q.points ? ` (${q.points} poin)` : ''}`,
-          style: 'Heading2',
-          spacing: { before: 200, after: 100 },
-        }));
+        // Add word/_rels/document.xml.rels
+        const wordRelsContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+</Relationships>`;
+        zip.folder('word/_rels').file('document.xml.rels', wordRelsContent);
 
-        children.push(new Paragraph({
-          text: q.question_text,
-          spacing: { after: 200 },
-        }));
-
-        // Options
-        q.options.forEach(opt => {
-          children.push(new Paragraph({
-            text: `${opt.label}. ${opt.option_text}${opt.is_correct ? ' ✓ (Jawaban Benar)' : ''}`,
-            spacing: { after: 100 },
-            style: opt.is_correct ? 'ListBullet' : 'ListNumber',
-          }));
-        });
-
-        // Explanation
-        if (q.explanation) {
-          children.push(new Paragraph({
-            text: new TextRun({
-              text: `Penjelasan: ${q.explanation}`,
-              italic: true,
-            }),
-            spacing: { after: 300, before: 100 },
-          }));
-        }
-
-        children.push(new Paragraph(''));
-      });
-
-      // Footer
-      children.push(new Paragraph({
-        text: `Diekspor pada: ${new Date().toLocaleString('id-ID')}`,
-        alignment: AlignmentType.CENTER,
-        spacing: { before: 400 },
-        style: 'Normal',
-      }));
-
-      const doc = new Document({ children });
-
-      Packer.toBlob(doc).then(blob => {
+        // Generate BLOB and download
+        const blob = await zip.generateAsync({ type: 'blob' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -1749,11 +1647,228 @@ function QuizBApp() {
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
+
         this.showToast('Export Word berhasil', 'success', '📝');
-      }).catch(e => {
+      } catch (e) {
         console.error('Word export error:', e);
-        this.showToast('Gagal membuat file Word', 'error', '❌');
+        this.showToast('Gagal membuat file Word: ' + e.message, 'error', '❌');
+      }
+    },
+
+    // Generate Word XML content
+    generateWordContent(exportData) {
+      const { quiz, questions } = exportData;
+      
+      // Escape XML special characters
+      const escapeXml = (str) => {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&apos;');
+      };
+
+      let body = '';
+
+      // Title
+      body += `<w:p>
+        <w:pPr>
+          <w:jc w:val="center"/>
+          <w:spacing w:before="0" w:after="200"/>
+          <w:pStyle w:val="Heading1"/>
+        </w:pPr>
+        <w:r>
+          <w:rPr>
+            <w:b/>
+            <w:sz w:val="32"/>
+          </w:rPr>
+          <w:t>${escapeXml(quiz.title)}</w:t>
+        </w:r>
+      </w:p>`;
+
+      // Category
+      body += `<w:p>
+        <w:pPr>
+          <w:jc w:val="center"/>
+          <w:spacing w:before="0" w:after="400"/>
+        </w:pPr>
+        <w:r>
+          <w:rPr>
+            <w:color w:val="666666"/>
+          </w:rPr>
+          <w:t>Kategori: ${escapeXml(quiz.category_name || '-')}</w:t>
+        </w:r>
+      </w:p>`;
+
+      // Quiz info table
+      body += `<w:tbl>
+        <w:tblPr>
+          <w:tblW w:w="9000" w:type="auto"/>
+          <w:tblBorders>
+            <w:top w:val="single" w:sz="12" w:space="0" w:color="000000"/>
+            <w:left w:val="single" w:sz="12" w:space="0" w:color="000000"/>
+            <w:bottom w:val="single" w:sz="12" w:space="0" w:color="000000"/>
+            <w:right w:val="single" w:sz="12" w:space="0" w:color="000000"/>
+            <w:insideH w:val="single" w:sz="12" w:space="0" w:color="000000"/>
+            <w:insideV w:val="single" w:sz="12" w:space="0" w:color="000000"/>
+          </w:tblBorders>
+        </w:tblPr>
+        <w:tr>
+          <w:tc>
+            <w:tcPr><w:tcW w:w="2250" w:type="dxa"/></w:tcPr>
+            <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Total Soal:</w:t></w:r></w:p>
+          </w:tc>
+          <w:tc>
+            <w:tcPr><w:tcW w:w="2250" w:type="dxa"/></w:tcPr>
+            <w:p><w:r><w:t>${quiz.total_questions}</w:t></w:r></w:p>
+          </w:tc>
+          <w:tc>
+            <w:tcPr><w:tcW w:w="2250" w:type="dxa"/></w:tcPr>
+            <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Tingkat Kesulitan:</w:t></w:r></w:p>
+          </w:tc>
+          <w:tc>
+            <w:tcPr><w:tcW w:w="2250" w:type="dxa"/></w:tcPr>
+            <w:p><w:r><w:t>${quiz.difficulty === 'easy' ? 'Mudah' : quiz.difficulty === 'medium' ? 'Sedang' : 'Sulit'}</w:t></w:r></w:p>
+          </w:tc>
+        </w:tr>
+        <w:tr>
+          <w:tc>
+            <w:tcPr><w:tcW w:w="2250" w:type="dxa"/></w:tcPr>
+            <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Waktu Limit:</w:t></w:r></w:p>
+          </w:tc>
+          <w:tc>
+            <w:tcPr><w:tcW w:w="2250" w:type="dxa"/></w:tcPr>
+            <w:p><w:r><w:t>${Math.ceil(quiz.time_limit / 60)} menit</w:t></w:r></w:p>
+          </w:tc>
+          <w:tc>
+            <w:tcPr><w:tcW w:w="2250" w:type="dxa"/></w:tcPr>
+            <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Nilai Kelulusan:</w:t></w:r></w:p>
+          </w:tc>
+          <w:tc>
+            <w:tcPr><w:tcW w:w="2250" w:type="dxa"/></w:tcPr>
+            <w:p><w:r><w:t>${quiz.passing_score}%</w:t></w:r></w:p>
+          </w:tc>
+        </w:tr>
+      </w:tbl>`;
+
+      // Description
+      if (quiz.description) {
+        body += `<w:p>
+          <w:pPr>
+            <w:spacing w:before="400" w:after="400"/>
+            <w:pStyle w:val="Normal"/>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:i/>
+              <w:color w:val="666666"/>
+            </w:rPr>
+            <w:t>Deskripsi: ${escapeXml(quiz.description)}</w:t>
+          </w:r>
+        </w:p>`;
+      }
+
+      // Questions
+      questions.forEach((q, idx) => {
+        // Question heading
+        body += `<w:p>
+          <w:pPr>
+            <w:spacing w:before="400" w:after="200"/>
+            <w:pStyle w:val="Heading2"/>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:b/>
+              <w:sz w:val="24"/>
+            </w:rPr>
+            <w:t>Soal ${idx + 1}${q.points ? ` (${q.points} poin)` : ''}</w:t>
+          </w:r>
+        </w:p>`;
+
+        // Question text
+        body += `<w:p>
+          <w:pPr>
+            <w:spacing w:before="0" w:after="200"/>
+            <w:ind w:left="720"/>
+          </w:pPr>
+          <w:r>
+            <w:t>${escapeXml(q.question_text)}</w:t>
+          </w:r>
+        </w:p>`;
+
+        // Options
+        q.options.forEach((opt, oIdx) => {
+          const isCorrect = opt.is_correct;
+          body += `<w:p>
+            <w:pPr>
+              <w:spacing w:before="0" w:after="100"/>
+              <w:ind w:left="1440" w:hanging="360"/>
+              <w:numPr>
+                <w:ilvl w:val="0"/>
+                <w:numId w:val="1"/>
+              </w:numPr>
+            </w:pPr>
+            <w:r>
+              <w:rPr>
+                ${isCorrect ? '<w:b/>' : ''}
+                ${isCorrect ? '<w:color w:val="10B981"/>' : ''}
+              </w:rPr>
+              <w:t>${opt.label}. ${escapeXml(opt.option_text)}${isCorrect ? ' ✓ (Jawaban Benar)' : ''}</w:t>
+            </w:r>
+          </w:p>`;
+        });
+
+        // Explanation
+        if (q.explanation) {
+          body += `<w:p>
+            <w:pPr>
+              <w:spacing w:before="200" w:after="200"/>
+              <w:ind w:left="720"/>
+              <w:pStyle w:val="Normal"/>
+            </w:pPr>
+            <w:r>
+              <w:rPr>
+                <w:i/>
+                <w:color w:val="F59E0B"/>
+              </w:rPr>
+              <w:t>Penjelasan: ${escapeXml(q.explanation)}</w:t>
+            </w:r>
+          </w:p>`;
+        }
+
+        body += '<w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>';
       });
+
+      // Footer
+      body += `<w:p>
+        <w:pPr>
+          <w:jc w:val="center"/>
+          <w:spacing w:before="400" w:after="0"/>
+          <w:pStyle w:val="Normal"/>
+        </w:pPr>
+        <w:r>
+          <w:rPr>
+            <w:sz w:val="18"/>
+            <w:color w:val="999999"/>
+          </w:rPr>
+          <w:t>Diekspor pada: ${new Date().toLocaleString('id-ID')}</w:t>
+        </w:r>
+      </w:p>`;
+
+      // Complete XML document
+      const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+            xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+            xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+  <w:body>
+    ${body}
+  </w:body>
+</w:document>`;
+
+      return xml;
     },
 
     // Generate HTML content for PDF
