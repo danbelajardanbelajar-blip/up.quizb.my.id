@@ -394,12 +394,20 @@ function assignment_submit(): void {
     );
     if (!$member) jsonError('Anda bukan anggota kelas ini', 403);
 
-    // Verifikasi attempt milik user dan untuk quiz yang sama
+    // Verifikasi attempt milik user dan quiz-nya ada dalam packages assignment ini
+    // (mendukung single maupun multiple quiz packages)
     $attempt = DB::one(
-        "SELECT * FROM attempts WHERE id = ? AND user_id = ? AND quiz_id = ?",
-        [$attemptId, $user['id'], $assignment['quiz_id']]
+        "SELECT att.* FROM attempts att
+         WHERE att.id = ? AND att.user_id = ?
+           AND (
+             att.quiz_id = ?
+             OR att.quiz_id IN (
+               SELECT quiz_id FROM assignment_quiz_packages WHERE assignment_id = ?
+             )
+           )",
+        [$attemptId, $user['id'], $assignment['quiz_id'], $assignmentId]
     );
-    if (!$attempt) jsonError('Attempt tidak valid', 404);
+    if (!$attempt) jsonError('Attempt tidak valid — quiz tidak terkait dengan tugas ini', 404);
 
     // Cek deadline
     if ($assignment['deadline'] && strtotime($assignment['deadline']) < time()) {
@@ -639,6 +647,7 @@ function assignment_my_dashboard(): void {
             "SELECT
                 a.id, a.title, a.deadline, a.mode,
                 a.timer_per_question, a.duration_minutes,
+                a.max_questions, a.shuffle_questions, a.shuffle_options,
                 q.id     AS quiz_id,
                 q.title  AS quiz_title,
                 q.total_questions,
@@ -646,7 +655,11 @@ function assignment_my_dashboard(): void {
                 cl.name  AS class_name,
                 s.id     AS submission_id,
                 s.submitted_at,
-                (SELECT MAX(score) FROM attempts WHERE user_id = ? AND quiz_id = a.quiz_id) AS my_score,
+                (SELECT MAX(att2.score) FROM attempts att2
+                 WHERE att2.user_id = ?
+                   AND (att2.quiz_id = a.quiz_id
+                        OR att2.quiz_id IN (SELECT quiz_id FROM assignment_quiz_packages WHERE assignment_id = a.id))
+                ) AS my_score,
                 CASE
                     WHEN s.id IS NOT NULL AND (a.require_full_score = 0 OR (a.require_full_score = 1 AND IFNULL(att.score,0) = 100)) THEN 'done'
                     WHEN s.id IS NOT NULL AND a.require_full_score = 1 AND IFNULL(att.score,0) < 100 THEN 'incomplete'
@@ -677,6 +690,24 @@ function assignment_my_dashboard(): void {
             $r['class_id']       = (int)$r['class_id'];
             $r['total_questions']= (int)$r['total_questions'];
             $r['my_score']       = $r['my_score'] !== null ? (int)$r['my_score'] : null;
+            
+            // Ambil quiz packages untuk setiap assignment
+            $quizPackages = DB::all(
+                "SELECT aqp.quiz_id, aqp.order_index, q.title, q.total_questions
+                 FROM assignment_quiz_packages aqp
+                 JOIN quizzes q ON q.id = aqp.quiz_id
+                 WHERE aqp.assignment_id = ?
+                 ORDER BY aqp.order_index ASC",
+                [(int)$r['id']]
+            );
+            $r['quiz_packages'] = $quizPackages;
+            
+            // Jika ada quiz packages, gunakan quiz pertama sebagai primary
+            if (!empty($quizPackages)) {
+                $r['primary_quiz_id'] = (int)$quizPackages[0]['quiz_id'];
+            } else {
+                $r['primary_quiz_id'] = (int)$r['quiz_id'];
+            }
         }
         unset($r);
 
@@ -819,13 +850,20 @@ function assignment_attempts(): void {
     $isMember  = DB::one("SELECT id FROM class_members WHERE class_id = ? AND user_id = ?", [$assignment['class_id'], $user['id']]);
     if (!$isTeacher && !$isMember && $user['role'] !== 'admin') jsonError('Anda tidak memiliki akses ke tugas ini', 403);
 
-    // Untuk pelajar: ambil semua attempt milik user untuk quiz assignment ini
+    // Untuk pelajar: ambil semua attempt milik user untuk semua quiz packages assignment ini
+    // Ini mendukung baik assignment single maupun multiple packages
     $attempts = DB::all(
-        "SELECT id, score, correct_count, time_taken, completed_at, mode
-         FROM attempts
-         WHERE user_id = ? AND quiz_id = ?
-         ORDER BY completed_at DESC",
-        [$user['id'], $assignment['quiz_id']]
+        "SELECT DISTINCT att.id, att.score, att.correct_count, att.time_taken, att.completed_at, att.mode
+         FROM attempts att
+         WHERE att.user_id = ?
+           AND (
+             att.quiz_id = ?
+             OR att.quiz_id IN (
+               SELECT quiz_id FROM assignment_quiz_packages WHERE assignment_id = ?
+             )
+           )
+         ORDER BY att.completed_at DESC",
+        [$user['id'], $assignment['quiz_id'], $id]
     );
 
     jsonSuccess(['assignment' => $assignment, 'attempts' => $attempts]);

@@ -44,14 +44,14 @@ function attempt_submit(): void {
 
     // Ambil hanya soal yang ditampilkan ke user.
     // Jika question_ids dikirim → filter ke soal tersebut (WAJIB untuk penilaian akurat).
-    // Jika tidak dikirim (klien lama) → fallback ke soal yang ada di answerMap saja,
-    // BUKAN semua soal quiz — karena soal yang tidak dikerjakan tidak boleh dihitung salah.
+    // PENTING: tidak lagi memfilter by quiz_id agar mendukung multiple quiz packages.
+    // Soal yang tidak dikerjakan tidak boleh dihitung salah.
     if (!empty($displayedQIds)) {
         $placeholders = implode(',', array_fill(0, count($displayedQIds), '?'));
         $questions = DB::all(
             "SELECT q.id, q.points FROM questions q
-             WHERE q.quiz_id = ? AND q.id IN ($placeholders)",
-            array_merge([$quizId], $displayedQIds)
+             WHERE q.id IN ($placeholders)",
+            $displayedQIds
         );
     } elseif (!empty($answerMap)) {
         // Fallback: hanya soal yang memang dijawab oleh pelajar
@@ -59,8 +59,8 @@ function attempt_submit(): void {
         $placeholders = implode(',', array_fill(0, count($answeredIds), '?'));
         $questions = DB::all(
             "SELECT q.id, q.points FROM questions q
-             WHERE q.quiz_id = ? AND q.id IN ($placeholders)",
-            array_merge([$quizId], $answeredIds)
+             WHERE q.id IN ($placeholders)",
+            $answeredIds
         );
     } else {
         // Tidak ada jawaban sama sekali

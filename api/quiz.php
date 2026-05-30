@@ -74,6 +74,24 @@ function quiz_get(): void {
 function quiz_questions(): void {
     $quizId       = (int)($_GET['id']            ?? 0);
     $assignmentId = (int)($_GET['assignment_id'] ?? 0);
+
+    // Jika quiz_id tidak diberikan tapi assignment_id ada,
+    // resolve quiz_id dari paket pertama assignment
+    if (!$quizId && $assignmentId > 0) {
+        $firstPkg = DB::one(
+            'SELECT quiz_id FROM assignment_quiz_packages
+             WHERE assignment_id = ? ORDER BY order_index ASC LIMIT 1',
+            [$assignmentId]
+        );
+        if (!$firstPkg) {
+            // Fallback ke quiz_id utama di tabel assignments
+            $aRow = DB::one('SELECT quiz_id FROM assignments WHERE id = ?', [$assignmentId]);
+            if ($aRow) $quizId = (int)$aRow['quiz_id'];
+        } else {
+            $quizId = (int)$firstPkg['quiz_id'];
+        }
+    }
+
     if (!$quizId) jsonError('Quiz ID diperlukan');
 
     $quiz = DB::one(

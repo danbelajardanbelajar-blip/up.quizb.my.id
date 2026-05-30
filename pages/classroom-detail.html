@@ -182,9 +182,14 @@
                     <div class="flex gap-2 flex-shrink-0">
                       <!-- For students: play button -->
                       <template x-if="!classroom.isTeacher">
-                        <button @click="assign.mode === 'bebas'
-                                  ? navigate('/quiz/' + assign.quiz_id + '?assign=' + assign.id)
-                                  : navigate('/play/' + assign.quiz_id + '?mode=' + assign.mode + '&assign=' + assign.id)"
+                        <button @click="(() => {
+                                  const hasMultiPkg = assign.quiz_packages && assign.quiz_packages.length > 1;
+                                  const qid = (assign.quiz_packages && assign.quiz_packages.length > 0)
+                                    ? assign.quiz_packages[0].quiz_id
+                                    : assign.quiz_id;
+                                  if (assign.mode === 'bebas') navigate('/quiz/' + qid + '?assign=' + assign.id);
+                                  else navigate('/play/' + (hasMultiPkg ? '0' : qid) + '?mode=' + assign.mode + '&assign=' + assign.id);
+                                })()"
                                 class="btn-primary text-xs px-3 py-1.5">Kerjakan</button>
                       </template>
                       <!-- For teachers: hasil, live, edit, delete -->

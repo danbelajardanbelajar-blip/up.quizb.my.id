@@ -115,18 +115,24 @@
 
               <!-- Tombol aksi -->
               <template x-if="a.status === 'pending'">
-                <button @click="a.mode === 'bebas'
-                            ? navigate('/quiz/' + a.quiz_id + '?assign=' + a.id)
-                            : navigate('/play/' + a.quiz_id + '?mode=' + a.mode + '&assign=' + a.id)"
+                <button @click="(() => {
+                            const hasMultiPkg = a.quiz_packages && a.quiz_packages.length > 1;
+                            const qid = a.primary_quiz_id || (a.quiz_packages && a.quiz_packages.length > 0 ? a.quiz_packages[0].quiz_id : a.quiz_id);
+                            if (a.mode === 'bebas') navigate('/quiz/' + qid + '?assign=' + a.id);
+                            else navigate('/play/' + (hasMultiPkg ? '0' : qid) + '?mode=' + a.mode + '&assign=' + a.id);
+                          })()"
                         class="w-full btn-primary text-sm py-2 mt-auto">
                   🚀 Kerjakan Sekarang
                 </button>
               </template>
               <template x-if="a.status !== 'pending'">
                 <div class="flex flex-col gap-2 mt-auto">
-                  <button @click="a.mode === 'bebas'
-                              ? navigate('/quiz/' + a.quiz_id + '?assign=' + a.id)
-                              : navigate('/play/' + a.quiz_id + '?mode=' + a.mode + '&assign=' + a.id)"
+                  <button @click="(() => {
+                              const hasMultiPkg = a.quiz_packages && a.quiz_packages.length > 1;
+                              const qid = a.primary_quiz_id || (a.quiz_packages && a.quiz_packages.length > 0 ? a.quiz_packages[0].quiz_id : a.quiz_id);
+                              if (a.mode === 'bebas') navigate('/quiz/' + qid + '?assign=' + a.id);
+                              else navigate('/play/' + (hasMultiPkg ? '0' : qid) + '?mode=' + a.mode + '&assign=' + a.id);
+                            })()"
                           class="w-full btn-primary text-sm py-2">
                     🔄 Kerjakan
                   </button>

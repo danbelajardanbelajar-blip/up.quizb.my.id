@@ -12,8 +12,8 @@
          const mode = mm ? mm[1] : 'exam';
          const cm  = (queryPart || '').match(/(?:^|&)cid=(\d+)/);
          const challengeId = cm ? cm[1] : null;
-         if (quizId) { loadQuiz(quizId, assignId, mode, challengeId); }
-         else { phase = 'error'; error = 'Quiz ID tidak ditemukan di URL'; }
+         if (quizId || assignId) { loadQuiz(quizId || 0, assignId, mode, challengeId); }
+         else { phase = 'error'; error = 'Quiz ID atau Assignment ID tidak ditemukan di URL'; }
        })()
      "
      @beforeunload.window="stopTimer()"
