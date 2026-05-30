@@ -5,7 +5,7 @@
 
 // ============================================
 // POST /api?action=assignment.create
-// Pengajar membuat tugas untuk kelas
+// Pengajar membuat tugas untuk kelas (dengan support multiple quiz packages)
 // ============================================
 function assignment_create(): void {
     // Re-use helper from class.php (loaded via require_once chain)
@@ -17,7 +17,17 @@ function assignment_create(): void {
 
     $body             = getJsonBody();
     $classId          = (int)($body['class_id']             ?? 0);
-    $quizId           = (int)($body['quiz_id']              ?? 0);
+    
+    // Support both single quiz_id (backward compatibility) dan multiple quiz_ids
+    $quizIds = [];
+    if (!empty($body['quiz_ids']) && is_array($body['quiz_ids'])) {
+        // New format: array of quiz IDs
+        $quizIds = array_map('intval', array_filter($body['quiz_ids']));
+    } elseif (!empty($body['quiz_id'])) {
+        // Old format: single quiz_id
+        $quizIds = [(int)$body['quiz_id']];
+    }
+    
     $title            = sanitizeString($body['title']       ?? '');
     $mode             = sanitizeString($body['mode']        ?? 'bebas');
     $deadline         = $body['deadline']                   ?? null;
@@ -31,7 +41,7 @@ function assignment_create(): void {
     $requireFull      = isset($body['require_full_score']) ? (int)(bool)$body['require_full_score'] : 0;
 
     if ($classId <= 0) jsonError('Pilih kelas');
-    if ($quizId  <= 0) jsonError('Pilih paket soal');
+    if (empty($quizIds)) jsonError('Pilih minimal satu paket soal');
     if (strlen($title) < 3) jsonError('Judul tugas minimal 3 karakter');
     if (!in_array($mode, ['instant','end','exam','bebas'])) jsonError('Mode tidak valid');
 
@@ -42,11 +52,17 @@ function assignment_create(): void {
         jsonError('Bukan kelas milik Anda', 403);
     }
 
-    // Verifikasi quiz ada
-    $quiz = DB::one("SELECT id FROM quizzes WHERE id = ?", [$quizId]);
-    if (!$quiz) jsonError('Paket soal tidak ditemukan', 404);
+    // Verifikasi semua quiz ada
+    foreach ($quizIds as $qid) {
+        $quiz = DB::one("SELECT id FROM quizzes WHERE id = ?", [$qid]);
+        if (!$quiz) jsonError('Paket soal tidak ditemukan', 404);
+    }
 
     $pdo = DB::conn();
+    
+    // Gunakan quiz_id pertama untuk backward compatibility
+    $primaryQuizId = $quizIds[0];
+    
     $pdo->prepare(
         "INSERT INTO assignments
          (class_id, quiz_id, teacher_id, title, mode, deadline,
@@ -54,7 +70,7 @@ function assignment_create(): void {
           shuffle_questions, shuffle_options, require_full_score)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )->execute([
-        $classId, $quizId, $user['id'], $title, $mode,
+        $classId, $primaryQuizId, $user['id'], $title, $mode,
         $deadline ?: null,
         $maxQuestions,
         $timerPerQ,
@@ -64,6 +80,14 @@ function assignment_create(): void {
         $requireFull,
     ]);
     $newId = $pdo->lastInsertId();
+    
+    // Insert semua quiz packages
+    $stmt = $pdo->prepare(
+        "INSERT INTO assignment_quiz_packages (assignment_id, quiz_id, order_index) VALUES (?, ?, ?)"
+    );
+    foreach ($quizIds as $index => $qid) {
+        $stmt->execute([$newId, $qid, $index]);
+    }
 
     $assignment = DB::one(
         "SELECT a.*, q.title AS quiz_title, c.name AS class_name
@@ -71,6 +95,17 @@ function assignment_create(): void {
          WHERE a.id = ?",
         [$newId]
     );
+    
+    // Ambil semua quiz packages
+    $quizPackages = DB::all(
+        "SELECT aqp.*, q.title, q.total_questions FROM assignment_quiz_packages aqp
+         JOIN quizzes q ON q.id = aqp.quiz_id
+         WHERE aqp.assignment_id = ?
+         ORDER BY aqp.order_index ASC",
+        [$newId]
+    );
+    $assignment['quiz_packages'] = $quizPackages;
+    
     jsonSuccess($assignment, 201);
 }
 
@@ -104,6 +139,19 @@ function assignment_list(): void {
          ORDER BY a.created_at DESC",
         [$classId]
     );
+
+    // Tambahkan quiz packages untuk setiap assignment
+    foreach ($assignments as &$a) {
+        $quizPackages = DB::all(
+            "SELECT aqp.*, q.title, q.total_questions FROM assignment_quiz_packages aqp
+             JOIN quizzes q ON q.id = aqp.quiz_id
+             WHERE aqp.assignment_id = ?
+             ORDER BY aqp.order_index ASC",
+            [$a['id']]
+        );
+        $a['quiz_packages'] = $quizPackages;
+    }
+    unset($a);
 
     // Untuk pelajar: tandai apakah sudah dikerjakan
     if (!$isTeacher) {
@@ -161,6 +209,16 @@ function assignment_get(): void {
     if (!$isTeacher && !$isMember && $user['role'] !== 'admin') {
         jsonError('Anda tidak memiliki akses ke tugas ini', 403);
     }
+
+    // Ambil semua quiz packages
+    $quizPackages = DB::all(
+        "SELECT aqp.*, q.title, q.total_questions FROM assignment_quiz_packages aqp
+         JOIN quizzes q ON q.id = aqp.quiz_id
+         WHERE aqp.assignment_id = ?
+         ORDER BY aqp.order_index ASC",
+        [$id]
+    );
+    $assignment['quiz_packages'] = $quizPackages;
 
     // Pelajar: cek status pengerjaan
     if (!$isTeacher) {
@@ -231,17 +289,65 @@ function assignment_update(): void {
                     ? (int)(bool)$body['require_full_score']
                     : (int)$assignment['require_full_score'];
 
-    DB::conn()->prepare(
+    // Support updating quiz packages
+    $quizIds = [];
+    if (!empty($body['quiz_ids']) && is_array($body['quiz_ids'])) {
+        $quizIds = array_map('intval', array_filter($body['quiz_ids']));
+    }
+
+    $pdo = DB::conn();
+    
+    // Tentukan primary_quiz_id
+    if (!empty($quizIds)) {
+        // Jika ada quiz_ids baru, gunakan yang pertama
+        $primaryQuizId = $quizIds[0];
+        // Verifikasi semua quiz ada
+        foreach ($quizIds as $qid) {
+            $quiz = DB::one("SELECT id FROM quizzes WHERE id = ?", [$qid]);
+            if (!$quiz) jsonError('Paket soal tidak ditemukan', 404);
+        }
+    } else {
+        // Jika tidak ada update quiz_ids, pertahankan yang lama
+        $primaryQuizId = $assignment['quiz_id'];
+    }
+    
+    $pdo->prepare(
         "UPDATE assignments SET title=?, mode=?, deadline=?, is_active=?,
                 max_questions=?, timer_per_question=?, duration_minutes=?,
-                shuffle_questions=?, shuffle_options=?, require_full_score=?
+                shuffle_questions=?, shuffle_options=?, require_full_score=?, quiz_id=?
          WHERE id=?"
     )->execute([$title, $mode, $deadline ?: null, $isActive,
                 $maxQ, $timerQ, $durMins,
                 $shuffleQ, $shuffleO, $requireFull,
-                $id]);
+                $primaryQuizId, $id]);
 
-    jsonSuccess(DB::one("SELECT * FROM assignments WHERE id = ?", [$id]));
+    // Update quiz packages jika ada perubahan
+    if (!empty($quizIds)) {
+        // Hapus yang lama
+        $pdo->prepare("DELETE FROM assignment_quiz_packages WHERE assignment_id = ?")->execute([$id]);
+        
+        // Insert yang baru
+        $stmt = $pdo->prepare(
+            "INSERT INTO assignment_quiz_packages (assignment_id, quiz_id, order_index) VALUES (?, ?, ?)"
+        );
+        foreach ($quizIds as $index => $qid) {
+            $stmt->execute([$id, $qid, $index]);
+        }
+    }
+
+    $result = DB::one("SELECT * FROM assignments WHERE id = ?", [$id]);
+    
+    // Ambil semua quiz packages
+    $quizPackages = DB::all(
+        "SELECT aqp.*, q.title, q.total_questions FROM assignment_quiz_packages aqp
+         JOIN quizzes q ON q.id = aqp.quiz_id
+         WHERE aqp.assignment_id = ?
+         ORDER BY aqp.order_index ASC",
+        [$id]
+    );
+    $result['quiz_packages'] = $quizPackages;
+    
+    jsonSuccess($result);
 }
 
 // ============================================

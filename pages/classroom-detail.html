@@ -142,10 +142,23 @@
                         </template>
                       </div>
                       <p class="text-sm text-gray-500 dark:text-gray-400">
-                        📝 <span x-text="assign.quiz_title"></span>
-                        •
-                        <span x-show="assign.max_questions" class="font-medium text-primary-600 dark:text-primary-400" x-text="assign.max_questions + ' soal (diatur guru)'"></span>
-                        <span x-show="!assign.max_questions" x-text="assign.total_questions + ' soal (bank soal)'"></span>
+                        <template x-if="assign.quiz_packages && assign.quiz_packages.length > 0">
+                          <span>
+                            📝
+                            <template x-for="(pkg, idx) in assign.quiz_packages" :key="pkg.id">
+                              <span><span x-text="pkg.title"></span><span x-show="idx < assign.quiz_packages.length - 1">, </span></span>
+                            </template>
+                            •
+                            <span class="font-medium text-primary-600 dark:text-primary-400" x-text="assign.max_questions ? assign.max_questions + ' soal (diatur guru)' : assign.total_questions + ' soal (bank soal)'"></span>
+                          </span>
+                        </template>
+                        <template x-if="!assign.quiz_packages || assign.quiz_packages.length === 0">
+                          <span>
+                            📝 <span x-text="assign.quiz_title"></span>
+                            •
+                            <span class="font-medium text-primary-600 dark:text-primary-400" x-text="assign.max_questions ? assign.max_questions + ' soal (diatur guru)' : assign.total_questions + ' soal (bank soal)'"></span>
+                          </span>
+                        </template>
                       </p>
                       <div class="flex flex-wrap items-center gap-2 text-xs text-gray-400 mt-1">
                         <span x-show="assign.deadline">⏰ <span x-text="formatDate(assign.deadline)"></span></span>
@@ -339,16 +352,90 @@
           <label class="form-label">Judul Tugas *</label>
           <input x-model="classroom.assignForm.title" class="form-input" placeholder="Cth: Latihan Soal Bab 3" />
         </div>
-        <!-- Pilih quiz hanya saat buat baru -->
-        <div x-show="!classroom.assignModal.editId">
-          <label class="form-label">Pilih Paket Soal (Quiz) *</label>
-          <div x-show="classroom.quizListLoading" class="skeleton h-10 rounded-lg"></div>
-          <select x-show="!classroom.quizListLoading" x-model="classroom.assignForm.quiz_id" class="form-input">
-            <option value="">-- Pilih Quiz --</option>
-            <template x-for="q in classroom.quizListForAssign" :key="q.id">
-              <option :value="q.id" x-text="q.title + ' (' + q.question_count + ' soal)'"></option>
-            </template>
-          </select>
+        <!-- Pilih quiz untuk buat baru atau edit -->
+        <div>
+          <div x-show="!classroom.assignModal.editId">
+            <label class="form-label">Pilih Paket Soal (Quiz) * <span class="text-xs text-gray-400">(bisa lebih dari satu)</span></label>
+          
+          <!-- Multi-select Quiz Packages (Tag Style) -->
+          <div class="space-y-2">
+            <!-- Selected Tags -->
+            <div x-show="classroom.assignForm.quiz_ids.length > 0" class="flex flex-wrap gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-2">
+              <template x-for="qid in classroom.assignForm.quiz_ids" :key="qid">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 rounded-full text-sm font-medium">
+                  <span x-text="classroom.quizListForAssign.find(q => q.id == qid)?.title || 'Quiz ' + qid"></span>
+                  <span x-text="'(' + (classroom.quizListForAssign.find(q => q.id == qid)?.question_count || 0) + ' soal)'"></span>
+                  <button type="button" @click="classroom.assignForm.quiz_ids = classroom.assignForm.quiz_ids.filter(id => id != qid)"
+                          class="ml-1 text-primary-500 hover:text-primary-700 dark:hover:text-primary-200 font-bold">
+                    ✕
+                  </button>
+                </div>
+              </template>
+            </div>
+
+            <!-- Dropdown untuk menambah quiz -->
+            <div class="relative">
+              <div x-show="!classroom.assignQuizDropdownOpen" 
+                   @click="classroom.assignQuizDropdownOpen = true"
+                   class="form-input cursor-pointer bg-white dark:bg-gray-800 flex items-center justify-between">
+                <span x-show="classroom.assignForm.quiz_ids.length === 0" class="text-gray-400">-- Pilih dan tambahkan quiz --</span>
+                <span x-show="classroom.assignForm.quiz_ids.length > 0" class="text-gray-500">-- Tambahkan quiz lain --</span>
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+                </svg>
+              </div>
+
+              <!-- Dropdown List -->
+              <div x-show="classroom.assignQuizDropdownOpen" 
+                   @click.outside="classroom.assignQuizDropdownOpen = false"
+                   class="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10"
+                   x-transition>
+                <div class="max-h-60 overflow-y-auto">
+                  <template x-for="q in classroom.quizListForAssign" :key="q.id">
+                    <div @click="
+                      if (!classroom.assignForm.quiz_ids.includes(q.id)) {
+                        classroom.assignForm.quiz_ids.push(q.id);
+                      }
+                      classroom.assignQuizDropdownOpen = false;
+                    "
+                         :class="classroom.assignForm.quiz_ids.includes(q.id) ? 'bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
+                         class="px-4 py-2.5 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-0 transition-colors flex items-center justify-between">
+                      <div class="flex-1">
+                        <p class="font-medium text-gray-800 dark:text-gray-100" x-text="q.title"></p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400" x-text="q.question_count + ' soal'"></p>
+                      </div>
+                      <span x-show="classroom.assignForm.quiz_ids.includes(q.id)" class="text-primary-600 dark:text-primary-400 font-bold">✓</span>
+                    </div>
+                  </template>
+                  
+                  <div x-show="!classroom.quizListLoading && classroom.quizListForAssign.length === 0" class="px-4 py-6 text-center text-gray-400 text-sm">
+                    Tidak ada paket soal yang tersedia
+                  </div>
+                  <div x-show="classroom.quizListLoading" class="px-4 py-6 text-center text-gray-400 text-sm">
+                    Memuat...
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-xs text-gray-400 mt-1.5">
+              💡 Tambahkan satu atau lebih paket soal. Soal dari semua paket akan digabung dalam satu tugas.
+            </p>
+          </div>
+
+          <!-- Untuk edit: tampilkan existing packages -->
+          <div x-show="classroom.assignModal.editId" class="space-y-2">
+            <label class="form-label">Paket Soal</label>
+            <div x-show="classroom.assignForm.quiz_ids.length > 0" class="flex flex-wrap gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <template x-for="qid in classroom.assignForm.quiz_ids" :key="qid">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 rounded-full text-sm font-medium">
+                  <span x-text="classroom.quizListForAssign.find(q => q.id == qid)?.title || 'Quiz ' + qid"></span>
+                  <span x-text="'(' + (classroom.quizListForAssign.find(q => q.id == qid)?.question_count || 0) + ' soal)'"></span>
+                </div>
+              </template>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">💡 Untuk mengubah paket soal, hubungi administrator atau buat tugas baru.</p>
+          </div>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>

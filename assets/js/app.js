@@ -77,9 +77,10 @@ function QuizBApp() {
       isTeacher:   false,
       // Create assignment modal
       assignModal: { show: false, editId: null },
-      assignForm:  { title: '', quiz_id: '', mode: 'bebas', deadline: '', max_questions: '', shuffle_questions: null, shuffle_options: null, timer_per_question: '', duration_minutes: '', require_full_score: false },
+      assignForm:  { title: '', quiz_ids: [], mode: 'bebas', deadline: '', max_questions: '', shuffle_questions: null, shuffle_options: null, timer_per_question: '', duration_minutes: '', require_full_score: false },
       assignError: '',
       assignLoading: false,
+      assignQuizDropdownOpen: false,
       // Quiz list for assignment dropdown
       quizListForAssign: [],
       quizListLoading: false,
@@ -997,9 +998,17 @@ function QuizBApp() {
 
     openEditAssignModal(assign) {
       this.classroom.assignModal.editId = assign.id;
+      // Ekstrak quiz_ids dari quiz_packages jika tersedia, atau fallback ke quiz_id
+      let quizIds = [];
+      if (assign.quiz_packages && Array.isArray(assign.quiz_packages)) {
+        quizIds = assign.quiz_packages.map(p => parseInt(p.quiz_id));
+      } else if (assign.quiz_id) {
+        quizIds = [parseInt(assign.quiz_id)];
+      }
+      
       this.classroom.assignForm = {
         title:             assign.title,
-        quiz_id:           assign.quiz_id,
+        quiz_ids:          quizIds,
         mode:              assign.mode,
         deadline:          assign.deadline ? assign.deadline.replace(' ', 'T').substring(0, 16) : '',
         max_questions:     assign.max_questions != null ? assign.max_questions : '',
@@ -1009,6 +1018,7 @@ function QuizBApp() {
         duration_minutes:    assign.duration_minutes   != null ? assign.duration_minutes   : '',
         require_full_score:  assign.require_full_score ? true : false,
       };
+      this.classroom.assignQuizDropdownOpen = false;
       this.classroom.assignError = '';
       this.classroom.assignModal.show = true;
     },
@@ -1025,7 +1035,8 @@ function QuizBApp() {
         const shuffleO   = f.shuffle_options;
         const timerPerQ  = f.timer_per_question !== '' && f.timer_per_question != null ? parseInt(f.timer_per_question) : null;
         const durMins    = f.duration_minutes   !== '' && f.duration_minutes   != null ? parseInt(f.duration_minutes)   : null;
-        await api.put('assignment.update', id, {
+        
+        const payload = {
           title:              f.title,
           mode:               f.mode,
           deadline:           f.deadline || null,
@@ -1035,7 +1046,14 @@ function QuizBApp() {
           timer_per_question: timerPerQ,
           duration_minutes:   durMins,
           require_full_score: f.require_full_score ? 1 : 0,
-        });
+        };
+        
+        // Include quiz_ids if it's an array with values (for edit)
+        if (Array.isArray(f.quiz_ids) && f.quiz_ids.length > 0) {
+          payload.quiz_ids = f.quiz_ids;
+        }
+        
+        await api.put('assignment.update', id, payload);
         this.classroom.assignModal.show = false;
         this.showToast('Tugas berhasil diperbarui!', 'success', '✅');
         await this.loadClassroomDetail(classId);
@@ -1048,7 +1066,19 @@ function QuizBApp() {
 
     async openAssignModal(existingAssign = null) {
       this.classroom.assignModal.editId = null;
-      this.classroom.assignForm  = { title: '', quiz_id: '', mode: 'bebas', deadline: '', max_questions: '', shuffle_questions: null, shuffle_options: null, timer_per_question: '', duration_minutes: '', require_full_score: false };
+      this.classroom.assignForm  = { 
+        title: '', 
+        quiz_ids: [], 
+        mode: 'bebas', 
+        deadline: '', 
+        max_questions: '', 
+        shuffle_questions: null, 
+        shuffle_options: null, 
+        timer_per_question: '', 
+        duration_minutes: '', 
+        require_full_score: false 
+      };
+      this.classroom.assignQuizDropdownOpen = false;
       this.classroom.assignError = '';
       this.classroom.assignModal.show = true;
       // Load quiz list for dropdown if not already loaded
@@ -1111,7 +1141,7 @@ function QuizBApp() {
     async createAssignment(classId) {
       const f = this.classroom.assignForm;
       if (!f.title || f.title.length < 3) { this.classroom.assignError = 'Judul tugas minimal 3 karakter'; return; }
-      if (!f.quiz_id) { this.classroom.assignError = 'Pilih paket soal'; return; }
+      if (!f.quiz_ids || f.quiz_ids.length === 0) { this.classroom.assignError = 'Pilih minimal satu paket soal'; return; }
       this.classroom.assignLoading = true;
       this.classroom.assignError   = '';
       try {
@@ -1122,7 +1152,7 @@ function QuizBApp() {
         const durMins   = f.duration_minutes   !== '' && f.duration_minutes   != null ? parseInt(f.duration_minutes)   : null;
         await api.post('assignment.create', {
           class_id:           parseInt(classId),
-          quiz_id:            parseInt(f.quiz_id),
+          quiz_ids:           f.quiz_ids,
           title:              f.title,
           mode:               f.mode,
           deadline:           f.deadline || null,
