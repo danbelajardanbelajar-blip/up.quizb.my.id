@@ -88,14 +88,18 @@ function quiz_questions(): void {
     $limit           = null;
     $shuffleQuestions = null;   // null = belum ditentukan
     $shuffleOptions   = null;
+    $assignmentData   = null;
 
     if ($assignmentId > 0) {
+        // Cari assignment — bisa punya satu atau multiple quiz packages
         $assignment = DB::one(
-            'SELECT max_questions, shuffle_questions, shuffle_options, timer_per_question, duration_minutes
-             FROM assignments WHERE id = ? AND quiz_id = ? AND is_active = 1',
-            [$assignmentId, $quizId]
+            'SELECT id, quiz_id, max_questions, shuffle_questions, shuffle_options, 
+                    timer_per_question, duration_minutes
+             FROM assignments WHERE id = ? AND is_active = 1',
+            [$assignmentId]
         );
         if ($assignment) {
+            $assignmentData = $assignment;
             if ($assignment['max_questions'] !== null)    $limit            = (int)$assignment['max_questions'];
             if ($assignment['shuffle_questions'] !== null) $shuffleQuestions = (bool)(int)$assignment['shuffle_questions'];
             if ($assignment['shuffle_options']   !== null) $shuffleOptions   = (bool)(int)$assignment['shuffle_options'];
@@ -128,11 +132,40 @@ function quiz_questions(): void {
     if ($limit === null || $limit < 0) $limit = 10;
 
     // ---- Ambil semua soal ----
-    $allQuestions = DB::all(
-        'SELECT id, question_text, type, points, order_num
-         FROM questions WHERE quiz_id = ? ORDER BY order_num',
-        [$quizId]
-    );
+    // Jika ada assignment dengan multiple packages, ambil dari semua packages
+    $allQuestions = [];
+    if ($assignmentId > 0 && $assignmentData) {
+        // Ambil semua quiz_ids yang terkait dengan assignment ini
+        $quizPackages = DB::all(
+            'SELECT aqp.quiz_id, q.title as quiz_title FROM assignment_quiz_packages aqp
+             JOIN quizzes q ON q.id = aqp.quiz_id
+             WHERE aqp.assignment_id = ?
+             ORDER BY aqp.order_index ASC',
+            [$assignmentId]
+        );
+        
+        if (!empty($quizPackages)) {
+            // Ambil soal dari semua packages
+            foreach ($quizPackages as $pkg) {
+                $questionsFromPkg = DB::all(
+                    'SELECT id, question_text, type, points, order_num
+                     FROM questions WHERE quiz_id = ? ORDER BY order_num',
+                    [$pkg['quiz_id']]
+                );
+                foreach ($questionsFromPkg as $q) {
+                    $q['quiz_title'] = $pkg['quiz_title'];  // Track which package this question belongs to
+                    $allQuestions[] = $q;
+                }
+            }
+        }
+    } else {
+        // Single quiz — ambil soal seperti biasa
+        $allQuestions = DB::all(
+            'SELECT id, question_text, type, points, order_num
+             FROM questions WHERE quiz_id = ? ORDER BY order_num',
+            [$quizId]
+        );
+    }
 
     // ---- Acak urutan soal (jika aktif) lalu potong sesuai limit ----
     if ($shuffleQuestions) {
