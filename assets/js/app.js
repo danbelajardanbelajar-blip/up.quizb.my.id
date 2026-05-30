@@ -996,7 +996,7 @@ function QuizBApp() {
       }
     },
 
-    openEditAssignModal(assign) {
+    async openEditAssignModal(assign) {
       this.classroom.assignModal.editId = assign.id;
       // Ekstrak quiz_ids dari quiz_packages jika tersedia, atau fallback ke quiz_id
       let quizIds = [];
@@ -1012,8 +1012,8 @@ function QuizBApp() {
         mode:              assign.mode,
         deadline:          assign.deadline ? assign.deadline.replace(' ', 'T').substring(0, 16) : '',
         max_questions:     assign.max_questions != null ? assign.max_questions : '',
-        shuffle_questions:   assign.shuffle_questions, // null | 0 | 1
-        shuffle_options:     assign.shuffle_options,
+        shuffle_questions: assign.shuffle_questions != null ? (assign.shuffle_questions == 1 ? true : (assign.shuffle_questions == 0 ? false : null)) : null,
+        shuffle_options:   assign.shuffle_options   != null ? (assign.shuffle_options   == 1 ? true : (assign.shuffle_options   == 0 ? false : null)) : null,
         timer_per_question:  assign.timer_per_question != null ? assign.timer_per_question : '',
         duration_minutes:    assign.duration_minutes   != null ? assign.duration_minutes   : '',
         require_full_score:  assign.require_full_score ? true : false,
@@ -1021,20 +1021,68 @@ function QuizBApp() {
       this.classroom.assignQuizDropdownOpen = false;
       this.classroom.assignError = '';
       this.classroom.assignModal.show = true;
+
+      // Muat daftar quiz untuk dropdown jika belum ada
+      if (!this.classroom.quizListForAssign.length) {
+        this.classroom.quizListLoading = true;
+        try {
+          let total = 0;
+          try {
+            const stats = await api.get('quiz.stats');
+            total = parseInt(stats.total_quizzes || 0, 10) || 0;
+          } catch (_) { total = 0; }
+
+          const perPage = 50;
+          let all = [];
+          if (total > 0) {
+            const pages = Math.max(1, Math.ceil(total / perPage));
+            const promises = [];
+            for (let p = 1; p <= pages; p++) {
+              promises.push(api.getFull('quiz.list', { limit: perPage, page: p }));
+            }
+            const results = await Promise.all(promises);
+            for (const r of results) {
+              if (Array.isArray(r.data)) all = all.concat(r.data);
+            }
+          } else {
+            let page = 1;
+            while (true) {
+              const r = await api.getFull('quiz.list', { limit: perPage, page });
+              const items = Array.isArray(r.data) ? r.data : [];
+              all = all.concat(items);
+              if (items.length < perPage) break;
+              page++;
+              if (page > 200) break;
+            }
+          }
+          try {
+            all.sort((a, b) => (a.title || '').toString().localeCompare((b.title || '').toString(), undefined, { sensitivity: 'base' }));
+          } catch (_) {
+            all.sort((a, b) => (a.title || '').toString().toLowerCase().localeCompare((b.title || '').toString().toLowerCase()));
+          }
+          this.classroom.quizListForAssign = all;
+        } catch (e) {
+          this.classroom.quizListForAssign = [];
+        } finally {
+          this.classroom.quizListLoading = false;
+        }
+      }
     },
 
     async updateAssignment(classId) {
       const f  = this.classroom.assignForm;
       const id = this.classroom.assignModal.editId;
       if (!f.title || f.title.length < 3) { this.classroom.assignError = 'Judul tugas minimal 3 karakter'; return; }
+      if (!f.quiz_ids || f.quiz_ids.length === 0) { this.classroom.assignError = 'Pilih minimal satu paket soal'; return; }
       this.classroom.assignLoading = true;
       this.classroom.assignError   = '';
       try {
-        const maxQ      = f.max_questions !== '' && f.max_questions != null ? parseInt(f.max_questions) : null;
-        const shuffleQ   = f.shuffle_questions; // null | 0 | 1
-        const shuffleO   = f.shuffle_options;
-        const timerPerQ  = f.timer_per_question !== '' && f.timer_per_question != null ? parseInt(f.timer_per_question) : null;
-        const durMins    = f.duration_minutes   !== '' && f.duration_minutes   != null ? parseInt(f.duration_minutes)   : null;
+        const maxQ     = f.max_questions !== '' && f.max_questions != null ? parseInt(f.max_questions) : null;
+        // Konversi boolean JS ke integer untuk PHP: true→1, false→0, null→null
+        const shuffleQ = f.shuffle_questions === true ? 1 : (f.shuffle_questions === false ? 0 : null);
+        const shuffleO = f.shuffle_options   === true ? 1 : (f.shuffle_options   === false ? 0 : null);
+        const timerPerQ = f.timer_per_question !== '' && f.timer_per_question != null ? parseInt(f.timer_per_question) : null;
+        const durMins   = f.duration_minutes   !== '' && f.duration_minutes   != null ? parseInt(f.duration_minutes)   : null;
         
         const payload = {
           title:              f.title,
@@ -1046,12 +1094,8 @@ function QuizBApp() {
           timer_per_question: timerPerQ,
           duration_minutes:   durMins,
           require_full_score: f.require_full_score ? 1 : 0,
+          quiz_ids:           f.quiz_ids,   // selalu kirim agar packages bisa diperbarui
         };
-        
-        // Include quiz_ids if it's an array with values (for edit)
-        if (Array.isArray(f.quiz_ids) && f.quiz_ids.length > 0) {
-          payload.quiz_ids = f.quiz_ids;
-        }
         
         await api.put('assignment.update', id, payload);
         this.classroom.assignModal.show = false;

@@ -274,20 +274,24 @@ function assignment_update(): void {
     $title        = sanitizeString($body['title'] ?? $assignment['title']);
     $mode         = sanitizeString($body['mode']  ?? $assignment['mode']);
     $deadline     = $body['deadline']    ?? $assignment['deadline'];
-    $isActive     = isset($body['is_active'])          ? (int)$body['is_active']           : (int)$assignment['is_active'];
-    $maxQ         = isset($body['max_questions'])       ? (int)$body['max_questions']       : $assignment['max_questions'];
-    $timerQ       = isset($body['timer_per_question'])  ? (int)$body['timer_per_question']  : $assignment['timer_per_question'];
-    $durMins      = isset($body['duration_minutes'])    ? (int)$body['duration_minutes']    : $assignment['duration_minutes'];
-    // shuffle: jika key ada di body → pakai nilai baru; jika tidak ada → pertahankan lama (termasuk NULL)
-    $shuffleQ     = array_key_exists('shuffle_questions', $body)
-                    ? (strlen((string)$body['shuffle_questions']) ? (int)(bool)$body['shuffle_questions'] : null)
-                    : $assignment['shuffle_questions'];
-    $shuffleO     = array_key_exists('shuffle_options', $body)
-                    ? (strlen((string)$body['shuffle_options'])   ? (int)(bool)$body['shuffle_options']   : null)
-                    : $assignment['shuffle_options'];
-    $requireFull  = array_key_exists('require_full_score', $body)
+    $isActive     = isset($body['is_active']) ? (int)$body['is_active'] : (int)$assignment['is_active'];
+    
+    // Nullable integers: null dari frontend = hapus/reset nilai
+    $maxQ    = array_key_exists('max_questions',      $body) ? ($body['max_questions']      !== null ? (int)$body['max_questions']      : null) : $assignment['max_questions'];
+    $timerQ  = array_key_exists('timer_per_question', $body) ? ($body['timer_per_question'] !== null ? (int)$body['timer_per_question'] : null) : $assignment['timer_per_question'];
+    $durMins = array_key_exists('duration_minutes',   $body) ? ($body['duration_minutes']   !== null ? (int)$body['duration_minutes']   : null) : $assignment['duration_minutes'];
+
+    // shuffle: null = ikuti pelajar, 0 = paksa tidak acak, 1 = paksa acak
+    $shuffleQ = array_key_exists('shuffle_questions', $body)
+                ? ($body['shuffle_questions'] !== null ? (int)$body['shuffle_questions'] : null)
+                : $assignment['shuffle_questions'];
+    $shuffleO = array_key_exists('shuffle_options', $body)
+                ? ($body['shuffle_options'] !== null ? (int)$body['shuffle_options'] : null)
+                : $assignment['shuffle_options'];
+    $requireFull = array_key_exists('require_full_score', $body)
                     ? (int)(bool)$body['require_full_score']
                     : (int)$assignment['require_full_score'];
+
 
     // Support updating quiz packages
     $quizIds = [];

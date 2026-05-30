@@ -99,7 +99,7 @@ function class_get(): void {
         [$classId]
     );
 
-    // Ambil tugas
+    // Ambil tugas beserta quiz packages per assignment
     $assignments = DB::all(
         "SELECT a.*, q.title AS quiz_title, q.total_questions,
                 (SELECT COUNT(*) FROM assignment_submissions WHERE assignment_id = a.id) AS submission_count,
@@ -119,12 +119,26 @@ function class_get(): void {
         [$user['id'], $user['id'], $classId]
     );
 
+    // Lampirkan quiz_packages ke setiap assignment
+    foreach ($assignments as &$a) {
+        $a['quiz_packages'] = DB::all(
+            "SELECT aqp.quiz_id, aqp.order_index, q.title, q.total_questions
+             FROM assignment_quiz_packages aqp
+             JOIN quizzes q ON q.id = aqp.quiz_id
+             WHERE aqp.assignment_id = ?
+             ORDER BY aqp.order_index ASC",
+            [(int)$a['id']]
+        );
+    }
+    unset($a);
+
     jsonSuccess([
         'class'       => $class,
         'members'     => $members,
         'assignments' => $assignments,
         'is_teacher'  => $isTeacher,
     ]);
+
 }
 
 // ============================================
