@@ -1692,7 +1692,10 @@ function _parseTextQuestionsLineByLine(string $text): array {
         }
 
         // Check for question ending with punctuation
-        if (!$cur && (strpos($line, '....') !== false || strpos($line, '...') !== false || str_ends_with($line, '?') || str_ends_with($line, ':'))) {
+        if ((!$cur || !$inOptions) && (strpos($line, '....') !== false || strpos($line, '...') !== false || str_ends_with($line, '?') || str_ends_with($line, ':') || str_ends_with($line, '؟'))) {
+            if ($cur && !empty($cur['options'])) {
+                $questions[] = $cur;
+            }
             $cur = ['question_text' => $line, 'explanation' => '', 'options' => []];
             $inOptions = true;
             continue;
@@ -1724,15 +1727,17 @@ function _parseTextQuestionsLineByLine(string $text): array {
                 $opt = trim(preg_replace('/\*|\[?\(?(benar|correct)\)?\]?/i', '', $opt));
             }
 
-            // FIX: Use mb_strlen for UTF-8
-            if (mb_strlen($opt, 'UTF-8') < 40) {  // Reasonable option length
+            // FIX: Use mb_strlen for UTF-8, increase length, and add max options limit
+            if (count($cur['options']) >= 5) {
+                $inOptions = false; // Stop absorbing after 5 options
+            } elseif (mb_strlen($opt, 'UTF-8') < 150) {  // Reasonable option length
                 $cur['options'][] = [
                     'option_text' => $opt,
                     'is_correct'  => $correct ? 1 : 0,
                     'label'       => chr(65 + count($cur['options'])),
                 ];
+                continue;
             }
-            continue;
         }
 
         // Append to question text if in options mode
@@ -1814,50 +1819,27 @@ function _parseDocx(string $path): array {
 
 
     foreach ($doc->xpath('//w:p') as $p) {
-
-
-
-
         $text = '';
-
-
-
-
-        foreach ($p->xpath('.//w:t') as $t) {
-
-
-
-
-            $text .= (string)$t;
-
-
-
-
+        $isHighlighted = false;
+        foreach ($p->xpath('.//w:r') as $r) {
+            $t = '';
+            foreach ($r->xpath('.//w:t') as $tx) {
+                $t .= (string)$tx;
+            }
+            if ($t !== '') {
+                if (!empty($r->xpath('.//w:highlight[@w:val="yellow"]') ?: $r->xpath('.//w:highlight[@w:val="green"]'))) {
+                    $isHighlighted = true;
+                }
+                $text .= $t;
+            }
         }
-
-
-
-
         $text = trim(preg_replace('/\s+/', ' ', $text));
-
-
-
-
         if ($text !== '') {
-
-
-
-
+            if ($isHighlighted) {
+                $text .= ' *';
+            }
             $paragraphs[] = $text;
-
-
-
-
         }
-
-
-
-
     }
 
 
