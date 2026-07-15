@@ -126,6 +126,21 @@ function attempt_submit(): void {
     );
     $attemptId = (int)DB::lastId();
 
+    // [REALTIME NOTIFIKASI] Tembak sinyal ke Tahajjud API secara asinkron
+    $notifyUrl = 'https://tahajjud.quizb.my.id/api_notify.php';
+    $postData = http_build_query([
+        'secret' => 'QUIZB_NOTIFY_SECRET_99',
+        'message' => 'Ada pengerjaan soal baru di UP.QuizB!'
+    ]);
+    
+    $ch = curl_init($notifyUrl);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_exec($ch);
+    curl_close($ch);
+
     // Simpan attempt_id di session untuk akses result tanpa login
     startSecureSession();
     if (!isset($_SESSION['my_attempts'])) $_SESSION['my_attempts'] = [];
