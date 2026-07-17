@@ -27,7 +27,7 @@ function attempt_submit(): void {
             if (!$quizId) jsonError('Quiz ID diperlukan');
         if (!is_array($answers)) jsonError('Format jawaban tidak valid');
 
-    $quiz = DB::one('SELECT id, total_questions, passing_score FROM quizzes WHERE id = ? AND is_published = 1', [$quizId]);
+    $quiz = DB::one('SELECT id, title, total_questions, passing_score FROM quizzes WHERE id = ? AND is_published = 1', [$quizId]);
     if (!$quiz) jsonError('Quiz tidak ditemukan', 404);
 
     // Normalisasi format answers: [{question_id, option_id}] atau {qid: oid}
@@ -127,10 +127,14 @@ function attempt_submit(): void {
     $attemptId = (int)DB::lastId();
 
     // [REALTIME NOTIFIKASI] Tembak sinyal ke Tahajjud API secara asinkron
+    $quizTitle = $quiz['title'] ?? 'Quiz';
+    $playerNameNotif = $user['name'] ?? 'User';
+    $msgText = "Pengerjaan '{$quizTitle}' oleh {$playerNameNotif} selesai dengan skor {$score}";
+    
     $notifyUrl = 'https://tahajjud.quizb.my.id/api_notify.php';
     $postData = http_build_query([
         'secret' => 'QUIZB_NOTIFY_SECRET_99',
-        'message' => 'Ada pengerjaan soal baru di UP.QuizB!'
+        'message' => $msgText
     ]);
     
     $ch = curl_init($notifyUrl);
