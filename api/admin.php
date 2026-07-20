@@ -808,7 +808,7 @@ function admin_question_stats(): void {
         $stats = DB::all(
             "SELECT 
                 q.id AS question_id,
-                q.text AS question_text,
+                q.question_text,
                 qz.title AS quiz_title,
                 q.type AS question_type,
                 SUM(CASE WHEN aa.option_id IS NOT NULL THEN 1 ELSE 0 END) AS total_answered,
@@ -818,7 +818,7 @@ function admin_question_stats(): void {
              JOIN quizzes qz ON q.quiz_id = qz.id
              LEFT JOIN attempt_answers aa ON aa.question_id = q.id
              WHERE qz.is_published = 1
-             GROUP BY q.id, q.text, qz.title, q.type
+             GROUP BY q.id, q.question_text, qz.title, q.type
              HAVING total_answered > 0
              ORDER BY wrong_count DESC, total_answered DESC
              LIMIT 100"
