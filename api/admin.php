@@ -804,7 +804,17 @@ function admin_quiz_export(): void {
 function admin_question_stats(): void {
     requirePengajar(); // admin + pengajar
 
+    $quizId = isset($_GET['quiz_id']) ? (int)$_GET['quiz_id'] : 0;
+    
     try {
+        $whereClause = "qz.is_published = 1";
+        $params = [];
+        
+        if ($quizId > 0) {
+            $whereClause .= " AND qz.id = ?";
+            $params[] = $quizId;
+        }
+
         $stats = DB::all(
             "SELECT 
                 q.id AS question_id,
@@ -817,11 +827,11 @@ function admin_question_stats(): void {
              FROM questions q
              JOIN quizzes qz ON q.quiz_id = qz.id
              LEFT JOIN attempt_answers aa ON aa.question_id = q.id
-             WHERE qz.is_published = 1
+             WHERE $whereClause
              GROUP BY q.id, q.question_text, qz.title, q.type
              HAVING total_answered > 0
-             ORDER BY wrong_count DESC, total_answered DESC
-             LIMIT 100"
+             ORDER BY wrong_count DESC, total_answered DESC",
+            $params
         );
 
         $result = [];

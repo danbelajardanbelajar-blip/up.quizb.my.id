@@ -916,18 +916,23 @@
         <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
           📈 Analisis Statistik Per Soal
         </h2>
-        <p class="text-sm text-gray-500 mt-1">Lihat soal mana yang paling sering dijawab salah oleh siswa.</p>
+        <p class="text-sm text-gray-500 mt-1">Pilih kuis untuk melihat soal mana yang paling sering dijawab salah.</p>
+      </div>
+      <div class="w-full sm:w-auto">
+        <select x-model="admin.analysisQuizId" @change="loadAnalysisData()" class="input-field min-w-[250px] font-medium shadow-sm">
+          <option value="">-- Pilih Kuis --</option>
+          <template x-for="qz in admin.quizPicker" :key="qz.id">
+            <option :value="qz.id" x-text="qz.title"></option>
+          </template>
+        </select>
       </div>
     </div>
 
     <!-- Data Table -->
-    <div class="card overflow-hidden">
+    <div class="card overflow-hidden" x-show="admin.analysisQuizId">
       <div class="overflow-x-auto">
         <table class="data-table">
           <thead><tr>
-            <th @click="sortAdmin('analysis','quiz_title')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800 text-left">
-              Kuis <span class="text-gray-400 text-xs" x-text="sortIcon('analysis','quiz_title')"></span>
-            </th>
             <th @click="sortAdmin('analysis','question_text')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800 text-left">
               Pertanyaan <span class="text-gray-400 text-xs" x-text="sortIcon('analysis','question_text')"></span>
             </th>
@@ -947,7 +952,6 @@
           <tbody>
             <template x-for="item in sortedAdmin('analysis', admin.analysis)" :key="item.question_id">
               <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                <td class="text-sm text-gray-600 dark:text-gray-300" x-text="item.quiz_title"></td>
                 <td class="text-sm font-medium text-gray-800 dark:text-gray-100" x-text="item.question_text"></td>
                 <td class="text-right tabular-nums text-sm text-gray-500" x-text="(item.total_answered || 0).toLocaleString()"></td>
                 <td class="text-right tabular-nums text-sm text-green-600 dark:text-green-400" x-text="(item.correct_count || 0).toLocaleString()"></td>
@@ -960,13 +964,22 @@
               </tr>
             </template>
             <tr x-show="admin.analysis.length === 0">
-              <td colspan="6" class="text-center py-10 text-gray-500">
-                Belum ada data analisis soal.
+              <td colspan="5" class="py-12 text-center text-gray-500">
+                <div class="flex flex-col items-center justify-center">
+                  <span class="text-4xl mb-3 opacity-50">📭</span>
+                  <p>Belum ada data analisis soal untuk kuis ini.</p>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
+    </div>
+    
+    <div x-show="!admin.analysisQuizId" class="card py-16 text-center text-gray-500 animate-fade-in border-dashed border-2 border-gray-300 dark:border-gray-700">
+      <span class="text-5xl mb-4 opacity-50 inline-block">👇</span>
+      <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300">Pilih Kuis Terlebih Dahulu</h3>
+      <p class="mt-2">Silakan pilih salah satu kuis dari dropdown di atas untuk melihat statistik soalnya.</p>
     </div>
   </div>
 

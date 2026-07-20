@@ -117,6 +117,7 @@ function QuizBApp() {
       review: { data: [], expandedId: null, attempts: {}, search: '', page: 1, perPage: 15 },
       // Analisis Soal
       analysis: [],
+      analysisQuizId: '',
       // User history modal
       userHistory: { show: false, user: null, allAttempts: [], page: 1, perPage: 15, loading: false, sort: { key: '', dir: 'asc' }, exporting: false },
       // Sort state per tab (client-side sort current page)
@@ -1335,8 +1336,12 @@ function QuizBApp() {
           this.admin.review.expandedId = null;
           this.admin.review.attempts   = {};
         } else if (tab === 'analysis') {
-          const data = await api.get('admin.question_stats');
-          this.admin.analysis = Array.isArray(data.data) ? data.data : [];
+          if (!this.admin.quizPicker.length) {
+            const d = await api.get('admin.quizzes_picker');
+            this.admin.quizPicker = d.quizzes || [];
+          }
+          this.admin.analysis = [];
+          this.admin.analysisQuizId = '';
         }
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
@@ -1451,6 +1456,23 @@ function QuizBApp() {
         this.admin.contentOpenGroups.push(groupId);
       } else {
         this.admin.contentOpenGroups.splice(idx, 1);
+      }
+    },
+
+    // ========== ANALISIS SOAL ==========
+    async loadAnalysisData() {
+      if (!this.admin.analysisQuizId) {
+        this.admin.analysis = [];
+        return;
+      }
+      this.admin.loading = true;
+      try {
+        const data = await api.get('admin.question_stats', { quiz_id: this.admin.analysisQuizId });
+        this.admin.analysis = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        this.admin.loading = false;
       }
     },
 
