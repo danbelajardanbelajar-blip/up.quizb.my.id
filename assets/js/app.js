@@ -318,7 +318,7 @@ function QuizBApp() {
         'login':       '/login',
         'register':    '/register',
         'google-setup': '/google-setup',
-        'admin':       '/admin',
+        'admin':       rest[0] ? '/admin/' + rest[0] : '/admin',
         'classroom':   rest[0] ? '/classroom/' + rest[0] : '/classroom',
         'challenges':      '/challenges',
         'activity':        '/activity',

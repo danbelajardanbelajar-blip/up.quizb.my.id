@@ -424,6 +424,13 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
         <?php include 'pages/admin-analysis.html'; ?>
       </div>
     </template>
+    
+    <!-- ADMIN MODALS -->
+    <template x-if="currentRoute.startsWith('/admin')">
+      <div>
+        <?php include 'pages/admin-modals.html'; ?>
+      </div>
+    </template>
 
     <!-- MESSAGES PAGE (full height, no footer) -->
     <div x-show="currentRoute === '/messages'" x-cloak>
