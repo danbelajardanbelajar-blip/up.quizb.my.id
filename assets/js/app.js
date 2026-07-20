@@ -126,6 +126,7 @@ function QuizBApp() {
         categories: { key: '', dir: 'asc' },
         review:     { key: 'total_plays', dir: 'desc' },
         questions:  { key: '', dir: 'asc' },
+        analysis:   { key: 'wrong_count', dir: 'desc' },
       },
       loading: false,
       modal: { show: false, type: '', data: {} },
