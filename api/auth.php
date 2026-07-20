@@ -127,7 +127,25 @@ function auth_me(): void {
     $data['shuffle_questions']    = (bool)(int)($data['shuffle_questions'] ?? 1);
     $data['shuffle_options']      = (bool)(int)($data['shuffle_options']   ?? 1);
     $data['csrf'] = generateCsrfToken();
+    
+    startSecureSession();
+    $data['is_impersonating'] = !empty($_SESSION['impersonate_original_admin']);
+    
     jsonSuccess($data);
+}
+
+function auth_stop_impersonating(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    startSecureSession();
+    if (!empty($_SESSION['impersonate_original_admin'])) {
+        $adminId = $_SESSION['impersonate_original_admin'];
+        $admin = DB::one('SELECT id, name, email, role FROM users WHERE id = ?', [$adminId]);
+        if ($admin) {
+            loginUser($admin);
+            jsonSuccess(['message' => 'Kembali ke sesi admin']);
+        }
+    }
+    jsonError('Sesi impersonasi tidak ditemukan');
 }
 
 function auth_update_settings(): void {

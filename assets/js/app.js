@@ -452,6 +452,7 @@ function QuizBApp() {
           name:                 data.name,
           email:                data.email,
           role:                 data.role,
+          is_impersonating:     data.is_impersonating || false,
           quiz_questions_limit: data.quiz_questions_limit || 10,
           shuffle_questions:    data.shuffle_questions    ?? true,
           shuffle_options:      data.shuffle_options      ?? true,
@@ -466,6 +467,15 @@ function QuizBApp() {
         if (data?.csrf) api.setToken(data.csrf);
       } catch {
         this.user = null;
+      }
+    },
+
+    async stopImpersonating() {
+      try {
+        await api.post('auth.stop_impersonating');
+        window.location.reload();
+      } catch (e) {
+        this.showToast(e.message, 'error');
       }
     },
 
@@ -2253,6 +2263,19 @@ function QuizBApp() {
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
         return false;
+      }
+    },
+
+    async loginAsUser(user) {
+      if (!confirm(`Login sebagai ${user.name}? Tab ini akan berubah menjadi sesi user tersebut.`)) return;
+      try {
+        await api.post('admin.user_login_as', { id: user.id });
+        // Buka dashboard di tab baru (opsional, karena current tab juga berubah)
+        window.open(window.location.origin + '/#/dashboard', '_blank');
+        // Refresh current tab agar menyesuaikan sesi baru
+        window.location.reload();
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
       }
     },
 

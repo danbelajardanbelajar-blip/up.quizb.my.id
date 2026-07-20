@@ -759,3 +759,17 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
     </div>
   </nav>
 
+
+  <!-- Impersonation Banner -->
+  <div x-show="user?.is_impersonating" style="display: none;" class="fixed bottom-0 inset-x-0 z-[100] bg-amber-500 text-amber-950 px-4 py-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] flex flex-col sm:flex-row items-center justify-between gap-3">
+    <div class="flex items-center gap-2 text-sm font-medium">
+      <span class="text-xl">???</span>
+      <span>Anda sedang mengakses akun <strong><span x-text="user?.name"></span></strong>. Tindakan Anda di sini adalah aksi nyata.</span>
+    </div>
+    <button @click="stopImpersonating()" class="whitespace-nowrap px-4 py-1.5 bg-amber-900/10 hover:bg-amber-900/20 rounded-lg transition-colors font-bold border border-amber-900/20 text-sm">
+      Kembali ke Admin
+    </button>
+  </div>
+
+</body>
+</html>

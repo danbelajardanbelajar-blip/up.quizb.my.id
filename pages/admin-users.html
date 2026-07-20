@@ -35,6 +35,7 @@
                 <td><span class="badge text-xs" :class="u.is_active?'badge-success':'badge-danger'" x-text="u.is_active?'Aktif':'Nonaktif'"></span></td>
                 <td>
                   <div class="flex items-center gap-2">
+                    <button @click="loginAsUser(u)" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline" x-show="u.id !== user?.id" title="Login sebagai user ini">Masuk</button>
                     <button @click="openAdminModal('user_edit', u)" class="text-xs text-blue-500 hover:underline">Edit</button>
                     <button @click="deleteAdminItem('user', u.id)" class="text-xs text-red-500 hover:underline" x-show="u.id !== user?.id">Hapus</button>
                   </div>

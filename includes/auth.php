@@ -184,8 +184,18 @@ function getCurrentUserOrAnon(): array {
     return $anon;
 }
 
-function loginUser(array $user): void {
+function loginUser(array $user, bool $is_impersonation = false): void {
     startSecureSession();
+    
+    // Simpan original admin id jika sedang impersonate
+    if ($is_impersonation) {
+        if (empty($_SESSION['impersonate_original_admin'])) {
+            $_SESSION['impersonate_original_admin'] = $_SESSION['user_id'];
+        }
+    } else {
+        unset($_SESSION['impersonate_original_admin']);
+    }
+
     session_regenerate_id(true);
     $_SESSION['user_id']   = $user['id'];
     $_SESSION['user_name'] = $user['name'];

@@ -403,6 +403,26 @@ function admin_user_delete(): void {
     jsonSuccess(['message' => 'User berhasil dihapus']);
 }
 
+function admin_user_login_as(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $admin = requireAdmin();
+    $body = getBody();
+    $id = isset($body['id']) ? (int)$body['id'] : 0;
+    if ($id <= 0) jsonError('ID tidak valid');
+
+    if ($admin['id'] == $id) {
+        jsonError('Anda sudah login sebagai akun ini');
+    }
+
+    $targetUser = DB::one('SELECT id, name, email, role FROM users WHERE id = ?', [$id]);
+    if (!$targetUser) jsonError('User tidak ditemukan');
+
+    // Gunakan argumen is_impersonation = true
+    loginUser($targetUser, true);
+
+    jsonSuccess(['message' => 'Berhasil login sebagai ' . $targetUser['name']]);
+}
+
 // ---- Platform Statistics ----
 
 function admin_stats(): void {
