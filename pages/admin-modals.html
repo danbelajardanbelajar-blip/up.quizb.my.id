@@ -158,6 +158,13 @@
           <span x-show="admin.loading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></span>
           Simpan
         </button>
+        <button x-show="admin.modal.type.endsWith('_edit')"
+                @click="deleteAdminItem(admin.modal.type.split('_')[0], admin.form.id).then(s => { if (s) closeAdminModal(); })"
+                type="button"
+                title="Hapus"
+                class="px-4 py-2 rounded-lg bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 font-medium transition-colors border border-red-200 dark:border-red-800">
+          🗑️
+        </button>
       </div>
     </div>
   </div>

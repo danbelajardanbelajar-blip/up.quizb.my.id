@@ -2234,7 +2234,7 @@ function QuizBApp() {
     },
 
     async deleteAdminItem(type, id) {
-      if (!confirm('Yakin ingin menghapus item ini?')) return;
+      if (!confirm('Yakin ingin menghapus item ini?')) return false;
       try {
         if (type === 'group')    await api.delete('admin.group_delete', id);
         if (type === 'quiz')     await api.delete('admin.quiz_delete', id);
@@ -2244,12 +2244,15 @@ function QuizBApp() {
           await api.post('question.delete', { id });
           this.showToast('Soal berhasil dihapus', 'success', '🗑️');
           await this.reloadQuizQuestions();
-          return;
+          if (this.admin.tab === 'analysis') await this.loadAnalysisData();
+          return true;
         }
         this.showToast('Berhasil dihapus', 'success', '🗑️');
         await this.loadAdminTab(this.admin.tab);
+        return true;
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
+        return false;
       }
     },
 
