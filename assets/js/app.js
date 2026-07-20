@@ -29,6 +29,10 @@ function QuizBApp() {
         base.push({ href: '/classroom', label: '🎓  Kelas' });
         const badge = this.challenge.pendingCount > 0 ? ' (' + this.challenge.pendingCount + ')' : '';
         base.push({ href: '/challenges', label: '⚔️  Tantangan' + badge });
+        base.push({ href: '/settings', label: '⚙️  Pengaturan' });
+        if (this.user.role === 'admin') {
+          base.push({ href: '/admin', label: '⚙️  Admin Panel' });
+        }
       }
       return base;
     },
