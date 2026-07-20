@@ -829,7 +829,6 @@ function admin_question_stats(): void {
              LEFT JOIN attempt_answers aa ON aa.question_id = q.id
              WHERE $whereClause
              GROUP BY q.id, q.question_text, qz.title, q.type
-             HAVING total_answered > 0
              ORDER BY wrong_count DESC, total_answered DESC",
             $params
         );

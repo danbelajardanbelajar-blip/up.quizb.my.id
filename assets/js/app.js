@@ -1313,10 +1313,11 @@ function QuizBApp() {
         } else if (tab === 'categories') {
           this.admin.categories = await api.get('admin.category_list');
         } else if (tab === 'questions') {
-          // Load full quiz list for filter dropdown
           if (!this.admin.quizPicker.length) {
             const d = await api.get('admin.quiz_list', { limit: 500 });
-            this.admin.quizPicker = d.quizzes || [];
+            let quizzes = d.quizzes || [];
+            quizzes.sort((a, b) => a.title.localeCompare(b.title));
+            this.admin.quizPicker = quizzes;
           }
           // Load all questions (paginated + searchable + filterable)
           const qData = await api.get('question.list_all', {
@@ -1338,7 +1339,9 @@ function QuizBApp() {
         } else if (tab === 'analysis') {
           if (!this.admin.quizPicker.length) {
             const d = await api.get('admin.quiz_list', { limit: 500 });
-            this.admin.quizPicker = d.quizzes || [];
+            let quizzes = d.quizzes || [];
+            quizzes.sort((a, b) => a.title.localeCompare(b.title));
+            this.admin.quizPicker = quizzes;
           }
           this.admin.analysis = [];
           this.admin.analysisQuizId = '';
