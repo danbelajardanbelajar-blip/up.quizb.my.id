@@ -209,8 +209,8 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
   <div x-data="globalTicker()"
        x-show="currentItem && currentRoute !== '/onboarding' && currentRoute !== '/messages' && !currentRoute.startsWith('/play/')"
        x-cloak
-       class="sticky z-40 border-b border-gray-200/30 dark:border-gray-700/30 bg-white/20 dark:bg-gray-900/20 backdrop-blur-sm"
-       :class="currentRoute.startsWith('/play/') ? 'top-0' : 'top-16'">
+       class="sticky z-40 border-b border-gray-200/30 dark:border-gray-700/30 bg-white/20 dark:bg-gray-900/20 backdrop-blur-sm md:top-0"
+       :class="currentRoute.startsWith('/play/') ? 'top-0' : 'top-14'">
 
     <div class="px-4 py-1 text-center">
       <!-- teks animasi -->
