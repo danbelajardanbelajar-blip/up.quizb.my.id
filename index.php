@@ -390,19 +390,39 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
 
     <!-- ADMIN PAGE -->
     <template x-if="currentRoute === '/admin/stats'">
-      <div><?php include 'pages/admin-stats.html'; ?></div>
+      <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <div class="flex items-center justify-between mb-6"><h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><span class="text-primary-500">⚙️</span> Admin Panel</h1></div>
+        <div x-show="admin.loading" class="flex justify-center py-12"><div class="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div></div>
+        <?php include 'pages/admin-stats.html'; ?>
+      </div>
     </template>
     <template x-if="currentRoute === '/admin/content'">
-      <div><?php include 'pages/admin-content.html'; ?></div>
+      <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <div class="flex items-center justify-between mb-6"><h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><span class="text-primary-500">⚙️</span> Admin Panel</h1></div>
+        <div x-show="admin.loading" class="flex justify-center py-12"><div class="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div></div>
+        <?php include 'pages/admin-content.html'; ?>
+      </div>
     </template>
     <template x-if="currentRoute === '/admin/users'">
-      <div><?php include 'pages/admin-users.html'; ?></div>
+      <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <div class="flex items-center justify-between mb-6"><h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><span class="text-primary-500">⚙️</span> Admin Panel</h1></div>
+        <div x-show="admin.loading" class="flex justify-center py-12"><div class="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div></div>
+        <?php include 'pages/admin-users.html'; ?>
+      </div>
     </template>
     <template x-if="currentRoute === '/admin/review'">
-      <div><?php include 'pages/admin-review.html'; ?></div>
+      <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <div class="flex items-center justify-between mb-6"><h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><span class="text-primary-500">⚙️</span> Admin Panel</h1></div>
+        <div x-show="admin.loading" class="flex justify-center py-12"><div class="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div></div>
+        <?php include 'pages/admin-review.html'; ?>
+      </div>
     </template>
     <template x-if="currentRoute === '/admin/analysis'">
-      <div><?php include 'pages/admin-analysis.html'; ?></div>
+      <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <div class="flex items-center justify-between mb-6"><h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><span class="text-primary-500">⚙️</span> Admin Panel</h1></div>
+        <div x-show="admin.loading" class="flex justify-center py-12"><div class="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div></div>
+        <?php include 'pages/admin-analysis.html'; ?>
+      </div>
     </template>
 
     <!-- MESSAGES PAGE (full height, no footer) -->
