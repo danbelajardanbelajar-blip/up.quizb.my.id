@@ -1,0 +1,354 @@
+<div x-show="!admin.loading && true" class="animate-fade-in">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
+      <div class="space-y-1">
+        <p class="text-sm text-gray-500 dark:text-gray-400">Kelola Rumpun, Kategori, dan Quiz dalam satu halaman.</p>
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Tampilan folder dan file</h2>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button @click="openAdminModal('group_create', { icon: '📚', color: '#6366f1', order_num: admin.groups.length + 1 })" class="btn-secondary text-sm px-4 py-2">+ Rumpun</button>
+        <button @click="openAdminModal('category_create', { icon: '📂', color: '#6366f1' })" class="btn-secondary text-sm px-4 py-2">+ Kategori</button>
+        <button @click="openAdminModal('quiz_create',{is_published:1,difficulty:'medium',time_limit:600,passing_score:60})" class="btn-primary text-sm px-4 py-2">+ Quiz</button>
+        <button @click="openImportFileModal()" class="btn-secondary text-sm px-4 py-2">📥 Import Soal</button>
+        <button @click="openImportQuizbModal()" class="btn-secondary text-sm px-4 py-2">🌐 Import QuizB</button>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-4 mb-5">
+      <div class="relative max-w-xl">
+        <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">🔍</span>
+        <input type="search"
+               :value="admin.contentSearch"
+               @input="onAdminContentSearch($event.target.value)"
+               placeholder="Cari rumpun, kategori, atau quiz..."
+               class="form-input pl-10 py-2 w-full" />
+      </div>
+      <div class="text-sm text-gray-500 dark:text-gray-400">Menampilkan <span class="font-semibold" x-text="admin.contentQuizCount"></span> quiz, <span class="font-semibold" x-text="admin.categories.length"></span> kategori, dan <span class="font-semibold" x-text="admin.groups.length"></span> rumpun.</div>
+    </div>
+
+    <div class="grid lg:grid-cols-[360px_1fr] gap-6">
+      <div class="card p-4 overflow-hidden">
+        <div class="font-semibold text-gray-800 dark:text-gray-100 mb-3">Struktur Konten</div>
+        <template x-for="group in getVisibleContentGroups()" :key="group.id">
+          <div class="mb-3">
+            <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900">
+              <button @click="toggleContentGroup(group.id)"
+                      class="flex-1 flex items-center justify-between text-left gap-3">
+                <div class="flex items-center gap-3">
+                  <span class="inline-flex h-9 w-9 rounded-full items-center justify-center text-lg"
+                        :style="'background:' + group.color + '22; color:' + group.color"> <span x-text="group.icon"></span></span>
+                  <div>
+                    <p class="font-semibold text-sm" x-text="group.name"></p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400" x-text="getContentGroupCategories(group).length + ' kategori'"></p>
+                  </div>
+                </div>
+                <span class="text-sm text-gray-500" x-text="admin.contentOpenGroups.includes(group.id) ? '▾' : '▸'"></span>
+              </button>
+              <div class="flex gap-2 text-xs items-center">
+                <button @click.stop="openGroupAssignModal(group)" class="text-primary-600 hover:underline">Atur</button>
+                <button @click.stop="openAdminModal('group_edit', group)" class="text-blue-500 hover:underline">Edit</button>
+                <button @click.stop="deleteAdminItem('group', group.id)" class="text-red-500 hover:underline">Hapus</button>
+              </div>
+            </div>
+            <div x-show="admin.contentOpenGroups.includes(group.id)" class="mt-3 space-y-3 pl-4 border-l border-gray-200 dark:border-gray-700">
+              <template x-for="cat in getContentGroupCategories(group)" :key="cat.id">
+                <div class="rounded-lg border p-3 bg-white dark:bg-gray-950 transition-colors"
+                     :class="Number(admin.contentCategoryFilter) === Number(cat.id)
+                               ? 'border-primary-400 dark:border-primary-600 ring-1 ring-primary-300 dark:ring-primary-700'
+                               : 'border-gray-200 dark:border-gray-800'">
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="flex-1 min-w-0">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <button @click="toggleContentCategory(cat.id)" class="flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+                          <span x-text="admin.contentOpenCategories.includes(cat.id) ? '▾' : '▸'"></span>
+                          <span x-text="cat.name"></span>
+                        </button>
+                        <p class="text-xs text-gray-500 dark:text-gray-400" x-text="getCategoryQuizCount(cat.id) + ' quiz'"></p>
+                      </div>
+                    </div>
+                    <div class="flex gap-2 text-xs flex-shrink-0">
+                      <button @click.stop="openAdminModal('category_edit', cat)" class="text-blue-500 hover:underline">Edit</button>
+                      <button @click.stop="deleteAdminItem('category', cat.id)" class="text-red-500 hover:underline">Hapus</button>
+                    </div>
+                  </div>
+                  <div x-show="admin.contentOpenCategories.includes(cat.id)" class="mt-3 space-y-2 pl-4 border-l border-primary-200 dark:border-primary-800">
+                    <template x-for="quiz in getQuizzesByCategory(cat.id)" :key="quiz.id">
+                      <div class="flex items-center justify-between gap-3 rounded-md px-3 py-2 cursor-pointer transition-colors"
+                           :class="admin.contentSelectedQuiz?.id === quiz.id
+                             ? 'bg-primary-50 dark:bg-primary-900/30 ring-1 ring-primary-300 dark:ring-primary-700'
+                             : 'bg-gray-50 dark:bg-gray-900 hover:bg-primary-50 dark:hover:bg-primary-900/20'"
+                           @click.stop="selectContentQuiz(quiz)">
+                        <div class="text-sm truncate flex-1 font-medium" :title="quiz.title" x-text="quiz.title"></div>
+                        <div class="flex gap-2 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                          <button @click.stop="openAdminModal('quiz_edit', quiz)" class="hover:text-blue-500">Edit</button>
+                          <button @click.stop="deleteAdminItem('quiz', quiz.id)" class="hover:text-red-500">Hapus</button>
+                        </div>
+                      </div>
+                    </template>
+                    <div x-show="getQuizzesByCategory(cat.id).length === 0" class="text-xs text-gray-500 italic py-1">Belum ada quiz dalam kategori ini</div>
+                  </div>
+                </div>
+              </template>
+              <div x-show="getContentGroupCategories(group).length === 0" class="text-sm text-gray-500 italic py-1">Rumpun ini belum memiliki kategori.</div>
+            </div>
+          </div>
+        </template>
+
+        <div class="mt-4" x-show="filteredUnassignedCategories().length > 0 || !admin.contentSearch">
+          <div class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Kategori Tanpa Rumpun</div>
+          <template x-for="cat in filteredUnassignedCategories()" :key="cat.id">
+            <div class="rounded-lg border p-3 mb-2 bg-white dark:bg-gray-950 cursor-pointer transition-colors"
+                 :class="Number(admin.contentCategoryFilter) === Number(cat.id)
+                           ? 'border-primary-400 dark:border-primary-600 ring-1 ring-primary-300 dark:ring-primary-700'
+                           : 'border-gray-200 dark:border-gray-800'"
+                 @click="toggleContentCategory(cat.id)">
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                  <span class="text-gray-500" x-text="admin.contentOpenCategories.includes(cat.id) ? '▾' : '▸'"></span>
+                  <div>
+                    <p class="font-medium text-sm text-gray-800 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400" x-text="cat.name"></p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5" x-text="getCategoryQuizCount(cat.id) + ' quiz'"></p>
+                  </div>
+                </div>
+                <div class="flex gap-2 text-xs flex-shrink-0">
+                  <button @click.stop="openAdminModal('category_edit', cat)" class="text-blue-500 hover:underline">Edit</button>
+                  <button @click.stop="deleteAdminItem('category', cat.id)" class="text-red-500 hover:underline">Hapus</button>
+                </div>
+              </div>
+              <div x-show="admin.contentOpenCategories.includes(cat.id)" class="mt-3 space-y-2 pl-4 border-l border-primary-200 dark:border-primary-800">
+                <template x-for="quiz in getQuizzesByCategory(cat.id)" :key="quiz.id">
+                  <div class="flex items-center justify-between gap-3 rounded-md px-3 py-2 cursor-pointer transition-colors"
+                       :class="admin.contentSelectedQuiz?.id === quiz.id
+                         ? 'bg-primary-50 dark:bg-primary-900/30 ring-1 ring-primary-300 dark:ring-primary-700'
+                         : 'bg-gray-50 dark:bg-gray-900 hover:bg-primary-50 dark:hover:bg-primary-900/20'"
+                       @click.stop="selectContentQuiz(quiz)">
+                    <div class="text-sm truncate flex-1 font-medium" :title="quiz.title" x-text="quiz.title"></div>
+                    <div class="flex gap-2 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                      <button @click.stop="openAdminModal('quiz_edit', quiz)" class="hover:text-blue-500">Edit</button>
+                      <button @click.stop="deleteAdminItem('quiz', quiz.id)" class="hover:text-red-500">Hapus</button>
+                    </div>
+                  </div>
+                </template>
+                <div x-show="getQuizzesByCategory(cat.id).length === 0" class="text-xs text-gray-500 italic py-1">Belum ada quiz dalam kategori ini</div>
+              </div>
+            </div>
+          </template>
+          <div x-show="filteredUnassignedCategories().length === 0" class="text-sm text-gray-500 italic">Semua kategori sudah berada dalam rumpun.</div>
+        </div>
+      </div>
+
+      <div class="card p-4 overflow-hidden">
+        <!-- Header panel kanan -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+          <!-- Header dinamis -->
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400"
+               x-text="admin.contentSelectedQuiz ? 'Kelola Soal' : 'Daftar Quiz'"></p>
+            <h3 class="font-semibold text-gray-900 dark:text-white truncate max-w-xs"
+                :title="admin.contentSelectedQuiz?.title"
+                x-text="admin.contentSelectedQuiz
+                  ? admin.contentSelectedQuiz.title
+                  : (admin.contentCategoryFilter
+                      ? (admin.categories.find(c => Number(c.id) === Number(admin.contentCategoryFilter))?.name || 'Kategori')
+                      : 'Pilih kategori')">
+            </h3>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <!-- Saat lihat soal: kembali + jumlah soal -->
+            <template x-if="admin.contentSelectedQuiz">
+              <div class="flex items-center gap-2">
+                <button @click="backToContentQuizList()"
+                        class="flex items-center gap-1 text-xs px-2 py-1 rounded border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-primary-600 hover:border-primary-400 transition-colors">
+                  ← Quiz
+                </button>
+                <span class="badge badge-secondary text-xs" x-text="admin.questionsTotal + ' soal'"></span>
+              </div>
+            </template>
+            <!-- Saat lihat daftar quiz: badge + reset -->
+            <template x-if="!admin.contentSelectedQuiz && admin.contentCategoryFilter">
+              <div class="flex items-center gap-2">
+                <span class="badge badge-primary text-sm" x-text="getFilteredQuizzes().length + ' quiz'"></span>
+                <button @click="admin.contentCategoryFilter = null; admin.contentOpenCategories = []; admin.contentSelectedQuiz = null;"
+                        class="text-xs text-gray-500 hover:text-red-500 transition-colors">✕ Reset</button>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- STATE 1: Placeholder — belum ada kategori dipilih -->
+        <div x-show="!admin.contentCategoryFilter && !admin.contentSelectedQuiz"
+             class="flex flex-col items-center justify-center py-16 text-center text-gray-400 dark:text-gray-600">
+          <div class="text-5xl mb-4">📂</div>
+          <p class="font-medium text-gray-600 dark:text-gray-400 text-sm">Pilih kategori untuk melihat quiz</p>
+          <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Klik nama kategori di panel kiri</p>
+        </div>
+
+        <!-- STATE 2: Daftar quiz — kategori dipilih, belum klik quiz -->
+        <div x-show="admin.contentCategoryFilter && !admin.contentSelectedQuiz">
+          <div class="overflow-x-auto">
+            <table class="data-table w-full">
+              <thead><tr>
+                <th class="text-left">Judul Quiz</th>
+                <th class="text-left">Status</th>
+                <th class="text-right">Aksi</th>
+              </tr></thead>
+              <tbody>
+                <template x-for="quiz in getFilteredQuizzes()" :key="quiz.id">
+                  <tr class="cursor-pointer hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+                      @click="selectContentQuiz(quiz)">
+                    <td class="max-w-xs">
+                      <div class="font-medium text-sm truncate" :title="quiz.title" x-text="quiz.title"></div>
+                    </td>
+                    <td>
+                      <span class="badge text-xs" :class="quiz.is_published ? 'badge-success' : 'badge-warning'"
+                            x-text="quiz.is_published ? 'Aktif' : 'Draft'"></span>
+                    </td>
+                    <td class="text-right">
+                      <div class="flex items-center justify-end gap-2">
+                        <button @click.stop="openAdminModal('quiz_edit', quiz)" class="text-xs text-blue-500 hover:underline">Edit</button>
+                        <button @click.stop="deleteAdminItem('quiz', quiz.id)" class="text-xs text-red-500 hover:underline">Hapus</button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <div x-show="getFilteredQuizzes().length === 0" class="text-center py-10 text-gray-500 text-sm italic">
+            Tidak ada quiz untuk kategori ini.
+          </div>
+        </div>
+
+        <!-- STATE 3: Kelola Soal — full CRUD inline, tanpa pindah halaman -->
+        <div x-show="admin.contentSelectedQuiz">
+          <!-- Toolbar soal -->
+          <div class="flex flex-wrap items-center gap-2 mb-3">
+            <div class="relative flex-1 min-w-[160px]">
+              <span class="absolute inset-y-0 left-2.5 flex items-center text-gray-400 pointer-events-none text-xs">🔍</span>
+              <input type="search"
+                     :value="admin.questionsSearch"
+                     @input="onAdminQuestionSearch($event.target.value)"
+                     placeholder="Cari soal..."
+                     class="form-input pl-8 py-1.5 text-sm w-full" />
+            </div>
+            <label class="flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors">
+              <input type="checkbox"
+                     @change="toggleSelectAllQuestions($event.target.checked)"
+                     :checked="admin.questionsAll.length > 0 && admin.questionsAll.every(q => q._sel)"
+                     class="accent-primary-600" />
+              <span>Semua</span>
+            </label>
+            <button @click="openImportFileModal()" class="btn-secondary text-xs px-2.5 py-1.5">📥 File</button>
+            <button @click="openImportQuizbModal()" class="btn-secondary text-xs px-2.5 py-1.5">🌐 QuizB</button>
+            <!-- Export dropdown -->
+            <div class="relative group">
+              <button class="btn-secondary text-xs px-2.5 py-1.5 flex items-center gap-1">
+                📤 Export
+                <span class="text-xs">▼</span>
+              </button>
+              <div class="absolute right-0 mt-1 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                <button @click="exportQuizQuestions('pdf')" class="block w-full text-left px-3 py-2 text-xs hover:bg-primary-50 dark:hover:bg-primary-900/30">📄 PDF</button>
+                <button @click="exportQuizQuestions('excel')" class="block w-full text-left px-3 py-2 text-xs hover:bg-green-50 dark:hover:bg-green-900/30">📊 Excel</button>
+                <button @click="exportQuizQuestions('word')" class="block w-full text-left px-3 py-2 text-xs hover:bg-blue-50 dark:hover:bg-blue-900/30">📝 Word</button>
+              </div>
+            </div>
+            <button @click="deleteSelectedQuestions()"
+                    :disabled="selectedAdminQuestionsCount === 0"
+                    class="btn-danger text-xs px-2.5 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">🗑️</button>
+            <button @click="admin.form = buildQuestionForm(); openAdminModal('question_create')"
+                    class="btn-primary text-xs px-3 py-1.5">+ Soal</button>
+          </div>
+          <div x-show="selectedAdminQuestionsCount > 0" class="text-xs text-gray-500 mb-2">
+            <span class="font-semibold" x-text="selectedAdminQuestionsCount"></span> soal terpilih.
+            <button @click="toggleSelectAllQuestions(false)" class="underline ml-1">Bersihkan</button>
+          </div>
+
+          <!-- Daftar soal dalam format card -->
+          <div class="space-y-3">
+            <template x-for="(q, idx) in sortedAdmin('questions', admin.questionsAll)" :key="q.id">
+              <div class="border border-gray-200 dark:border-gray-800 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors">
+                <!-- Header dengan checkbox dan nomor -->
+                <div class="flex items-start gap-3 mb-3">
+                  <input type="checkbox" x-model="q._sel" class="accent-primary-600 mt-1 flex-shrink-0" />
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="inline-block px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-medium text-gray-600 dark:text-gray-400">
+                        Soal <span x-text="idx + 1"></span>
+                      </span>
+                      <span class="inline-block px-2 py-0.5 rounded-full bg-primary-50 dark:bg-primary-900/30 text-xs font-medium text-primary-600 dark:text-primary-400">
+                        <span x-text="q.points"></span> poin
+                      </span>
+                      <span class="inline-block px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-500 dark:text-gray-400" x-text="q.type === 'true_false' ? 'Benar/Salah' : 'Pilihan Ganda'"></span>
+                    </div>
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white break-words leading-relaxed"
+                       dir="auto"
+                       x-text="q.question_text"></p>
+                    <p x-show="q.explanation"
+                       class="text-xs text-gray-500 dark:text-gray-400 italic mt-2 leading-relaxed"
+                       dir="auto"
+                       x-text="'💡 ' + q.explanation"></p>
+                  </div>
+                </div>
+
+                <!-- Pilihan jawaban -->
+                <div class="ml-7 space-y-1.5 mb-3">
+                  <template x-for="(opt, oidx) in q.options" :key="opt.id">
+                    <div class="flex items-start gap-2 p-2 rounded-lg"
+                         :class="opt.is_correct
+                           ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                           : 'bg-gray-50 dark:bg-gray-800/50'">
+                      <span class="flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold mt-0.5"
+                            :class="opt.is_correct
+                              ? 'border-green-500 bg-green-500 text-white'
+                              : 'border-gray-300 dark:border-gray-600 text-gray-400'">
+                        <span x-text="String.fromCharCode(65 + oidx)"></span>
+                      </span>
+                      <span class="flex-1 text-sm break-words leading-relaxed"
+                            dir="auto"
+                            :class="opt.is_correct
+                              ? 'text-green-700 dark:text-green-300 font-medium'
+                              : 'text-gray-700 dark:text-gray-300'">
+                        <span x-text="opt.option_text"></span>
+                        <span x-show="opt.is_correct" class="inline-flex items-center gap-0.5 ml-2 text-xs font-semibold text-green-600 dark:text-green-400">✓ Benar</span>
+                      </span>
+                    </div>
+                  </template>
+                </div>
+
+                <!-- Aksi -->
+                <div class="flex items-center justify-end gap-2 ml-7 pt-2 border-t border-gray-100 dark:border-gray-800">
+                  <button @click="openAdminModal('question_edit', {...q, options: q.options.map(o=>({...o}))})"
+                          class="text-xs px-3 py-1.5 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
+                    ✏️ Edit
+                  </button>
+                  <button @click="deleteAdminItem('question', q.id)"
+                          class="text-xs px-3 py-1.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                    🗑️ Hapus
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Empty state -->
+          <div x-show="admin.questionsAll.length === 0 && !admin.loading" class="text-center py-10 text-gray-400">
+            <p class="text-3xl mb-2">❓</p>
+            <p class="text-sm">Quiz ini belum memiliki soal</p>
+            <button @click="admin.form = buildQuestionForm(); openAdminModal('question_create')"
+                    class="mt-3 btn-primary text-sm px-4 py-2">+ Tambah Soal Pertama</button>
+          </div>
+
+          <!-- Pagination soal -->
+          <div x-show="admin.questionsTotal > 20" class="flex items-center justify-center gap-2 mt-4">
+            <button @click="admin.questionsPage--; reloadQuizQuestions()" :disabled="admin.questionsPage <= 1"
+                    class="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">← Prev</button>
+            <span class="text-xs text-gray-500 px-2"
+                  x-text="'Hal. ' + admin.questionsPage + ' / ' + Math.max(1, Math.ceil(admin.questionsTotal/20))"></span>
+            <button @click="admin.questionsPage++; reloadQuizQuestions()" :disabled="admin.questionsPage*20 >= admin.questionsTotal"
+                    class="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== QUIZZES TAB ===== -->

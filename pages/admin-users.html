@@ -1,0 +1,64 @@
+<div x-show="!admin.loading && true" class="animate-fade-in">
+    <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+      <div class="relative flex-1 min-w-[200px] max-w-sm">
+        <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 pointer-events-none">🔍</span>
+        <input type="search"
+               :value="admin.usersSearch"
+               @input="onAdminUserSearch($event.target.value)"
+               placeholder="Cari nama atau email..."
+               class="form-input pl-9 py-2 text-sm w-full" />
+      </div>
+      <p class="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap flex-shrink-0" x-text="admin.usersTotal + ' pengguna'"></p>
+    </div>
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="data-table">
+          <thead><tr>
+            <th @click="sortAdmin('users','name')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">Nama <span class="text-gray-400 text-xs" x-text="sortIcon('users','name')"></span></th>
+            <th @click="sortAdmin('users','email')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">Email <span class="text-gray-400 text-xs" x-text="sortIcon('users','email')"></span></th>
+            <th @click="sortAdmin('users','role')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">Role <span class="text-gray-400 text-xs" x-text="sortIcon('users','role')"></span></th>
+            <th @click="sortAdmin('users','total_points')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">Poin <span class="text-gray-400 text-xs" x-text="sortIcon('users','total_points')"></span></th>
+            <th @click="sortAdmin('users','is_active')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">Status <span class="text-gray-400 text-xs" x-text="sortIcon('users','is_active')"></span></th>
+            <th>Aksi</th>
+          </tr></thead>
+          <tbody>
+            <template x-for="u in sortedAdmin('users', admin.users)" :key="u.id">
+              <tr>
+                <td>
+                  <button @click="loadUserHistory(u)"
+                          class="font-medium text-left hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
+                          x-text="u.name"></button>
+                </td>
+                <td class="text-gray-400 text-xs" x-text="u.email"></td>
+                <td><span class="badge text-xs" :class="u.role==='admin'?'badge-primary':''" x-text="u.role"></span></td>
+                <td x-text="u.total_points?.toLocaleString()"></td>
+                <td><span class="badge text-xs" :class="u.is_active?'badge-success':'badge-danger'" x-text="u.is_active?'Aktif':'Nonaktif'"></span></td>
+                <td>
+                  <div class="flex items-center gap-2">
+                    <button @click="openAdminModal('user_edit', u)" class="text-xs text-blue-500 hover:underline">Edit</button>
+                    <button @click="deleteAdminItem('user', u.id)" class="text-xs text-red-500 hover:underline" x-show="u.id !== user?.id">Hapus</button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+      <div x-show="admin.users.length === 0 && !admin.loading" class="text-center py-12 text-gray-400">
+        <p class="text-4xl mb-2">🔍</p>
+        <p class="text-sm" x-show="admin.usersSearch">Tidak ada pengguna yang cocok dengan "<span x-text="admin.usersSearch" class="font-medium text-gray-600 dark:text-gray-300"></span>"</p>
+        <p class="text-sm" x-show="!admin.usersSearch">Belum ada pengguna</p>
+      </div>
+    </div>
+    <!-- Pagination users -->
+    <div x-show="admin.usersTotal > 15" class="flex items-center justify-center gap-2 mt-5">
+      <button @click="admin.usersPage--; loadAdminTab('users')" :disabled="admin.usersPage<=1"
+              class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">← Prev</button>
+      <span class="text-sm text-gray-500 dark:text-gray-400 px-3"
+            x-text="'Halaman ' + admin.usersPage + ' dari ' + Math.max(1, Math.ceil(admin.usersTotal/15))"></span>
+      <button @click="admin.usersPage++; loadAdminTab('users')" :disabled="admin.usersPage*15 >= admin.usersTotal"
+              class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">Next →</button>
+    </div>
+  </div>
+
+  <!-- ===== REVIEW SOAL TAB ===== -->

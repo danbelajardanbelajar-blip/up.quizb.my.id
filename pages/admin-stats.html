@@ -1,0 +1,32 @@
+<div x-show="!admin.loading && true && admin.stats" class="animate-fade-in">
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+      <div class="card p-5"><p class="text-sm text-gray-500 mb-1">Total Pengguna</p><p class="text-3xl font-extrabold text-primary-600" x-text="admin.stats?.total_users?.toLocaleString()"></p></div>
+      <div class="card p-5"><p class="text-sm text-gray-500 mb-1">Total Quiz</p><p class="text-3xl font-extrabold text-gray-800 dark:text-gray-100" x-text="admin.stats?.total_quizzes"></p></div>
+      <div class="card p-5"><p class="text-sm text-gray-500 mb-1">Total Percobaan</p><p class="text-3xl font-extrabold text-gray-800 dark:text-gray-100" x-text="admin.stats?.total_attempts?.toLocaleString()"></p></div>
+      <div class="card p-5"><p class="text-sm text-gray-500 mb-1">Rata-rata Skor</p><p class="text-3xl font-extrabold text-yellow-500" x-text="admin.stats?.avg_score + '%'"></p></div>
+    </div>
+
+    <!-- Recent attempts -->
+    <div class="card overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-800 font-semibold text-gray-800 dark:text-gray-100">
+        🕐 Percobaan Terbaru
+      </div>
+      <div class="overflow-x-auto">
+        <table class="data-table">
+          <thead><tr><th>Pengguna</th><th>Quiz</th><th>Skor</th><th>Waktu</th></tr></thead>
+          <tbody>
+            <template x-for="a in admin.stats?.recent_attempts" :key="a.id">
+              <tr>
+                <td x-text="a.user_name"></td>
+                <td x-text="a.quiz_title" class="max-w-[200px] truncate"></td>
+                <td><span class="badge text-xs" :class="a.score>=60?'badge-success':'badge-danger'" x-text="a.score+'%'"></span></td>
+                <td class="text-gray-400 text-xs" x-text="formatRelative(a.completed_at)"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CONTENT TAB ===== -->

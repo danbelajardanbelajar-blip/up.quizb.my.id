@@ -1,0 +1,598 @@
+<div x-show="!admin.loading && true" class="animate-fade-in">
+    <div class="flex items-center justify-between mb-5">
+      <p class="text-sm text-gray-500 dark:text-gray-400" x-text="admin.groups.length + ' rumpun'"></p>
+      <button @click="openAdminModal('group_create', { icon: '📚', color: '#6366f1', order_num: admin.groups.length + 1 })" class="btn-primary text-sm px-4 py-2">+ Tambah Rumpun</button>
+    </div>
+
+    <!-- Group cards -->
+    <div class="space-y-4">
+      <template x-for="grp in admin.groups" :key="grp.id">
+        <div class="card p-5">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+                   :style="'background:' + grp.color + '22'">
+                <span x-text="grp.icon"></span>
+              </div>
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white" x-text="grp.name"></h3>
+                <p class="text-xs text-gray-400 mt-0.5" x-text="grp.category_count + ' kategori'"></p>
+              </div>
+            </div>
+            <div class="flex gap-2 flex-shrink-0">
+              <button @click="openGroupAssignModal(grp)"
+                      class="text-xs px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 hover:bg-primary-100 font-medium transition-colors">
+                📂 Kelola Kategori
+              </button>
+              <button @click="openAdminModal('group_edit', {...grp})"
+                      class="text-xs text-blue-500 hover:underline px-1">Edit</button>
+              <button @click="deleteAdminItem('group', grp.id)"
+                      class="text-xs text-red-500 hover:underline px-1">Hapus</button>
+            </div>
+          </div>
+
+          <!-- Assigned categories chips -->
+          <div x-show="grp.categories && grp.categories.length > 0" class="mt-4 flex flex-wrap gap-2">
+            <template x-for="cat in grp.categories" :key="cat.id">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                <span x-text="cat.icon"></span>
+                <span x-text="cat.name"></span>
+              </span>
+            </template>
+          </div>
+          <div x-show="!grp.categories || grp.categories.length === 0" class="mt-3">
+            <p class="text-xs text-gray-400 italic">Belum ada kategori. Klik "Kelola Kategori" untuk menambahkan.</p>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <div x-show="admin.groups.length === 0" class="text-center py-16 text-gray-400">
+      <p class="text-4xl mb-3">🗂️</p>
+      <p>Belum ada rumpun. Klik "+ Tambah Rumpun" untuk memulai.</p>
+    </div>
+  </div>
+
+
+  <!-- ===== MODAL: IMPORT SOAL DARI FILE ===== -->
+  <template x-if="admin.importFile.show">
+    <div @keydown.escape.window="admin.importFile.show = false" class="modal-overlay">
+      <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+          <div>
+            <h3 class="font-bold text-gray-900 dark:text-white">📥 Import Soal dari File</h3>
+            <p class="text-xs text-gray-400 mt-0.5">Format yang didukung: Word (.doc/.docx), Excel (.xlsx/.xls), CSV (.csv), dan PDF (.pdf)</p>
+          </div>
+          <button @click="admin.importFile.show = false" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+        </div>
+
+        <!-- Step 1: Upload -->
+        <div x-show="admin.importFile.step === 1" class="p-6 flex-1">
+          <div class="space-y-5">
+            <div class="grid sm:grid-cols-3 gap-3">
+              <div class="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 text-sm">
+                <p class="font-semibold text-blue-700 dark:text-blue-400 mb-2">📄 Word (.doc/.docx)</p>
+                <p class="text-blue-600 dark:text-blue-300 text-xs leading-relaxed">
+                  Dapat memproses berbagai template Word dengan nomor soal, opsi A/B/C/D, kunci, dan penjelasan.
+                </p>
+              </div>
+              <div class="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 text-sm">
+                <p class="font-semibold text-green-700 dark:text-green-400 mb-2">📊 Excel (.xlsx)</p>
+                <p class="text-green-600 dark:text-green-300 text-xs leading-relaxed">
+                  Kolom: <strong>Soal | A | B | C | D | E | Jawaban | Penjelasan</strong><br>
+                  Header baris pertama dikenali otomatis. Kolom "Jawaban" isi huruf kunci:
+                  <code class="bg-green-100 dark:bg-green-900/40 px-1 rounded">A</code>
+                  <code class="bg-green-100 dark:bg-green-900/40 px-1 rounded">B</code>
+                  <code class="bg-green-100 dark:bg-green-900/40 px-1 rounded">C</code>
+                  <code class="bg-green-100 dark:bg-green-900/40 px-1 rounded">D</code>
+                  <code class="bg-green-100 dark:bg-green-900/40 px-1 rounded">E</code>
+                </p>
+              </div>
+              <div class="p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 text-sm">
+                <p class="font-semibold text-orange-700 dark:text-orange-400 mb-2">📋 CSV (.csv)</p>
+                <p class="text-orange-600 dark:text-orange-300 text-xs leading-relaxed">
+                  Format sama dengan Excel.<br>
+                  Kolom: <strong>Soal, A, B, C, D, E, Jawaban, Penjelasan</strong><br>
+                  Header dikenali otomatis. Separator koma <code class="bg-orange-100 dark:bg-orange-900/40 px-1 rounded">,</code> atau titik koma <code class="bg-orange-100 dark:bg-orange-900/40 px-1 rounded">;</code>
+                </p>
+              </div>
+              <div class="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 text-sm">
+                <p class="font-semibold text-purple-700 dark:text-purple-400 mb-2">📄 PDF (.pdf)</p>
+                <p class="text-purple-600 dark:text-purple-300 text-xs leading-relaxed">
+                  PDF akan diproses dengan text extraction / OCR bila tersedia di server.
+                </p>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <div x-show="!admin.importFile.quizId">
+                <label class="form-label">Quiz Tujuan</label>
+                <select x-model.number="admin.importFile.quizId"
+                        class="form-input w-full text-sm py-2">
+                  <option value="">-- Pilih Quiz Tujuan --</option>
+                  <template x-for="quiz in (admin.contentQuizzes.length ? admin.contentQuizzes : admin.quizPicker)" :key="quiz.id">
+                    <option :value="quiz.id" x-text="quiz.title + ' (' + (quiz.category_name || 'Kategori tanpa nama') + ')'"/>
+                  </template>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Pilih quiz tujuan import jika belum memilih quiz di panel konten.</p>
+              </div>
+              <div>
+                <label class="form-label">Pilih File</label>
+                <input id="import-file-input" type="file" accept=".doc,.docx,.xlsx,.xls,.csv,.pdf"
+                       class="block w-full text-sm text-gray-600 dark:text-gray-300
+                              file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0
+                              file:text-sm file:font-semibold
+                              file:bg-primary-50 file:text-primary-700
+                              dark:file:bg-primary-900/30 dark:file:text-primary-400
+                              hover:file:bg-primary-100 cursor-pointer" />
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-3 mt-6">
+            <button @click="admin.importFile.show = false"
+                    class="flex-1 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Batal</button>
+            <button @click="parseImportFile()" :disabled="admin.importFile.loading"
+                    class="flex-1 btn-primary py-2 text-sm">
+              <span x-show="admin.importFile.loading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></span>
+              <span x-show="!admin.importFile.loading">🔍 Analisis File</span>
+              <span x-show="admin.importFile.loading">Menganalisis...</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: Preview & Select -->
+        <div x-show="admin.importFile.step === 2" class="flex flex-col flex-1 min-h-0">
+          <div class="px-6 py-3 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Ditemukan <span class="text-primary-600 font-bold" x-text="admin.importFile.questions.length"></span> soal
+                </p>
+                <p class="text-xs mt-0.5"
+                   :class="admin.importFile.questions.some(q=>!q.has_key) ? 'text-amber-500' : 'text-green-500'"
+                   x-text="admin.importFile.questions.some(q=>!q.has_key)
+                     ? '⚠️ Klik salah satu opsi pada setiap soal untuk menentukan kunci jawaban'
+                     : '✅ Semua kunci jawaban berhasil terdeteksi dari file'">
+                </p>
+              </div>
+              <div class="flex items-center gap-3 text-sm">
+                <label class="flex items-center gap-1.5 cursor-pointer text-gray-500">
+                  <input type="checkbox" checked @change="toggleAllImportFile($event.target.checked)"
+                         class="w-4 h-4 rounded accent-primary-600">
+                  Pilih semua
+                </label>
+                <span class="text-gray-400" x-text="admin.importFile.questions.filter(q=>q._sel).length + ' dipilih'"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="overflow-y-auto flex-1 px-6 py-4 space-y-3">
+            <template x-for="(q, idx) in admin.importFile.questions" :key="idx">
+              <div class="border rounded-xl p-3 transition-colors"
+                   :class="q._sel ? 'border-primary-200 dark:border-primary-700 bg-primary-50/40 dark:bg-primary-900/10' : 'border-gray-200 dark:border-gray-700'">
+                <div class="flex items-start gap-3">
+                  <input type="checkbox" :checked="q._sel"
+                         @change="admin.importFile.questions[idx]._sel = $event.target.checked; admin.importFile.questions = [...admin.importFile.questions]"
+                         class="w-4 h-4 mt-0.5 rounded accent-primary-600 flex-shrink-0">
+                  <div class="flex-1 min-w-0">
+                    <!-- Nomor + teks soal -->
+                    <p class="text-sm font-medium text-gray-800 dark:text-gray-100 mb-2">
+                      <span class="text-gray-400 mr-1" x-text="(idx+1) + '.'"></span>
+                      <span x-text="q.question_text"></span>
+                    </p>
+
+                    <!-- Badge status kunci -->
+                    <div class="mb-2">
+                      <template x-if="q.has_key">
+                        <span class="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                          🔑 Kunci terdeteksi dari file
+                        </span>
+                      </template>
+                      <template x-if="!q.has_key">
+                        <span class="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 animate-pulse">
+                          ⚠️ Pilih kunci jawaban — klik opsi di bawah
+                        </span>
+                      </template>
+                    </div>
+
+                    <!-- Opsi jawaban interaktif — klik untuk pilih kunci -->
+                    <div class="space-y-1">
+                      <template x-for="(o, oi) in q.options" :key="oi">
+                        <button type="button"
+                                @click="setImportCorrect(idx, oi)"
+                                class="w-full text-left flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs transition-all"
+                                :class="o.is_correct
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-semibold ring-1 ring-green-400/50'
+                                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/60 cursor-pointer'">
+                          <span class="w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors"
+                                :class="o.is_correct ? 'border-green-500 bg-green-500' : 'border-gray-300 dark:border-gray-600'">
+                            <span x-show="o.is_correct" class="text-white text-[9px] leading-none">✓</span>
+                          </span>
+                          <span class="text-gray-400 dark:text-gray-500 font-mono flex-shrink-0" x-text="String.fromCharCode(65+oi) + '.'"></span>
+                          <span x-text="o.option_text"></span>
+                        </button>
+                      </template>
+                    </div>
+
+                    <p x-show="q.explanation" class="mt-1.5 text-xs text-gray-400 italic" x-text="'💡 ' + q.explanation"></p>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <div class="flex items-center gap-3 px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex-shrink-0">
+            <div class="flex-1 text-xs">
+              <template x-if="admin.importFile.questions.filter(q=>q._sel && !q.has_key).length > 0">
+                <span class="text-amber-600 dark:text-amber-400">
+                  ⚠️ <span x-text="admin.importFile.questions.filter(q=>q._sel && !q.has_key).length"></span> soal dipilih belum ada kuncinya
+                </span>
+              </template>
+              <template x-if="admin.importFile.questions.filter(q=>q._sel && !q.has_key).length === 0 && admin.importFile.questions.filter(q=>q._sel).length > 0">
+                <span class="text-green-600 dark:text-green-400">✅ Semua soal sudah memiliki kunci</span>
+              </template>
+            </div>
+            <button @click="admin.importFile.step = 1"
+                    class="py-2 px-4 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">← Kembali</button>
+            <button @click="saveImportFile()" :disabled="admin.importFile.loading"
+                    class="btn-primary py-2 px-5 text-sm">
+              <span x-show="admin.importFile.loading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></span>
+              <span x-show="!admin.importFile.loading"
+                    x-text="'✅ Import ' + admin.importFile.questions.filter(q=>q._sel).length + ' Soal'"></span>
+              <span x-show="admin.importFile.loading">Menyimpan...</span>
+            </button>
+          </div>
+        </div>
+
+
+      </div>
+    </div>
+  </template>
+
+  <!-- ===== MODAL: IMPORT SOAL DARI QUIZB ===== -->
+  <template x-if="admin.importQuizb.show">
+    <div @keydown.escape.window="admin.importQuizb.show = false" class="modal-overlay">
+      <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+          <div>
+            <h3 class="font-bold text-gray-900 dark:text-white">🌐 Import Soal dari QuizB</h3>
+            <p class="text-xs text-gray-400 mt-0.5">Pilih soal dari bank soal quizb.my.id</p>
+          </div>
+          <button @click="admin.importQuizb.show = false" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+        </div>
+
+        <!-- Loading tree -->
+        <div x-show="admin.importQuizb.loading && admin.importQuizb.themes.length === 0"
+             class="flex items-center justify-center py-16 flex-1">
+          <div class="w-8 h-8 border-3 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+        </div>
+
+        <!-- Browse panel -->
+        <div x-show="!admin.importQuizb.loading || admin.importQuizb.themes.length > 0"
+             class="flex flex-col flex-1 min-h-0">
+
+          <!-- Cascade selects -->
+          <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+            <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+            <div class="grid sm:grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
+              <div x-show="!admin.importQuizb.quizId">
+                <label class="form-label text-xs">Quiz Tujuan</label>
+                <select x-model.number="admin.importQuizb.quizId"
+                        class="form-input text-sm py-2 w-full">
+                  <option value="">-- Pilih Quiz Tujuan --</option>
+                  <template x-for="quiz in (admin.contentQuizzes.length ? admin.contentQuizzes : admin.quizPicker)" :key="quiz.id">
+                    <option :value="quiz.id" x-text="quiz.title + ' (' + (quiz.category_name || 'Kategori tanpa nama') + ')'" />
+                  </template>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Pilih quiz tujuan import jika belum memilih quiz langsung dari panel konten.</p>
+              </div>
+              <div x-show="admin.importQuizb.quizId" class="text-sm text-gray-500">
+                Quiz tujuan: <span class="font-semibold" x-text="(admin.contentQuizzes.concat(admin.quizPicker).find(q => Number(q.id) === Number(admin.importQuizb.quizId)) || {}).title || 'Quiz tidak ditemukan'"></span>
+              </div>
+            </div>
+            <div class="grid sm:grid-cols-3 gap-3">
+              <div>
+                <label class="form-label text-xs">Tema</label>
+                <select x-model="admin.importQuizb.selectedThemeId"
+                        @change="onQuizbThemeChange()"
+                        class="form-input text-sm py-2">
+                  <option value="">-- Pilih Tema --</option>
+                  <template x-for="th in admin.importQuizb.themes" :key="th.id">
+                    <option :value="th.id" x-text="th.name"></option>
+                  </template>
+                </select>
+              </div>
+              <div>
+                <label class="form-label text-xs">Sub-tema</label>
+                <select x-model="admin.importQuizb.selectedSubthemeId"
+                        @change="onQuizbSubthemeChange()"
+                        :disabled="!admin.importQuizb.selectedThemeId"
+                        class="form-input text-sm py-2 disabled:opacity-50">
+                  <option value="">-- Pilih Sub-tema --</option>
+                  <template x-for="s in admin.importQuizb.subthemes" :key="s.id">
+                    <option :value="s.id" x-text="s.name"></option>
+                  </template>
+                </select>
+              </div>
+              <div>
+                <label class="form-label text-xs">Judul Soal</label>
+                <select x-model="admin.importQuizb.selectedTitleId"
+                        @change="loadQuizbQuestions()"
+                        :disabled="!admin.importQuizb.selectedSubthemeId"
+                        class="form-input text-sm py-2 disabled:opacity-50">
+                  <option value="">-- Pilih Judul --</option>
+                  <template x-for="t in admin.importQuizb.titles" :key="t.id">
+                    <option :value="t.id" x-text="t.title"></option>
+                  </template>
+                </select>
+              </div>
+            </div>
+          </div>
+          </div>
+
+          <!-- Questions panel -->
+          <div class="flex-1 min-h-0 flex flex-col">
+            <div x-show="!admin.importQuizb.selectedTitleId && !admin.importQuizb.loading"
+                 class="flex-1 flex items-center justify-center text-gray-400 py-12">
+              <div class="text-center">
+                <p class="text-4xl mb-3">🔍</p>
+                <p class="text-sm">Pilih tema → sub-tema → judul soal untuk melihat daftar soal</p>
+              </div>
+            </div>
+
+            <div x-show="admin.importQuizb.loading && admin.importQuizb.selectedTitleId"
+                 class="flex-1 flex items-center justify-center py-12">
+              <div class="w-6 h-6 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+            </div>
+
+            <div x-show="admin.importQuizb.questions.length > 0 && !admin.importQuizb.loading"
+                 class="flex flex-col flex-1 min-h-0">
+              <div class="px-6 py-2 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between flex-shrink-0">
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <span class="font-bold text-primary-600" x-text="admin.importQuizb.selectedTitleName"></span>
+                  — <span x-text="admin.importQuizb.questions.length + ' soal'"></span>
+                </p>
+                <div class="flex items-center gap-3 text-sm">
+                  <label class="flex items-center gap-1.5 cursor-pointer text-gray-500">
+                    <input type="checkbox"
+                           :checked="admin.importQuizb.selectedIds.length === admin.importQuizb.questions.length && admin.importQuizb.questions.length > 0"
+                           @change="toggleAllQuizb($event.target.checked)"
+                           class="w-4 h-4 rounded accent-primary-600">
+                    Pilih semua
+                  </label>
+                  <span class="text-gray-400" x-text="admin.importQuizb.selectedIds.length + ' dipilih'"></span>
+                </div>
+              </div>
+
+              <div class="overflow-y-auto flex-1 px-6 py-4 space-y-3">
+                <template x-for="(q, idx) in admin.importQuizb.questions" :key="q.id">
+                  <div class="border rounded-xl p-3 transition-colors cursor-pointer"
+                       :class="admin.importQuizb.selectedIds.includes(q.id)
+                         ? 'border-primary-200 dark:border-primary-700 bg-primary-50/40 dark:bg-primary-900/10'
+                         : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'"
+                       @click="toggleQuizbQuestion(q.id)">
+                    <div class="flex items-start gap-3">
+                      <input type="checkbox" :checked="admin.importQuizb.selectedIds.includes(q.id)"
+                             @click.stop @change="toggleQuizbQuestion(q.id)"
+                             class="w-4 h-4 mt-0.5 rounded accent-primary-600 flex-shrink-0">
+                      <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-800 dark:text-gray-100 mb-2">
+                          <span class="text-gray-400 mr-1" x-text="(idx+1) + '.'"></span>
+                          <span x-text="q.question_text"></span>
+                        </p>
+                        <div class="grid grid-cols-2 gap-1">
+                          <template x-for="(o, oi) in q.options" :key="oi">
+                            <p class="text-xs flex items-center gap-1"
+                               :class="o.is_correct ? 'text-green-600 dark:text-green-400 font-medium' : 'text-gray-500 dark:text-gray-400'">
+                              <span x-text="o.is_correct ? '✅' : '○'"></span>
+                              <span x-text="o.option_text"></span>
+                            </p>
+                          </template>
+                        </div>
+                        <p x-show="q.explanation" class="mt-1.5 text-xs text-gray-400 italic"
+                           x-text="'💡 ' + q.explanation"></p>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex gap-3 px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex-shrink-0">
+          <button @click="admin.importQuizb.show = false"
+                  class="flex-1 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Batal</button>
+          <button @click="saveImportQuizb()"
+                  :disabled="admin.importQuizb.loading || admin.importQuizb.selectedIds.length === 0"
+                  class="flex-1 btn-primary py-2 text-sm disabled:opacity-50">
+            <span x-show="admin.importQuizb.loading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2"></span>
+            <span x-show="!admin.importQuizb.loading"
+                  x-text="admin.importQuizb.selectedIds.length > 0
+                    ? '✅ Import ' + admin.importQuizb.selectedIds.length + ' Soal'
+                    : 'Pilih soal dulu'"></span>
+            <span x-show="admin.importQuizb.loading">Mengimpor...</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </template>
+
+  <!-- ===== MODAL: ASSIGN CATEGORIES TO GROUP ===== -->
+  <template x-if="admin.groupAssign.show">
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+        <div class="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+          <div>
+            <h3 class="font-bold text-gray-900 dark:text-white">📂 Kelola Kategori</h3>
+            <p class="text-xs text-gray-400 mt-0.5" x-text="'Rumpun: ' + admin.groupAssign.group?.name"></p>
+          </div>
+          <button @click="admin.groupAssign.show = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl leading-none">&times;</button>
+        </div>
+
+        <div class="overflow-y-auto flex-1 p-5">
+          <p class="text-xs text-gray-400 mb-4">
+            Centang kategori yang masuk dalam rumpun ini. Kategori yang sudah terpilih di rumpun lain akan dipindahkan ke rumpun ini.
+          </p>
+          <div class="space-y-2">
+            <template x-for="cat in admin.allCategories" :key="cat.id">
+              <label class="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors"
+                     :class="admin.groupAssign.selected.includes(cat.id)
+                       ? 'bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-800'
+                       : 'border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800'">
+                <input type="checkbox"
+                       :checked="admin.groupAssign.selected.includes(cat.id)"
+                       @change="toggleGroupCategory(cat.id)"
+                       class="w-4 h-4 rounded accent-primary-600">
+                <span class="text-lg" x-text="cat.icon"></span>
+                <span class="text-sm font-medium text-gray-800 dark:text-gray-200" x-text="cat.name"></span>
+                <template x-if="cat.group_id > 0 && cat.group_id !== admin.groupAssign.group?.id">
+                  <span class="ml-auto text-xs text-amber-500 font-medium">⚡ pindah</span>
+                </template>
+                <template x-if="cat.group_id === admin.groupAssign.group?.id">
+                  <span class="ml-auto text-xs text-primary-500 font-medium">✓ rumpun ini</span>
+                </template>
+              </label>
+            </template>
+          </div>
+        </div>
+
+        <div class="p-5 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between flex-shrink-0">
+          <span class="text-sm text-gray-400" x-text="admin.groupAssign.selected.length + ' kategori dipilih'"></span>
+          <div class="flex gap-3">
+            <button @click="admin.groupAssign.show = false" class="btn-secondary text-sm px-4 py-2">Batal</button>
+            <button @click="saveGroupAssign()" class="btn-primary text-sm px-4 py-2" :disabled="admin.loading">Simpan</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+
+  <!-- ===== MODAL: USER HISTORY ===== -->
+  <template x-if="admin.userHistory.show">
+    <div @keydown.escape.window="admin.userHistory.show = false" class="modal-overlay">
+      <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+          <div>
+            <h3 class="font-bold text-gray-900 dark:text-white">
+              📋 Riwayat Quiz — <span x-text="admin.userHistory.user?.name"></span>
+            </h3>
+            <p class="text-xs text-gray-400 mt-0.5" x-text="admin.userHistory.user?.email"></p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button @click="exportUserHistoryExcel(admin.userHistory.user)"
+                    :disabled="admin.userHistory.exporting || admin.userHistory.loading"
+                    class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 disabled:opacity-50 transition-colors">
+              <span x-show="!admin.userHistory.exporting">📥 Export Excel</span>
+              <span x-show="admin.userHistory.exporting" class="flex items-center gap-1">
+                <span class="w-3 h-3 border border-emerald-500 border-t-transparent rounded-full animate-spin inline-block"></span>
+                Mengunduh...
+              </span>
+            </button>
+            <button @click="admin.userHistory.show = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl leading-none">&times;</button>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div x-show="admin.userHistory.loading" class="flex items-center justify-center py-16 flex-1">
+          <div class="w-8 h-8 border-3 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+        </div>
+
+        <!-- Table -->
+        <div x-show="!admin.userHistory.loading" class="overflow-y-auto flex-1">
+          <table class="w-full text-sm">
+            <thead class="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+              <tr>
+                <th @click="sortUserHistory('quiz_title')"
+                    class="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200">
+                  Quiz <span x-text="sortIconUH('quiz_title')"></span>
+                </th>
+                <th @click="sortUserHistory('mode')"
+                    class="text-center px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200">
+                  Mode <span x-text="sortIconUH('mode')"></span>
+                </th>
+                <th @click="sortUserHistory('score')"
+                    class="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200">
+                  Skor <span x-text="sortIconUH('score')"></span>
+                </th>
+                <th @click="sortUserHistory('correct_count')"
+                    class="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200">
+                  Benar <span x-text="sortIconUH('correct_count')"></span>
+                </th>
+                <th @click="sortUserHistory('time_taken')"
+                    class="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200">
+                  Waktu <span x-text="sortIconUH('time_taken')"></span>
+                </th>
+                <th @click="sortUserHistory('completed_at')"
+                    class="text-right px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200">
+                  Tanggal <span x-text="sortIconUH('completed_at')"></span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="att in sortedUserHistory()" :key="att.id">
+                <tr class="border-b border-gray-50 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                  <td class="px-5 py-3 font-medium text-gray-800 dark:text-gray-100 max-w-[220px] truncate" x-text="att.quiz_title"></td>
+                  <td class="px-4 py-3 text-center">
+                    <span class="badge text-xs"
+                          :class="{
+                            'badge-primary': att.mode === 'exam',
+                            'badge-success': att.mode === 'instant',
+                            'badge-warning': att.mode === 'end',
+                            'badge-danger':  att.mode === 'challenge'
+                          }"
+                          x-text="{exam:'Ujian',instant:'Instan',end:'Akhir',challenge:'Tantangan'}[att.mode] || att.mode || '—'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <span class="font-bold tabular-nums"
+                          :class="att.score >= 60 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'"
+                          x-text="att.score + '%'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-right tabular-nums text-gray-600 dark:text-gray-300"
+                      x-text="att.correct_count ?? '—'"></td>
+                  <td class="px-4 py-3 text-right tabular-nums text-xs text-gray-500"
+                      x-text="att.time_taken ? Math.floor(att.time_taken/60) + 'm ' + (att.time_taken%60) + 's' : '—'"></td>
+                  <td class="px-5 py-3 text-right text-xs text-gray-400"
+                      x-text="formatDateTime(att.completed_at)"></td>
+                </tr>
+              </template>
+              <tr x-show="admin.userHistory.allAttempts.length === 0 && !admin.userHistory.loading">
+                <td colspan="6" class="px-5 py-12 text-center text-gray-400 text-sm">Pengguna ini belum pernah mengerjakan quiz</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination + Footer -->
+        <div class="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex-shrink-0">
+          <span class="text-xs text-gray-400"
+                x-text="admin.userHistory.allAttempts.length + ' percobaan total'"></span>
+          <div x-show="admin.userHistory.allAttempts.length > admin.userHistory.perPage" class="flex items-center gap-2">
+            <button @click="admin.userHistory.page--"
+                    :disabled="admin.userHistory.page <= 1"
+                    class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">← Prev</button>
+            <span class="text-xs text-gray-500 dark:text-gray-400"
+                  x-text="'Hal. ' + admin.userHistory.page + ' / ' + Math.max(1, Math.ceil(admin.userHistory.allAttempts.length / admin.userHistory.perPage))"></span>
+            <button @click="admin.userHistory.page++"
+                    :disabled="admin.userHistory.page * admin.userHistory.perPage >= admin.userHistory.allAttempts.length"
+                    class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">Next →</button>
+          </div>
+          <button @click="admin.userHistory.show = false"
+                  class="text-sm px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Tutup</button>
+        </div>
+
+      </div>
+    </div>
+  </template>
+
+</div>

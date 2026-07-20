@@ -104,12 +104,42 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
       </div>
     </div>
     <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1 custom-scrollbar">
-      <template x-for="item in navItems" :key="item.href">
-        <a :href="'#' + item.href" @click.prevent="navigate(item.href)"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
-           :class="currentRoute === item.href ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'">
-             <span x-text="item.label"></span>
-        </a>
+      <template x-for="item in navItems" :key="item.href || item.label">
+        <div x-data="{ open: currentRoute.startsWith(item.href || '') && item.children }">
+          
+          <!-- Jika punya children (Accordion) -->
+          <template x-if="item.children">
+            <button @click="open = !open"
+                    class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
+                    :class="currentRoute.startsWith(item.href || '') ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : ''">
+              <span x-text="item.label"></span>
+              <svg class="w-4 h-4 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+          </template>
+          
+          <!-- Jika tidak punya children (Link biasa) -->
+          <template x-if="!item.children">
+            <a :href="'#' + item.href" @click.prevent="navigate(item.href)"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
+               :class="currentRoute === item.href ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'">
+                 <span x-text="item.label"></span>
+            </a>
+          </template>
+          
+          <!-- Isi Accordion -->
+          <template x-if="item.children">
+            <div x-show="open" x-transition class="pl-6 pr-2 py-1 space-y-1">
+              <template x-for="child in item.children" :key="child.href">
+                <a :href="'#' + child.href" @click.prevent="navigate(child.href)"
+                   class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150"
+                   :class="currentRoute === child.href ? 'bg-primary-100/50 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'">
+                     <span x-text="child.label"></span>
+                </a>
+              </template>
+            </div>
+          </template>
+          
+        </div>
       </template>
     </nav>
     <div class="p-4 border-t border-gray-100 dark:border-gray-800 flex flex-col gap-3 flex-shrink-0">
@@ -359,9 +389,21 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
     </div>
 
     <!-- ADMIN PAGE -->
-    <div x-show="currentRoute.startsWith('/admin')">
-      <?php include 'pages/admin.html'; ?>
-    </div>
+    <template x-if="currentRoute === '/admin/stats'">
+      <div><?php include 'pages/admin-stats.html'; ?></div>
+    </template>
+    <template x-if="currentRoute === '/admin/content'">
+      <div><?php include 'pages/admin-content.html'; ?></div>
+    </template>
+    <template x-if="currentRoute === '/admin/users'">
+      <div><?php include 'pages/admin-users.html'; ?></div>
+    </template>
+    <template x-if="currentRoute === '/admin/review'">
+      <div><?php include 'pages/admin-review.html'; ?></div>
+    </template>
+    <template x-if="currentRoute === '/admin/analysis'">
+      <div><?php include 'pages/admin-analysis.html'; ?></div>
+    </template>
 
     <!-- MESSAGES PAGE (full height, no footer) -->
     <div x-show="currentRoute === '/messages'" x-cloak>

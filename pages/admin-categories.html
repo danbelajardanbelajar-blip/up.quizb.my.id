@@ -1,0 +1,25 @@
+<div x-show="!admin.loading && true" class="animate-fade-in">
+    <div class="flex items-center justify-between mb-4">
+      <p class="text-sm text-gray-500 dark:text-gray-400" x-text="admin.categories.length + ' kategori'"></p>
+      <button @click="openAdminModal('category_create',{})" class="btn-primary text-sm px-4 py-2">+ Tambah Kategori</button>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <template x-for="cat in admin.categories" :key="cat.id">
+        <div class="card p-4 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl" :style="'background:'+cat.color+'20'" x-text="cat.icon"></div>
+            <div>
+              <p class="font-semibold text-sm text-gray-800 dark:text-gray-100" x-text="cat.name"></p>
+              <p class="text-xs text-gray-400" x-text="cat.quiz_count + ' quiz'"></p>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button @click="openAdminModal('category_edit', cat)" class="text-xs text-blue-500 hover:underline">Edit</button>
+            <button @click="deleteAdminItem('category', cat.id)" class="text-xs text-red-500 hover:underline">Hapus</button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ===== USERS TAB ===== -->

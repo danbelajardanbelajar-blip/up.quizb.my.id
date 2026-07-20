@@ -31,7 +31,17 @@ function QuizBApp() {
         base.push({ href: '/challenges', label: '⚔️  Tantangan' + badge });
         base.push({ href: '/settings', label: '⚙️  Pengaturan' });
         if (this.user.role === 'admin') {
-          base.push({ href: '/admin', label: '⚙️  Admin Panel' });
+          base.push({ 
+            href: '/admin', 
+            label: '⚙️  Admin Panel',
+            children: [
+              { href: '/admin/stats', label: '📊 Statistik' },
+              { href: '/admin/content', label: '📁 Konten' },
+              { href: '/admin/users', label: '👥 Pengguna' },
+              { href: '/admin/review', label: '🔍 Review Soal' },
+              { href: '/admin/analysis', label: '📈 Analisis Soal' }
+            ]
+          });
         }
       }
       return base;
@@ -392,7 +402,14 @@ function QuizBApp() {
       if (route === '/settings')           this.loadSettings();
       if (route === '/google-setup')       this.loadGoogleSetup();
       if (route.startsWith('/result/'))    this.loadResult(params[0]);
-      if (route.startsWith('/admin'))      this.loadAdminTab(this.admin.tab);
+      if (route.startsWith('/admin')) {
+        const tab = route.split('/')[2] || 'stats';
+        if (route === '/admin') {
+          setTimeout(() => this.navigate('/admin/stats'), 0);
+          return;
+        }
+        this.loadAdminTab(tab);
+      }
       if (route === '/classroom')          this.loadClassroom();
       if (route.startsWith('/classroom/') && params[0]) this.loadClassroomDetail(params[0]);
       if (route === '/challenges')         this.loadChallenges();
