@@ -1337,7 +1337,7 @@ function QuizBApp() {
           this.admin.review.attempts   = {};
         } else if (tab === 'analysis') {
           if (!this.admin.quizPicker.length) {
-            const d = await api.get('admin.quizzes_picker');
+            const d = await api.get('admin.quiz_list', { limit: 500 });
             this.admin.quizPicker = d.quizzes || [];
           }
           this.admin.analysis = [];
