@@ -1499,6 +1499,28 @@ function QuizBApp() {
         this.admin.loading = false;
       }
     },
+    
+    async editQuestionFromAnalysis(questionId, quizId) {
+      const quiz = this.admin.quizPicker.find(q => q.id === quizId);
+      this.admin.questionsQuizTitle = quiz ? quiz.title : '';
+      this.admin.questionsQuizId = quizId; // Set the quiz ID for reloading correctly
+      
+      this.admin.loading = true;
+      try {
+        const qData = await api.get('question.list_all', { quiz_id: quizId });
+        const questions = qData.questions || [];
+        const q = questions.find(x => x.id == questionId);
+        if (q) {
+          this.openAdminModal('question_edit', {...q, options: q.options.map(o=>({...o}))});
+        } else {
+          this.showToast('Soal tidak ditemukan', 'error');
+        }
+      } catch (e) {
+        this.showToast(e.message, 'error');
+      } finally {
+        this.admin.loading = false;
+      }
+    },
 
     toggleContentCategory(catId) {
       const idx = this.admin.contentOpenCategories.indexOf(catId);
@@ -2196,6 +2218,9 @@ function QuizBApp() {
           await api.post('question.update', f);
           this.showToast('Soal berhasil diperbarui', 'success', '✅');
           await this.reloadQuizQuestions();
+          if (this.admin.tab === 'analysis') {
+            await this.loadAnalysisData();
+          }
         }
         this.closeAdminModal();
         if (type !== 'question_create' && type !== 'question_edit') {
