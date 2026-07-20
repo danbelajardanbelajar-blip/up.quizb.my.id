@@ -14,6 +14,7 @@
     <button @click="loadAdminTab('content')" :class="admin.tab==='content' ? 'admin-tab active' : 'admin-tab'">📁 Konten</button>
     <button @click="loadAdminTab('users')"   :class="admin.tab==='users'   ? 'admin-tab active' : 'admin-tab'">👥 Pengguna</button>
     <button @click="loadAdminTab('review')"  :class="admin.tab==='review'  ? 'admin-tab active' : 'admin-tab'">🔍 Review Soal</button>
+    <button @click="loadAdminTab('analysis')" :class="admin.tab==='analysis' ? 'admin-tab active' : 'admin-tab'">📈 Analisis Soal</button>
   </div>
 
   <!-- Loading -->
@@ -905,6 +906,55 @@
       <button @click="admin.review.page++"
               :disabled="admin.review.page * admin.review.perPage >= reviewFilteredTotal()"
               class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">Next →</button>
+    </div>
+  </div>
+
+  <!-- ===== ANALISIS SOAL TAB ===== -->
+  <div x-show="!admin.loading && admin.tab==='analysis'" class="animate-fade-in space-y-6">
+    <div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+      <div>
+        <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+          📈 Analisis Statistik Per Soal
+        </h2>
+        <p class="text-sm text-gray-500 mt-1">Lihat soal mana yang paling sering dijawab salah oleh siswa.</p>
+      </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="data-table">
+          <thead><tr>
+            <th class="text-left">Kuis</th>
+            <th class="text-left">Pertanyaan</th>
+            <th class="text-right">Total Dijawab</th>
+            <th class="text-right">Benar</th>
+            <th class="text-right">Salah</th>
+            <th class="text-right">% Kesalahan</th>
+          </tr></thead>
+          <tbody>
+            <template x-for="item in admin.analysis" :key="item.question_id">
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                <td class="text-sm text-gray-600 dark:text-gray-300" x-text="item.quiz_title"></td>
+                <td class="text-sm font-medium text-gray-800 dark:text-gray-100" x-text="item.question_text"></td>
+                <td class="text-right tabular-nums text-sm text-gray-500" x-text="(item.total_answered || 0).toLocaleString()"></td>
+                <td class="text-right tabular-nums text-sm text-green-600 dark:text-green-400" x-text="(item.correct_count || 0).toLocaleString()"></td>
+                <td class="text-right tabular-nums text-sm text-red-500 dark:text-red-400 font-semibold" x-text="(item.wrong_count || 0).toLocaleString()"></td>
+                <td class="text-right">
+                  <span class="badge text-xs font-semibold"
+                        :class="item.error_pct >= 70 ? 'badge-danger' : item.error_pct >= 40 ? 'badge-warning' : 'badge-success'"
+                        x-text="item.error_pct + '%'"></span>
+                </td>
+              </tr>
+            </template>
+            <tr x-show="admin.analysis.length === 0">
+              <td colspan="6" class="text-center py-10 text-gray-500">
+                Belum ada data analisis soal.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 

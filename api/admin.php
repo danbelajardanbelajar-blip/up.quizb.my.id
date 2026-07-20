@@ -796,3 +796,53 @@ function admin_quiz_export(): void {
 
     jsonSuccess($exportData);
 }
+
+// ============================================
+// STATISTIK PER SOAL (ANALISIS SOAL)
+// ============================================
+
+function admin_question_stats(): void {
+    requirePengajar(); // admin + pengajar
+
+    try {
+        $stats = DB::all(
+            "SELECT 
+                q.id AS question_id,
+                q.text AS question_text,
+                qz.title AS quiz_title,
+                q.type AS question_type,
+                SUM(CASE WHEN aa.option_id IS NOT NULL THEN 1 ELSE 0 END) AS total_answered,
+                SUM(CASE WHEN aa.option_id IS NOT NULL AND aa.is_correct = 0 THEN 1 ELSE 0 END) AS wrong_count,
+                SUM(CASE WHEN aa.option_id IS NOT NULL AND aa.is_correct = 1 THEN 1 ELSE 0 END) AS correct_count
+             FROM questions q
+             JOIN quizzes qz ON q.quiz_id = qz.id
+             LEFT JOIN attempt_answers aa ON aa.question_id = q.id
+             WHERE qz.is_published = 1
+             GROUP BY q.id, q.text, qz.title, q.type
+             HAVING total_answered > 0
+             ORDER BY wrong_count DESC, total_answered DESC
+             LIMIT 100"
+        );
+
+        $result = [];
+        foreach ($stats as $row) {
+            $total = (int)$row['total_answered'];
+            $wrong = (int)$row['wrong_count'];
+            $result[] = [
+                'question_id'    => (int)$row['question_id'],
+                'question_text'  => mb_strimwidth(strip_tags($row['question_text']), 0, 80, "..."), // Limit text length for table
+                'quiz_title'     => $row['quiz_title'],
+                'question_type'  => $row['question_type'],
+                'total_answered' => $total,
+                'wrong_count'    => $wrong,
+                'correct_count'  => (int)$row['correct_count'],
+                'error_pct'      => $total > 0 ? round(($wrong / $total) * 100, 1) : 0,
+            ];
+        }
+
+        jsonSuccess(['data' => $result]);
+    } catch (\Throwable $e) {
+        error_log('[admin.question_stats] ' . $e->__toString());
+        jsonError('Terjadi kesalahan server', 500);
+    }
+}

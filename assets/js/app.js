@@ -115,6 +115,8 @@ function QuizBApp() {
       groupAssign: { show: false, group: null, selected: [] },
       // Review Soal
       review: { data: [], expandedId: null, attempts: {}, search: '', page: 1, perPage: 15 },
+      // Analisis Soal
+      analysis: [],
       // User history modal
       userHistory: { show: false, user: null, allAttempts: [], page: 1, perPage: 15, loading: false, sort: { key: '', dir: 'asc' }, exporting: false },
       // Sort state per tab (client-side sort current page)
@@ -1331,6 +1333,9 @@ function QuizBApp() {
           this.admin.review.data       = Array.isArray(data) ? data : [];
           this.admin.review.expandedId = null;
           this.admin.review.attempts   = {};
+        } else if (tab === 'analysis') {
+          const data = await api.get('admin.question_stats');
+          this.admin.analysis = Array.isArray(data.data) ? data.data : [];
         }
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
