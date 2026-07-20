@@ -53,7 +53,7 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
   <!-- Custom CSS -->
   <link rel="stylesheet" href="assets/css/app.css" />
 </head>
-<body class="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans min-h-screen transition-colors duration-300">
+<body class="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans h-screen flex flex-col md:flex-row overflow-hidden transition-colors duration-300">
 
   <!-- Page Loader -->
   <div id="page-loader" class="fixed inset-0 z-[99999] flex items-center justify-center bg-white text-primary-600" style="background:#f8fafc;color:#4f46e5;">
@@ -77,13 +77,124 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
     <span x-text="toast.message"></span>
   </div>
 
-  <!-- NAVBAR — mobile: logo center | desktop: logo left + nav + dark + profile -->
-  <nav x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding'"
-       class="sticky top-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
-    <div class="w-full">
+  
+  <!-- ── DESKTOP SIDEBAR ── -->
+  <aside x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding'"
+         class="hidden md:flex flex-col w-64 h-full bg-white dark:bg-gray-900 border-r border-gray-200/50 dark:border-gray-800/50 flex-shrink-0 z-50 shadow-sm relative">
+    <div class="h-16 flex items-center px-6 border-b border-gray-100 dark:border-gray-800/50 flex-shrink-0">
+      <a :href="user ? '#/dashboard' : '#/'" @click.prevent="navigate(user ? '/dashboard' : '/')" class="flex items-center gap-2 group">
+        <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+          <span class="text-white font-bold text-sm">Q</span>
+        </div>
+        <span class="font-bold text-xl bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">QuizB</span>
+      </a>
+    </div>
+    <div class="px-4 py-4 border-b border-gray-100 dark:border-gray-800/50 flex-shrink-0" x-data="{ focused: false }">
+      <div class="relative">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input type="search" x-model="search.q"
+               @focus="focused = true"
+               @input.debounce.300ms="if(search.q.trim().length >= 2) { if(currentRoute !== '/search') navigate('/search'); loadSearch(search.q); } else { search.results = []; }"
+               @keydown.escape="search.q=''; search.results=[]; $el.blur(); focused=false"
+               @keydown.enter="search.q.trim().length >= 2 && (currentRoute !== '/search' ? navigate('/search') : loadSearch(search.q))"
+               placeholder="Cari quiz..."
+               class="w-full pl-9 pr-3 py-2 text-sm bg-gray-100 dark:bg-gray-800 border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-400 focus:bg-white dark:focus:bg-gray-700 transition-all placeholder-gray-400"/>
+      </div>
+    </div>
+    <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1 custom-scrollbar">
+      <template x-for="item in navItems" :key="item.href">
+        <a :href="'#' + item.href" @click.prevent="navigate(item.href)"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
+           :class="currentRoute === item.href ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'">
+             <span x-text="item.label"></span>
+        </a>
+      </template>
+    </nav>
+    <div class="p-4 border-t border-gray-100 dark:border-gray-800 flex flex-col gap-3 flex-shrink-0">
+      <div class="flex items-center justify-between">
+        <button @click="toggleDark()" class="flex items-center justify-center p-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-1 mr-2" title="Toggle dark mode">
+          <svg x-show="!darkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+          <svg x-show="darkMode"  class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        </button>
+        <template x-if="user">
+          <div class="flex items-center gap-2">
+            <div class="relative" x-data="{ isOpen: false }">
+              <button @click="isOpen=!isOpen; if(isOpen) loadNotifications()" class="relative p-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Notifikasi">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                <span x-show="notif.unreadCount > 0" class="absolute top-0.5 right-0.5 min-w-[1.1rem] h-[1.1rem] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5" x-text="notif.unreadCount > 99 ? '99+' : notif.unreadCount"></span>
+              </button>
+              <div x-show="isOpen" @click.outside="isOpen=false" x-transition class="absolute bottom-full left-0 mb-2 w-80 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 z-50 flex flex-col overflow-hidden" style="max-height:480px">
+                   <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+                     <span class="font-semibold text-sm text-gray-800 dark:text-gray-100">🔔 Notifikasi</span>
+                     <div class="flex items-center gap-2">
+                       <button x-show="notif.unreadCount > 0" @click="markAllNotifRead()" class="text-xs text-primary-600 dark:text-primary-400 hover:underline">Baca semua</button>
+                       <button x-show="notif.list.some(n => n.is_read)" @click="clearReadNotif()" class="text-xs text-gray-400 hover:text-red-500 hover:underline">Hapus yg dibaca</button>
+                     </div>
+                   </div>
+                   <div class="overflow-y-auto flex-1 custom-scrollbar">
+                     <div x-show="notif.loading" class="flex justify-center py-8"><div class="w-5 h-5 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div></div>
+                     <div x-show="!notif.loading && notif.list.length === 0" class="text-center py-10 text-gray-400"><p class="text-3xl mb-2">🔔</p><p class="text-xs">Tidak ada notifikasi</p></div>
+                     <template x-for="n in notif.list" :key="n.id">
+                       <div @click="clickNotif(n); isOpen=false" class="flex items-start gap-3 px-4 py-3 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors" :class="!n.is_read ? 'bg-primary-50/50 dark:bg-primary-900/10' : ''">
+                         <div class="w-8 h-8 rounded-full flex items-center justify-center text-lg flex-shrink-0 mt-0.5" :class="!n.is_read ? 'bg-primary-100 dark:bg-primary-900/40' : 'bg-gray-100 dark:bg-gray-800'" x-text="{challenge:'⚔️',challenge_result:'🏆',message:'💬',system:'📢',new_user:'👤',new_question:'📝'}[n.type] || '🔔'"></div>
+                         <div class="flex-1 min-w-0">
+                           <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug" :class="!n.is_read ? 'font-semibold' : ''" x-text="n.title"></p>
+                           <p class="text-xs text-gray-300 dark:text-gray-600 mt-1" x-text="formatRelative(n.created_at)"></p>
+                         </div>
+                         <div x-show="!n.is_read" class="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0 mt-2"></div>
+                       </div>
+                     </template>
+                   </div>
+              </div>
+            </div>
+            <button @click="navigate('/messages')" class="relative p-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Pesan">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+              <span x-show="msgs.unreadCount > 0" class="absolute top-0.5 right-0.5 min-w-[1.1rem] h-[1.1rem] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5" x-text="msgs.unreadCount > 99 ? '99+' : msgs.unreadCount"></span>
+            </button>
+          </div>
+        </template>
+      </div>
+      <template x-if="!user">
+        <div class="flex flex-col gap-2 mt-2">
+          <a href="#/login" @click.prevent="navigate('/login')" class="btn-secondary text-sm px-4 py-2 text-center w-full">Masuk</a>
+          <a href="#/register" @click.prevent="navigate('/register')" class="btn-primary text-sm px-4 py-2 text-center w-full">Daftar</a>
+        </div>
+      </template>
+      <template x-if="user">
+        <div class="relative w-full" x-data="{ isOpen: false }">
+          <button @click="isOpen=!isOpen" class="flex items-center gap-3 p-2 w-full rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-semibold flex-shrink-0" x-text="user.name.charAt(0).toUpperCase()"></div>
+            <div class="flex flex-col items-start flex-1 min-w-0">
+               <span class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate w-full text-left" x-text="user.name"></span>
+               <span class="text-xs text-gray-500 dark:text-gray-400 truncate w-full text-left" x-text="user.role === 'admin' ? 'Administrator' : 'Pengguna'"></span>
+            </div>
+            <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+          </button>
+          <div x-show="isOpen" @click.outside="isOpen=false" x-transition class="absolute bottom-full left-0 mb-2 w-full bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50">
+            <a href="#/dashboard" @click.prevent="navigate('/dashboard');isOpen=false" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📊 Dashboard</a>
+            <a href="#/profile" @click.prevent="navigate('/profile');isOpen=false" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">👤 Profil</a>
+            <a href="#/history" @click.prevent="navigate('/history');isOpen=false" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📋 Histori</a>
+            <a href="#/settings" @click.prevent="navigate('/settings');isOpen=false" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">⚙️ Pengaturan</a>
+            <template x-if="user && user.role === 'admin'">
+              <a href="#/admin" @click.prevent="navigate('/admin');isOpen=false" class="flex items-center gap-2 px-4 py-2 text-sm text-purple-600 dark:text-purple-400 hover:bg-gray-50 dark:hover:bg-gray-700">⚙️ Admin Panel</a>
+            </template>
+            <hr class="my-1 border-gray-200 dark:border-gray-700"/>
+            <button @click="logout();isOpen=false" class="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-gray-700">🚪 Keluar</button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </aside>
 
-      <!-- ── MOBILE: logo centered, nothing else ─────────── -->
-      <div class="flex md:hidden items-center justify-center h-14">
+  <!-- ── MAIN CONTENT WRAPPER ── -->
+  <div class="flex flex-col flex-1 h-full overflow-y-auto relative w-full scroll-smooth custom-scrollbar">
+
+    <!-- MOBILE TOP BAR (Only visible on Mobile) -->
+    <nav x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding'"
+         class="md:hidden sticky top-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
+      <div class="flex items-center justify-center h-14 w-full">
         <a :href="user ? '#/dashboard' : '#/'" @click.prevent="navigate(user ? '/dashboard' : '/')" class="flex items-center gap-2 group">
           <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
             <span class="text-white font-bold text-sm">Q</span>
@@ -91,152 +202,8 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
           <span class="font-bold text-xl bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">QuizB</span>
         </a>
       </div>
+    </nav>
 
-      <!-- ── DESKTOP: logo left + nav + dark + notif + profile ── -->
-      <div class="hidden md:flex items-center h-16 gap-6">
-
-        <!-- Logo -->
-        <a :href="user ? '#/dashboard' : '#/'" @click.prevent="navigate(user ? '/dashboard' : '/')" class="flex items-center gap-2 group flex-shrink-0">
-          <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-            <span class="text-white font-bold text-sm">Q</span>
-          </div>
-          <span class="font-bold text-xl bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">QuizB</span>
-        </a>
-
-        <!-- Nav items -->
-        <div class="flex items-center gap-1">
-          <template x-for="item in navItems" :key="item.href">
-            <a :href="'#' + item.href" @click.prevent="navigate(item.href)"
-               class="px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150"
-               :class="currentRoute === item.href
-                 ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400'
-                 : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'"
-               x-text="item.label"></a>
-          </template>
-        </div>
-
-        <!-- Spacer -->
-        <div class="flex-1"></div>
-
-        <!-- Search bar desktop -->
-        <div class="relative" x-data="{ focused: false }">
-          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-               fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-          </svg>
-          <input type="search"
-                 x-model="search.q"
-                 @focus="focused = true"
-                 @input.debounce.300ms="if(search.q.trim().length >= 2) { if(currentRoute !== '/search') navigate('/search'); loadSearch(search.q); } else { search.results = []; }"
-                 @keydown.escape="search.q=''; search.results=[]; $el.blur(); focused=false"
-                 @keydown.enter="search.q.trim().length >= 2 && (currentRoute !== '/search' ? navigate('/search') : loadSearch(search.q))"
-                 placeholder="Cari quiz..."
-                 class="w-48 lg:w-64 pl-9 pr-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-400 focus:bg-white dark:focus:bg-gray-700 transition-all placeholder-gray-400"/>
-        </div>
-
-        <!-- Dark Mode Toggle -->
-        <button @click="toggleDark()"
-                class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                title="Toggle dark mode">
-          <svg x-show="!darkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
-          <svg x-show="darkMode"  class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-        </button>
-
-        <!-- Notifikasi + Pesan (logged in) -->
-        <template x-if="user">
-          <div class="flex items-center gap-1">
-
-            <!-- Notifikasi -->
-          <div class="relative" x-data="{ isOpen: false }">
-            <button @click="isOpen=!isOpen; if(isOpen) loadNotifications()"
-                      class="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Notifikasi">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                </svg>
-                <span x-show="notif.unreadCount > 0"
-                      class="absolute top-0.5 right-0.5 min-w-[1.1rem] h-[1.1rem] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5"
-                      x-text="notif.unreadCount > 99 ? '99+' : notif.unreadCount"></span>
-              </button>
-              <!-- Dropdown -->
-              <div x-show="isOpen" @click.outside="isOpen=false" x-transition
-                   class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 z-50 flex flex-col overflow-hidden"
-                   style="max-height:480px">
-                <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
-                  <span class="font-semibold text-sm text-gray-800 dark:text-gray-100">🔔 Notifikasi</span>
-                  <div class="flex items-center gap-2">
-                    <button x-show="notif.unreadCount > 0" @click="markAllNotifRead()" class="text-xs text-primary-600 dark:text-primary-400 hover:underline">Baca semua</button>
-                    <button x-show="notif.list.some(n => n.is_read)" @click="clearReadNotif()" class="text-xs text-gray-400 hover:text-red-500 hover:underline">Hapus yg dibaca</button>
-                  </div>
-                </div>
-                <div class="overflow-y-auto flex-1">
-                  <div x-show="notif.loading" class="flex justify-center py-8"><div class="w-5 h-5 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div></div>
-                  <div x-show="!notif.loading && notif.list.length === 0" class="text-center py-10 text-gray-400"><p class="text-3xl mb-2">🔔</p><p class="text-xs">Tidak ada notifikasi</p></div>
-                  <template x-for="n in notif.list" :key="n.id">
-                    <div @click="clickNotif(n); isOpen=false"
-                         class="flex items-start gap-3 px-4 py-3 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
-                         :class="!n.is_read ? 'bg-primary-50/50 dark:bg-primary-900/10' : ''">
-                      <div class="w-8 h-8 rounded-full flex items-center justify-center text-lg flex-shrink-0 mt-0.5"
-                           :class="!n.is_read ? 'bg-primary-100 dark:bg-primary-900/40' : 'bg-gray-100 dark:bg-gray-800'"
-                           x-text="{challenge:'⚔️',challenge_result:'🏆',message:'💬',system:'📢',new_user:'👤',new_question:'📝'}[n.type] || '🔔'"></div>
-                      <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug" :class="!n.is_read ? 'font-semibold' : ''" x-text="n.title"></p>
-                        <p class="text-xs text-gray-300 dark:text-gray-600 mt-1" x-text="formatRelative(n.created_at)"></p>
-                      </div>
-                      <div x-show="!n.is_read" class="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0 mt-2"></div>
-                    </div>
-                  </template>
-                </div>
-              </div>
-            </div>
-
-            <!-- Pesan -->
-            <button @click="navigate('/messages')"
-                    class="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Pesan">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-              <span x-show="msgs.unreadCount > 0"
-                    class="absolute top-0.5 right-0.5 min-w-[1.1rem] h-[1.1rem] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5"
-                    x-text="msgs.unreadCount > 99 ? '99+' : msgs.unreadCount"></span>
-            </button>
-
-          </div>
-        </template>
-
-        <!-- Auth (not logged in) -->
-        <template x-if="!user">
-          <div class="flex items-center gap-2">
-            <a href="#/login"    @click.prevent="navigate('/login')"    class="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-primary-600 transition-colors">Masuk</a>
-            <a href="#/register" @click.prevent="navigate('/register')" class="btn-primary text-sm px-4 py-1.5">Daftar</a>
-          </div>
-        </template>
-
-        <!-- User menu (logged in) -->
-        <template x-if="user">
-          <div class="relative" x-data="{ isOpen: false }">
-            <button @click="isOpen=!isOpen" class="flex items-center gap-2 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-semibold text-sm" x-text="user.name.charAt(0).toUpperCase()"></div>
-              <span class="text-sm font-medium text-gray-700 dark:text-gray-200" x-text="user.name.split(' ')[0]"></span>
-              <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-            </button>
-            <div x-show="isOpen" @click.outside="isOpen=false" x-transition
-                 class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50">
-              <a href="#/dashboard" @click.prevent="navigate('/dashboard');isOpen=false" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📊 Dashboard</a>
-              <a href="#/profile"   @click.prevent="navigate('/profile');isOpen=false"   class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">👤 Profil</a>
-              <a href="#/history"   @click.prevent="navigate('/history');isOpen=false"   class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📋 Histori</a>
-              <a href="#/settings"  @click.prevent="navigate('/settings');isOpen=false"  class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">⚙️ Pengaturan</a>
-              <template x-if="user && user.role === 'admin'">
-                <a href="#/admin" @click.prevent="navigate('/admin');isOpen=false" class="flex items-center gap-2 px-4 py-2 text-sm text-purple-600 dark:text-purple-400 hover:bg-gray-50 dark:hover:bg-gray-700">⚙️ Admin Panel</a>
-              </template>
-              <hr class="my-1 border-gray-200 dark:border-gray-700"/>
-              <button @click="logout();isOpen=false" class="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-gray-700">🚪 Keluar</button>
-            </div>
-          </div>
-        </template>
-
-      </div><!-- end desktop row -->
-
-    </div>
-  </nav>
 
     <!-- ACTIVITY TICKER — sticky tepat di bawah nav (top-0 saat fullscreen quiz) -->
   <div x-data="globalTicker()"
