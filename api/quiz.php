@@ -95,7 +95,7 @@ function quiz_questions(): void {
     if (!$quizId) jsonError('Quiz ID diperlukan');
 
     $quiz = DB::one(
-        'SELECT id, title, description, duration, time_limit, total_questions, passing_score
+        'SELECT id, title, description, duration, time_limit, total_questions, passing_score, require_camera
          FROM quizzes WHERE id = ? AND is_published = 1',
         [$quizId]
     );
