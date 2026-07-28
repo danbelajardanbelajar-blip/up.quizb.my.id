@@ -13,6 +13,9 @@ header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token');
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Expose-Headers: X-CSRF-Token');
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
