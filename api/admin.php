@@ -95,7 +95,7 @@ function admin_quiz_list(): void {
 
     $quizzes = DB::all(
         "SELECT q.id, q.title, q.slug, q.category_id, q.difficulty, q.time_limit,
-                q.passing_score, q.is_published, q.max_attempts, q.created_at,
+                q.passing_score, q.is_published, q.max_attempts, q.require_camera, q.created_at,
                 c.name AS category_name, g.name AS group_name,
                 u.name AS creator_name,
                 (SELECT COUNT(*) FROM questions WHERE quiz_id = q.id) AS question_count,
@@ -141,6 +141,7 @@ function admin_quiz_create(): void {
     $passingScore= (int)($body['passing_score'] ?? 60);
     $isPublished = (int)($body['is_published'] ?? 0);
     $maxAttempts = (int)($body['max_attempts'] ?? 0);
+    $requireCamera = (int)($body['require_camera'] ?? 0);
 
     if (strlen($title) < 3) jsonError('Judul minimal 3 karakter');
     if (!in_array($difficulty, ['easy','medium','hard'])) jsonError('Difficulty tidak valid');
@@ -158,12 +159,12 @@ function admin_quiz_create(): void {
     $pdo = DB::conn();
     $stmt = $pdo->prepare(
         "INSERT INTO quizzes (title, slug, description, category_id, difficulty, time_limit,
-                              passing_score, is_published, max_attempts, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                              passing_score, is_published, max_attempts, require_camera, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     $stmt->execute([
         $title, $slug, $description, $categoryId, $difficulty, $timeLimit,
-        $passingScore, $isPublished, $maxAttempts, $_SESSION['user_id']
+        $passingScore, $isPublished, $maxAttempts, $requireCamera, $_SESSION['user_id']
     ]);
     $newId = $pdo->lastInsertId();
 
@@ -194,13 +195,14 @@ function admin_quiz_update(): void {
     $passingScore= (int)($body['passing_score'] ?? $existing['passing_score']);
     $isPublished = isset($body['is_published']) ? (int)$body['is_published'] : (int)$existing['is_published'];
     $maxAttempts = (int)($body['max_attempts'] ?? $existing['max_attempts']);
+    $requireCamera = isset($body['require_camera']) ? (int)$body['require_camera'] : (int)$existing['require_camera'];
 
     DB::conn()->prepare(
         "UPDATE quizzes SET title=?, description=?, category_id=?, difficulty=?,
-                            time_limit=?, passing_score=?, is_published=?, max_attempts=?,
+                            time_limit=?, passing_score=?, is_published=?, max_attempts=?, require_camera=?,
                             updated_at=NOW()
          WHERE id=?"
-    )->execute([$title, $description, $categoryId, $difficulty, $timeLimit, $passingScore, $isPublished, $maxAttempts, $id]);
+    )->execute([$title, $description, $categoryId, $difficulty, $timeLimit, $passingScore, $isPublished, $maxAttempts, $requireCamera, $id]);
 
     // Update category counts if category changed
     if ($categoryId !== (int)$existing['category_id']) {
@@ -680,7 +682,8 @@ function admin_user_history(): void {
 
     $rows = DB::all(
         "SELECT a.id, a.score, a.correct_count, a.time_taken, a.completed_at, a.mode,
-                q.title AS quiz_title
+                q.title AS quiz_title,
+                (SELECT 1 FROM attempt_snapshots WHERE attempt_id = a.id LIMIT 1) AS has_snapshots
          FROM attempts a
          JOIN quizzes q ON a.quiz_id = q.id
          WHERE a.user_id = ?
@@ -693,6 +696,7 @@ function admin_user_history(): void {
         $r['score']         = (int)$r['score'];
         $r['correct_count'] = (int)$r['correct_count'];
         $r['time_taken']    = (int)$r['time_taken'];
+        $r['has_snapshots'] = (bool)$r['has_snapshots'];
     }
     unset($r);
 
@@ -875,3 +879,17 @@ function admin_question_stats(): void {
         jsonError('Terjadi kesalahan server', 500);
     }
 }
+
+// ============================================
+// PROCTORING
+// ============================================
+
+function admin_attempt_snapshots(): void {
+    requireAdmin();
+    $attemptId = (int)($_GET['attempt_id'] ?? 0);
+    if ($attemptId <= 0) jsonError('ID tidak valid');
+
+    $snapshots = DB::all("SELECT id, image_path, created_at FROM attempt_snapshots WHERE attempt_id = ? ORDER BY created_at ASC", [$attemptId]);
+    jsonSuccess(['snapshots' => $snapshots]);
+}
+

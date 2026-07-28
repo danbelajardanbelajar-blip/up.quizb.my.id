@@ -27,6 +27,10 @@ function QuizEngine() {
     questionTimeLeft: 0,    // timer per soal (instant/end mode)
     questionTimerInterval: null,
     questionTimerDefault: 20, // detik per soal
+    
+    // Proctoring
+    cameraStream: null,
+    snapshotInterval: null,
 
     // ── Audio ──────────────────────────────────
     _ac: null,           // AudioContext
@@ -148,7 +152,17 @@ function QuizEngine() {
     },
 
     // ---- Start quiz ----
-    startQuiz() {
+    async startQuiz() {
+      if (this.quiz?.require_camera == 1) {
+        try {
+          this.cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          // Start snapshot loop after attemptId is set (which happens during loadQuiz? No, attemptId is already created in loadQuiz)
+          this.startSnapshotLoop();
+        } catch (e) {
+          alert('Kuis ini mewajibkan akses kamera. Harap izinkan akses kamera di browser Anda.');
+          return;
+        }
+      }
       this.phase = 'playing';
       this.startBgMusic();           // 🔊 musik latar mulai
       if (this.isReviewMode) {
@@ -157,6 +171,43 @@ function QuizEngine() {
         this.startTimer();
       }
       if (this.assignmentId) this._startHeartbeat();
+    },
+
+    // ---- Snapshot Loop ----
+    startSnapshotLoop() {
+      if (!this.cameraStream) return;
+      this.snapshotInterval = setInterval(() => {
+        if (this.phase !== 'playing') return;
+        this.takeAndUploadSnapshot();
+      }, 60000); // 60 seconds
+      // Take first snapshot immediately
+      setTimeout(() => this.takeAndUploadSnapshot(), 2000);
+    },
+    
+    takeAndUploadSnapshot() {
+      if (!this.cameraStream || !this.attemptId) return;
+      const video = document.createElement('video');
+      video.srcObject = this.cameraStream;
+      video.play().then(() => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 640;
+        canvas.height = 480;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imgBase64 = canvas.toDataURL('image/jpeg', 0.5);
+        api.post('attempt.upload_snapshot', {
+          attempt_id: this.attemptId,
+          image: imgBase64
+        }).catch(() => {});
+      }).catch(() => {});
+    },
+    
+    stopCamera() {
+      if (this.snapshotInterval) clearInterval(this.snapshotInterval);
+      if (this.cameraStream) {
+        this.cameraStream.getTracks().forEach(t => t.stop());
+        this.cameraStream = null;
+      }
     },
 
     // ---- Timer ----
@@ -351,6 +402,7 @@ function QuizEngine() {
     async submitAnswers() {
       this._stopHeartbeat();
       this.stopBgMusic();            // 🔇 hentikan musik saat submit
+      this.stopCamera();
       this.loading = true;
       try {
         const initialTime = this.mode === 'exam'
@@ -367,6 +419,7 @@ function QuizEngine() {
             option_id:   parseInt(option_id),
           })),
           time_taken: timeTaken,
+          snapshots: this.snapshots || []
         };
         const result = await api.post('attempt.submit', payload);
         this.result  = result;

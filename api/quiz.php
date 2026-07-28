@@ -34,7 +34,7 @@ function quiz_list(): void {
     )['cnt'];
 
     $quizzes = DB::all(
-        "SELECT q.id, q.title, q.slug, q.description, q.time_limit, q.duration, q.difficulty,
+        "SELECT q.id, q.title, q.slug, q.description, q.time_limit, q.duration, q.difficulty, q.require_camera,
                 q.total_questions, q.total_questions AS question_count,
                 q.total_attempts, q.total_attempts AS attempt_count,
                 c.name AS category_name, c.icon AS category_icon, c.color AS category_color

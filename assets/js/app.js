@@ -134,6 +134,7 @@ function QuizBApp() {
       analysisQuizId: '',
       // User history modal
       userHistory: { show: false, user: null, allAttempts: [], page: 1, perPage: 15, loading: false, sort: { key: '', dir: 'asc' }, exporting: false },
+      snapshotModal: { show: false, snapshots: [], loading: false },
       // Sort state per tab (client-side sort current page)
       sort: {
         quizzes:    { key: '', dir: 'asc' },
@@ -2654,6 +2655,19 @@ function QuizBApp() {
       // Paginate dari data yang sudah disort
       const from = (uh.page - 1) * uh.perPage;
       return data.slice(from, from + uh.perPage);
+    },
+    async viewSnapshots(attemptId) {
+      this.admin.snapshotModal.show = true;
+      this.admin.snapshotModal.loading = true;
+      this.admin.snapshotModal.snapshots = [];
+      try {
+        const res = await api.get('admin.attempt_snapshots', { attempt_id: attemptId });
+        this.admin.snapshotModal.snapshots = res.snapshots || [];
+      } catch (e) {
+        this.showToast('Gagal memuat snapshot', 'error');
+      } finally {
+        this.admin.snapshotModal.loading = false;
+      }
     },
 
     async exportUserHistoryExcel(u) {

@@ -61,6 +61,10 @@
             <input type="checkbox" id="is-published" x-model.number="admin.form.is_published" :checked="admin.form.is_published==1" class="w-4 h-4 accent-primary-600" />
             <label for="is-published" class="text-sm text-gray-700 dark:text-gray-300">Publikasikan quiz</label>
           </div>
+          <div class="flex items-center gap-2">
+            <input type="checkbox" id="require-camera" x-model.number="admin.form.require_camera" :checked="admin.form.require_camera==1" class="w-4 h-4 accent-primary-600" />
+            <label for="require-camera" class="text-sm text-gray-700 dark:text-gray-300">Wajibkan akses kamera (Proctoring)</label>
+          </div>
         </div>
       </div>
 
@@ -735,8 +739,11 @@
                       x-text="att.correct_count ?? '—'"></td>
                   <td class="px-4 py-3 text-right tabular-nums text-xs text-gray-500"
                       x-text="att.time_taken ? Math.floor(att.time_taken/60) + 'm ' + (att.time_taken%60) + 's' : '—'"></td>
-                  <td class="px-5 py-3 text-right text-xs text-gray-400"
-                      x-text="formatDateTime(att.completed_at)"></td>
+                  <td class="px-5 py-3 text-right text-xs text-gray-400">
+                    <span x-text="formatDateTime(att.completed_at)"></span>
+                    <br>
+                    <button x-show="att.has_snapshots" @click="viewSnapshots(att.id)" class="mt-1 text-primary-600 hover:underline">📷 Lihat Snapshots</button>
+                  </td>
                 </tr>
               </template>
               <tr x-show="admin.userHistory.allAttempts.length === 0 && !admin.userHistory.loading">
@@ -764,6 +771,34 @@
                   class="text-sm px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Tutup</button>
         </div>
 
+      </div>
+    </div>
+  </template>
+
+  <!-- ===== MODAL: SNAPSHOTS ===== -->
+  <template x-if="admin.snapshotModal.show">
+    <div @keydown.escape.window="admin.snapshotModal.show = false" class="modal-overlay z-[60]">
+      <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+          <h3 class="font-bold text-gray-900 dark:text-white">📷 Rekaman Pengawasan (Proctoring)</h3>
+          <button @click="admin.snapshotModal.show = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl leading-none">&times;</button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-1">
+          <div x-show="admin.snapshotModal.loading" class="flex items-center justify-center py-16">
+            <div class="w-8 h-8 border-3 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+          </div>
+          <div x-show="!admin.snapshotModal.loading && admin.snapshotModal.snapshots.length === 0" class="text-center text-gray-400 py-12">
+            Belum ada snapshot yang tersimpan.
+          </div>
+          <div x-show="!admin.snapshotModal.loading && admin.snapshotModal.snapshots.length > 0" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <template x-for="snap in admin.snapshotModal.snapshots" :key="snap.id">
+              <div class="card overflow-hidden border border-gray-100 dark:border-gray-800">
+                <img :src="snap.image_path" class="w-full h-auto aspect-video object-cover bg-gray-50 dark:bg-gray-950" loading="lazy">
+                <div class="p-3 text-xs text-center text-gray-500" x-text="formatDateTime(snap.created_at)"></div>
+              </div>
+            </template>
+          </div>
+        </div>
       </div>
     </div>
   </template>

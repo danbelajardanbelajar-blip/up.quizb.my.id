@@ -158,6 +158,24 @@ function attempt_submit(): void {
         );
     }
 
+    // Save snapshots (Proctoring)
+    if (!empty($body['snapshots']) && is_array($body['snapshots'])) {
+        $dir = __DIR__ . '/../uploads/snapshots';
+        if (!is_dir($dir)) mkdir($dir, 0755, true);
+        foreach ($body['snapshots'] as $idx => $b64) {
+            if (strpos($b64, ',') !== false) {
+                @list(, $b64) = explode(',', $b64);
+            }
+            $imgData = base64_decode($b64);
+            if ($imgData) {
+                $fileName = 'snap_' . $attemptId . '_' . time() . '_' . $idx . '.jpg';
+                if (file_put_contents($dir . '/' . $fileName, $imgData)) {
+                    DB::execute('INSERT INTO attempt_snapshots (attempt_id, image_path) VALUES (?, ?)', [$attemptId, 'uploads/snapshots/' . $fileName]);
+                }
+            }
+        }
+    }
+
     // Jika tamu memberikan nama kustom → update nama di DB & session
     if (!empty($playerName) && ($user['is_anon'] ?? false)) {
         DB::execute('UPDATE users SET name = ? WHERE id = ?', [$playerName, $user['id']]);
@@ -194,6 +212,7 @@ function attempt_submit(): void {
         'is_anon'         => $user['is_anon'] ?? false,
     ], 'Quiz berhasil diselesaikan');
     } catch (Throwable $e) {
+        if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
         error_log("[attempt.submit] " . $e->__toString());
         jsonError('Terjadi kesalahan server', 500);
     }
@@ -467,3 +486,4 @@ function attempt_quiz_global_history(): void {
 function quiz_global_history(): void {
     attempt_quiz_global_history();
 }
+
