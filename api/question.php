@@ -2185,26 +2185,20 @@ function _parseXlsx(string $path): array {
 
 
 
+        $kunci7   = strtoupper(trim($r[6] ?? ''));
+        $kunci6   = strtoupper(trim($r[5] ?? ''));
+        
+        if (in_array($kunci7, ['A','B','C','D','E'])) {
+            $correct = $kunci7;
+            $expl    = trim($r[7] ?? '');
+        } else {
+            $correct = $kunci6;
+            if (!in_array($correct, ['A','B','C','D','E'])) $correct = 'A';
+            $expl    = trim($r[6] ?? '');
+        }
+
         $letters  = ['A', 'B', 'C', 'D', 'E'];
-
-
-
-
-        $correct  = strtoupper(trim($r[5] ?? 'A'));
-
-
-
-
-        $expl     = trim($r[6] ?? '');
-
-
-
-
         $opts     = [];
-
-
-
-
         for ($j = 1; $j <= 5; $j++) {
 
 
@@ -2535,21 +2529,19 @@ function _parseCsv(string $path): array {
 
 
 
-        $correct = strtoupper(trim($r[5] ?? 'A'));
-
-
-
-
-        $expl    = trim($r[6] ?? '');
-
-
-
+        $kunci7   = strtoupper(trim($r[6] ?? ''));
+        $kunci6   = strtoupper(trim($r[5] ?? ''));
+        
+        if (in_array($kunci7, ['A','B','C','D','E'])) {
+            $correct = $kunci7;
+            $expl    = trim($r[7] ?? '');
+        } else {
+            $correct = $kunci6;
+            if (!in_array($correct, ['A','B','C','D','E'])) $correct = 'A';
+            $expl    = trim($r[6] ?? '');
+        }
 
         $opts    = [];
-
-
-
-
         for ($j = 1; $j <= 5; $j++) {
 
 
