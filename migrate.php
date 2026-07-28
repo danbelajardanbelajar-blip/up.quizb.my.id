@@ -21,4 +21,13 @@ try {
 } catch (Exception $e) {
     echo "<p>Failed: " . $e->getMessage() . "</p>";
 }
+
+try {
+    DB::execute("ALTER TABLE assignments ADD COLUMN require_camera TINYINT(1) NOT NULL DEFAULT 0");
+    echo "Column require_camera added to assignments table.<br>";
+} catch (Exception $e) {
+    echo "Error (assignments.require_camera): " . $e->getMessage() . "<br>";
+}
+
+echo "Migration finished.";
 echo "<p>Done.</p>";

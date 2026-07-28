@@ -91,7 +91,7 @@ function QuizBApp() {
       isTeacher:   false,
       // Create assignment modal
       assignModal: { show: false, editId: null },
-      assignForm:  { title: '', quiz_ids: [], mode: 'bebas', deadline: '', max_questions: '', shuffle_questions: null, shuffle_options: null, timer_per_question: '', duration_minutes: '', require_full_score: false },
+      assignForm:  { title: '', quiz_ids: [], mode: 'bebas', deadline: '', max_questions: '', shuffle_questions: null, shuffle_options: null, timer_per_question: '', duration_minutes: '', require_full_score: false, require_camera: false },
       assignError: '',
       assignLoading: false,
       assignQuizDropdownOpen: false,
@@ -1053,6 +1053,7 @@ function QuizBApp() {
         timer_per_question:  assign.timer_per_question != null ? assign.timer_per_question : '',
         duration_minutes:    assign.duration_minutes   != null ? assign.duration_minutes   : '',
         require_full_score:  assign.require_full_score ? true : false,
+        require_camera:      assign.require_camera == 1,
       };
       this.classroom.assignQuizDropdownOpen = false;
       this.classroom.assignError = '';
@@ -1156,7 +1157,8 @@ function QuizBApp() {
         shuffle_options: null, 
         timer_per_question: '', 
         duration_minutes: '', 
-        require_full_score: false 
+        require_full_score: false,
+        require_camera: false
       };
       this.classroom.assignQuizDropdownOpen = false;
       this.classroom.assignError = '';

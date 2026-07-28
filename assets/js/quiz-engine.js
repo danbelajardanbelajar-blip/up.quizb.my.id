@@ -135,6 +135,9 @@ function QuizEngine() {
               const dur = parseInt(a.duration_minutes, 10);
               if (Number.isFinite(dur) && dur > 0) this.timeLeft = dur * 60;
             }
+            if (a && a.require_camera == 1) {
+              this.quiz.require_camera = 1;
+            }
           } catch (_) {
             // ignore — already have sane defaults
           }

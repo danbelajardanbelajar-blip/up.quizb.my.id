@@ -639,6 +639,14 @@
             <label for="assign_require_full_score" class="text-sm text-gray-500 dark:text-gray-400">Jika dicentang, tugas hanya dianggap selesai jika skor 100%</label>
           </div>
         </div>
+        <!-- Proctoring option -->
+        <div class="border border-gray-100 dark:border-gray-800 rounded-xl p-4">
+          <label class="form-label mb-3">Pengawasan (Proctoring)</label>
+          <div class="flex items-center gap-3">
+            <input type="checkbox" id="assign_require_camera" x-model="classroom.assignForm.require_camera" class="form-checkbox" />
+            <label for="assign_require_camera" class="text-sm text-gray-500 dark:text-gray-400">Wajibkan akses kamera saat ujian (foto peserta akan direkam secara berkala)</label>
+          </div>
+        </div>
       </div>
       <div x-show="classroom.assignError" class="mt-3 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-sm text-red-600 dark:text-red-400" x-text="classroom.assignError"></div>
       <div class="flex gap-3 mt-6">

@@ -39,6 +39,7 @@ function assignment_create(): void {
     $shuffleOptions   = array_key_exists('shuffle_options', $body)
                         ? (int)(bool)$body['shuffle_options']   : null;
     $requireFull      = isset($body['require_full_score']) ? (int)(bool)$body['require_full_score'] : 0;
+    $requireCamera    = isset($body['require_camera']) ? (int)(bool)$body['require_camera'] : 0;
 
     if ($classId <= 0) jsonError('Pilih kelas');
     if (empty($quizIds)) jsonError('Pilih minimal satu paket soal');
@@ -67,8 +68,8 @@ function assignment_create(): void {
         "INSERT INTO assignments
          (class_id, quiz_id, teacher_id, title, mode, deadline,
           max_questions, timer_per_question, duration_minutes,
-          shuffle_questions, shuffle_options, require_full_score)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          shuffle_questions, shuffle_options, require_full_score, require_camera)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )->execute([
         $classId, $primaryQuizId, $user['id'], $title, $mode,
         $deadline ?: null,
@@ -78,6 +79,7 @@ function assignment_create(): void {
         $shuffleQuestions,
         $shuffleOptions,
         $requireFull,
+        $requireCamera
     ]);
     $newId = $pdo->lastInsertId();
     
@@ -291,6 +293,9 @@ function assignment_update(): void {
     $requireFull = array_key_exists('require_full_score', $body)
                     ? (int)(bool)$body['require_full_score']
                     : (int)$assignment['require_full_score'];
+    $requireCamera = array_key_exists('require_camera', $body)
+                    ? (int)(bool)$body['require_camera']
+                    : (int)$assignment['require_camera'];
 
 
     // Support updating quiz packages
@@ -316,14 +321,15 @@ function assignment_update(): void {
     }
     
     $pdo->prepare(
-        "UPDATE assignments SET title=?, mode=?, deadline=?, is_active=?,
-                max_questions=?, timer_per_question=?, duration_minutes=?,
-                shuffle_questions=?, shuffle_options=?, require_full_score=?, quiz_id=?
-         WHERE id=?"
-    )->execute([$title, $mode, $deadline ?: null, $isActive,
-                $maxQ, $timerQ, $durMins,
-                $shuffleQ, $shuffleO, $requireFull,
-                $primaryQuizId, $id]);
+        "UPDATE assignments
+         SET quiz_id = ?, title = ?, mode = ?, deadline = ?, is_active = ?,
+             max_questions = ?, timer_per_question = ?, duration_minutes = ?,
+             shuffle_questions = ?, shuffle_options = ?, require_full_score = ?, require_camera = ?
+         WHERE id = ?"
+    )->execute([
+        $primaryQuizId, $title, $mode, $deadline ?: null, $isActive,
+        $maxQ, $timerQ, $durMins, $shuffleQ, $shuffleO, $requireFull, $requireCamera, $id
+    ]);
 
     // Update quiz packages jika ada perubahan
     if (!empty($quizIds)) {
