@@ -107,6 +107,7 @@ function QuizBApp() {
       results:  null,
       monitor:  null,
       monitorInterval: null,
+      snapshotModal: { show: false, loading: false, snapshots: [] }
     },
 
     // Admin state
@@ -2794,6 +2795,21 @@ function QuizBApp() {
         this.showToast(e.message, 'error', '❌');
       } finally {
         this.assignmentView.loading = false;
+      }
+    },
+
+    async viewAssignmentSnapshots(attemptId, assignmentId) {
+      this.assignmentView.snapshotModal.show = true;
+      this.assignmentView.snapshotModal.loading = true;
+      this.assignmentView.snapshotModal.snapshots = [];
+      try {
+        const res = await api.get('assignment.attempt_snapshots', { attempt_id: attemptId, assignment_id: assignmentId });
+        this.assignmentView.snapshotModal.snapshots = res.snapshots || [];
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+        this.assignmentView.snapshotModal.show = false;
+      } finally {
+        this.assignmentView.snapshotModal.loading = false;
       }
     },
 

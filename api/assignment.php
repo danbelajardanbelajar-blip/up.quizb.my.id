@@ -481,7 +481,8 @@ function assignment_results(): void {
     $submissions = DB::all(
         "SELECT u.id AS user_id, u.name AS student_name, u.email,
                 s.submitted_at,
-                att.score, att.correct_count, att.time_taken, att.total_points
+                att.id AS attempt_id, att.score, att.correct_count, att.time_taken, att.total_points,
+                (SELECT 1 FROM attempt_snapshots WHERE attempt_id = att.id LIMIT 1) AS has_snapshots
          FROM class_members cm
          JOIN users u ON u.id = cm.user_id
          LEFT JOIN assignment_submissions s ON s.assignment_id = ? AND s.user_id = u.id
@@ -877,4 +878,38 @@ function assignment_attempts(): void {
     );
 
     jsonSuccess(['assignment' => $assignment, 'attempts' => $attempts]);
+}
+
+// ============================================
+// GET /api?action=assignment.attempt_snapshots
+// Pengajar (atau admin) melihat snapshot suatu attempt (untuk proctoring)
+// ============================================
+function assignment_attempt_snapshots(): void {
+    $user = requireAuth();
+    if (!in_array($user['role'], ['pengajar', 'admin'])) {
+        jsonError('Akses ditolak', 403);
+    }
+    $attemptId = (int)($_GET['attempt_id'] ?? 0);
+    $assignmentId = (int)($_GET['assignment_id'] ?? 0);
+    if (!$attemptId || !$assignmentId) jsonError('attempt_id dan assignment_id diperlukan');
+
+    // Pastikan user adalah pengajar assignment ini atau admin
+    $assignment = DB::one("SELECT teacher_id FROM assignments WHERE id = ?", [$assignmentId]);
+    if (!$assignment) jsonError('Assignment tidak ditemukan', 404);
+    if ($user['role'] !== 'admin' && (int)$assignment['teacher_id'] !== $user['id']) {
+        jsonError('Bukan assignment milik Anda', 403);
+    }
+
+    $snapshots = DB::all(
+        "SELECT id, image_path, created_at FROM attempt_snapshots WHERE attempt_id = ? ORDER BY created_at ASC",
+        [$attemptId]
+    );
+
+    // Bikin URL path full jika diperlukan
+    foreach ($snapshots as &$s) {
+        $s['image_path'] = 'uploads/snapshots/' . basename($s['image_path']);
+    }
+    unset($s);
+
+    jsonSuccess(['snapshots' => $snapshots]);
 }
