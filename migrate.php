@@ -12,10 +12,10 @@ try {
 try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS attempt_snapshots (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        attempt_id INT NOT NULL,
+        attempt_id BIGINT NOT NULL,
         image_path VARCHAR(255) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (attempt_id) REFERENCES attempts(id) ON DELETE CASCADE
+        INDEX(attempt_id)
     )");
     echo "<p>Success: Created attempt_snapshots table</p>";
 } catch (Exception $e) {
