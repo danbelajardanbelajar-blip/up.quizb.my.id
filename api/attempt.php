@@ -169,8 +169,10 @@ function attempt_submit(): void {
             $imgData = base64_decode($b64);
             if ($imgData) {
                 $fileName = 'snap_' . $attemptId . '_' . time() . '_' . $idx . '.jpg';
-                if (file_put_contents($dir . '/' . $fileName, $imgData)) {
-                    DB::execute('INSERT INTO attempt_snapshots (attempt_id, image_path) VALUES (?, ?)', [$attemptId, 'uploads/snapshots/' . $fileName]);
+                $filePath = $dir . '/' . $fileName;
+                if (file_put_contents($filePath, $imgData)) {
+                    chmod($filePath, 0644);
+                    DB::execute('INSERT INTO attempt_snapshots (attempt_id, image_path) VALUES (?, ?)', [$attemptId, '/uploads/snapshots/' . $fileName]);
                 }
             }
         }
