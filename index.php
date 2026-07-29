@@ -509,7 +509,7 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
   <!-- App Scripts -->
   <script src="assets/js/utils.js?v=3"></script>
   <script src="assets/js/quiz-engine.js?v=4"></script>
-  <script src="assets/js/app.js?v=4"></script>
+  <script src="assets/js/app.js?v=5"></script>
 
   <!-- ═══════════════════════════════════════════════
        MOBILE BOTTOM NAV — hanya tampil di layar kecil
