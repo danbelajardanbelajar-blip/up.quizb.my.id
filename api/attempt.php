@@ -487,3 +487,36 @@ function quiz_global_history(): void {
     attempt_quiz_global_history();
 }
 
+// ============================================
+// Upload Snapshot (Proctoring Real-time)
+// POST /api?action=attempt.upload_snapshot
+// ============================================
+function attempt_upload_snapshot(): void {
+    $body = getJsonBody();
+    $attemptId = $body['attempt_id'] ?? null;
+    $b64 = $body['image'] ?? null;
+
+    if (!$attemptId || !$b64) {
+        jsonError('Parameter tidak lengkap', 400);
+    }
+
+    if (strpos($b64, ',') !== false) {
+        @list(, $b64) = explode(',', $b64);
+    }
+    $imgData = base64_decode($b64);
+    if (!$imgData) {
+        jsonError('Data gambar tidak valid', 400);
+    }
+
+    $dir = __DIR__ . '/../uploads/snapshots';
+    if (!is_dir($dir)) mkdir($dir, 0755, true);
+
+    $fileName = 'snap_' . $attemptId . '_' . time() . '_' . rand(100, 999) . '.jpg';
+    if (file_put_contents($dir . '/' . $fileName, $imgData)) {
+        DB::execute('INSERT INTO attempt_snapshots (attempt_id, image_path) VALUES (?, ?)', [$attemptId, 'uploads/snapshots/' . $fileName]);
+        jsonResponse(['success' => true]);
+    } else {
+        jsonError('Gagal menyimpan gambar di server', 500);
+    }
+}
+
