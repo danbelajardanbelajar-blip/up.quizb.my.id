@@ -507,7 +507,7 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <!-- App Scripts -->
-  <script src="assets/js/utils.js?v=2"></script>
+  <script src="assets/js/utils.js?v=3"></script>
   <script src="assets/js/quiz-engine.js?v=4"></script>
   <script src="assets/js/app.js?v=4"></script>
 

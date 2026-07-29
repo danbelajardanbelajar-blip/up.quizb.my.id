@@ -43,7 +43,7 @@ const api = {
   },
 
   async get(action, params = {}) {
-    const qs = new URLSearchParams({ action, ...params });
+    const qs = new URLSearchParams({ action, ...params, _t: Date.now() });
     const r = await fetch(`${API_BASE}?${qs}`, { credentials: 'same-origin' });
     const ct = r.headers.get('X-CSRF-Token');
     if (ct) this._csrfToken = ct;
@@ -54,7 +54,7 @@ const api = {
 
   // Kembalikan seluruh response (untuk endpoint paginated yang butuh .meta)
   async getFull(action, params = {}) {
-    const qs = new URLSearchParams({ action, ...params });
+    const qs = new URLSearchParams({ action, ...params, _t: Date.now() });
     const r = await fetch(`${API_BASE}?${qs}`, { credentials: 'same-origin' });
     const ct = r.headers.get('X-CSRF-Token');
     if (ct) this._csrfToken = ct;
