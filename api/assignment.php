@@ -438,6 +438,17 @@ function assignment_submit(): void {
             if ($oldScore !== null && $oldScore === 100) {
                 jsonError('Anda sudah mengumpulkan tugas ini');
             }
+            // Hapus snapshot fisik & record dari attempt lama untuk menghemat penyimpanan
+            $oldSnaps = DB::all("SELECT image_path FROM attempt_snapshots WHERE attempt_id = ?", [$existing['attempt_id']]);
+            foreach ($oldSnaps as $snap) {
+                // image_path formatnya: uploads/snapshots/...
+                $file = __DIR__ . '/../' . ltrim($snap['image_path'], '/');
+                if (file_exists($file)) {
+                    @unlink($file);
+                }
+            }
+            DB::execute("DELETE FROM attempt_snapshots WHERE attempt_id = ?", [$existing['attempt_id']]);
+
             // Update existing submission record ke attempt baru
             DB::conn()->prepare(
                 "UPDATE assignment_submissions SET attempt_id = ?, submitted_at = NOW() WHERE id = ?"
