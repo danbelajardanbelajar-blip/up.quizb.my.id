@@ -188,7 +188,10 @@ function QuizEngine() {
     },
     
     takeAndUploadSnapshot() {
-      if (!this.cameraStream || !this.attemptId) return;
+      if (!this.cameraStream) return;
+      
+      if (!this.snapshots) this.snapshots = [];
+
       const video = document.createElement('video');
       video.srcObject = this.cameraStream;
       video.play().then(() => {
@@ -198,10 +201,7 @@ function QuizEngine() {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const imgBase64 = canvas.toDataURL('image/jpeg', 0.5);
-        api.post('attempt.upload_snapshot', {
-          attempt_id: this.attemptId,
-          image: imgBase64
-        }).catch(() => {});
+        this.snapshots.push(imgBase64);
       }).catch(() => {});
     },
     
