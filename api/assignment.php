@@ -431,33 +431,36 @@ function assignment_submit(): void {
     );
 
     if ($existing) {
-        // Jika tugas meminta full score, izinkan update jika skor lama < 100
+        // Jika tugas meminta full score, tolak update jika skor lama sudah 100
         if (!empty($assignment['require_full_score'])) {
             $oldAttempt = DB::one("SELECT score FROM attempts WHERE id = ?", [$existing['attempt_id']]);
             $oldScore = $oldAttempt && isset($oldAttempt['score']) ? (int)$oldAttempt['score'] : null;
             if ($oldScore !== null && $oldScore === 100) {
-                jsonError('Anda sudah mengumpulkan tugas ini');
+                jsonError('Anda sudah mengumpulkan tugas ini dan mendapatkan nilai sempurna (100).');
             }
-            // Hapus snapshot fisik & record dari attempt lama untuk menghemat penyimpanan
-            $oldSnaps = DB::all("SELECT image_path FROM attempt_snapshots WHERE attempt_id = ?", [$existing['attempt_id']]);
-            foreach ($oldSnaps as $snap) {
-                // image_path formatnya: uploads/snapshots/...
-                $file = __DIR__ . '/../' . ltrim($snap['image_path'], '/');
-                if (file_exists($file)) {
-                    @unlink($file);
-                }
-            }
-            DB::execute("DELETE FROM attempt_snapshots WHERE attempt_id = ?", [$existing['attempt_id']]);
-
-            // Update existing submission record ke attempt baru
-            DB::conn()->prepare(
-                "UPDATE assignment_submissions SET attempt_id = ?, submitted_at = NOW() WHERE id = ?"
-            )->execute([$attemptId, $existing['id']]);
-            jsonSuccess(['message' => 'Tugas berhasil diperbarui', 'score' => $attempt['score']]);
         }
 
-        // Jika tidak require full score, tolak submit ulang
-        jsonError('Anda sudah mengumpulkan tugas ini');
+        // Hapus snapshot fisik & record dari attempt lama untuk menghemat penyimpanan
+        $oldSnaps = DB::all("SELECT image_path FROM attempt_snapshots WHERE attempt_id = ?", [$existing['attempt_id']]);
+        foreach ($oldSnaps as $snap) {
+            // image_path formatnya: uploads/snapshots/...
+            $file = __DIR__ . '/../' . ltrim($snap['image_path'], '/');
+            if (file_exists($file)) {
+                @unlink($file);
+            }
+        }
+        
+        // Hapus record lama di DB untuk menghindari penumpukan (orphaned data)
+        DB::execute("DELETE FROM attempt_snapshots WHERE attempt_id = ?", [$existing['attempt_id']]);
+        DB::execute("DELETE FROM attempt_answers WHERE attempt_id = ?", [$existing['attempt_id']]);
+        DB::execute("DELETE FROM attempts WHERE id = ?", [$existing['attempt_id']]);
+
+        // Update existing submission record ke attempt baru
+        DB::conn()->prepare(
+            "UPDATE assignment_submissions SET attempt_id = ?, submitted_at = NOW() WHERE id = ?"
+        )->execute([$attemptId, $existing['id']]);
+        
+        jsonSuccess(['message' => 'Tugas berhasil diperbarui', 'score' => $attempt['score']]);
     }
 
     DB::conn()->prepare(

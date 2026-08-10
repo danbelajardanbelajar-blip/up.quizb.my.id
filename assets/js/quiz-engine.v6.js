@@ -182,7 +182,7 @@ function QuizEngine() {
       this.snapshotInterval = setInterval(() => {
         if (this.phase !== 'playing') return;
         this.takeAndUploadSnapshot();
-      }, 60000); // 60 seconds
+      }, 300000); // 5 minutes
       // Take first snapshot immediately
       setTimeout(() => this.takeAndUploadSnapshot(), 2000);
     },
