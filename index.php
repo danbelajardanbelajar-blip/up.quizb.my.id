@@ -465,7 +465,7 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
   <!-- FOOTER -->
   <footer x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding' && currentRoute !== '/messages' && currentRoute !== '/play'"
           class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 mt-auto flex-shrink-0">
-    <div class="w-full py-8">
+    <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div class="flex flex-col md:flex-row items-center justify-between gap-4">
         <div class="flex items-center gap-2">
           <div class="w-7 h-7 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
