@@ -389,45 +389,29 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
     </div>
 
     <!-- ADMIN PAGE -->
-    <template x-if="currentRoute === '/admin/stats'">
-      <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-        <div class="flex items-center justify-between mb-6"><h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><span class="text-primary-500">⚙️</span> Admin Panel</h1></div>
-        <div x-show="admin.loading" class="flex justify-center py-12"><div class="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div></div>
-        <?php include 'pages/admin-stats.html'; ?>
-      </div>
-    </template>
-    <template x-if="currentRoute === '/admin/content'">
-      <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-        <div class="flex items-center justify-between mb-6"><h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><span class="text-primary-500">⚙️</span> Admin Panel</h1></div>
-        <div x-show="admin.loading" class="flex justify-center py-12"><div class="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div></div>
-        <?php include 'pages/admin-content.html'; ?>
-      </div>
-    </template>
-    <template x-if="currentRoute === '/admin/users'">
-      <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-        <div class="flex items-center justify-between mb-6"><h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><span class="text-primary-500">⚙️</span> Admin Panel</h1></div>
-        <div x-show="admin.loading" class="flex justify-center py-12"><div class="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div></div>
-        <?php include 'pages/admin-users.html'; ?>
-      </div>
-    </template>
-    <template x-if="currentRoute === '/admin/review'">
-      <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-        <div class="flex items-center justify-between mb-6"><h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><span class="text-primary-500">⚙️</span> Admin Panel</h1></div>
-        <div x-show="admin.loading" class="flex justify-center py-12"><div class="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div></div>
-        <?php include 'pages/admin-review.html'; ?>
-      </div>
-    </template>
-    <template x-if="currentRoute === '/admin/analysis'">
-      <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-        <div class="flex items-center justify-between mb-6"><h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><span class="text-primary-500">⚙️</span> Admin Panel</h1></div>
-        <div x-show="admin.loading" class="flex justify-center py-12"><div class="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div></div>
-        <?php include 'pages/admin-analysis.html'; ?>
-      </div>
-    </template>
-    
-    <!-- ADMIN MODALS -->
     <template x-if="currentRoute.startsWith('/admin')">
-      <div>
+      <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <div class="flex items-center justify-between mb-4">
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><span class="text-primary-500">⚙️</span> Admin Panel</h1>
+        </div>
+        
+        <!-- MOBILE TABS NAVIGATION -->
+        <div class="flex md:hidden overflow-x-auto gap-2 pb-2 mb-6 custom-scrollbar" style="scrollbar-width: none;">
+          <a href="#/admin/stats" @click.prevent="navigate('/admin/stats')" :class="currentRoute==='/admin/stats' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700'" class="px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors">📊 Statistik</a>
+          <a href="#/admin/content" @click.prevent="navigate('/admin/content')" :class="currentRoute==='/admin/content' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700'" class="px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors">📁 Konten</a>
+          <a href="#/admin/users" @click.prevent="navigate('/admin/users')" :class="currentRoute==='/admin/users' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700'" class="px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors">👥 Pengguna</a>
+          <a href="#/admin/review" @click.prevent="navigate('/admin/review')" :class="currentRoute==='/admin/review' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700'" class="px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors">🔍 Review Soal</a>
+          <a href="#/admin/analysis" @click.prevent="navigate('/admin/analysis')" :class="currentRoute==='/admin/analysis' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700'" class="px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors">📈 Analisis</a>
+        </div>
+
+        <div x-show="admin.loading" class="flex justify-center py-12"><div class="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div></div>
+        
+        <div x-show="currentRoute === '/admin/stats'"><?php include 'pages/admin-stats.html'; ?></div>
+        <div x-show="currentRoute === '/admin/content'"><?php include 'pages/admin-content.html'; ?></div>
+        <div x-show="currentRoute === '/admin/users'"><?php include 'pages/admin-users.html'; ?></div>
+        <div x-show="currentRoute === '/admin/review'"><?php include 'pages/admin-review.html'; ?></div>
+        <div x-show="currentRoute === '/admin/analysis'"><?php include 'pages/admin-analysis.html'; ?></div>
+
         <?php include 'pages/admin-modals.html'; ?>
       </div>
     </template>
