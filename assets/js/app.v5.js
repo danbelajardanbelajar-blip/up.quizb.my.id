@@ -751,7 +751,7 @@ function QuizBApp() {
         this.dashboard.loading = false;
       }
       // Muat tugas untuk pelajar & pengajar (parallel, tidak block stats)
-      if (this.user && ['pelajar', 'pengajar', 'admin'].includes(this.user.role)) {
+      if (this.user && ['pelajar', 'pengajar', 'admin', 'user'].includes(this.user.role)) {
         this.dashboard.assignmentsLoading = true;
         try {
           const aData = await api.get('assignment.my_dashboard');

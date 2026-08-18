@@ -660,12 +660,12 @@ function assignment_my_dashboard(): void {
     $user = requireAuth();
     $role = $user['role'];
 
-    if (!in_array($role, ['pelajar', 'pengajar', 'admin'])) {
+    if (!in_array($role, ['pelajar', 'pengajar', 'admin', 'user'])) {
         jsonSuccess(['assignments' => [], 'role' => $role]);
         return;
     }
 
-    if ($role === 'pelajar') {
+    if ($role === 'pelajar' || $role === 'user') {
         // Ambil semua tugas aktif dari kelas yang diikuti pelajar,
         // lengkap dengan status submission
         $rows = DB::all(
