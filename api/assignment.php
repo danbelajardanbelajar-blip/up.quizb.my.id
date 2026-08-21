@@ -424,14 +424,21 @@ function assignment_submit(): void {
         jsonError('Batas waktu tugas sudah berakhir');
     }
 
-    // Cek sudah submit?
+    // Membuat tabel log percobaan tugas jika belum ada
+    try {
+        DB::execute("CREATE TABLE IF NOT EXISTS assignment_attempts (id INTEGER PRIMARY KEY AUTOINCREMENT, assignment_id INTEGER, user_id INTEGER, attempt_id INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
+    } catch(Exception $e) {}
+
+    // Catat attempt ini ke riwayat tugas
+    DB::execute("INSERT INTO assignment_attempts (assignment_id, user_id, attempt_id) VALUES (?, ?, ?)", [$assignmentId, $user['id'], $attemptId]);
+
+    // Cek sudah submit? (untuk update record utamanya)
     $existing = DB::one(
         "SELECT id, attempt_id FROM assignment_submissions WHERE assignment_id = ? AND user_id = ?",
         [$assignmentId, $user['id']]
     );
 
     if ($existing) {
-        // Jika tugas meminta full score, tolak update jika skor lama sudah 100
         if (!empty($assignment['require_full_score'])) {
             $oldAttempt = DB::one("SELECT score FROM attempts WHERE id = ?", [$existing['attempt_id']]);
             $oldScore = $oldAttempt && isset($oldAttempt['score']) ? (int)$oldAttempt['score'] : null;
@@ -440,22 +447,30 @@ function assignment_submit(): void {
             }
         }
 
-        // Hapus snapshot fisik & record dari attempt lama untuk menghemat penyimpanan
-        $oldSnaps = DB::all("SELECT image_path FROM attempt_snapshots WHERE attempt_id = ?", [$existing['attempt_id']]);
-        foreach ($oldSnaps as $snap) {
-            // image_path formatnya: uploads/snapshots/...
-            $file = __DIR__ . '/../' . ltrim($snap['image_path'], '/');
-            if (file_exists($file)) {
-                @unlink($file);
+        // Hapus snapshot fisik & record lama JIKA BUKAN dari 5 percobaan TERAKHIR (sisakan 5)
+        $historySnaps = DB::all(
+            "SELECT att.id as attempt_id FROM assignment_attempts aa 
+             JOIN attempts att ON att.id = aa.attempt_id 
+             WHERE aa.assignment_id = ? AND aa.user_id = ? 
+             ORDER BY aa.id DESC", 
+            [$assignmentId, $user['id']]
+        );
+
+        if (count($historySnaps) > 5) {
+            // Ambil attempt yang lebih tua dari 5 terakhir
+            $oldAttempts = array_slice($historySnaps, 5);
+            foreach ($oldAttempts as $oa) {
+                $oldSnaps = DB::all("SELECT image_path FROM attempt_snapshots WHERE attempt_id = ?", [$oa['attempt_id']]);
+                foreach ($oldSnaps as $snap) {
+                    $file = __DIR__ . '/../' . ltrim($snap['image_path'], '/');
+                    if (file_exists($file)) @unlink($file);
+                }
+                // Hapus record snapshot-nya saja, BUKAN attempts-nya
+                DB::execute("DELETE FROM attempt_snapshots WHERE attempt_id = ?", [$oa['attempt_id']]);
             }
         }
-        
-        // Hapus record lama di DB untuk menghindari penumpukan (orphaned data)
-        DB::execute("DELETE FROM attempt_snapshots WHERE attempt_id = ?", [$existing['attempt_id']]);
-        DB::execute("DELETE FROM attempt_answers WHERE attempt_id = ?", [$existing['attempt_id']]);
-        DB::execute("DELETE FROM attempts WHERE id = ?", [$existing['attempt_id']]);
 
-        // Update existing submission record ke attempt baru
+        // Update existing submission record ke attempt baru yang memegang skor terbaru/terakhir
         DB::conn()->prepare(
             "UPDATE assignment_submissions SET attempt_id = ?, submitted_at = NOW() WHERE id = ?"
         )->execute([$attemptId, $existing['id']]);
