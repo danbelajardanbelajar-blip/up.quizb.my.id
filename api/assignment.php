@@ -435,8 +435,17 @@ function assignment_submit(): void {
         )");
     } catch(Exception $e) {}
 
-    // Catat attempt ini ke riwayat tugas
-    DB::execute("INSERT INTO assignment_attempts (assignment_id, user_id, attempt_id) VALUES (?, ?, ?)", [$assignmentId, $user['id'], $attemptId]);
+    // Catat attempt ini ke riwayat tugas JIKA belum ada
+    $alreadyLogged = DB::one(
+        "SELECT id FROM assignment_attempts WHERE assignment_id = ? AND user_id = ? AND attempt_id = ?", 
+        [$assignmentId, $user['id'], $attemptId]
+    );
+    if (!$alreadyLogged) {
+        DB::execute(
+            "INSERT INTO assignment_attempts (assignment_id, user_id, attempt_id) VALUES (?, ?, ?)", 
+            [$assignmentId, $user['id'], $attemptId]
+        );
+    }
 
     // Cek sudah submit? (untuk update record utamanya)
     $existing = DB::one(
