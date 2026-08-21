@@ -368,11 +368,14 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
       <?php include 'pages/classroom-detail.html'; ?>
     </div>
 
-    <!-- CHALLENGES PAGE -->
-    <div x-show="currentRoute.startsWith('/assignment/')">
+    <!-- ASSIGNMENT PAGES -->
+    <template x-if="currentRoute.startsWith('/assignment/')">
+      <div>
       <?php include 'pages/assignment-results.html'; ?>
+      <?php include 'pages/assignment-history.html'; ?>
       <?php include 'pages/assignment-monitor.html'; ?>
-    </div>
+      </div>
+    </template>
 
     <div x-show="currentRoute === '/challenges'">
       <?php include 'pages/challenges.html'; ?>
