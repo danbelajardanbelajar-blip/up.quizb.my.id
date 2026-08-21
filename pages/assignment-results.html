@@ -114,7 +114,7 @@
                     <span class="w-7 h-7 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 flex items-center justify-center text-xs font-bold flex-shrink-0"
                           x-text="s.student_name.charAt(0).toUpperCase()"></span>
                     <div class="flex flex-col min-w-0">
-                      <button @click.stop="openPublicHistory('user', s.user_id, s.student_name)"
+                      <button @click.stop="navigate('/assignment/' + routeParams[0] + '/history/' + s.user_id)"
                               class="font-medium text-gray-800 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors text-left truncate">
                         <span x-text="s.student_name"></span>
                       </button>

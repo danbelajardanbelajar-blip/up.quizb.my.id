@@ -107,6 +107,7 @@ function QuizBApp() {
       results:  null,
       monitor:  null,
       monitorInterval: null,
+      studentHistory: null,
       snapshotModal: { show: false, loading: false, snapshots: [] }
     },
 
@@ -422,6 +423,7 @@ function QuizBApp() {
         this.assignmentView.monitorInterval = null;
       }
       if (/^\/assignment\/\d+\/results$/.test(route)) this.loadAssignmentResults(params[0]);
+      if (/^\/assignment\/\d+\/history\/\d+$/.test(route)) this.loadAssignmentStudentHistory(params[0], params[2]);
       if (/^\/assignment\/\d+\/monitor$/.test(route)) this.loadAssignmentMonitor(params[0]);
       if (route === '/messages') {
         // Refresh thread list
@@ -2792,6 +2794,20 @@ function QuizBApp() {
       try {
         const data = await api.get('assignment.results', { id });
         this.assignmentView.results = data;
+        this.assignmentView.assignment = data.assignment;
+      } catch (e) {
+        this.showToast(e.message, 'error', '❌');
+      } finally {
+        this.assignmentView.loading = false;
+      }
+    },
+    
+    async loadAssignmentStudentHistory(assignmentId, userId) {
+      this.assignmentView.loading = true;
+      this.assignmentView.studentHistory = null;
+      try {
+        const data = await api.get('assignment.student_history', { assignment_id: assignmentId, user_id: userId });
+        this.assignmentView.studentHistory = data;
         this.assignmentView.assignment = data.assignment;
       } catch (e) {
         this.showToast(e.message, 'error', '❌');

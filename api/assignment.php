@@ -537,6 +537,46 @@ function assignment_results(): void {
 }
 
 // ============================================
+// GET /api?action=assignment.student_history&assignment_id=X&user_id=Y
+// ============================================
+function assignment_student_history(): void {
+    $user = requireAuth();
+    $assignmentId = (int)($_GET['assignment_id'] ?? 0);
+    $studentId    = (int)($_GET['user_id'] ?? 0);
+    if ($assignmentId <= 0 || $studentId <= 0) jsonError('Parameter tidak valid');
+
+    $assignment = DB::one("SELECT * FROM assignments WHERE id = ?", [$assignmentId]);
+    if (!$assignment) jsonError('Tugas tidak ditemukan', 404);
+    if ((int)$assignment['teacher_id'] !== $user['id'] && $user['role'] !== 'admin') {
+        jsonError('Bukan tugas milik Anda', 403);
+    }
+
+    $student = DB::one("SELECT id, name FROM users WHERE id = ?", [$studentId]);
+
+    // Jika tabel belum pernah dibuat, jangan error
+    try {
+        $attempts = DB::all(
+            "SELECT aa.id, aa.attempt_id, aa.created_at, 
+                    att.score, att.correct_count, att.time_taken,
+                    (SELECT 1 FROM attempt_snapshots WHERE attempt_id = att.id LIMIT 1) AS has_snapshots
+             FROM assignment_attempts aa
+             JOIN attempts att ON att.id = aa.attempt_id
+             WHERE aa.assignment_id = ? AND aa.user_id = ?
+             ORDER BY aa.id DESC",
+            [$assignmentId, $studentId]
+        );
+    } catch(Exception $e) {
+        $attempts = [];
+    }
+
+    jsonSuccess([
+        'student' => $student,
+        'assignment' => $assignment,
+        'attempts' => $attempts
+    ]);
+}
+
+// ============================================
 // POST /api?action=assignment.progress_update
 // Siswa kirim heartbeat posisi soal
 // ============================================
