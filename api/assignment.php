@@ -426,7 +426,13 @@ function assignment_submit(): void {
 
     // Membuat tabel log percobaan tugas jika belum ada
     try {
-        DB::execute("CREATE TABLE IF NOT EXISTS assignment_attempts (id INTEGER PRIMARY KEY AUTOINCREMENT, assignment_id INTEGER, user_id INTEGER, attempt_id INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
+        DB::execute("CREATE TABLE IF NOT EXISTS assignment_attempts (
+            id INT AUTO_INCREMENT PRIMARY KEY, 
+            assignment_id INT, 
+            user_id INT, 
+            attempt_id INT, 
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )");
     } catch(Exception $e) {}
 
     // Catat attempt ini ke riwayat tugas
