@@ -934,12 +934,12 @@ function admin_quiz_duplicate(): void {
     }
 
     DB::execute(
-        "INSERT INTO quizzes (title, slug, description, difficulty, time_limit, passing_score, is_published, category_id, require_camera, max_attempts) 
-         VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)",
+        "INSERT INTO quizzes (title, slug, description, difficulty, time_limit, passing_score, is_published, category_id, require_camera, max_attempts, created_by) 
+         VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)",
         [
             $newTitle, $slug, $orig['description'], $orig['difficulty'], 
             $orig['time_limit'], $orig['passing_score'], $orig['category_id'], 
-            $orig['require_camera'], $orig['max_attempts']
+            $orig['require_camera'], $orig['max_attempts'], $_SESSION['user_id']
         ]
     );
     $newQuizId = (int)DB::lastId();
