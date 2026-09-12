@@ -2246,6 +2246,20 @@ function QuizBApp() {
       }
     },
 
+    
+    async duplicateAdminQuiz(id) {
+      if (!confirm('Yakin ingin menduplikat quiz ini?')) return false;
+      this.admin.loading = true;
+      try {
+        const res = await api.post('admin.quiz_duplicate', { id });
+        this.showToast('Quiz berhasil diduplikasi', 'success', '📑');
+        await this.loadAdminTab(this.admin.tab);
+      } catch (e) {
+        this.showToast('Gagal menduplikat quiz: ' + e.message, 'error', '❌');
+      } finally {
+        this.admin.loading = false;
+      }
+    },
     async deleteAdminItem(type, id) {
       if (!confirm('Yakin ingin menghapus item ini?')) return false;
       try {

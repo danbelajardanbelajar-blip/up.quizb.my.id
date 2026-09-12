@@ -912,3 +912,57 @@ function admin_attempt_snapshots(): void {
     jsonSuccess(['snapshots' => $snapshots]);
 }
 
+function admin_quiz_duplicate(): void {
+    requireAdmin();
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $body = getJsonBody();
+    $quizId = (int)($body['id'] ?? 0);
+    if ($quizId <= 0) jsonError('Invalid quiz ID');
+
+    $orig = DB::first("SELECT * FROM quizzes WHERE id = ?", [$quizId]);
+    if (!$orig) jsonError('Quiz not found', 404);
+
+    $newTitle = $orig['title'] . " (Copy)";
+    $baseSlug = preg_replace('/[^a-z0-9]+/', '-', strtolower($newTitle));
+    $baseSlug = trim($baseSlug, '-');
+    if (!$baseSlug) $baseSlug = 'quiz';
+    $slug = $baseSlug;
+    $count = 1;
+    while (DB::first("SELECT id FROM quizzes WHERE slug = ?", [$slug])) {
+        $slug = $baseSlug . '-' . $count;
+        $count++;
+    }
+
+    DB::execute(
+        "INSERT INTO quizzes (title, slug, description, difficulty, time_limit, passing_score, is_published, category_id, require_camera, max_attempts) 
+         VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)",
+        [
+            $newTitle, $slug, $orig['description'], $orig['difficulty'], 
+            $orig['time_limit'], $orig['passing_score'], $orig['category_id'], 
+            $orig['require_camera'], $orig['max_attempts']
+        ]
+    );
+    $newQuizId = (int)DB::lastId();
+
+    $questions = DB::all("SELECT * FROM questions WHERE quiz_id = ?", [$quizId]);
+    foreach ($questions as $q) {
+        DB::execute(
+            "INSERT INTO questions (quiz_id, question_text, type, points, explanation, order_num) 
+             VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                $newQuizId, $q['question_text'], $q['type'], $q['points'], $q['explanation'], $q['order_num']
+            ]
+        );
+        $newQuestionId = (int)DB::lastId();
+
+        $options = DB::all("SELECT * FROM options WHERE question_id = ?", [$q['id']]);
+        foreach ($options as $opt) {
+            DB::execute(
+                "INSERT INTO options (question_id, option_text, is_correct, order_num) VALUES (?, ?, ?, ?)",
+                [$newQuestionId, $opt['option_text'], $opt['is_correct'], $opt['order_num']]
+            );
+        }
+    }
+
+    jsonResponse(['success' => true, 'message' => 'Quiz berhasil diduplikasi', 'new_quiz_id' => $newQuizId]);
+}

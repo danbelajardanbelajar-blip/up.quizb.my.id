@@ -204,6 +204,7 @@
                     </td>
                     <td class="text-right">
                       <div class="flex items-center justify-end gap-2">
+                        <button @click.stop="duplicateAdminQuiz(quiz.id)" class="text-xs text-green-600 dark:text-green-400 hover:underline">Duplikat</button>
                         <button @click.stop="openAdminModal('quiz_edit', quiz)" class="text-xs text-blue-500 hover:underline">Edit</button>
                         <button @click.stop="deleteAdminItem('quiz', quiz.id)" class="text-xs text-red-500 hover:underline">Hapus</button>
                       </div>

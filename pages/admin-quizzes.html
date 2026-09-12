@@ -39,6 +39,7 @@
                   </td>
                   <td>
                     <div class="flex items-center gap-2">
+                      <button @click="duplicateAdminQuiz(q.id)" class="text-xs text-green-600 dark:text-green-400 hover:underline">Duplikat</button>
                       <button @click="openAdminModal('quiz_edit', q)" class="text-xs text-blue-500 hover:underline">Edit Info</button>
                       <button @click="openQuizQuestions(q)" class="text-xs text-primary-600 dark:text-primary-400 hover:underline font-medium">Kelola Soal</button>
                       <button @click="deleteAdminItem('quiz', q.id)" class="text-xs text-red-500 hover:underline">Hapus</button>
