@@ -188,6 +188,7 @@
             <table class="data-table w-full">
               <thead><tr>
                 <th class="text-left">Judul Quiz</th>
+                <th class="text-left">Info Soal</th>
                 <th class="text-left">Status</th>
                 <th class="text-right">Aksi</th>
               </tr></thead>
@@ -197,6 +198,9 @@
                       @click="selectContentQuiz(quiz)">
                     <td class="max-w-xs">
                       <div class="font-medium text-sm truncate" :title="quiz.title" x-text="quiz.title"></div>
+                    </td>
+                    <td>
+                      <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap" x-text="quiz.question_count + ' soal'"></span>
                     </td>
                     <td>
                       <span class="badge text-xs" :class="quiz.is_published ? 'badge-success' : 'badge-warning'"
