@@ -1594,6 +1594,27 @@ function QuizBApp() {
       this.admin.questionsAll = this.admin.questionsAll.map(q => ({ ...q, _sel: checked }));
     },
 
+        async copySelectedQuestionsTo(targetQuizId) {
+      const selectedIds = this.admin.questionsAll.filter(q => q._sel).map(q => q.id);
+      if (selectedIds.length === 0) return;
+      
+      const targetQuiz = this.admin.quizPicker.find(q => q.id === targetQuizId);
+      if (!confirm(Yakin ingin menyalin  soal terpilih ke quiz " + (targetQuiz ? targetQuiz.title : '') + "?)) return;
+      
+      this.admin.loading = true;
+      try {
+        await api.post('question.copy_bulk', {
+          question_ids: selectedIds,
+          target_quiz_id: targetQuizId
+        });
+        this.showToast(${selectedIds.length} soal berhasil disalin, 'success', '??');
+        this.toggleSelectAllQuestions(false);
+      } catch (e) {
+        this.showToast('Gagal menyalin soal: ' + e.message, 'error', '?');
+      } finally {
+        this.admin.loading = false;
+      }
+    },
     async deleteSelectedQuestions() {
       const ids = this.admin.questionsAll.filter(q => q._sel).map(q => q.id);
       if (ids.length === 0) return;

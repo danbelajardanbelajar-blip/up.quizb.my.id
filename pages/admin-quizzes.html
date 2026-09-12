@@ -102,6 +102,19 @@
         <div class="flex items-center gap-2 flex-shrink-0 ml-auto flex-wrap">
           <button @click="openImportFileModal()" class="btn-secondary text-sm px-3 py-2 flex items-center gap-1.5">📥 Import File</button>
           <button @click="openImportQuizbModal()" class="btn-secondary text-sm px-3 py-2 flex items-center gap-1.5">🌐 Import QuizB</button>
+                    <div class="relative flex-shrink-0" x-data="{ open: false }" @click.away="open = false">
+            <button @click="open = !open" 
+                    :disabled="selectedAdminQuestionsCount === 0"
+                    class="btn-secondary text-sm px-3 py-2 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+              ?? Salin ke...
+            </button>
+            <div x-show="open" class="absolute right-0 z-10 mt-1 w-64 bg-white dark:bg-gray-800 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto" style="display: none;">
+              <template x-for="q in admin.quizPicker.filter(x => x.id !== (admin.questionsQuizFilter || admin.contentSelectedQuiz?.id))" :key="q.id">
+                <button @click="copySelectedQuestionsTo(q.id); open = false" class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 truncate" x-text="q.title"></button>
+              </template>
+              <div x-show="admin.quizPicker.filter(x => x.id !== (admin.questionsQuizFilter || admin.contentSelectedQuiz?.id)).length === 0" class="px-4 py-3 text-sm text-gray-500 text-center">Tidak ada quiz lain.</div>
+            </div>
+          </div>
           <button @click="deleteSelectedQuestions()"
                   :disabled="selectedAdminQuestionsCount === 0"
                   class="btn-danger text-sm px-3 py-2 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">

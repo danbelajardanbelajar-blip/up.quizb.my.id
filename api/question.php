@@ -3649,3 +3649,48 @@ function question_import_quizb(): void {
 
 
 
+function question_copy_bulk(): void {
+    requireAdmin();
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $body = getJsonBody();
+    $questionIds = $body['question_ids'] ?? [];
+    $targetQuizId = (int)($body['target_quiz_id'] ?? 0);
+
+    if (empty($questionIds) || !is_array($questionIds)) jsonError('Tidak ada soal yang dipilih');
+    if ($targetQuizId <= 0) jsonError('Quiz tujuan tidak valid');
+
+    $targetQuiz = DB::one("SELECT id FROM quizzes WHERE id = ?", [$targetQuizId]);
+    if (!$targetQuiz) jsonError('Quiz tujuan tidak ditemukan', 404);
+
+    $pdo = DB::conn();
+    $pdo->beginTransaction();
+    try {
+        // Find highest order_num in target quiz
+        $maxOrder = (int)(DB::one("SELECT MAX(order_num) as m FROM questions WHERE quiz_id = ?", [$targetQuizId])['m'] ?? 0);
+
+        foreach ($questionIds as $qId) {
+            $q = DB::one("SELECT * FROM questions WHERE id = ?", [(int)$qId]);
+            if ($q) {
+                $maxOrder++;
+                DB::execute(
+                    "INSERT INTO questions (quiz_id, question_text, type, points, explanation, order_num) VALUES (?, ?, ?, ?, ?, ?)",
+                    [$targetQuizId, $q['question_text'], $q['type'], $q['points'], $q['explanation'], $maxOrder]
+                );
+                $newQuestionId = (int)DB::lastId();
+
+                $options = DB::all("SELECT * FROM options WHERE question_id = ?", [(int)$q['id']]);
+                foreach ($options as $opt) {
+                    DB::execute(
+                        "INSERT INTO options (question_id, option_text, is_correct, order_num) VALUES (?, ?, ?, ?)",
+                        [$newQuestionId, $opt['option_text'], $opt['is_correct'], $opt['order_num']]
+                    );
+                }
+            }
+        }
+        $pdo->commit();
+        jsonResponse(['success' => true, 'message' => 'Soal berhasil disalin']);
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        jsonError('Gagal menyalin soal: ' . $e->getMessage());
+    }
+}
