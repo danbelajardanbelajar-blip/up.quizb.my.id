@@ -1,4 +1,4 @@
-<div x-show="!admin.loading && true && admin.stats" class="animate-fade-in">
+<div x-show="admin.stats" class="animate-fade-in">
     <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
       <div class="card p-5"><p class="text-sm text-gray-500 mb-1">Total Pengguna</p><p class="text-3xl font-extrabold text-primary-600" x-text="admin.stats?.total_users?.toLocaleString()"></p></div>
       <div class="card p-5"><p class="text-sm text-gray-500 mb-1">Total Quiz</p><p class="text-3xl font-extrabold text-gray-800 dark:text-gray-100" x-text="admin.stats?.total_quizzes"></p></div>
