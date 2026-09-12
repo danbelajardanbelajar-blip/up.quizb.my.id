@@ -254,7 +254,7 @@
             <button @click="deleteSelectedQuestions()"
                     :disabled="selectedAdminQuestionsCount === 0"
                     class="btn-danger text-xs px-2.5 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">🗑️</button>
-            <button @click="admin.form = buildQuestionForm(); openAdminModal('question_create')"
+            <button @click="openAdminModal('question_create', buildQuestionForm(admin.contentSelectedQuiz?.id))"
                     class="btn-primary text-xs px-3 py-1.5">+ Soal</button>
           </div>
           <div x-show="selectedAdminQuestionsCount > 0" class="text-xs text-gray-500 mb-2">
@@ -333,7 +333,7 @@
           <div x-show="admin.questionsAll.length === 0 && !admin.loading" class="text-center py-10 text-gray-400">
             <p class="text-3xl mb-2">❓</p>
             <p class="text-sm">Quiz ini belum memiliki soal</p>
-            <button @click="admin.form = buildQuestionForm(); openAdminModal('question_create')"
+            <button @click="openAdminModal('question_create', buildQuestionForm(admin.contentSelectedQuiz?.id))"
                     class="mt-3 btn-primary text-sm px-4 py-2">+ Tambah Soal Pertama</button>
           </div>
 
