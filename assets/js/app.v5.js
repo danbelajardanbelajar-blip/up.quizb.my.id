@@ -1384,9 +1384,12 @@ function QuizBApp() {
       }
     },
 
-    async onAdminContentSearch(value) {
-      this.admin.contentSearch = value.trim();
-      await this.loadAdminTab('content');
+    onAdminContentSearch(value) {
+      this.admin.contentSearch = value;
+      const search = value.trim().toLowerCase();
+      if (search) {
+        this.admin.contentOpenGroups = this.getVisibleContentGroups().map(g => g.id);
+      }
     },
 
     getVisibleContentGroups() {
