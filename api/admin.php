@@ -188,6 +188,16 @@ function admin_quiz_update(): void {
     if (!$existing) jsonError('Quiz tidak ditemukan', 404);
 
     $title       = sanitizeString($body['title'] ?? $existing['title']);
+    
+    // Perbarui slug berdasarkan title (atau dari payload jika dikirim)
+    $rawSlug = sanitizeString($body['slug'] ?? $title);
+    $slug    = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower($rawSlug)), '-');
+    $slugBase  = $slug;
+    $slugCount = 1;
+    while (DB::one("SELECT id FROM quizzes WHERE slug = ? AND id != ?", [$slug, $id])) {
+        $slug = $slugBase . '-' . $slugCount++;
+    }
+
     $description = sanitizeString($body['description'] ?? $existing['description']);
     $categoryId  = (int)($body['category_id'] ?? $existing['category_id']);
     $difficulty  = sanitizeString($body['difficulty'] ?? $existing['difficulty']);
@@ -198,11 +208,11 @@ function admin_quiz_update(): void {
     $requireCamera = isset($body['require_camera']) ? (int)$body['require_camera'] : (int)$existing['require_camera'];
 
     DB::conn()->prepare(
-        "UPDATE quizzes SET title=?, description=?, category_id=?, difficulty=?,
+        "UPDATE quizzes SET title=?, slug=?, description=?, category_id=?, difficulty=?,
                             time_limit=?, passing_score=?, is_published=?, max_attempts=?, require_camera=?,
                             updated_at=NOW()
          WHERE id=?"
-    )->execute([$title, $description, $categoryId, $difficulty, $timeLimit, $passingScore, $isPublished, $maxAttempts, $requireCamera, $id]);
+    )->execute([$title, $slug, $description, $categoryId, $difficulty, $timeLimit, $passingScore, $isPublished, $maxAttempts, $requireCamera, $id]);
 
     // Update category counts if category changed
     if ($categoryId !== (int)$existing['category_id']) {
@@ -303,7 +313,16 @@ function admin_category_update(): void {
     if (!$existing) jsonError('Kategori tidak ditemukan', 404);
 
     $name    = sanitizeString($body['name']  ?? $existing['name']);
-    $slug    = sanitizeString($body['slug']  ?? $existing['slug']);
+    
+    // Validasi & pastikan slug unik
+    $rawSlug = sanitizeString($body['slug'] ?? $name);
+    $slug    = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower($rawSlug)), '-');
+    $slugBase  = $slug;
+    $slugCount = 1;
+    while (DB::one("SELECT id FROM categories WHERE slug = ? AND id != ?", [$slug, $id])) {
+        $slug = $slugBase . '-' . $slugCount++;
+    }
+
     $desc    = sanitizeString($body['description'] ?? $existing['description']);
     $icon    = sanitizeString($body['icon']  ?? $existing['icon']);
     $color   = sanitizeString($body['color'] ?? $existing['color']);

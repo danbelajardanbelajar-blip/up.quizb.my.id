@@ -903,6 +903,8 @@ function question_delete(): void {
 
 
 
+    DB::execute('DELETE FROM attempt_answers WHERE question_id = ?', [$id]);
+    DB::execute('DELETE FROM options WHERE question_id = ?', [$id]);
     DB::execute('DELETE FROM questions WHERE id = ?', [$id]);
 
 
