@@ -58,11 +58,11 @@
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <input type="checkbox" id="is-published" x-model.number="admin.form.is_published" :checked="admin.form.is_published==1" class="w-4 h-4 accent-primary-600" />
+            <input type="checkbox" id="is-published" x-model="admin.form.is_published" :checked="admin.form.is_published==1" class="w-4 h-4 accent-primary-600" />
             <label for="is-published" class="text-sm text-gray-700 dark:text-gray-300">Publikasikan quiz</label>
           </div>
           <div class="flex items-center gap-2">
-            <input type="checkbox" id="require-camera" x-model.number="admin.form.require_camera" :checked="admin.form.require_camera==1" class="w-4 h-4 accent-primary-600" />
+            <input type="checkbox" id="require-camera" x-model="admin.form.require_camera" :checked="admin.form.require_camera==1" class="w-4 h-4 accent-primary-600" />
             <label for="require-camera" class="text-sm text-gray-700 dark:text-gray-300">Wajibkan akses kamera (Proctoring)</label>
           </div>
         </div>
@@ -106,7 +106,7 @@
             </select>
           </div>
           <div class="flex items-center gap-2">
-            <input type="checkbox" id="user-active" x-model.number="admin.form.is_active" class="w-4 h-4 accent-primary-600" />
+            <input type="checkbox" id="user-active" x-model="admin.form.is_active" class="w-4 h-4 accent-primary-600" />
             <label for="user-active" class="text-sm text-gray-700 dark:text-gray-300">Akun aktif</label>
           </div>
         </div>

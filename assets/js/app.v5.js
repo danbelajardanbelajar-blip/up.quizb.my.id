@@ -1327,13 +1327,6 @@ function QuizBApp() {
             this.admin.categories = await api.get('admin.category_list');
           }
         } else if (tab === 'content') {
-          this.admin.contentSearch          = '';
-          this.admin.contentOpenGroups      = [];
-          this.admin.contentOpenCategories  = [];
-          this.admin.contentCategoryFilter  = null;
-          this.admin.contentSelectedQuiz = null;
-          this.admin.questionsAll        = [];
-          this.admin.questionsTotal      = 0;
           const [cats, groupsData, quizData] = await Promise.all([
             api.get('admin.category_list'),
             api.get('admin.group_list'),
@@ -1344,7 +1337,6 @@ function QuizBApp() {
           this.admin.groups            = groupsData.groups || [];
           this.admin.contentQuizzes    = quizData.quizzes || [];
           this.admin.contentQuizCount  = quizData.total   || 0;
-          this.admin.contentOpenGroups = [];
         } else if (tab === 'users') {
           const data = await api.get('admin.user_list', { page: this.admin.usersPage, limit: 15, search: this.admin.usersSearch });
           this.admin.users      = data.users  || [];
@@ -2329,11 +2321,12 @@ function QuizBApp() {
     // ---- Import soal dari File (Word/Excel) ----
 
     openImportFileModal() {
-      if (!this.admin.questionsQuizFilter) {
+      const targetQuizId = this.admin.questionsQuizFilter || this.admin.contentSelectedQuiz?.id;
+      if (!targetQuizId) {
         this.showToast('Pilih filter quiz terlebih dahulu sebagai tujuan import', 'error', '❌');
         return;
       }
-      this.admin.importFile = { show: true, loading: false, step: 1, questions: [], quizId: this.admin.questionsQuizFilter };
+      this.admin.importFile = { show: true, loading: false, step: 1, questions: [], quizId: targetQuizId };
     },
 
     async parseImportFile() {
