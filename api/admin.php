@@ -919,7 +919,7 @@ function admin_quiz_duplicate(): void {
     $quizId = (int)($body['id'] ?? 0);
     if ($quizId <= 0) jsonError('Invalid quiz ID');
 
-    $orig = DB::first("SELECT * FROM quizzes WHERE id = ?", [$quizId]);
+    $orig = DB::one("SELECT * FROM quizzes WHERE id = ?", [$quizId]);
     if (!$orig) jsonError('Quiz not found', 404);
 
     $newTitle = $orig['title'] . " (Copy)";
@@ -928,7 +928,7 @@ function admin_quiz_duplicate(): void {
     if (!$baseSlug) $baseSlug = 'quiz';
     $slug = $baseSlug;
     $count = 1;
-    while (DB::first("SELECT id FROM quizzes WHERE slug = ?", [$slug])) {
+    while (DB::one("SELECT id FROM quizzes WHERE slug = ?", [$slug])) {
         $slug = $baseSlug . '-' . $count;
         $count++;
     }
