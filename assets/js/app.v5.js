@@ -1598,7 +1598,7 @@ function QuizBApp() {
       const selectedIds = this.admin.questionsAll.filter(q => q._sel).map(q => q.id);
       if (selectedIds.length === 0) return;
       
-      const targetQuiz = this.admin.quizPicker.find(q => q.id === targetQuizId);
+      const targetQuiz = this.admin.quizPicker.find(q => q.id === targetQuizId) || this.admin.contentQuizzes.find(q => q.id === targetQuizId);
       if (!confirm(`Yakin ingin menyalin ${selectedIds.length} soal terpilih ke quiz "${targetQuiz ? targetQuiz.title : ''}"?`)) return;
       
       this.admin.loading = true;
