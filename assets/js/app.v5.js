@@ -1594,12 +1594,12 @@ function QuizBApp() {
       this.admin.questionsAll = this.admin.questionsAll.map(q => ({ ...q, _sel: checked }));
     },
 
-        async copySelectedQuestionsTo(targetQuizId) {
+    async copySelectedQuestionsTo(targetQuizId) {
       const selectedIds = this.admin.questionsAll.filter(q => q._sel).map(q => q.id);
       if (selectedIds.length === 0) return;
       
       const targetQuiz = this.admin.quizPicker.find(q => q.id === targetQuizId);
-      if (!confirm(Yakin ingin menyalin  soal terpilih ke quiz " + (targetQuiz ? targetQuiz.title : '') + "?)) return;
+      if (!confirm(`Yakin ingin menyalin ${selectedIds.length} soal terpilih ke quiz "${targetQuiz ? targetQuiz.title : ''}"?`)) return;
       
       this.admin.loading = true;
       try {
@@ -1607,10 +1607,10 @@ function QuizBApp() {
           question_ids: selectedIds,
           target_quiz_id: targetQuizId
         });
-        this.showToast(${selectedIds.length} soal berhasil disalin, 'success', '??');
+        this.showToast(`${selectedIds.length} soal berhasil disalin`, 'success', '📋');
         this.toggleSelectAllQuestions(false);
       } catch (e) {
-        this.showToast('Gagal menyalin soal: ' + e.message, 'error', '?');
+        this.showToast('Gagal menyalin soal: ' + e.message, 'error', '❌');
       } finally {
         this.admin.loading = false;
       }
