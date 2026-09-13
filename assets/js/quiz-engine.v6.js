@@ -168,6 +168,7 @@ function QuizEngine() {
         }
       }
       this.phase = 'playing';
+      this.startTimeMs = Date.now();
       this.startBgMusic();           // 🔊 musik latar mulai
       if (this.isReviewMode) {
         this.startQuestionTimer();
@@ -342,6 +343,9 @@ function QuizEngine() {
         setTimeout(() => {
           if (this.answers[questionId] === optionId) this.next();
         }, 500);
+      } else if (this.mode === 'challenge') {
+        // Mode tantangan: soal terakhir langsung auto-submit karena adu cepat
+        setTimeout(() => this.submitAnswers(), 500);
       }
     },
 
@@ -409,10 +413,16 @@ function QuizEngine() {
       this.stopCamera();
       this.loading = true;
       try {
-        const initialTime = this.mode === 'exam'
-          ? 20 * (this.questions.length || 10)
-          : (this.quiz.exam_duration || this.quiz.time_limit || this.quiz.duration || 600);
-        const timeTaken = initialTime - this.timeLeft;
+        let timeTaken = 0;
+        if (this.startTimeMs) {
+          timeTaken = Math.floor((Date.now() - this.startTimeMs) / 1000);
+        } else {
+          const initialTime = this.mode === 'exam'
+            ? 20 * (this.questions.length || 10)
+            : (this.quiz.exam_duration || this.quiz.time_limit || this.quiz.duration || 600);
+          timeTaken = initialTime - this.timeLeft;
+        }
+        
         const payload = {
           quiz_id:      this.quiz.id,
           mode:         this.mode || 'exam',
