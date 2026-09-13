@@ -143,6 +143,7 @@
                           class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
                       🤝 Seri
                     </span>
+                    <div x-show="c.win_reason" class="mt-1 text-[10px] text-gray-400 italic text-right" x-text="c.win_reason"></div>
                   </div>
                 </template>
                 <!-- Tombol lanjut main jika masih playing -->
@@ -227,6 +228,7 @@
                         class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
                     🤝 Seri
                   </span>
+                  <div x-show="c.win_reason" class="mt-1 text-[10px] text-gray-400 italic text-right" x-text="c.win_reason"></div>
                 </div>
                 <button @click="deleteChallenge(c.id, 'outgoing')"
                         class="px-4 py-1.5 border border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 text-xs font-semibold rounded-lg hover:border-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">

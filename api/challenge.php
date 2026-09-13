@@ -78,8 +78,8 @@ function challenge_list(): void {
                 q.title AS quiz_title, q.total_questions, q.time_limit,
                 u.name AS challenger_name, u.id AS challenger_id,
                 w.name AS winner_name, w.id AS winner_id,
-                a.score AS my_score, a.time_taken AS my_time,
-                a2.score AS challenger_score, a2.time_taken AS challenger_time
+                a.score AS my_score, a.time_taken AS my_time, a.correct_count AS my_correct,
+                a2.score AS challenger_score, a2.time_taken AS challenger_time, a2.correct_count AS challenger_correct
          FROM challenges c
          INNER JOIN quizzes q  ON q.id  = c.quiz_id
          INNER JOIN users   u  ON u.id  = c.challenger_id
@@ -96,16 +96,30 @@ function challenge_list(): void {
         "SELECT c.id, c.quiz_id, c.status, c.created_at,
                 q.title AS quiz_title,
                 u.name AS challenged_name, u.id AS challenged_id,
-                w.name AS winner_name
+                w.name AS winner_name, w.id AS winner_id,
+                a1.score AS my_score, a1.time_taken AS my_time, a1.correct_count AS my_correct,
+                a2.score AS challenged_score, a2.time_taken AS challenged_time, a2.correct_count AS challenged_correct
          FROM challenges c
          INNER JOIN quizzes q ON q.id = c.quiz_id
          INNER JOIN users   u ON u.id = c.challenged_id
          LEFT JOIN  users   w ON w.id = c.winner_id
+         LEFT JOIN  attempts a1 ON a1.id = c.challenger_attempt_id
+         LEFT JOIN  attempts a2 ON a2.id = c.challenged_attempt_id
          WHERE c.challenger_id = ?
          ORDER BY c.created_at DESC
          LIMIT 20",
         [$user['id']]
     );
+
+    foreach ($received as &$r) {
+        $r['win_reason'] = get_win_reason($r['status'], $r['winner_id'], $r['challenger_score'], $r['my_score'], $r['challenger_correct'], $r['my_correct'], $r['challenger_time'], $r['my_time']);
+    }
+    unset($r);
+
+    foreach ($outgoing as &$o) {
+        $o['win_reason'] = get_win_reason($o['status'], $o['winner_id'], $o['my_score'], $o['challenged_score'], $o['my_correct'], $o['challenged_correct'], $o['my_time'], $o['challenged_time']);
+    }
+    unset($o);
 
     jsonSuccess([
         'incoming'      => $incoming,
@@ -170,6 +184,15 @@ function challenge_decline(): void {
     jsonSuccess([], 'Tantangan ditolak.');
 }
 
+function get_win_reason($status, $winnerId, $s1, $s2, $c1, $c2, $t1, $t2) {
+    if ($status !== 'completed') return null;
+    if (empty($winnerId)) return 'Keduanya mendapat skor 0 (Seri mutlak).';
+    if ($s1 !== $s2) return 'Menang karena skor persentase lebih tinggi.';
+    if ($c1 !== $c2) return 'Menang karena jumlah jawaban benar lebih banyak.';
+    if ($t1 !== $t2) return 'Menang karena waktu pengerjaan lebih cepat.';
+    return 'Menang karena menyelesaikan kuis lebih awal.';
+}
+
 // GET — status tantangan (untuk polling hasil)
 function challenge_status(): void {
     $user = requireAuth();
@@ -182,8 +205,8 @@ function challenge_status(): void {
                 q.title AS quiz_title,
                 u1.name AS challenger_name, u2.name AS challenged_name,
                 w.name  AS winner_name,
-                a1.score AS challenger_score, a1.time_taken AS challenger_time,
-                a2.score AS challenged_score, a2.time_taken AS challenged_time
+                a1.score AS challenger_score, a1.time_taken AS challenger_time, a1.correct_count AS challenger_correct,
+                a2.score AS challenged_score, a2.time_taken AS challenged_time, a2.correct_count AS challenged_correct
          FROM challenges c
          INNER JOIN quizzes q  ON q.id  = c.quiz_id
          INNER JOIN users   u1 ON u1.id = c.challenger_id
@@ -198,12 +221,19 @@ function challenge_status(): void {
 
     $c['is_challenger'] = (int)$c['challenger_id'] === (int)$user['id'];
     $c['is_winner']     = $c['winner_id'] && (int)$c['winner_id'] === (int)$user['id'];
-    $c['is_draw']       = false; // tidak pernah seri
+    $c['is_draw']       = $c['status'] === 'completed' && empty($c['winner_id']);
 
     // Cast numbers
-    foreach (['challenger_score','challenger_time','challenged_score','challenged_time'] as $k) {
+    foreach (['challenger_score','challenger_time','challenged_score','challenged_time', 'challenger_correct', 'challenged_correct'] as $k) {
         $c[$k] = $c[$k] !== null ? (int)$c[$k] : null;
     }
+    
+    $c['win_reason'] = get_win_reason(
+        $c['status'], $c['winner_id'],
+        $c['challenger_score'], $c['challenged_score'],
+        $c['challenger_correct'], $c['challenged_correct'],
+        $c['challenger_time'], $c['challenged_time']
+    );
 
     jsonSuccess($c);
 }
@@ -263,25 +293,29 @@ function challenge_submit(): void {
         $t1 = (int)$a1['time_taken'];
         $t2 = (int)$a2['time_taken'];
 
-        // Lapis 1: skor lebih tinggi
-        if ($s1 !== $s2) {
-            $winnerId = $s1 > $s2 ? $updated['challenger_id'] : $updated['challenged_id'];
+        if ($s1 === 0 && $s2 === 0) {
+            $winnerId = null;
+            $isDraw = true;
+        } else {
+            // Lapis 1: skor lebih tinggi
+            if ($s1 !== $s2) {
+                $winnerId = $s1 > $s2 ? $updated['challenger_id'] : $updated['challenged_id'];
+            }
+            // Lapis 2: jumlah benar lebih banyak (antisipasi pembulatan skor)
+            elseif ($c1 !== $c2) {
+                $winnerId = $c1 > $c2 ? $updated['challenger_id'] : $updated['challenged_id'];
+            }
+            // Lapis 3: waktu lebih cepat
+            elseif ($t1 !== $t2) {
+                $winnerId = $t1 < $t2 ? $updated['challenger_id'] : $updated['challenged_id'];
+            }
+            // Lapis 4 (final): attempt_id lebih kecil = submit lebih awal
+            else {
+                $winnerId = (int)$updated['challenger_attempt_id'] < (int)$updated['challenged_attempt_id']
+                    ? $updated['challenger_id']
+                    : $updated['challenged_id'];
+            }
         }
-        // Lapis 2: jumlah benar lebih banyak (antisipasi pembulatan skor)
-        elseif ($c1 !== $c2) {
-            $winnerId = $c1 > $c2 ? $updated['challenger_id'] : $updated['challenged_id'];
-        }
-        // Lapis 3: waktu lebih cepat
-        elseif ($t1 !== $t2) {
-            $winnerId = $t1 < $t2 ? $updated['challenger_id'] : $updated['challenged_id'];
-        }
-        // Lapis 4 (final — tidak mungkin seri): attempt_id lebih kecil = submit lebih awal
-        else {
-            $winnerId = (int)$updated['challenger_attempt_id'] < (int)$updated['challenged_attempt_id']
-                ? $updated['challenger_id']
-                : $updated['challenged_id'];
-        }
-        // $isDraw selalu false — selalu ada pemenang
 
         DB::execute(
             "UPDATE challenges SET status = 'completed', winner_id = ? WHERE id = ?",
