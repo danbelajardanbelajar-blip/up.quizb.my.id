@@ -113,23 +113,26 @@
 
       <!-- Challenge Mode Progress Bars -->
       <div class="flex-1 w-full" x-show="mode === 'challenge'">
-        <!-- My Progress -->
-        <div class="flex items-center gap-3 mb-2">
-          <div class="w-20 text-xs font-bold text-right text-gray-700 dark:text-gray-300">Kamu</div>
-          <div class="flex-1 h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-            <div class="h-full bg-primary-500 transition-all duration-500" :style="'width: ' + myScore + '%'"></div>
-          </div>
-          <div class="w-12 text-xs font-bold text-primary-600" x-text="myScore + '%'"></div>
+        <div class="flex flex-col gap-2 mb-2 w-full max-w-xl mx-auto">
+          <template x-for="p in [...participants].sort((a,b) => b.score - a.score)" :key="p.id">
+            <div class="flex items-center gap-3">
+              <div class="w-24 text-xs font-bold text-right truncate"
+                   :class="p.id === (user?.id || 0) ? 'text-primary-600' : 'text-gray-600 dark:text-gray-400'">
+                <span x-text="p.id === (user?.id || 0) ? 'Kamu' : p.name"></span>
+                <span x-show="p.disconnected" class="text-red-500" title="Terputus"> ⚠️</span>
+              </div>
+              <div class="flex-1 h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
+                <div class="h-full transition-all duration-500"
+                     :class="p.id === (user?.id || 0) ? 'bg-primary-500' : (p.disconnected ? 'bg-gray-400' : 'bg-red-500')"
+                     :style="'width: ' + p.score + '%'"></div>
+              </div>
+              <div class="w-12 text-xs font-bold"
+                   :class="p.id === (user?.id || 0) ? 'text-primary-600' : (p.disconnected ? 'text-gray-400' : 'text-red-500')"
+                   x-text="p.score + '%'"></div>
+            </div>
+          </template>
         </div>
-        <!-- Enemy Progress -->
-        <div class="flex items-center gap-3">
-          <div class="w-20 text-xs font-bold text-right text-red-500 truncate" x-text="opponentName || 'Lawan'"></div>
-          <div class="flex-1 h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
-            <div class="h-full bg-red-500 transition-all duration-500" :style="'width: ' + opponentScore + '%'"></div>
-          </div>
-          <div class="w-12 text-xs font-bold text-red-500" x-text="opponentScore + '%'"></div>
-        </div>
-        <div class="text-center mt-2">
+        <div class="text-center mt-1">
           <span class="text-xs font-medium text-gray-500">Soal <span x-text="currentIndex+1"></span> dari <span x-text="questions.length"></span></span>
         </div>
       </div>

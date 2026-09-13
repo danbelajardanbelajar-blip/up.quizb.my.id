@@ -25,9 +25,7 @@ function QuizEngine() {
     heartbeatInterval: null,
     playerName: '',        // nama tamu (dari localStorage, opsional)
     questionTimeLeft: 0,    // timer per soal (instant/end mode)
-    opponentScore: 0,
-    opponentName: '',
-    opponentQIndex: 0,
+    participants: [],       // { name, score, disconnected, ... }
     myScore: 0,
     syncInterval: null,
     syncCountdown: 0,
@@ -112,19 +110,9 @@ function QuizEngine() {
         const data = await api.get('quiz.questions', params);
         this.quiz      = data.quiz;
         this.questions = data.questions;
-
-        // Fetch opponent's score if this is a challenge
+        // Initialize participants array (will be populated by challenge.sync)
         if (this.mode === 'challenge' && this.challengeId) {
-          try {
-            const cStatus = await api.get('challenge.status', { id: this.challengeId });
-            if (!cStatus.is_challenger && cStatus.challenger_score !== null) {
-              this.opponentScore = cStatus.challenger_score;
-              this.opponentName = cStatus.challenger_name;
-            } else if (cStatus.is_challenger && cStatus.challenged_score !== null) {
-              this.opponentScore = cStatus.challenged_score;
-              this.opponentName = cStatus.challenged_name;
-            }
-          } catch(e) {}
+          this.participants = [];
         }
 
         // Untuk mode EXAM: 20 detik per soal × jumlah soal
@@ -252,13 +240,27 @@ function QuizEngine() {
             score: this.myScore,
             q_index: this.currentIndex
           });
-          if (res.status === 'disconnected') {
-            clearInterval(this.syncInterval);
-            alert('Lawan terputus koneksinya! Kamu menang otomatis.');
-            this.autoSubmit();
-          } else if (res.enemy) {
-            this.opponentScore = res.enemy.s || 0;
-            this.opponentQIndex = res.enemy.q || 0;
+          if (res.participants) {
+            this.participants = res.participants.map(p => ({
+              id: p.user_id,
+              name: p.name,
+              score: p.user_id === (this.user?.id || 0) ? this.myScore : (p.progress_data ? p.progress_data.s : 0),
+              q_index: p.progress_data ? p.progress_data.q : 0,
+              disconnected: p.disconnected
+            }));
+            
+            // Periksa jika ada partisipan lain yang tersisa (tidak termasuk diri sendiri)
+            // Jika semua lawan terputus
+            const activeOpponents = this.participants.filter(p => p.id !== (this.user?.id || 0) && !p.disconnected);
+            if (activeOpponents.length === 0 && this.participants.length > 1) {
+                // Jangan otomatis alert menang jika ini multiplayer banyak orang, tapi game status akan jadi 'completed'
+                // Biarkan saja, jika completed nanti UI akan menyesuaikan atau bisa auto submit
+                if (res.status === 'completed') {
+                   clearInterval(this.syncInterval);
+                   alert('Semua lawan terputus! Mengakhiri kuis.');
+                   this.autoSubmit();
+                }
+            }
           }
         } catch(e) {}
       }, 2000);
@@ -379,6 +381,12 @@ function QuizEngine() {
         if (q && q.correct_option_id == this.answers[qId]) correct++;
       }
       this.myScore = Math.round((correct / (this.questions.length || 1)) * 100);
+      
+      // Update local participants array for instant UI feedback
+      if (this.mode === 'challenge' && this.participants) {
+          const me = this.participants.find(p => p.id === (this.user?.id || 0));
+          if (me) me.score = this.myScore;
+      }
 
       // Hentikan timer soal saat jawaban dipilih
       if (this.isReviewMode) this.stopQuestionTimer();
