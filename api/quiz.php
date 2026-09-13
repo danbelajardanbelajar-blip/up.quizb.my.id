@@ -148,9 +148,9 @@ function quiz_questions(): void {
     $mode        = $_GET['mode'] ?? 'exam';
     $challengeId = (int)($_GET['challenge_id'] ?? 0);
     
-    // Jika Mode Tantangan, PAKSA limit = 0 (tampilkan SEMUA soal agar 100% adil)
+    // Jika Mode Tantangan, PAKSA limit = 10 agar adil dan seragam
     if ($mode === 'challenge' && $challengeId > 0) {
-        $limit = 0; 
+        $limit = 10; 
         $shuffleQuestions = true;
         $shuffleOptions   = true;
         // Gunakan ID tantangan sebagai seed agar kedua pemain mendapat urutan acak yang SAMA PERSIS
