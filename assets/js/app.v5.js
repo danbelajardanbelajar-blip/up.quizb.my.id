@@ -2806,6 +2806,25 @@ function QuizBApp() {
       this.challenge.loading = true;
       try {
         const data = await api.get('challenge.list');
+        
+        // Cek jika ada lawan yang baru saja menerima tantangan (pending -> playing)
+        if (this.challenge.outgoing && this.challenge.outgoing.length > 0) {
+          const newOutgoing = data.outgoing || [];
+          for (let newC of newOutgoing) {
+            if (newC.status === 'playing') {
+              const oldC = this.challenge.outgoing.find(c => c.id === newC.id);
+              if (oldC && oldC.status === 'pending') {
+                // Auto-redirect ke halaman bermain
+                this.showToast('Lawan telah menerima tantangan! Bersiap...', 'success', '⚔️');
+                setTimeout(() => {
+                  this.navigate('/play/' + newC.quiz_id + '?mode=challenge&cid=' + newC.id);
+                }, 1000);
+                break;
+              }
+            }
+          }
+        }
+
         this.challenge.incoming     = data.incoming      || [];
         this.challenge.received     = data.received      || [];
         this.challenge.outgoing     = data.outgoing      || [];
