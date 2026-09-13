@@ -111,7 +111,7 @@ function challenge_status(): void {
     $c = DB::one("SELECT c.*, q.title as quiz_title, NOW() as server_now FROM challenges c JOIN quizzes q ON q.id = c.quiz_id WHERE c.id = ?", [$challengeId]);
     if (!$c) jsonError('Not found', 404);
 
-    $participants = DB::all("SELECT cp.user_id, cp.status, cp.progress, cp.score_final, u.name, cp.is_host FROM challenge_participants cp JOIN users u ON u.id = cp.user_id WHERE cp.challenge_id = ?", [$challengeId]);
+    $participants = DB::all("SELECT cp.user_id, cp.status, cp.progress, cp.score_final, cp.time_taken, u.name, cp.is_host FROM challenge_participants cp JOIN users u ON u.id = cp.user_id WHERE cp.challenge_id = ?", [$challengeId]);
     $c['participants'] = $participants;
     
     $c['is_participant'] = false;

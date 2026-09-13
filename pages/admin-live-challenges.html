@@ -12,18 +12,18 @@
     </button>
   </div>
 
-  <div x-show="admin.liveChallenges.loading && admin.liveChallenges.list.length === 0" class="flex justify-center py-12">
+  <div x-show="admin.liveChallenges.loading && admin.liveChallenges.live.length === 0 && admin.liveChallenges.history.length === 0" class="flex justify-center py-12">
     <div class="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
   </div>
 
-  <div x-show="!admin.liveChallenges.loading && admin.liveChallenges.list.length === 0" class="text-center py-12 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+  <div x-show="!admin.liveChallenges.loading && admin.liveChallenges.live.length === 0" class="text-center py-12 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
     <span class="text-4xl mb-4 block">??</span>
     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">Belum ada pertandingan aktif</h3>
     <p class="text-sm text-gray-500 dark:text-gray-400">Tantangan yang sedang berlangsung akan muncul di sini secara real-time.</p>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <template x-for="chal in admin.liveChallenges.list" :key="chal.id">
+    <template x-for="chal in admin.liveChallenges.live" :key="chal.id">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col relative">
         <div class="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
           <div class="flex items-center justify-between mb-2">
@@ -78,4 +78,46 @@
       </div>
     </template>
   </div>
+
+  <!-- History Section -->
+  <div x-show="admin.liveChallenges.history.length > 0" class="pt-8 mt-8 border-t border-gray-100 dark:border-gray-800">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+      ?? Riwayat Challenge
+    </h2>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <template x-for="chal in admin.liveChallenges.history" :key="chal.id">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col opacity-80 hover:opacity-100 transition-opacity">
+          <div class="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 flex justify-between items-center">
+            <div>
+              <h3 class="font-bold text-gray-900 dark:text-white truncate pr-4" x-text="chal.quiz_title"></h3>
+              <div class="text-xs text-gray-500 dark:text-gray-400 mt-1" x-text="'Selesai ' + formatRelative(chal.start_time)"></div>
+            </div>
+            <span class="text-xs font-medium px-2 py-1 bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-md">Selesai</span>
+          </div>
+          
+          <div class="p-4 flex flex-col gap-2">
+            <template x-for="(p, index) in [...chal.participants].sort((a,b) => {
+              if (b.score_final !== a.score_final) return (b.score_final || 0) - (a.score_final || 0);
+              return (a.time_taken || 999999) - (b.time_taken || 999999);
+            })" :key="p.user_id">
+              <div class="flex items-center justify-between text-sm py-1.5 border-b border-gray-50 dark:border-gray-700/50 last:border-0">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold w-4 text-center"
+                        :class="index === 0 ? 'text-yellow-500' : (index === 1 ? 'text-gray-400' : (index === 2 ? 'text-amber-700' : 'text-gray-500'))"
+                        x-text="index + 1"></span>
+                  <span class="font-medium text-gray-800 dark:text-gray-200" x-text="p.name"></span>
+                  <span x-show="p.is_host" class="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded font-bold" title="Host">??</span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="text-xs text-gray-400" x-text="p.time_taken ? formatTime(p.time_taken) : '-'"></span>
+                  <span class="font-bold text-gray-700 dark:text-gray-300 w-12 text-right" x-text="(p.score_final || 0) + ' pts'"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
 </div>

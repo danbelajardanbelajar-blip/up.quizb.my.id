@@ -969,6 +969,7 @@ function admin_quiz_duplicate(): void {
 
 function admin_live_challenges(): void {
     requireAdmin();
+    // Live Challenges
     $playing = DB::all("SELECT c.id, c.quiz_id, c.status, c.created_at, c.start_time, q.title AS quiz_title 
         FROM challenges c 
         INNER JOIN quizzes q ON q.id = c.quiz_id 
@@ -983,8 +984,6 @@ function admin_live_challenges(): void {
         foreach ($parts as &$participant) {
             $participant['progress_data'] = $participant['progress'] ? json_decode($participant['progress'], true) : null;
             unset($participant['progress']);
-            
-            // Check disconnected
             $lastPing = $participant['progress_data']['last_ping'] ?? 0;
             $participant['disconnected'] = ($lastPing > 0 && (time() - $lastPing) > 10) ? true : false;
         }
@@ -993,6 +992,24 @@ function admin_live_challenges(): void {
     }
     unset($p);
 
-    jsonSuccess($playing);
+    // History (Completed) Challenges
+    $history = DB::all("SELECT c.id, c.quiz_id, c.status, c.created_at, c.start_time, q.title AS quiz_title 
+        FROM challenges c 
+        INNER JOIN quizzes q ON q.id = c.quiz_id 
+        WHERE c.status = 'completed' ORDER BY c.start_time DESC LIMIT 10");
+        
+    foreach ($history as &$h) {
+        $hParts = DB::all("SELECT cp.user_id, cp.is_host, cp.status, cp.score_final, cp.time_taken, u.name 
+            FROM challenge_participants cp 
+            INNER JOIN users u ON u.id = cp.user_id 
+            WHERE cp.challenge_id = ?", [$h['id']]);
+        $h['participants'] = $hParts;
+    }
+    unset($h);
+
+    jsonSuccess([
+        'live' => $playing,
+        'history' => $history
+    ]);
 }
 

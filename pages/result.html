@@ -131,35 +131,64 @@
               </div>
             </template>
             <template x-if="result.challengeData && result.challengeData.status === 'completed'">
-              <div>
-                <div class="text-center mb-4">
-                  <template x-if="result.challengeData.is_winner">
-                    <div><p class="text-4xl mb-1">🏆</p><p class="font-bold text-green-600 dark:text-green-400 text-lg">Kamu Menang!</p></div>
+              <div class="mt-2" x-data="{
+                sortedParticipants: [...result.challengeData.participants].sort((a,b) => {
+                  if (b.score_final !== a.score_final) return b.score_final - a.score_final;
+                  return (a.time_taken || 999999) - (b.time_taken || 999999);
+                }),
+                getRank(uid) {
+                  return this.sortedParticipants.findIndex(p => p.user_id == uid) + 1;
+                },
+                get myRank() { return this.getRank(user.id); },
+                get myData() { return this.sortedParticipants.find(p => p.user_id == user.id); }
+              }">
+                <div class="text-center mb-6">
+                  <template x-if="myRank === 1">
+                    <div><p class="text-5xl mb-2">🏆</p><p class="font-bold text-yellow-500 text-xl">Juara Pertama!</p></div>
                   </template>
-                  <template x-if="!result.challengeData.is_winner && result.challengeData.winner_id">
-                    <div>
-                      <p class="text-4xl mb-1">😔</p>
-                      <p class="font-bold text-red-500 text-lg">Kamu Kalah!</p>
+                  <template x-if="myRank === 2">
+                    <div><p class="text-5xl mb-2">🥈</p><p class="font-bold text-gray-400 text-xl">Juara Kedua!</p></div>
+                  </template>
+                  <template x-if="myRank === 3">
+                    <div><p class="text-5xl mb-2">🥉</p><p class="font-bold text-amber-700 text-xl">Juara Ketiga!</p></div>
+                  </template>
+                  <template x-if="myRank > 3">
+                    <div><p class="text-5xl mb-2">💪</p><p class="font-bold text-primary-500 text-xl">Kerja Bagus!</p></div>
+                  </template>
+                  <p class="text-sm text-gray-500 mt-1">Kamu menempati peringkat <strong x-text="'#' + myRank"></strong> dari <strong x-text="sortedParticipants.length"></strong> peserta.</p>
+                </div>
+                
+                <div class="space-y-3">
+                  <template x-for="(p, index) in sortedParticipants" :key="p.user_id">
+                    <div class="flex items-center p-3 rounded-xl border relative overflow-hidden"
+                         :class="p.user_id == user.id ? 'bg-primary-50 border-primary-200 dark:bg-primary-900/20 dark:border-primary-800' : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700'">
+                      
+                      <!-- Peringkat -->
+                      <div class="w-8 flex-shrink-0 flex items-center justify-center font-bold text-lg"
+                           :class="index === 0 ? 'text-yellow-500' : (index === 1 ? 'text-gray-400' : (index === 2 ? 'text-amber-700' : 'text-gray-400 dark:text-gray-600'))">
+                        <span x-show="index === 0">1</span>
+                        <span x-show="index === 1">2</span>
+                        <span x-show="index === 2">3</span>
+                        <span x-show="index > 2" x-text="index + 1" class="text-sm"></span>
+                      </div>
+                      
+                      <!-- Info Peserta -->
+                      <div class="flex-1 ml-3 min-w-0">
+                        <p class="font-bold text-gray-900 dark:text-white truncate text-sm flex items-center gap-1.5">
+                          <span x-text="p.user_id == user.id ? 'Kamu (' + p.name + ')' : p.name"></span>
+                          <span x-show="p.is_host" class="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded font-bold" title="Host">👑</span>
+                        </p>
+                        <p class="text-xs text-gray-500" x-text="p.time_taken ? formatTime(p.time_taken) : '-'"></p>
+                      </div>
+                      
+                      <!-- Skor -->
+                      <div class="flex-shrink-0 text-right ml-3">
+                        <p class="font-extrabold text-lg"
+                           :class="p.user_id == user.id ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'"
+                           x-text="(p.score_final ?? 0) + ' pts'"></p>
+                      </div>
                     </div>
                   </template>
-                  <template x-if="!result.challengeData.winner_id">
-                    <div><p class="text-4xl mb-1">🤝</p><p class="font-bold text-gray-600 dark:text-gray-300 text-lg">Seri!</p></div>
-                  </template>
-                  <div x-show="result.challengeData.win_reason" class="mt-2 text-xs text-gray-500 italic" x-text="result.challengeData.win_reason"></div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                  <div class="bg-white dark:bg-gray-900 rounded-xl p-3 text-center border"
-                       :class="result.challengeData.is_challenger ? 'border-primary-300' : 'border-gray-200 dark:border-gray-700'">
-                    <p class="text-xs font-semibold text-gray-500 mb-1" x-text="result.challengeData.challenger_name"></p>
-                    <p class="text-2xl font-extrabold text-primary-600 dark:text-primary-400" x-text="(result.challengeData.challenger_score ?? '?') + '%'"></p>
-                    <p class="text-xs text-gray-400 mt-0.5" x-text="result.challengeData.challenger_time ? formatTime(result.challengeData.challenger_time) : '-'"></p>
-                  </div>
-                  <div class="bg-white dark:bg-gray-900 rounded-xl p-3 text-center border"
-                       :class="!result.challengeData.is_challenger ? 'border-primary-300' : 'border-gray-200 dark:border-gray-700'">
-                    <p class="text-xs font-semibold text-gray-500 mb-1" x-text="result.challengeData.challenged_name"></p>
-                    <p class="text-2xl font-extrabold text-primary-600 dark:text-primary-400" x-text="(result.challengeData.challenged_score ?? '?') + '%'"></p>
-                    <p class="text-xs text-gray-400 mt-0.5" x-text="result.challengeData.challenged_time ? formatTime(result.challengeData.challenged_time) : '-'"></p>
-                  </div>
                 </div>
               </div>
             </template>

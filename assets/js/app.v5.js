@@ -115,7 +115,7 @@ function QuizBApp() {
     admin: {
       tab: 'content',
       stats: null,
-      liveChallenges: { list: [], loading: false, interval: null },
+      liveChallenges: { live: [], history: [], loading: false, interval: null },
       quizzes: [], quizzesTotal: 0, quizzesPage: 1, quizzesSearch: '', quizzesView: 'list',
       users:   [],   usersTotal: 0,   usersPage: 1,   usersSearch: '',
       categories: [],
@@ -1536,7 +1536,8 @@ function QuizBApp() {
       if (!silent) this.admin.liveChallenges.loading = true;
       try {
         const data = await api.get('admin.live_challenges');
-        this.admin.liveChallenges.list = Array.isArray(data) ? data : [];
+        this.admin.liveChallenges.live = Array.isArray(data.live) ? data.live : [];
+        this.admin.liveChallenges.history = Array.isArray(data.history) ? data.history : [];
       } catch (e) {
         if (!silent) this.showToast(e.message, 'error', '❌');
       } finally {
