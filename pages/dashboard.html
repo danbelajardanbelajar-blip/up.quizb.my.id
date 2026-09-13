@@ -243,6 +243,56 @@
     </template>
   </div>
 
+  <!-- FEATURED QUIZZES -->
+  <div class="mb-8">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="font-bold text-gray-900 dark:text-white text-lg">⭐ Quiz Unggulan</h2>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Mulai dari yang paling populer</p>
+      </div>
+      <button @click="navigate('/quizzes')" class="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline">Lihat semua →</button>
+    </div>
+
+    <!-- Skeleton -->
+    <div x-show="home.loading || (dashboard.loading && home.featured.length === 0)" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <template x-for="i in 3">
+        <div class="card p-4 space-y-3">
+          <div class="skeleton h-5 w-3/4 rounded"></div>
+          <div class="skeleton h-4 w-full rounded"></div>
+          <div class="skeleton h-4 w-2/3 rounded"></div>
+          <div class="flex gap-2 mt-3">
+            <div class="skeleton h-5 w-16 rounded-full"></div>
+            <div class="skeleton h-5 w-20 rounded-full"></div>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Cards -->
+    <div x-show="!(home.loading || (dashboard.loading && home.featured.length === 0))" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <template x-for="quiz in home.featured.slice(0,3)" :key="quiz.id">
+        <div class="card card-hover p-4 cursor-pointer group" @click="navigate('/quiz/'+quiz.id)">
+          <div class="flex items-start justify-between mb-2">
+            <span class="text-xl">📝</span>
+            <span class="badge text-[10px] px-2 py-0.5 rounded-full font-medium"
+                  :class="difficultyClass(quiz.difficulty)" x-text="difficultyLabel(quiz.difficulty)"></span>
+          </div>
+          <h3 class="font-semibold text-gray-800 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-1 mb-1" x-text="quiz.title"></h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-3" x-text="quiz.description || 'Tidak ada deskripsi.'"></p>
+          <div class="flex items-center gap-3 text-[10px] text-gray-400">
+            <span>⏱ <span x-text="Math.floor(quiz.time_limit/60)+'m'"></span></span>
+            <span>❓ <span x-text="quiz.question_count"></span> soal</span>
+            <span>👥 <span x-text="quiz.attempt_count || 0"></span></span>
+          </div>
+        </div>
+      </template>
+      <div x-show="home.featured.length === 0" class="col-span-3 text-center py-6 text-gray-400">
+        <p class="text-2xl mb-2">📭</p>
+        <p class="text-sm">Belum ada quiz tersedia</p>
+      </div>
+    </div>
+  </div>
+
   <!-- Stats Cards -->
   <div x-show="!dashboard.loading" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
     <div class="card p-5">

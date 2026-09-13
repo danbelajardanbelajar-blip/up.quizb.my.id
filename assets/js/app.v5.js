@@ -747,6 +747,15 @@ function QuizBApp() {
         this.dashboard.userInfo = data.user   || null;
         this.dashboard.stats    = data.stats  || null;
         this.dashboard.recent   = data.recent || [];
+        
+        if (!this.home.featured || this.home.featured.length === 0) {
+          try {
+            const quizData = await api.getFull('quiz.list', { limit: 6 });
+            this.home.featured = Array.isArray(quizData.data) ? quizData.data : [];
+          } catch (e) {
+             console.error("Gagal memuat quiz unggulan", e);
+          }
+        }
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
