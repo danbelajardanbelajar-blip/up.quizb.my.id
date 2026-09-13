@@ -44,6 +44,22 @@
            });
            this.challengeModal.sent = true;
            this.challengeModal.challengeId = data.challenge_id;
+           
+           // Fast polling setiap 3 detik untuk auto-redirect langsung dari modal
+           if (this.challengeModal.pollInterval) clearInterval(this.challengeModal.pollInterval);
+           this.challengeModal.pollInterval = setInterval(async () => {
+             try {
+               const st = await api.get('challenge.status', { id: data.challenge_id });
+               if (st.status === 'playing') {
+                 clearInterval(this.challengeModal.pollInterval);
+                 this.showToast('Lawan telah menerima tantangan! Bersiap...', 'success', '⚔️');
+                 setTimeout(() => {
+                   this.navigate('/play/' + quizId + '?mode=challenge&cid=' + data.challenge_id);
+                 }, 500);
+               }
+             } catch(e) {}
+           }, 3000);
+
          } catch(e) {
            this.challengeModal.error = e.message;
          } finally {
@@ -217,14 +233,14 @@
   </div>
 
   <!-- ===== CHALLENGE MODAL ===== -->
-  <div x-show="challengeModal.show" @click.self="challengeModal.show=false"
+  <div x-show="challengeModal.show" @click.self="challengeModal.show=false; if(challengeModal.pollInterval) clearInterval(challengeModal.pollInterval)"
        class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
        style="display:none">
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md animate-slide-up">
       <div class="p-6">
         <div class="flex items-center justify-between mb-5">
           <h2 class="text-lg font-bold text-gray-900 dark:text-white">⚔️ Tantang Teman</h2>
-          <button @click="challengeModal.show=false" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+          <button @click="challengeModal.show=false; if(challengeModal.pollInterval) clearInterval(challengeModal.pollInterval)" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
 
         <!-- Sent success -->
@@ -235,8 +251,8 @@
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4" x-text="'Menunggu ' + (challengeModal.selectedUser?.name || 'lawan') + ' menerima tantangan.'"></p>
             <p class="text-xs text-gray-400 mb-6">Kamu bisa mengerjakan quiz sekarang. Hasil akan dibandingkan ketika lawan selesai.</p>
             <div class="flex gap-3">
-              <button @click="challengeModal.show=false" class="btn-secondary flex-1 py-2 text-sm">Nanti</button>
-              <button @click="navigate('/play/' + quizDetail.quiz?.id + '?mode=challenge&cid=' + challengeModal.challengeId); challengeModal.show=false"
+              <button @click="challengeModal.show=false; if(challengeModal.pollInterval) clearInterval(challengeModal.pollInterval)" class="btn-secondary flex-1 py-2 text-sm">Nanti</button>
+              <button @click="navigate('/play/' + quizDetail.quiz?.id + '?mode=challenge&cid=' + challengeModal.challengeId); challengeModal.show=false; if(challengeModal.pollInterval) clearInterval(challengeModal.pollInterval)"
                       class="btn-primary flex-1 py-2 text-sm">Mulai Sekarang →</button>
             </div>
           </div>
@@ -295,8 +311,8 @@
             <p x-show="challengeModal.error" class="text-sm text-red-500" x-text="challengeModal.error"></p>
 
             <!-- Actions -->
-            <div class="flex gap-3 pt-1">
-              <button @click="challengeModal.show=false" class="btn-secondary flex-1 py-2.5 text-sm">Batal</button>
+            <div class="flex gap-3 pt-2">
+              <button @click="challengeModal.show=false; if(challengeModal.pollInterval) clearInterval(challengeModal.pollInterval)" class="btn-secondary flex-1 py-2.5 text-sm">Batal</button>
               <button @click="sendChallenge(quizDetail.quiz?.id)"
                       :disabled="!challengeModal.selectedUser || challengeModal.sending"
                       class="btn-primary flex-1 py-2.5 text-sm disabled:opacity-50">
