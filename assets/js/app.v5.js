@@ -415,7 +415,21 @@ function QuizBApp() {
       }
       if (route === '/classroom')          this.loadClassroom();
       if (route.startsWith('/classroom/') && params[0]) this.loadClassroomDetail(params[0]);
-      if (route === '/challenges')         this.loadChallenges();
+      if (route === '/challenges') {
+          this.loadChallenges();
+          if (!this.challenge.fastPollInterval) {
+             this.challenge.fastPollInterval = setInterval(() => {
+                 if (this.currentRoute === '/challenges' && this.challenge.outgoing.some(c => c.status === 'pending')) {
+                     this.loadChallenges(true); // true = silent fetch
+                 }
+             }, 3000);
+          }
+      } else {
+          if (this.challenge.fastPollInterval) {
+              clearInterval(this.challenge.fastPollInterval);
+              this.challenge.fastPollInterval = null;
+          }
+      }
       if (route === '/activity')            this.loadActivity();
       if (route === '/public-history')     this.loadPublicHistory();
       if (!this.currentRoute.includes('/monitor') && this.assignmentView && this.assignmentView.monitorInterval) {
@@ -2801,9 +2815,9 @@ function QuizBApp() {
     },
 
     // ---- Challenge ----
-    async loadChallenges() {
+    async loadChallenges(silent = false) {
       if (!this.user) return;
-      this.challenge.loading = true;
+      if (!silent) this.challenge.loading = true;
       try {
         const data = await api.get('challenge.list');
         
