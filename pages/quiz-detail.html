@@ -250,10 +250,12 @@
             <p class="font-bold text-gray-900 dark:text-white mb-1">Tantangan Terkirim!</p>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4" x-text="'Menunggu ' + (challengeModal.selectedUser?.name || 'lawan') + ' menerima tantangan.'"></p>
             <p class="text-xs text-gray-400 mb-6">Kamu bisa mengerjakan quiz sekarang. Hasil akan dibandingkan ketika lawan selesai.</p>
-            <div class="flex gap-3">
-              <button @click="challengeModal.show=false; if(challengeModal.pollInterval) clearInterval(challengeModal.pollInterval)" class="btn-secondary flex-1 py-2 text-sm">Nanti</button>
-              <button @click="navigate('/play/' + quizDetail.quiz?.id + '?mode=challenge&cid=' + challengeModal.challengeId); challengeModal.show=false; if(challengeModal.pollInterval) clearInterval(challengeModal.pollInterval)"
-                      class="btn-primary flex-1 py-2 text-sm">Mulai Sekarang →</button>
+            <div class="flex gap-3 mt-4">
+              <button @click="challengeModal.show=false; if(challengeModal.pollInterval) clearInterval(challengeModal.pollInterval)" class="btn-secondary flex-1 py-2 text-sm">Tutup (Lanjut Menunggu di Latar Belakang)</button>
+            </div>
+            <div class="mt-4 flex items-center justify-center gap-2 text-sm font-medium text-primary-600">
+              <span class="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></span>
+              Menunggu musuh menerima...
             </div>
           </div>
         </template>

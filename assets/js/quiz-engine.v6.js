@@ -25,8 +25,12 @@ function QuizEngine() {
     heartbeatInterval: null,
     playerName: '',        // nama tamu (dari localStorage, opsional)
     questionTimeLeft: 0,    // timer per soal (instant/end mode)
-    opponentScore: null,
+    opponentScore: 0,
     opponentName: '',
+    opponentQIndex: 0,
+    myScore: 0,
+    syncInterval: null,
+    syncCountdown: 0,
     questionTimerInterval: null,
     questionTimerDefault: 20, // detik per soal
     
@@ -165,11 +169,42 @@ function QuizEngine() {
         this.currentIndex = 0;
         // Baca nama tamu dari localStorage (jika user tidak login)
       this.playerName = (typeof localStorage !== 'undefined' ? localStorage.getItem('quizb_guest_name') : '') || '';
-      this.startQuiz();
+      
+      if (this.mode === 'challenge' && this.challengeId) {
+        this.waitForChallengeStart();
+      } else {
+        this.startQuiz();
+      }
       } catch (e) {
         this.error = e.message;
         this.phase = 'error';
       }
+    },
+
+    // ---- Wait for challenge sync ----
+    waitForChallengeStart() {
+      this.phase = 'syncing';
+      this.syncCountdown = 3;
+      
+      const poll = setInterval(async () => {
+        try {
+          const res = await api.get('challenge.status', { id: this.challengeId });
+          if (res.status === 'playing' && res.start_time) {
+            // Convert MySQL dates to JS Dates (assuming they are in same TZ)
+            const startT = new Date(res.start_time.replace(' ', 'T')).getTime();
+            const serverT = new Date(res.server_now.replace(' ', 'T')).getTime();
+            const diff = startT - serverT;
+            
+            if (diff <= 0) {
+              clearInterval(poll);
+              this.startQuiz();
+              this.startChallengeSync(); // Start real-time sync
+            } else {
+              this.syncCountdown = Math.ceil(diff / 1000);
+            }
+          }
+        } catch(e) {}
+      }, 1000);
     },
 
     // ---- Start quiz ----
@@ -204,6 +239,29 @@ function QuizEngine() {
       }, 300000); // 5 minutes
       // Take first snapshot immediately
       setTimeout(() => this.takeAndUploadSnapshot(), 2000);
+    },
+    
+    // ---- Challenge Sync ----
+    startChallengeSync() {
+      if (this.syncInterval) clearInterval(this.syncInterval);
+      this.syncInterval = setInterval(async () => {
+        if (this.phase !== 'playing') return;
+        try {
+          const res = await api.post('challenge.sync', {
+            challenge_id: this.challengeId,
+            score: this.myScore,
+            q_index: this.currentIndex
+          });
+          if (res.status === 'disconnected') {
+            clearInterval(this.syncInterval);
+            alert('Lawan terputus koneksinya! Kamu menang otomatis.');
+            this.autoSubmit();
+          } else if (res.enemy) {
+            this.opponentScore = res.enemy.s || 0;
+            this.opponentQIndex = res.enemy.q || 0;
+          }
+        } catch(e) {}
+      }, 2000);
     },
     
     takeAndUploadSnapshot() {
@@ -313,6 +371,14 @@ function QuizEngine() {
     selectOption(questionId, optionId) {
       if (this.phase !== 'playing') return;
       this.answers[questionId] = optionId;
+      
+      // Hitung skor sementara (khusus challenge)
+      let correct = 0;
+      for (const qId in this.answers) {
+        const q = this.questions.find(x => x.id == qId);
+        if (q && q.correct_option_id == this.answers[qId]) correct++;
+      }
+      this.myScore = Math.round((correct / (this.questions.length || 1)) * 100);
 
       // Hentikan timer soal saat jawaban dipilih
       if (this.isReviewMode) this.stopQuestionTimer();

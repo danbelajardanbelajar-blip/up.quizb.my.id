@@ -145,9 +145,14 @@ function challenge_accept(): void {
         [$challengeId, $user['id']]
     );
     if (!$challenge) jsonError('Tantangan tidak ditemukan atau sudah kedaluwarsa', 404);
-
-    DB::execute("UPDATE challenges SET status = 'playing' WHERE id = ?", [$challengeId]);
-
+    DB::execute("
+        UPDATE challenges 
+        SET status = 'playing', 
+            start_time = DATE_ADD(NOW(), INTERVAL 5 SECOND),
+            challenger_progress = '{\"s\":0, \"q\":0, \"last_ping\":0}',
+            challenged_progress = '{\"s\":0, \"q\":0, \"last_ping\":0}'
+        WHERE id = ?
+    ", [$challengeId]);
     jsonSuccess([
         'challenge_id' => $challengeId,
         'quiz_id'      => (int)$challenge['quiz_id'],
@@ -202,6 +207,7 @@ function challenge_status(): void {
     $c = DB::one(
         "SELECT c.id, c.status, c.quiz_id, c.challenger_id, c.challenged_id,
                 c.challenger_attempt_id, c.challenged_attempt_id, c.winner_id,
+                c.start_time, NOW() as server_now,
                 q.title AS quiz_title,
                 u1.name AS challenger_name, u2.name AS challenged_name,
                 w.name  AS winner_name,
@@ -236,6 +242,55 @@ function challenge_status(): void {
     );
 
     jsonSuccess($c);
+}
+// POST — sinkronisasi real-time
+function challenge_sync(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $user = requireAuth();
+    $body = getBody();
+    
+    $challengeId = (int)($body['challenge_id'] ?? 0);
+    $score = (int)($body['score'] ?? 0);
+    $qIndex = (int)($body['q_index'] ?? 0);
+    if (!$challengeId) jsonError('Challenge ID diperlukan');
+
+    $c = DB::one("SELECT * FROM challenges WHERE id = ? AND (challenger_id = ? OR challenged_id = ?)", [$challengeId, $user['id'], $user['id']]);
+    if (!$c) jsonError('Tantangan tidak ditemukan', 404);
+
+    $isChallenger = (int)$c['challenger_id'] === (int)$user['id'];
+    
+    // Update progress kita
+    $myProgress = json_encode(['s' => $score, 'q' => $qIndex, 'last_ping' => time()]);
+    if ($isChallenger) {
+        DB::execute("UPDATE challenges SET challenger_progress = ? WHERE id = ?", [$myProgress, $challengeId]);
+        $c['challenger_progress'] = $myProgress;
+    } else {
+        DB::execute("UPDATE challenges SET challenged_progress = ? WHERE id = ?", [$myProgress, $challengeId]);
+        $c['challenged_progress'] = $myProgress;
+    }
+
+    // Ambil data lawan
+    $enemyProgressRaw = $isChallenger ? $c['challenged_progress'] : $c['challenger_progress'];
+    $enemyP = $enemyProgressRaw ? json_decode($enemyProgressRaw, true) : null;
+    
+    // Cek putus koneksi lawan (timeout 20 detik) jika status masih playing
+    if ($c['status'] === 'playing' && $enemyP && isset($enemyP['last_ping'])) {
+        if (time() - $enemyP['last_ping'] > 20) {
+            // Lawan putus koneksi, kita menang otomatis
+            $winnerId = $user['id'];
+            DB::execute(
+                "UPDATE challenges SET status = 'completed', winner_id = ? WHERE id = ?",
+                [$winnerId, $challengeId]
+            );
+            jsonSuccess(['status' => 'disconnected', 'enemy' => $enemyP]);
+        }
+    }
+
+    jsonSuccess([
+        'status' => $c['status'],
+        'start_time' => $c['start_time'] ?? null,
+        'enemy' => $enemyP
+    ]);
 }
 
 // POST — simpan attempt ke tantangan & tentukan pemenang jika kedua selesai
