@@ -82,18 +82,12 @@ function challenge_accept(): void {
     $user = requireAuth();
     $body = getBody();
     $challengeId = (int)($body['challenge_id'] ?? 0);
-    $accept = !empty($body['accept']);
 
     if (!$challengeId) jsonError('Challenge ID diperlukan');
     $cp = DB::one("SELECT * FROM challenge_participants WHERE challenge_id = ? AND user_id = ?", [$challengeId, $user['id']]);
     if (!$cp || $cp['status'] !== 'pending') jsonError('Tantangan tidak valid', 404);
     $c = DB::one("SELECT * FROM challenges WHERE id = ?", [$challengeId]);
     if (!$c || $c['status'] !== 'pending') jsonError('Tantangan kadaluarsa', 400);
-
-    if (!$accept) {
-        DB::execute("UPDATE challenge_participants SET status = 'declined' WHERE id = ?", [$cp['id']]);
-        jsonSuccess([], 'Tantangan ditolak.');
-    }
 
     DB::execute("UPDATE challenge_participants SET status = 'accepted' WHERE id = ?", [$cp['id']]);
     $pendingCount = DB::one("SELECT COUNT(*) as c FROM challenge_participants WHERE challenge_id = ? AND status = 'pending'", [$challengeId])['c'];
@@ -217,5 +211,34 @@ function challenge_delete(): void {
     DB::execute("DELETE FROM challenges WHERE id = ?", [$challengeId]);
 
     jsonSuccess([], 'Tantangan berhasil dihapus.');
+}
+
+
+function challenge_decline(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $user = requireAuth();
+    $body = getBody();
+    $challengeId = (int)($body['challenge_id'] ?? 0);
+
+    if (!$challengeId) jsonError('Challenge ID diperlukan');
+    $cp = DB::one("SELECT * FROM challenge_participants WHERE challenge_id = ? AND user_id = ?", [$challengeId, $user['id']]);
+    if (!$cp || $cp['status'] !== 'pending') jsonError('Tantangan tidak valid', 404);
+    $c = DB::one("SELECT * FROM challenges WHERE id = ?", [$challengeId]);
+    if (!$c || $c['status'] !== 'pending') jsonError('Tantangan kadaluarsa', 400);
+
+    DB::execute("UPDATE challenge_participants SET status = 'declined' WHERE id = ?", [$cp['id']]);
+
+    // Check if there are no pending participants left
+    $pendingCount = DB::one("SELECT COUNT(*) as c FROM challenge_participants WHERE challenge_id = ? AND status = 'pending'", [$challengeId])['c'];
+    if ($pendingCount == 0) {
+        $acceptedCount = DB::one("SELECT COUNT(*) as c FROM challenge_participants WHERE challenge_id = ? AND status = 'accepted'", [$challengeId])['c'];
+        if ($acceptedCount > 1) {
+            DB::execute("UPDATE challenges SET status = 'playing', start_time = DATE_ADD(NOW(), INTERVAL 5 SECOND) WHERE id = ?", [$challengeId]);
+        } else {
+            DB::execute("UPDATE challenges SET status = 'completed' WHERE id = ?", [$challengeId]);
+        }
+    }
+
+    jsonSuccess([], 'Tantangan ditolak.');
 }
 
