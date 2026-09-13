@@ -99,6 +99,10 @@
         </span>
         <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
               :class="modeBadgeClass" x-text="modeLabel"></span>
+        <span x-show="mode === 'challenge' && opponentScore !== null" 
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 border border-red-200 dark:border-red-800 animate-pulse">
+          🎯 <span class="ml-1" x-text="opponentName + ' ' + opponentScore + '%'"></span>
+        </span>
       </div>
       <!-- Timer global (exam / challenge) -->
       <template x-if="!isReviewMode">

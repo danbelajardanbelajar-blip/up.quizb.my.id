@@ -25,6 +25,8 @@ function QuizEngine() {
     heartbeatInterval: null,
     playerName: '',        // nama tamu (dari localStorage, opsional)
     questionTimeLeft: 0,    // timer per soal (instant/end mode)
+    opponentScore: null,
+    opponentName: '',
     questionTimerInterval: null,
     questionTimerDefault: 20, // detik per soal
     
@@ -106,6 +108,21 @@ function QuizEngine() {
         const data = await api.get('quiz.questions', params);
         this.quiz      = data.quiz;
         this.questions = data.questions;
+
+        // Fetch opponent's score if this is a challenge
+        if (this.mode === 'challenge' && this.challengeId) {
+          try {
+            const cStatus = await api.get('challenge.status', { id: this.challengeId });
+            if (!cStatus.is_challenger && cStatus.challenger_score !== null) {
+              this.opponentScore = cStatus.challenger_score;
+              this.opponentName = cStatus.challenger_name;
+            } else if (cStatus.is_challenger && cStatus.challenged_score !== null) {
+              this.opponentScore = cStatus.challenged_score;
+              this.opponentName = cStatus.challenged_name;
+            }
+          } catch(e) {}
+        }
+
         // Untuk mode EXAM: 20 detik per soal × jumlah soal
         // Untuk mode lain (challenge, dll): gunakan exam_duration/time_limit sebagai fallback
         if (this.mode === 'exam') {
