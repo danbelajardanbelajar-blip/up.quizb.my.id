@@ -1,0 +1,81 @@
+<div class="space-y-6">
+  <div class="flex items-center justify-between">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+      <span class="relative flex h-3 w-3">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+      </span>
+      Live Challenges
+    </h2>
+    <button @click="loadAdminLiveChallenges()" class="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-gray-800 rounded-xl transition-colors" title="Refresh">
+      <svg class="w-5 h-5" :class="admin.liveChallenges.loading ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+    </button>
+  </div>
+
+  <div x-show="admin.liveChallenges.loading && admin.liveChallenges.list.length === 0" class="flex justify-center py-12">
+    <div class="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+  </div>
+
+  <div x-show="!admin.liveChallenges.loading && admin.liveChallenges.list.length === 0" class="text-center py-12 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+    <span class="text-4xl mb-4 block">??</span>
+    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">Belum ada pertandingan aktif</h3>
+    <p class="text-sm text-gray-500 dark:text-gray-400">Tantangan yang sedang berlangsung akan muncul di sini secara real-time.</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <template x-for="chal in admin.liveChallenges.list" :key="chal.id">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col relative">
+        <div class="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-gray-900 dark:text-white truncate pr-4" x-text="chal.quiz_title"></h3>
+            <span class="text-xs font-medium px-2 py-1 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-md whitespace-nowrap flex items-center gap-1.5 border border-red-200 dark:border-red-800/50">
+              <span class="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
+              LIVE
+            </span>
+          </div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span x-text="'Dimulai ' + formatRelative(chal.start_time)"></span>
+          </div>
+        </div>
+        
+        <div class="p-4 flex flex-col gap-3">
+          <template x-for="p in [...chal.participants].sort((a,b) => {
+            const sA = a.progress_data ? a.progress_data.score : 0;
+            const sB = b.progress_data ? b.progress_data.score : 0;
+            return sB - sA;
+          })" :key="p.user_id">
+            <div class="flex flex-col gap-1.5 group">
+              <div class="flex items-center justify-between text-sm">
+                <div class="flex items-center gap-2">
+                  <span class="font-medium text-gray-800 dark:text-gray-200" x-text="p.name"></span>
+                  <span x-show="p.is_host" class="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded font-bold" title="Host">??</span>
+                  <span x-show="p.disconnected" class="text-[10px] bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 px-1.5 py-0.5 rounded" title="Koneksi terputus">?? Offline</span>
+                </div>
+                <div class="font-bold flex items-center gap-1">
+                  <span class="text-primary-600 dark:text-primary-400" x-text="p.progress_data ? p.progress_data.score : 0"></span>
+                  <span class="text-xs text-gray-400 font-normal">pts</span>
+                </div>
+              </div>
+              
+              <div class="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden relative">
+                <div class="absolute top-0 left-0 h-full rounded-full transition-all duration-700 ease-out flex items-center justify-end"
+                     :class="(p.progress_data ? p.progress_data.score : 0) >= 0 ? 'bg-primary-500' : 'bg-red-500'"
+                     :style="\width: \%\">
+                  <div class="w-full h-full relative overflow-hidden rounded-full opacity-50">
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]"></div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="flex justify-between items-center text-[10px] text-gray-400 mt-0.5">
+                <span x-text="p.progress_data ? \Mengerjakan No. \\ : 'Persiapan...'"></span>
+                <span x-show="p.status === 'completed'" class="text-green-500 font-medium">Selesai! ??</span>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+  </div>
+</div>

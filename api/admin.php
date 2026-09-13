@@ -966,3 +966,33 @@ function admin_quiz_duplicate(): void {
 
     jsonResponse(['success' => true, 'message' => 'Quiz berhasil diduplikasi', 'new_quiz_id' => $newQuizId]);
 }
+
+function admin_live_challenges(): void {
+    requireAdmin();
+    $playing = DB::all("SELECT c.id, c.quiz_id, c.status, c.created_at, c.start_time, q.title AS quiz_title 
+        FROM challenges c 
+        INNER JOIN quizzes q ON q.id = c.quiz_id 
+        WHERE c.status = 'playing' ORDER BY c.start_time DESC");
+    
+    foreach ($playing as &$p) {
+        $parts = DB::all("SELECT cp.user_id, cp.is_host, cp.status, cp.progress, cp.score_final, cp.time_taken, u.name 
+            FROM challenge_participants cp 
+            INNER JOIN users u ON u.id = cp.user_id 
+            WHERE cp.challenge_id = ?", [$p['id']]);
+        
+        foreach ($parts as &$participant) {
+            $participant['progress_data'] = $participant['progress'] ? json_decode($participant['progress'], true) : null;
+            unset($participant['progress']);
+            
+            // Check disconnected
+            $lastPing = $participant['progress_data']['last_ping'] ?? 0;
+            $participant['disconnected'] = ($lastPing > 0 && (time() - $lastPing) > 10) ? true : false;
+        }
+        unset($participant);
+        $p['participants'] = $parts;
+    }
+    unset($p);
+
+    jsonSuccess($playing);
+}
+

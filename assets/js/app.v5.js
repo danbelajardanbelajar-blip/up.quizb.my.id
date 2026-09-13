@@ -115,6 +115,7 @@ function QuizBApp() {
     admin: {
       tab: 'content',
       stats: null,
+      liveChallenges: { list: [], loading: false, interval: null },
       quizzes: [], quizzesTotal: 0, quizzesPage: 1, quizzesSearch: '', quizzesView: 'list',
       users:   [],   usersTotal: 0,   usersPage: 1,   usersSearch: '',
       categories: [],
@@ -1399,6 +1400,18 @@ function QuizBApp() {
           }
           this.admin.analysis = [];
           this.admin.analysisQuizId = '';
+        } else if (tab === 'live-challenges') {
+          this.loadAdminLiveChallenges();
+          if (!this.admin.liveChallenges.interval) {
+            this.admin.liveChallenges.interval = setInterval(() => {
+              if (this.currentRoute === '/admin/live-challenges') {
+                this.loadAdminLiveChallenges(true);
+              } else {
+                clearInterval(this.admin.liveChallenges.interval);
+                this.admin.liveChallenges.interval = null;
+              }
+            }, 3000);
+          }
         }
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
@@ -1516,6 +1529,18 @@ function QuizBApp() {
         this.admin.contentOpenGroups.push(groupId);
       } else {
         this.admin.contentOpenGroups.splice(idx, 1);
+      }
+    },
+
+    async loadAdminLiveChallenges(silent = false) {
+      if (!silent) this.admin.liveChallenges.loading = true;
+      try {
+        const data = await api.get('admin.live_challenges');
+        this.admin.liveChallenges.list = Array.isArray(data) ? data : [];
+      } catch (e) {
+        if (!silent) this.showToast(e.message, 'error', '❌');
+      } finally {
+        if (!silent) this.admin.liveChallenges.loading = false;
       }
     },
 
