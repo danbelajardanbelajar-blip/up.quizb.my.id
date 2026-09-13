@@ -329,20 +329,30 @@ function challenge_submit(): void {
         $winnerIdInt  = (int)$winnerId;
 
         foreach ([$challengerId, $challengedId] as $pid) {
-            $iWin = $pid === $winnerIdInt;
-            pushNotification(
-                $pid,
-                'challenge_result',
-                $iWin ? '🏆 Kamu menang!' : '😔 Kamu kalah',
-                ($iWin ? 'Selamat! Kamu memenangkan tantangan "' : 'Sayang sekali, kamu kalah di tantangan "') . $quizTitle . '"',
-                '/challenges'
-            );
+            if ($isDraw) {
+                pushNotification(
+                    $pid,
+                    'challenge_result',
+                    '🤝 Tantangan Seri!',
+                    'Kalian berdua mendapat skor 0 di tantangan "' . $quizTitle . '"',
+                    '/challenges'
+                );
+            } else {
+                $iWin = $pid === $winnerIdInt;
+                pushNotification(
+                    $pid,
+                    'challenge_result',
+                    $iWin ? '🏆 Kamu menang!' : '😔 Kamu kalah',
+                    ($iWin ? 'Selamat! Kamu memenangkan tantangan "' : 'Sayang sekali, kamu kalah di tantangan "') . $quizTitle . '"',
+                    '/challenges'
+                );
+            }
         }
     }
 
     jsonSuccess([
         'both_done'    => $bothDone,
-        'is_draw'      => false,   // tidak pernah seri — selalu ada pemenang
+        'is_draw'      => $isDraw,
         'winner_id'    => $winnerId ? (int)$winnerId : null,
         'challenge_id' => $challengeId,
     ], $bothDone ? 'Tantangan selesai!' : 'Hasil disimpan, menunggu lawan selesai.');

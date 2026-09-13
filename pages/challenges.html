@@ -136,8 +136,8 @@
                       🏆 Kamu Menang!
                     </span>
                     <span x-show="c.winner_id && c.winner_id != user?.id"
-                          class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400"
-                          x-text="'😔 ' + c.winner_name + ' Menang'">
+                          class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400">
+                      😔 Kamu Kalah!
                     </span>
                     <span x-show="!c.winner_id"
                           class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
@@ -217,14 +217,15 @@
                   ⌛ Kedaluwarsa
                 </span>
                 <div x-show="c.status === 'completed'" class="text-right">
-                  <span x-show="c.winner_name"
-                        class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
-                        :class="c.winner_name === user?.name
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
-                          : 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'"
-                        x-text="c.winner_name === user?.name ? '🏆 Kamu Menang!' : '😔 ' + c.winner_name + ' Menang'">
+                  <span x-show="c.winner_id && c.winner_id == user?.id"
+                        class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
+                    🏆 Kamu Menang!
                   </span>
-                  <span x-show="!c.winner_name"
+                  <span x-show="c.winner_id && c.winner_id != user?.id"
+                        class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400">
+                    😔 Kamu Kalah!
+                  </span>
+                  <span x-show="!c.winner_id"
                         class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
                     🤝 Seri
                   </span>
