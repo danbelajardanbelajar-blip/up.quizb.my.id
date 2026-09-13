@@ -229,11 +229,17 @@ function challenge_submit(): void {
     $isChallenger = (int)$challenge['challenger_id'] === (int)$user['id'];
 
     if ($isChallenger) {
+        if (!empty($challenge['challenger_attempt_id'])) {
+            jsonError('Anda sudah mengumpulkan hasil untuk tantangan ini.');
+        }
         DB::execute(
             "UPDATE challenges SET challenger_attempt_id = ?, status = 'playing' WHERE id = ?",
             [$attemptId, $challengeId]
         );
     } else {
+        if (!empty($challenge['challenged_attempt_id'])) {
+            jsonError('Anda sudah mengumpulkan hasil untuk tantangan ini.');
+        }
         DB::execute(
             "UPDATE challenges SET challenged_attempt_id = ? WHERE id = ?",
             [$attemptId, $challengeId]
