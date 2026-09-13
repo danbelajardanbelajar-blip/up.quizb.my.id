@@ -187,3 +187,35 @@ function challenge_submit(): void {
     jsonSuccess([], 'Tersubmit');
 }
 
+
+function challenge_search_users(): void {
+    $user = requireAuth();
+    $q = trim($_GET['q'] ?? '');
+    if (strlen($q) < 2) jsonSuccess([]);
+
+    $results = DB::all(
+        "SELECT id, name, email FROM users 
+         WHERE (name LIKE ? OR email LIKE ?) AND id != ? AND is_active = 1 
+         ORDER BY name ASC LIMIT 10",
+        ['%' . $q . '%', '%' . $q . '%', $user['id']]
+    );
+    jsonSuccess($results);
+}
+
+
+function challenge_delete(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'DELETE') jsonError('Method not allowed', 405);
+    $user = requireAuth();
+    $challengeId = (int)($_GET['id'] ?? 0);
+    if (!$challengeId) jsonError('Challenge ID diperlukan');
+
+    $c = DB::one("SELECT id FROM challenges WHERE id = ?", [$challengeId]);
+    if (!$c) jsonError('Tantangan tidak ditemukan', 404);
+
+    // Hapus peserta dan tantangan
+    DB::execute("DELETE FROM challenge_participants WHERE challenge_id = ?", [$challengeId]);
+    DB::execute("DELETE FROM challenges WHERE id = ?", [$challengeId]);
+
+    jsonSuccess([], 'Tantangan berhasil dihapus.');
+}
+
