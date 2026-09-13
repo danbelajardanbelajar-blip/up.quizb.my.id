@@ -273,9 +273,9 @@ function challenge_sync(): void {
     $enemyProgressRaw = $isChallenger ? $c['challenged_progress'] : $c['challenger_progress'];
     $enemyP = $enemyProgressRaw ? json_decode($enemyProgressRaw, true) : null;
     
-    // Cek putus koneksi lawan (timeout 20 detik) jika status masih playing
-    if ($c['status'] === 'playing' && $enemyP && isset($enemyP['last_ping'])) {
-        if (time() - $enemyP['last_ping'] > 20) {
+    // Cek putus koneksi lawan (timeout 25 detik) jika status masih playing
+    if ($c['status'] === 'playing' && $enemyP && !empty($enemyP['last_ping'])) {
+        if (time() - $enemyP['last_ping'] > 25) {
             // Lawan putus koneksi, kita menang otomatis
             $winnerId = $user['id'];
             DB::execute(

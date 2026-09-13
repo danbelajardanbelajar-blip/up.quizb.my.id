@@ -29,13 +29,13 @@ function challenge_sync(): void {
     $enemyProgressRaw = $isChallenger ? $c['challenged_progress'] : $c['challenger_progress'];
     $enemyP = $enemyProgressRaw ? json_decode($enemyProgressRaw, true) : null;
     
-    // Cek putus koneksi lawan (timeout 15 detik) jika status masih playing
-    if ($c['status'] === 'playing' && $enemyP && isset($enemyP['last_ping'])) {
-        if (time() - $enemyP['last_ping'] > 15) {
+    // Cek putus koneksi lawan (timeout 20 detik) jika status masih playing
+    if ($c['status'] === 'playing' && $enemyP && !empty($enemyP['last_ping'])) {
+        if (time() - $enemyP['last_ping'] > 25) { // naikkan toleransi jadi 25 detik
             // Lawan putus koneksi, kita menang otomatis
             $winnerId = $user['id'];
             DB::execute(
-                "UPDATE challenges SET status = 'completed', winner_id = ? WHERE id = ?",
+                "UPDATE challenges SET status = 'completed', winner_id = ?, win_reason = 'Menang WO (Lawan terputus)' WHERE id = ?",
                 [$winnerId, $challengeId]
             );
             jsonSuccess(['status' => 'disconnected', 'enemy' => $enemyP]);
