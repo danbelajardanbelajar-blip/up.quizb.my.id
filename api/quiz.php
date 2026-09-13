@@ -145,9 +145,24 @@ function quiz_questions(): void {
         if ($shuffleOptions   === null) $shuffleOptions   = true;
     }
 
-    // Nilai 0 dari assignment berarti "tampilkan SEMUA soal" — jangan override ke 10.
-    // Hanya nilai negatif atau null sisa yang perlu di-default-kan.
-    if ($limit === null || $limit < 0) $limit = 10;
+    $mode        = $_GET['mode'] ?? 'exam';
+    $challengeId = (int)($_GET['challenge_id'] ?? 0);
+    
+    // Jika Mode Tantangan, PAKSA limit = 0 (tampilkan SEMUA soal agar 100% adil)
+    if ($mode === 'challenge' && $challengeId > 0) {
+        $limit = 0; 
+        $shuffleQuestions = true;
+        $shuffleOptions   = true;
+        // Gunakan ID tantangan sebagai seed agar kedua pemain mendapat urutan acak yang SAMA PERSIS
+        mt_srand($challengeId); 
+    } else {
+        // Nilai 0 dari assignment berarti "tampilkan SEMUA soal" — jangan override ke 10.
+        // Hanya nilai negatif atau null sisa yang perlu di-default-kan.
+        if ($limit === null || $limit < 0) $limit = 10;
+        
+        // Reset seed (best practice) agar kuis lain tetap acak
+        mt_srand();
+    }
 
     // ---- Ambil semua soal ----
     // Jika ada assignment dengan multiple packages, ambil dari semua packages

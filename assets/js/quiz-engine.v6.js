@@ -100,8 +100,9 @@ function QuizEngine() {
       this.mode         = mode || 'exam';
       this.challengeId  = challengeId ? parseInt(challengeId) : null;
       try {
-        const params = { id: quizId };
+        const params = { id: quizId, mode: this.mode };
         if (assignmentId) params.assignment_id = assignmentId;
+        if (this.mode === 'challenge' && this.challengeId) params.challenge_id = this.challengeId;
         const data = await api.get('quiz.questions', params);
         this.quiz      = data.quiz;
         this.questions = data.questions;
