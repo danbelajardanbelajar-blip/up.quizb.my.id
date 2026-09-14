@@ -777,6 +777,7 @@ function assignment_my_dashboard(): void {
                 END,
                 a.deadline ASC,
                 a.created_at DESC
+            LIMIT 6
         ", [$user['id'], $user['id'], $user['id']]);
 
         foreach ($rows as &$r) {
@@ -833,7 +834,7 @@ function assignment_my_dashboard(): void {
             INNER JOIN classes cl ON cl.id = a.class_id AND cl.is_active = 1
             WHERE a.is_active = 1 $teacherCond
             ORDER BY a.deadline ASC, a.created_at DESC
-            LIMIT 20
+            LIMIT 6
         ", $params);
 
         foreach ($rows as &$r) {
