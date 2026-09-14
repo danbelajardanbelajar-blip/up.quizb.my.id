@@ -109,7 +109,7 @@
                   <span x-show="p.is_host" class="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded font-bold" title="Host">??</span>
                 </div>
                 <div class="flex items-center gap-3">
-                  <span class="text-xs text-gray-400" x-text="p.time_taken ? formatTime(p.time_taken) : '-'"></span>
+                  <span class="text-xs text-gray-400" x-text="p.time_taken ? formatDuration(p.time_taken) : '-'"></span>
                   <span class="font-bold text-gray-700 dark:text-gray-300 w-12 text-right" x-text="(p.score_final || 0) + ' pts'"></span>
                 </div>
               </div>

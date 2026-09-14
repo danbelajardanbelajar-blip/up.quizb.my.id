@@ -3445,6 +3445,13 @@ function QuizBApp() {
       return new Date(dt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     },
 
+    formatDuration(seconds) {
+      if (seconds == null || isNaN(seconds)) return '-';
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    },
+
     formatDayLabel(dt) {
       if (!dt) return '';
       const d = new Date(dt);
