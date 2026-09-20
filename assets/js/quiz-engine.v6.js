@@ -244,14 +244,14 @@ function QuizEngine() {
             this.participants = res.participants.map(p => ({
               id: p.user_id,
               name: p.name,
-              score: p.user_id === (this.user?.id || 0) ? this.myScore : (p.progress_data ? p.progress_data.s : 0),
+              score: p.user_id == (this.user?.id || 0) ? this.myScore : (p.progress_data ? p.progress_data.s : 0),
               q_index: p.progress_data ? p.progress_data.q : 0,
               disconnected: p.disconnected
             }));
             
             // Periksa jika ada partisipan lain yang tersisa (tidak termasuk diri sendiri)
             // Jika semua lawan terputus
-            const activeOpponents = this.participants.filter(p => p.id !== (this.user?.id || 0) && !p.disconnected);
+            const activeOpponents = this.participants.filter(p => p.id != (this.user?.id || 0) && !p.disconnected);
             if (activeOpponents.length === 0 && this.participants.length > 1) {
                 // Jangan otomatis alert menang jika ini multiplayer banyak orang, tapi game status akan jadi 'completed'
                 // Biarkan saja, jika completed nanti UI akan menyesuaikan atau bisa auto submit
@@ -384,7 +384,7 @@ function QuizEngine() {
       
       // Update local participants array for instant UI feedback
       if (this.mode === 'challenge' && this.participants) {
-          const me = this.participants.find(p => p.id === (this.user?.id || 0));
+          const me = this.participants.find(p => p.id == (this.user?.id || 0));
           if (me) me.score = this.myScore;
       }
 
