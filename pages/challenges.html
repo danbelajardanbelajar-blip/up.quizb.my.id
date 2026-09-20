@@ -130,19 +130,36 @@
                   ⌛ Kedaluwarsa
                 </span>
                 <template x-if="c.status === 'completed'">
-                  <div>
-                    <span x-show="c.winner_id && c.winner_id == user?.id"
-                          class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
-                      🏆 Kamu Menang!
-                    </span>
-                    <span x-show="c.winner_id && c.winner_id != user?.id"
-                          class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400">
-                      😔 Kamu Kalah!
-                    </span>
-                    <span x-show="!c.winner_id"
-                          class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                      🤝 Seri
-                    </span>
+                  <div class="text-right">
+                    <template x-if="c.score_final === null">
+                      <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                        Mangkir
+                      </span>
+                    </template>
+                    <template x-if="c.score_final !== null">
+                      <div>
+                        <span x-show="c.my_rank == 1 && c.total_players > 1"
+                              class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800">
+                          🥇 Juara 1
+                        </span>
+                        <span x-show="c.my_rank == 2 && c.total_players > 1"
+                              class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600">
+                          🥈 Juara 2
+                        </span>
+                        <span x-show="c.my_rank == 3 && c.total_players > 1"
+                              class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-500 border border-amber-200 dark:border-amber-800">
+                          🥉 Juara 3
+                        </span>
+                        <span x-show="c.my_rank > 3 && c.total_players > 1"
+                              class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
+                          Peringkat <span x-text="c.my_rank" class="ml-1"></span>
+                        </span>
+                        <span x-show="c.total_players <= 1"
+                              class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
+                          ✅ Selesai
+                        </span>
+                      </div>
+                    </template>
                     <div x-show="c.win_reason" class="mt-1 text-[10px] text-gray-400 italic text-right" x-text="c.win_reason"></div>
                   </div>
                 </template>
@@ -215,18 +232,35 @@
                   ⌛ Kedaluwarsa
                 </span>
                 <div x-show="c.status === 'completed'" class="text-right">
-                  <span x-show="c.winner_id && c.winner_id == user?.id"
-                        class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
-                    🏆 Kamu Menang!
-                  </span>
-                  <span x-show="c.winner_id && c.winner_id != user?.id"
-                        class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400">
-                    😔 Kamu Kalah!
-                  </span>
-                  <span x-show="!c.winner_id"
-                        class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                    🤝 Seri
-                  </span>
+                  <template x-if="c.score_final === null">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                      Mangkir
+                    </span>
+                  </template>
+                  <template x-if="c.score_final !== null">
+                    <div>
+                      <span x-show="c.my_rank == 1 && c.total_players > 1"
+                            class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800">
+                        🥇 Juara 1
+                      </span>
+                      <span x-show="c.my_rank == 2 && c.total_players > 1"
+                            class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600">
+                        🥈 Juara 2
+                      </span>
+                      <span x-show="c.my_rank == 3 && c.total_players > 1"
+                            class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-500 border border-amber-200 dark:border-amber-800">
+                        🥉 Juara 3
+                      </span>
+                      <span x-show="c.my_rank > 3 && c.total_players > 1"
+                            class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
+                        Peringkat <span x-text="c.my_rank" class="ml-1"></span>
+                      </span>
+                      <span x-show="c.total_players <= 1"
+                            class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
+                        ✅ Selesai
+                      </span>
+                    </div>
+                  </template>
                   <div x-show="c.win_reason" class="mt-1 text-[10px] text-gray-400 italic" x-text="c.win_reason"></div>
                 </div>
                 <!-- Tombol lanjut main -->
