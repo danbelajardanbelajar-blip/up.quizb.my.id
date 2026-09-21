@@ -138,7 +138,8 @@ function attempt_submit(): void {
     ]);
     
     $ch = curl_init($notifyUrl);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 200); // Set timeout sangat singkat (200ms) agar benar-benar non-blocking
+    curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
