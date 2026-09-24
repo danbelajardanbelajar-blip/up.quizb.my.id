@@ -1,6 +1,26 @@
 <?php
 // Bootstrap flash message dari session (diset oleh verify-email.php)
 require_once __DIR__ . '/config/db.php';
+
+// --- AUTO MIGRATE INDEXES (Solution 3) ---
+if (!file_exists(__DIR__ . '/.indexes_applied')) {
+    try {
+        $pdo = DB::getInstance();
+        $queries = [
+            "ALTER TABLE challenges ADD INDEX idx_c_challenger (challenger_id)",
+            "ALTER TABLE challenges ADD INDEX idx_c_status (status)",
+            "ALTER TABLE challenges ADD INDEX idx_c_created (created_at)",
+            "ALTER TABLE challenge_participants ADD INDEX idx_cp_challenge (challenge_id)",
+            "ALTER TABLE challenge_participants ADD INDEX idx_cp_user (user_id)",
+            "ALTER TABLE challenge_participants ADD INDEX idx_cp_status (status)"
+        ];
+        foreach ($queries as $q) {
+            try { $pdo->exec($q); } catch (\Throwable $e) {} // Abaikan jika index sudah ada
+        }
+    } catch (\Throwable $e) {}
+    file_put_contents(__DIR__ . '/.indexes_applied', date('Y-m-d H:i:s'));
+}
+// -----------------------------------------
 require_once __DIR__ . '/includes/auth.php';
 startSecureSession();
 $flashType  = $_SESSION['flash_type']  ?? '';
