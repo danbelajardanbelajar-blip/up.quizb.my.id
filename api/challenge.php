@@ -66,13 +66,85 @@ function challenge_list(): void {
     $user = requireAuth();
     $incoming = DB::all("SELECT c.id, c.quiz_id, c.status, c.created_at, q.title AS quiz_title, u.name AS challenger_name, u.id AS challenger_id FROM challenge_participants cp INNER JOIN challenges c ON c.id = cp.challenge_id INNER JOIN quizzes q ON q.id = c.quiz_id INNER JOIN users u ON u.id = c.challenger_id WHERE cp.user_id = ? AND cp.status = 'pending' AND c.status = 'pending' ORDER BY c.created_at DESC LIMIT 20", [$user['id']]);
     
-    $outgoing = DB::all("SELECT c.id, c.quiz_id, c.status, c.created_at, q.title AS quiz_title, c.winner_id, w.name AS winner_name, (SELECT COUNT(*) FROM challenge_participants p WHERE p.challenge_id = c.id AND p.is_host = 0) as total_invited, (SELECT COUNT(*) FROM challenge_participants p WHERE p.challenge_id = c.id AND p.status = 'accepted' AND p.is_host = 0) as total_accepted, cp.score_final, cp.time_taken, (SELECT COUNT(*) + 1 FROM challenge_participants p2 WHERE p2.challenge_id = c.id AND p2.attempt_id IS NOT NULL AND (p2.score_final > cp.score_final OR (p2.score_final = cp.score_final AND p2.time_taken < cp.time_taken))) AS my_rank, (SELECT COUNT(*) FROM challenge_participants p3 WHERE p3.challenge_id = c.id) AS total_players FROM challenges c INNER JOIN challenge_participants cp ON cp.challenge_id = c.id AND cp.user_id = c.challenger_id INNER JOIN quizzes q ON q.id = c.quiz_id LEFT JOIN users w ON w.id = c.winner_id WHERE c.challenger_id = ? ORDER BY c.created_at DESC LIMIT 20", [$user['id']]);
+    // Fetch base challenges without heavy subqueries
+    $outgoing = DB::all("SELECT c.id, c.quiz_id, c.status, c.created_at, q.title AS quiz_title, c.winner_id, w.name AS winner_name, cp.score_final, cp.time_taken FROM challenges c INNER JOIN challenge_participants cp ON cp.challenge_id = c.id AND cp.user_id = c.challenger_id INNER JOIN quizzes q ON q.id = c.quiz_id LEFT JOIN users w ON w.id = c.winner_id WHERE c.challenger_id = ? ORDER BY c.created_at DESC LIMIT 20", [$user['id']]);
+    
+    $history = DB::all("SELECT c.id, c.quiz_id, c.status, c.created_at, q.title AS quiz_title, c.winner_id, w.name as winner_name, cp.score_final, cp.time_taken, cp.status as my_status FROM challenge_participants cp INNER JOIN challenges c ON c.id = cp.challenge_id INNER JOIN quizzes q ON q.id = c.quiz_id LEFT JOIN users w ON w.id = c.winner_id WHERE cp.user_id = ? AND c.status = 'completed' ORDER BY c.created_at DESC LIMIT 20", [$user['id']]);
+    
+    // Eager load participants to calculate statistics in PHP
+    $allChallengeIds = [];
+    foreach ($outgoing as $o) { $allChallengeIds[$o['id']] = true; }
+    foreach ($history as $h) { $allChallengeIds[$h['id']] = true; }
+    $allChallengeIds = array_keys($allChallengeIds);
+    
+    $participantsData = [];
+    if (!empty($allChallengeIds)) {
+        $placeholders = str_repeat('?,', count($allChallengeIds) - 1) . '?';
+        $pRows = DB::all("SELECT cp.challenge_id, cp.user_id, cp.status, cp.is_host, cp.score_final, cp.time_taken, cp.attempt_id, u.name 
+                          FROM challenge_participants cp 
+                          INNER JOIN users u ON u.id = cp.user_id 
+                          WHERE cp.challenge_id IN ($placeholders)", 
+                          $allChallengeIds);
+        
+        foreach ($pRows as $r) {
+            $cid = $r['challenge_id'];
+            if (!isset($participantsData[$cid])) {
+                $participantsData[$cid] = [];
+            }
+            $participantsData[$cid][] = $r;
+        }
+    }
+
+    // Assign stats to outgoing
     foreach ($outgoing as &$o) {
-        $o['participants'] = DB::all("SELECT u.name, cp.status, cp.is_host FROM challenge_participants cp INNER JOIN users u ON u.id = cp.user_id WHERE cp.challenge_id = ? AND cp.is_host = 0", [$o['id']]);
+        $cid = $o['id'];
+        $cParts = $participantsData[$cid] ?? [];
+        
+        $totalInvited = 0;
+        $totalAccepted = 0;
+        $totalPlayers = count($cParts);
+        $participantsList = [];
+        $betterCount = 0;
+
+        foreach ($cParts as $p) {
+            if ($p['is_host'] == 0) {
+                $totalInvited++;
+                if ($p['status'] === 'accepted') $totalAccepted++;
+                $participantsList[] = ['name' => $p['name'], 'status' => $p['status'], 'is_host' => $p['is_host']];
+            }
+            if ($p['attempt_id'] !== null && $o['score_final'] !== null) {
+                if ($p['score_final'] > $o['score_final'] || ($p['score_final'] == $o['score_final'] && $p['time_taken'] < $o['time_taken'])) {
+                    $betterCount++;
+                }
+            }
+        }
+        
+        $o['total_invited'] = $totalInvited;
+        $o['total_accepted'] = $totalAccepted;
+        $o['total_players'] = $totalPlayers;
+        $o['my_rank'] = $betterCount + 1;
+        $o['participants'] = $participantsList;
     }
     unset($o);
 
-    $history = DB::all("SELECT c.id, c.quiz_id, c.status, c.created_at, q.title AS quiz_title, c.winner_id, w.name as winner_name, cp.score_final, cp.time_taken, cp.status as my_status, (SELECT COUNT(*) + 1 FROM challenge_participants p2 WHERE p2.challenge_id = c.id AND p2.attempt_id IS NOT NULL AND (p2.score_final > cp.score_final OR (p2.score_final = cp.score_final AND p2.time_taken < cp.time_taken))) AS my_rank, (SELECT COUNT(*) FROM challenge_participants p3 WHERE p3.challenge_id = c.id) AS total_players FROM challenge_participants cp INNER JOIN challenges c ON c.id = cp.challenge_id INNER JOIN quizzes q ON q.id = c.quiz_id LEFT JOIN users w ON w.id = c.winner_id WHERE cp.user_id = ? AND c.status = 'completed' ORDER BY c.created_at DESC LIMIT 20", [$user['id']]);
+    // Assign stats to history
+    foreach ($history as &$h) {
+        $cid = $h['id'];
+        $cParts = $participantsData[$cid] ?? [];
+        
+        $betterCount = 0;
+        foreach ($cParts as $p) {
+            if ($p['attempt_id'] !== null && $h['score_final'] !== null) {
+                if ($p['score_final'] > $h['score_final'] || ($p['score_final'] == $h['score_final'] && $p['time_taken'] < $h['time_taken'])) {
+                    $betterCount++;
+                }
+            }
+        }
+
+        $h['total_players'] = count($cParts);
+        $h['my_rank'] = $betterCount + 1;
+    }
+    unset($h);
     
     jsonSuccess(['incoming' => $incoming, 'outgoing' => $outgoing, 'history' => $history]);
 }
