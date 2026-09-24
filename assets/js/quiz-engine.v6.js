@@ -177,6 +177,14 @@ function QuizEngine() {
       const poll = setInterval(async () => {
         try {
           const res = await api.get('challenge.status', { id: this.challengeId });
+          
+          if (res.status === 'completed' || res.status === 'expired' || res.status === 'declined') {
+            clearInterval(poll);
+            this.error = 'Tantangan ini sudah berakhir atau tidak valid.';
+            this.phase = 'error';
+            return;
+          }
+
           if (res.status === 'playing' && res.start_time) {
             // Convert MySQL dates to JS Dates (assuming they are in same TZ)
             const startT = new Date(res.start_time.replace(' ', 'T')).getTime();
@@ -191,7 +199,11 @@ function QuizEngine() {
               this.syncCountdown = Math.ceil(diff / 1000);
             }
           }
-        } catch(e) {}
+        } catch(e) {
+          clearInterval(poll);
+          this.error = e.message || 'Tantangan tidak ditemukan atau sudah dihapus.';
+          this.phase = 'error';
+        }
       }, 1000);
     },
 
