@@ -205,22 +205,56 @@ function challenge_sync(): void {
     $c = DB::one("SELECT status, start_time FROM challenges WHERE id = ?", [$challengeId]);
     if (!$c) jsonError('Tantangan tidak ditemukan', 404);
 
-    $myProgress = json_encode(['s' => $score, 'q' => $qIndex, 'last_ping' => time()]);
-    DB::execute("UPDATE challenge_participants SET progress = ? WHERE challenge_id = ? AND user_id = ?", [$myProgress, $challengeId, $user['id']]);
-
+    // Ambil partisipan duluan
     $participants = DB::all("SELECT cp.user_id, cp.progress, u.name, cp.score_final FROM challenge_participants cp JOIN users u ON u.id = cp.user_id WHERE cp.challenge_id = ? AND cp.status = 'accepted'", [$challengeId]);
 
+    $now = time();
+    $needsUpdate = false;
+    $myNewProgress = null;
     $activeCount = 0;
+
+    // Evaluasi progress dan ping
     foreach ($participants as &$p) {
         $prog = $p['progress'] ? json_decode($p['progress'], true) : null;
+        
+        if ((int)$p['user_id'] === (int)$user['id']) {
+            $oldScore = isset($prog['s']) ? (int)$prog['s'] : -1;
+            $oldQIndex = isset($prog['q']) ? (int)$prog['q'] : -1;
+            $oldPing = isset($prog['last_ping']) ? (int)$prog['last_ping'] : 0;
+
+            // Write-Reduction: Update DB jika skor berubah ATAU ping usang (> 8 detik)
+            if ($oldScore !== $score || $oldQIndex !== $qIndex || ($now - $oldPing > 8)) {
+                $needsUpdate = true;
+                if (!$prog) $prog = [];
+                $prog['s'] = $score;
+                $prog['q'] = $qIndex;
+                $prog['last_ping'] = $now;
+                $myNewProgress = json_encode($prog);
+                $p['progress'] = $myNewProgress; // Update state lokal untuk response
+            } else {
+                if (!$prog) $prog = [];
+                $prog['last_ping'] = $now; // Segarkan secara virtual untuk pengecekan disconnect
+            }
+        }
+
         if ($c['status'] === 'playing' && $prog && !empty($prog['last_ping'])) {
-            if (time() - $prog['last_ping'] > 25) {
+            if ($now - $prog['last_ping'] > 25) {
                 $p['disconnected'] = true;
-            } else { $p['disconnected'] = false; $activeCount++; }
-        } else { $p['disconnected'] = false; $activeCount++; }
+            } else { 
+                $p['disconnected'] = false; 
+                $activeCount++; 
+            }
+        } else { 
+            $p['disconnected'] = false; 
+            $activeCount++; 
+        }
         $p['progress_data'] = $prog;
     }
     unset($p);
+
+    if ($needsUpdate && $myNewProgress !== null) {
+        DB::execute("UPDATE challenge_participants SET progress = ? WHERE challenge_id = ? AND user_id = ?", [$myNewProgress, $challengeId, $user['id']]);
+    }
 
     if ($c['status'] === 'playing' && $activeCount <= 1 && count($participants) > 1) {
         DB::execute("UPDATE challenges SET status = 'completed' WHERE id = ?", [$challengeId]);
