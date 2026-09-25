@@ -73,7 +73,7 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
   <!-- Custom CSS -->
   <link rel="stylesheet" href="assets/css/app.css" />
 </head>
-<body class="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans h-screen flex flex-col md:flex-row overflow-hidden transition-colors duration-300">
+<body class="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans h-[100dvh] flex flex-col md:flex-row overflow-hidden transition-colors duration-300">
 
   <!-- Page Loader -->
   <div id="page-loader" class="fixed inset-0 z-[99999] flex items-center justify-center bg-white text-primary-600" style="background:#f8fafc;color:#4f46e5;">
@@ -474,7 +474,7 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
   <!-- FOOTER -->
   <footer x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding' && currentRoute !== '/messages' && currentRoute !== '/play'"
           class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 mt-auto flex-shrink-0">
-    <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-24 md:py-8">
+    <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-32 md:py-8">
       <div class="flex flex-col md:flex-row items-center justify-between gap-4">
         <div class="flex items-center gap-2">
           <div class="w-7 h-7 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
