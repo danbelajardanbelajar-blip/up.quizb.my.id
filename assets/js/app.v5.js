@@ -33,15 +33,15 @@ function QuizBApp() {
         if (['admin', 'pengajar'].includes(this.user.role)) {
           base.push({ 
             href: '/admin', 
-            label: '?? Admin/Pengajar',
+            label: '👑 Admin/Pengajar',
             children: (this.user.role === 'admin') ? [
-                { href: '/admin/stats', label: '?? Statistik' },
+                { href: '/admin/stats', label: '📊 Statistik' },
               { href: '/admin/content', label: '📁 Konten' },
               { href: '/admin/users', label: '👥 Pengguna' },
               { href: '/admin/review', label: '🔍 Review Soal' },
               { href: '/admin/analysis', label: '📈 Analisis Soal' }
             ] : [
-                { href: '/admin/content', label: '?? Konten' }
+                { href: '/admin/content', label: '📁 Konten' }
               ]
           });
         }
