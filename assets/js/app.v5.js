@@ -292,7 +292,7 @@ function QuizBApp() {
         this.showToast('Silakan login untuk mengakses halaman ini', 'warning', '⚠️');
         return this.navigate('/login');
       }
-      if (admin_routes.some(r => route.startsWith(r)) && this.user?.role !== 'admin') {
+      if (admin_routes.some(r => route.startsWith(r)) && !['admin', 'pengajar'].includes(this.user?.role)) {
         this.showToast('Akses ditolak', 'error', '⛔');
         return this.navigate('/');
       }
@@ -388,7 +388,7 @@ function QuizBApp() {
           this.showToast('Silakan login untuk mengakses halaman ini', 'warning', '⚠️');
           return this.navigate('/login');
         }
-        if (admin_routes.some(r => route.startsWith(r)) && this.user?.role !== 'admin') {
+        if (admin_routes.some(r => route.startsWith(r)) && !['admin', 'pengajar'].includes(this.user?.role)) {
           this.showToast('Akses ditolak', 'error', '⛔');
           return this.navigate('/');
         }

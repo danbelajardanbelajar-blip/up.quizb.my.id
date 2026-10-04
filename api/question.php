@@ -24,16 +24,12 @@
 
 
 function question_list(): void {
-
-
-
-
-    requireAdmin();
-
-
-
-
+    $user = requirePengajar();
     $quizId = (int)($_GET['quiz_id'] ?? 0);
+    if ($quizId > 0 && $user['role'] !== 'admin') {
+        $quiz = DB::one("SELECT created_by FROM quizzes WHERE id = ?", [$quizId]);
+        if (!$quiz || (int)$quiz['created_by'] !== (int)$user['id']) jsonError('Akses ditolak', 403);
+    }
 
 
 
@@ -164,11 +160,7 @@ function question_list(): void {
 
 
 function question_list_all(): void {
-
-
-
-
-    requireAdmin();
+    $user = requirePengajar();
 
 
 
@@ -444,21 +436,14 @@ function question_list_all(): void {
 
 
 function question_create(): void {
-
-
-
-
+    $user = requirePengajar();
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
-
-
-
-
-    requireAdmin();
-
-
-
-
     $body = getBody();
+    $quizId = (int)($body['quiz_id'] ?? 0);
+    if ($user['role'] !== 'admin') {
+        $quiz = DB::one("SELECT created_by FROM quizzes WHERE id = ?", [$quizId]);
+        if (!$quiz || (int)$quiz['created_by'] !== (int)$user['id']) jsonError('Akses ditolak', 403);
+    }
 
 
 

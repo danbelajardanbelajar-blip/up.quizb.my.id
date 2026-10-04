@@ -70,19 +70,28 @@ function admin_fix_correct_answers(): void {
 // ---- Quiz CRUD (Admin) ----
 
 function admin_quiz_list(): void {
-    requireAdmin();
+    $user = requirePengajar();
     // Izinkan limit besar untuk content tab (bulk load), default 15 untuk tab quiz biasa
     $page   = max(1, (int)($_GET['page']  ?? 1));
     $limit  = min(1000, max(1, (int)($_GET['limit'] ?? 15)));
     $offset = ($page - 1) * $limit;
 
     $search = trim($_GET['search'] ?? '');
-    $where  = ''; $params = [];
-    if ($search !== '') {
-        $where    = "WHERE (q.title LIKE ? OR c.name LIKE ? OR g.name LIKE ?)";
-        $like     = '%' . $search . '%';
-        $params   = [$like, $like, $like];
+    
+    $whereConditions = [];
+    $params = [];
+    
+    if ($user['role'] !== 'admin') {
+        $whereConditions[] = "q.created_by = " . (int)$user['id'];
     }
+    
+    if ($search !== '') {
+        $whereConditions[] = "(q.title LIKE ? OR c.name LIKE ? OR g.name LIKE ?)";
+        $like     = '%' . $search . '%';
+        array_push($params, $like, $like, $like);
+    }
+    
+    $where = count($whereConditions) > 0 ? "WHERE " . implode(" AND ", $whereConditions) : "";
 
     $total = (int)(DB::one(
         "SELECT COUNT(*) AS cnt
@@ -129,7 +138,7 @@ function admin_quiz_list(): void {
 }
 
 function admin_quiz_create(): void {
-    requireAdmin();
+    requirePengajar();
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
 
     $body = getJsonBody();
@@ -177,7 +186,7 @@ function admin_quiz_create(): void {
 }
 
 function admin_quiz_update(): void {
-    requireAdmin();
+    $user = requirePengajar();
     if ($_SERVER['REQUEST_METHOD'] !== 'PUT') jsonError('Method not allowed', 405);
 
     $id   = (int)($_GET['id'] ?? 0);
@@ -186,6 +195,10 @@ function admin_quiz_update(): void {
 
     $existing = DB::one("SELECT * FROM quizzes WHERE id = ?", [$id]);
     if (!$existing) jsonError('Quiz tidak ditemukan', 404);
+
+    if ($user['role'] !== 'admin' && (int)$existing['created_by'] !== (int)$user['id']) {
+        jsonError('Anda tidak memiliki akses ke kuis ini', 403);
+    }
 
     $title       = sanitizeString($body['title'] ?? $existing['title']);
     
@@ -226,7 +239,7 @@ function admin_quiz_update(): void {
 }
 
 function admin_quiz_delete(): void {
-    requireAdmin();
+    $user = requirePengajar();
     if ($_SERVER['REQUEST_METHOD'] !== 'DELETE') jsonError('Method not allowed', 405);
 
     $id = (int)($_GET['id'] ?? 0);
@@ -234,6 +247,10 @@ function admin_quiz_delete(): void {
 
     $quiz = DB::one("SELECT * FROM quizzes WHERE id = ?", [$id]);
     if (!$quiz) jsonError('Quiz tidak ditemukan', 404);
+
+    if ($user['role'] !== 'admin' && (int)$quiz['created_by'] !== (int)$user['id']) {
+        jsonError('Anda tidak memiliki akses ke kuis ini', 403);
+    }
 
     // Cascade: answers → attempts → options → questions → quiz
     $pdo = DB::conn();
@@ -250,7 +267,7 @@ function admin_quiz_delete(): void {
 // ---- Category CRUD (Admin) ----
 
 function admin_category_list(): void {
-    requireAdmin();
+    requirePengajar();
     $cats = DB::all(
         "SELECT id, name, slug, description, icon, color, quiz_count,
                 COALESCE(group_id, 0) AS group_id
@@ -913,7 +930,7 @@ function admin_attempt_snapshots(): void {
 }
 
 function admin_quiz_duplicate(): void {
-    requireAdmin();
+    requirePengajar();
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
     $body = getJsonBody();
     $quizId = (int)($body['id'] ?? 0);

@@ -750,9 +750,9 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
              class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">📋 Histori</a>
           <a @click.prevent="navigate('/settings');isOpen=false" href="#/settings"
              class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">⚙️ Pengaturan</a>
-          <template x-if="user && user.role === 'admin'">
+          <template x-if="user && ['admin', 'pengajar'].includes(user.role)">
             <a @click.prevent="navigate('/admin');isOpen=false" href="#/admin"
-               class="flex items-center gap-2 px-4 py-2.5 text-sm text-purple-600 dark:text-purple-400 hover:bg-gray-50 dark:hover:bg-gray-700">🛡️ Admin Panel</a>
+               class="flex items-center gap-2 px-4 py-2.5 text-sm text-purple-600 dark:text-purple-400 hover:bg-gray-50 dark:hover:bg-gray-700">🛡️ Admin/Pengajar Panel</a>
           </template>
 
           <!-- Pemisah + Logout -->
