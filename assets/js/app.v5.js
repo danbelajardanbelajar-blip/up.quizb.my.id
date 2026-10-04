@@ -30,10 +30,10 @@ function QuizBApp() {
         const badge = this.challenge.pendingCount > 0 ? ' (' + this.challenge.pendingCount + ')' : '';
         base.push({ href: '/challenges', label: '⚔️  Tantangan' + badge });
         base.push({ href: '/settings', label: '⚙️  Pengaturan' });
-        if (this.user.role === 'admin') {
+        if (['admin', 'pengajar'].includes(this.user.role)) {
           base.push({ 
             href: '/admin', 
-            label: '⚙️  Admin Panel',
+            label: '?? Admin/Pengajar',
             children: [
               { href: '/admin/stats', label: '📊 Statistik' },
               { href: '/admin/content', label: '📁 Konten' },
