@@ -94,9 +94,15 @@ function quiz_questions(): void {
 
     if (!$quizId) jsonError('Quiz ID diperlukan');
 
+    $user = Auth::user();
+    $isCreator = $user && (int)DB::one('SELECT created_by FROM quizzes WHERE id = ?', [$quizId])['created_by'] === (int)$user['id'];
+    $isAdmin = $user && $user['role'] === 'admin';
+    $isAssigned = $assignmentId > 0;
+    
+    $wherePub = ($isCreator || $isAdmin || $isAssigned) ? "" : " AND is_published = 1";
     $quiz = DB::one(
-        'SELECT id, title, description, duration, time_limit, total_questions, passing_score, require_camera
-         FROM quizzes WHERE id = ? AND is_published = 1',
+        "SELECT id, title, description, duration, time_limit, total_questions, passing_score, require_camera 
+         FROM quizzes WHERE id = ?$wherePub",
         [$quizId]
     );
     if (!$quiz) jsonError('Quiz tidak ditemukan', 404);
