@@ -34,13 +34,15 @@ function QuizBApp() {
           base.push({ 
             href: '/admin', 
             label: '?? Admin/Pengajar',
-            children: [
-              { href: '/admin/stats', label: '📊 Statistik' },
+            children: (this.user.role === 'admin') ? [
+                { href: '/admin/stats', label: '?? Statistik' },
               { href: '/admin/content', label: '📁 Konten' },
               { href: '/admin/users', label: '👥 Pengguna' },
               { href: '/admin/review', label: '🔍 Review Soal' },
               { href: '/admin/analysis', label: '📈 Analisis Soal' }
-            ]
+            ] : [
+                { href: '/admin/content', label: '?? Konten' }
+              ]
           });
         }
       }
@@ -409,7 +411,7 @@ function QuizBApp() {
       if (route.startsWith('/admin')) {
         const tab = route.split('/')[2] || 'stats';
         if (route === '/admin') {
-          setTimeout(() => this.navigate('/admin/stats'), 0);
+          setTimeout(() => this.navigate(this.user?.role === 'admin' ? '/admin/stats' : '/admin/content'), 0);
           return;
         }
         this.loadAdminTab(tab);
