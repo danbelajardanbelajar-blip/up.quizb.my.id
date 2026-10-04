@@ -283,7 +283,7 @@ function admin_category_list(): void {
 }
 
 function admin_category_create(): void {
-    requireAdmin();
+    requirePengajar();
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
     $body = getJsonBody();
 
@@ -320,7 +320,7 @@ function admin_category_create(): void {
 }
 
 function admin_category_update(): void {
-    requireAdmin();
+    requirePengajar();
     if ($_SERVER['REQUEST_METHOD'] !== 'PUT') jsonError('Method not allowed', 405);
     $id   = (int)($_GET['id'] ?? 0);
     $body = getJsonBody();
@@ -367,7 +367,7 @@ function admin_category_update(): void {
 }
 
 function admin_category_delete(): void {
-    requireAdmin();
+    requirePengajar();
     if ($_SERVER['REQUEST_METHOD'] !== 'DELETE') jsonError('Method not allowed', 405);
     $id = (int)($_GET['id'] ?? 0);
     if ($id <= 0) jsonError('ID tidak valid');
@@ -518,7 +518,7 @@ function admin_stats(): void {
 // ============================================
 
 function admin_group_list(): void {
-    requireAdmin();
+    requirePengajar();
     $groups = DB::all(
         "SELECT g.id, g.name, g.icon, g.color, g.description, g.order_num,
                 COUNT(c.id) AS category_count
@@ -559,7 +559,7 @@ function admin_group_list(): void {
 }
 
 function admin_group_create(): void {
-    requireAdmin();
+    requirePengajar();
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
     $body     = getJsonBody();
     $name     = sanitizeString($body['name']        ?? '');
@@ -577,7 +577,7 @@ function admin_group_create(): void {
 }
 
 function admin_group_update(): void {
-    requireAdmin();
+    requirePengajar();
     $id = (int)($_GET['id'] ?? 0);
     if ($_SERVER['REQUEST_METHOD'] !== 'PUT') jsonError('Method not allowed', 405);
     if ($id <= 0) jsonError('ID tidak valid');
@@ -596,7 +596,7 @@ function admin_group_update(): void {
 }
 
 function admin_group_delete(): void {
-    requireAdmin();
+    requirePengajar();
     $id = (int)($_GET['id'] ?? 0);
     if ($_SERVER['REQUEST_METHOD'] !== 'DELETE') jsonError('Method not allowed', 405);
     if ($id <= 0) jsonError('ID tidak valid');
@@ -606,7 +606,7 @@ function admin_group_delete(): void {
 }
 
 function admin_group_assign(): void {
-    requireAdmin();
+    requirePengajar();
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
     $body        = getJsonBody();
     $groupId     = (int)($body['group_id']    ?? 0);
