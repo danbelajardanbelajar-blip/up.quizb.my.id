@@ -289,6 +289,12 @@ function QuizBApp() {
       if (this.user && auth_only_routes.some(r => route.startsWith(r))) {
         return this.navigate('/dashboard');
       }
+
+          // User belum onboard -> paksa ke onboarding (kecuali sedang di google-setup)
+          if (this.user && !this.user.has_onboarded && !['/onboarding', '/google-setup'].includes(route) && !auth_only_routes.some(r => route.startsWith(r))) {
+            return this.navigate('/onboarding');
+          }
+
       if (route === '/onboarding' && !this.user) return this.navigate('/login');
       if (protected_routes.some(r => route.startsWith(r)) && !this.user) {
         this.showToast('Silakan login untuk mengakses halaman ini', 'warning', '⚠️');
@@ -385,6 +391,12 @@ function QuizBApp() {
         if (this.user && auth_only_routes.some(r => route.startsWith(r))) {
           return this.navigate('/dashboard');
         }
+
+          // User belum onboard -> paksa ke onboarding (kecuali sedang di google-setup)
+          if (this.user && !this.user.has_onboarded && !['/onboarding', '/google-setup'].includes(route) && !auth_only_routes.some(r => route.startsWith(r))) {
+            return this.navigate('/onboarding');
+          }
+
         if (route === '/onboarding' && !this.user) return this.navigate('/login');
         if (protected_routes.some(r => route.startsWith(r)) && !this.user) {
           this.showToast('Silakan login untuk mengakses halaman ini', 'warning', '⚠️');
@@ -507,7 +519,7 @@ function QuizBApp() {
       try {
         // API auth.login returns flat: { id, name, email, role, csrf_token }
         const data = await api.post('auth.login', { email: f.email, password: f.password });
-        this.user = { id: data.id, name: data.name, email: data.email, role: data.role };
+        this.user = { id: data.id, name: data.name, email: data.email, role: data.role, has_onboarded: data.has_onboarded };
         api._csrfToken = data.csrf_token || null;
         this.showToast(`Selamat datang, ${this.user.name}!`, 'success', '👋');
         this.navigate('/dashboard');
@@ -926,7 +938,7 @@ function QuizBApp() {
     async setOnboardingRole(role) {
       try {
         await api.post('auth.set_role', { role });
-        if (this.user) this.user.role = role;
+        if (this.user) { this.user.role = role; this.user.has_onboarded = 1; }
         if (role === 'pelajar') {
           this.navigate('/classroom');
           await this.$nextTick?.();

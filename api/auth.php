@@ -7,6 +7,7 @@
 // agar tidak menyebabkan 500 pada endpoint lain jika PHPMailer belum ada.
 
 function auth_login(): void {
+    ensureHasOnboardedColumnExists();
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
 
     $body  = getBody();
@@ -23,7 +24,7 @@ function auth_login(): void {
     }
 
     $user = DB::one(
-        'SELECT id, name, email, password_hash, role, is_active, email_verified_at FROM users WHERE email = ?',
+        'SELECT id, name, email, password_hash, role, is_active, email_verified_at, has_onboarded FROM users WHERE email = ?',
         [$email]
     );
 
@@ -46,6 +47,7 @@ function auth_login(): void {
         'name'       => $user['name'],
         'email'      => $user['email'],
         'role'       => $user['role'],
+        'has_onboarded' => (bool)$user['has_onboarded'],
         'csrf_token' => generateCsrfToken(),
     ], 'Login berhasil');
 }
@@ -65,6 +67,7 @@ function includeMailer(): void {
 }
 
 function auth_register(): void {
+    ensureHasOnboardedColumnExists();
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
     includeMailer();
 
@@ -114,12 +117,13 @@ function auth_logout(): void {
 }
 
 function auth_me(): void {
+    ensureHasOnboardedColumnExists();
     $user = getCurrentUser();
     if (!$user) jsonError('Tidak login', 401);
 
     $data = DB::one(
         'SELECT id, name, email, role, avatar, total_points, quizzes_taken,
-                quiz_questions_limit, shuffle_questions, shuffle_options, created_at
+                quiz_questions_limit, shuffle_questions, shuffle_options, created_at, has_onboarded
          FROM users WHERE id = ?',
         [$user['id']]
     );
@@ -139,7 +143,7 @@ function auth_stop_impersonating(): void {
     startSecureSession();
     if (!empty($_SESSION['impersonate_original_admin'])) {
         $adminId = $_SESSION['impersonate_original_admin'];
-        $admin = DB::one('SELECT id, name, email, role FROM users WHERE id = ?', [$adminId]);
+        $admin = DB::one('SELECT id, name, email, role, has_onboarded FROM users WHERE id = ?', [$adminId]);
         if ($admin) {
             loginUser($admin);
             jsonSuccess(['message' => 'Kembali ke sesi admin']);
@@ -198,7 +202,7 @@ function auth_set_role(): void {
     $allowed = ['user', 'pelajar', 'pengajar'];
     if (!in_array($role, $allowed)) jsonError('Role tidak valid');
 
-    DB::execute('UPDATE users SET role = ?, updated_at = NOW() WHERE id = ?', [$role, $user['id']]);
+    DB::execute('UPDATE users SET role = ?, has_onboarded = 1, updated_at = NOW() WHERE id = ?', [$role, $user['id']]);
 
     // Sinkronkan session
     $_SESSION['user_role'] = $role;
@@ -296,6 +300,15 @@ function fetchGoogleJson(string $url, array $postFields = [], array $headers = [
     return $data;
 }
 
+
+function ensureHasOnboardedColumnExists(): void {
+    $column = DB::one("SHOW COLUMNS FROM users LIKE 'has_onboarded'");
+    if (!$column) {
+        DB::execute("ALTER TABLE users ADD COLUMN has_onboarded TINYINT(1) DEFAULT 0 AFTER role");
+        DB::execute("UPDATE users SET has_onboarded = 1");
+    }
+}
+
 function auth_google(): void {
     $mode = $_GET['mode'] ?? $_GET['state'] ?? 'login';
     if (!in_array($mode, ['login', 'register'])) {
@@ -348,7 +361,7 @@ function auth_google(): void {
         }
 
         // Check if user exists
-        $user = DB::one('SELECT id, name, email, role, google_id FROM users WHERE google_id = ? OR email = ?', [$googleId, $email]);
+        $user = DB::one('SELECT id, name, email, role, google_id, has_onboarded FROM users WHERE google_id = ? OR email = ?', [$googleId, $email]);
 
         if ($user) {
             // User exists, login
@@ -369,7 +382,7 @@ function auth_google(): void {
             'INSERT INTO users (name, email, google_id) VALUES (?, ?, ?)',
             [$name, $email, $googleId]
         );
-        $newUser = DB::one('SELECT id, name, email, role FROM users WHERE google_id = ?', [$googleId]);
+        $newUser = DB::one('SELECT id, name, email, role, has_onboarded FROM users WHERE google_id = ?', [$googleId]);
         loginUser($newUser);
         header('Location: ' . APP_URL . '/#/google-setup');
         exit;
@@ -397,6 +410,7 @@ function auth_google_callback(): void {
 // GET /api.php?action=auth.verify_email&token=XXX
 // ============================================
 function auth_verify_email(): void {
+    ensureHasOnboardedColumnExists();
     includeMailer();
     $token = trim($_GET['token'] ?? $_POST['token'] ?? '');
     if (!$token || strlen($token) !== 64 || !ctype_xdigit($token)) {
@@ -404,7 +418,7 @@ function auth_verify_email(): void {
     }
     $tokenHash = hash('sha256', $token);
     $user = DB::one(
-        "SELECT id, name, email, role, email_verification_token, is_active FROM users WHERE email_verification_token = ?",
+        "SELECT id, name, email, role, email_verification_token, is_active, has_onboarded FROM users WHERE email_verification_token = ?",
         [$tokenHash]
     );
     if (!$user) {
@@ -417,6 +431,7 @@ function auth_verify_email(): void {
             'name'        => $user['name'],
             'email'       => $user['email'],
             'role'        => $user['role'],
+            'has_onboarded' => (bool)$user['has_onboarded'],
             'is_new_user' => true,
             'csrf_token'  => generateCsrfToken(),
         ], 'Email sudah terverifikasi. Login berhasil.');
@@ -425,7 +440,7 @@ function auth_verify_email(): void {
         "UPDATE users SET is_active = 1, email_verified_at = NOW(), email_verification_token = NULL, updated_at = NOW() WHERE id = ?",
         [(int)$user['id']]
     );
-    $verified = DB::one('SELECT id, name, email, role FROM users WHERE id = ?', [(int)$user['id']]);
+    $verified = DB::one('SELECT id, name, email, role, has_onboarded FROM users WHERE id = ?', [(int)$user['id']]);
     loginUser($verified);
     $newUserId = (int)$verified['id'];
     $others = DB::all("SELECT id FROM users WHERE id != ? AND is_active = 1", [$newUserId]);
@@ -441,6 +456,7 @@ function auth_verify_email(): void {
         'name'        => $verified['name'],
         'email'       => $verified['email'],
         'role'        => $verified['role'],
+        'has_onboarded' => (bool)$verified['has_onboarded'],
         'is_new_user' => true,
         'csrf_token'  => generateCsrfToken(),
     ], 'Email berhasil dikonfirmasi! Selamat datang 🎉');
