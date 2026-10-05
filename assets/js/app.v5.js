@@ -291,7 +291,7 @@ function QuizBApp() {
       }
 
           // User belum onboard -> paksa ke onboarding (kecuali sedang di google-setup)
-          if (this.user && !this.user.has_onboarded && !['/onboarding', '/google-setup'].includes(route) && !auth_only_routes.some(r => route.startsWith(r))) {
+          if (this.user && this.user.role !== 'admin' && !this.user.has_onboarded && !['/onboarding', '/google-setup'].includes(route) && !auth_only_routes.some(r => route.startsWith(r))) {
             return this.navigate('/onboarding');
           }
 
@@ -393,7 +393,7 @@ function QuizBApp() {
         }
 
           // User belum onboard -> paksa ke onboarding (kecuali sedang di google-setup)
-          if (this.user && !this.user.has_onboarded && !['/onboarding', '/google-setup'].includes(route) && !auth_only_routes.some(r => route.startsWith(r))) {
+          if (this.user && this.user.role !== 'admin' && !this.user.has_onboarded && !['/onboarding', '/google-setup'].includes(route) && !auth_only_routes.some(r => route.startsWith(r))) {
             return this.navigate('/onboarding');
           }
 
