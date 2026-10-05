@@ -27,7 +27,7 @@ function attempt_submit(): void {
             if (!$quizId) jsonError('Quiz ID diperlukan');
         if (!is_array($answers)) jsonError('Format jawaban tidak valid');
 
-    $user = Auth::user();
+    $user = getCurrentUser();
     $isCreator = $user && (int)DB::one('SELECT created_by FROM quizzes WHERE id = ?', [$quizId])['created_by'] === (int)$user['id'];
     $isAdmin = $user && $user['role'] === 'admin';
     // attempt.submit dipanggil SEBELUM assignment_submit, jadi client tidak selalu kirim assignment_id ke sini.
