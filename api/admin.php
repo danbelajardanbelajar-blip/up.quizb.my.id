@@ -986,6 +986,19 @@ function admin_quiz_duplicate(): void {
 
 function admin_live_challenges(): void {
     requireAdmin();
+    
+    // Auto-complete stale challenges that got stuck in "playing" state
+    // A challenge is considered stale if it's been playing longer than its time_limit + 15 mins
+    // Or if time_limit is 0 (no limit), we assume 120 mins (2 hours) as the absolute maximum.
+    DB::execute("
+        UPDATE challenges c
+        INNER JOIN quizzes q ON q.id = c.quiz_id
+        SET c.status = 'completed'
+        WHERE c.status = 'playing' 
+          AND c.start_time IS NOT NULL 
+          AND c.start_time < DATE_SUB(NOW(), INTERVAL IF(q.time_limit > 0, q.time_limit + 15, 120) MINUTE)
+    ");
+
     // Live Challenges
     $playing = DB::all("SELECT c.id, c.quiz_id, c.status, c.created_at, c.start_time, q.title AS quiz_title 
         FROM challenges c 
