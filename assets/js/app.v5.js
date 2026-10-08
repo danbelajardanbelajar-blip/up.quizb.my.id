@@ -485,6 +485,7 @@ function QuizBApp() {
           name:                 data.name,
           email:                data.email,
           role:                 data.role,
+          has_onboarded:        data.has_onboarded,
           is_impersonating:     data.is_impersonating || false,
           quiz_questions_limit: data.quiz_questions_limit || 10,
           shuffle_questions:    data.shuffle_questions    ?? true,
