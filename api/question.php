@@ -668,7 +668,7 @@ function question_update(): void {
 
 
 
-    requireAdmin();
+    $user = requirePengajar();
 
 
 
@@ -684,6 +684,10 @@ function question_update(): void {
 
 
     $id     = (int)($body['id'] ?? 0);
+    if ($user['role'] !== 'admin') {
+        $qOwner = DB::one("SELECT q.created_by FROM questions qs JOIN quizzes q ON qs.quiz_id = q.id WHERE qs.id = ?", [$id]);
+        if (!$qOwner || (int)$qOwner['created_by'] !== (int)$user['id']) jsonError('Akses ditolak', 403);
+    }
 
 
 
@@ -848,7 +852,7 @@ function question_delete(): void {
 
 
 
-    requireAdmin();
+    $user = requirePengajar();
 
 
 
@@ -879,6 +883,10 @@ function question_delete(): void {
 
 
     if (!$q) jsonError('Soal tidak ditemukan', 404);
+    if ($user['role'] !== 'admin') {
+        $quizOwner = DB::one("SELECT created_by FROM quizzes WHERE id = ?", [$q['quiz_id']]);
+        if (!$quizOwner || (int)$quizOwner['created_by'] !== (int)$user['id']) jsonError('Akses ditolak', 403);
+    }
 
 
 
@@ -2659,7 +2667,7 @@ function question_import_file_parse(): void {
 
 
 
-    requireAdmin();
+    requirePengajar();
 
 
 
@@ -2814,7 +2822,7 @@ function question_import_save(): void {
 
 
 
-    requireAdmin();
+    $user = requirePengajar();
 
 
 
@@ -2845,6 +2853,10 @@ function question_import_save(): void {
 
 
     if (empty($questions)) jsonError('Tidak ada soal');
+    if ($user['role'] !== 'admin') {
+        $quiz = DB::one("SELECT created_by FROM quizzes WHERE id = ?", [$quizId]);
+        if (!$quiz || (int)$quiz['created_by'] !== (int)$user['id']) jsonError('Akses ditolak', 403);
+    }
 
 
 
@@ -3079,7 +3091,7 @@ function question_browse_quizb(): void {
 
 
 
-    requireAdmin();
+    requirePengajar();
 
 
 
@@ -3354,7 +3366,7 @@ function question_import_quizb(): void {
 
 
 
-    requireAdmin();
+    $user = requirePengajar();
 
 
 
@@ -3380,6 +3392,10 @@ function question_import_quizb(): void {
 
 
     if (!$quizId) jsonError('Quiz ID diperlukan');
+    if ($user['role'] !== 'admin') {
+        $quiz = DB::one("SELECT created_by FROM quizzes WHERE id = ?", [$quizId]);
+        if (!$quiz || (int)$quiz['created_by'] !== (int)$user['id']) jsonError('Akses ditolak', 403);
+    }
 
 
 
@@ -3635,7 +3651,7 @@ function question_import_quizb(): void {
 
 
 function question_copy_bulk(): void {
-    requireAdmin();
+    $user = requirePengajar();
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
     $body = getJsonBody();
     $questionIds = $body['question_ids'] ?? [];
@@ -3644,8 +3660,11 @@ function question_copy_bulk(): void {
     if (empty($questionIds) || !is_array($questionIds)) jsonError('Tidak ada soal yang dipilih');
     if ($targetQuizId <= 0) jsonError('Quiz tujuan tidak valid');
 
-    $targetQuiz = DB::one("SELECT id FROM quizzes WHERE id = ?", [$targetQuizId]);
+    $targetQuiz = DB::one("SELECT id, created_by FROM quizzes WHERE id = ?", [$targetQuizId]);
     if (!$targetQuiz) jsonError('Quiz tujuan tidak ditemukan', 404);
+    if ($user['role'] !== 'admin' && (int)$targetQuiz['created_by'] !== (int)$user['id']) {
+        jsonError('Akses ditolak', 403);
+    }
 
     $pdo = DB::conn();
     $pdo->beginTransaction();

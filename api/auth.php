@@ -133,6 +133,8 @@ function auth_me(): void {
     $data['csrf'] = generateCsrfToken();
     
     startSecureSession();
+    $_SESSION['user_name'] = $data['name'];
+    $_SESSION['user_role'] = $data['role'];
     $data['is_impersonating'] = !empty($_SESSION['impersonate_original_admin']);
     
     jsonSuccess($data);

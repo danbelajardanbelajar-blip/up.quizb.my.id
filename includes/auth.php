@@ -40,8 +40,34 @@ function requireAuth(): array {
         header('Content-Type: application/json; charset=utf-8');
         die(json_encode(['success' => false, 'error' => 'Unauthorized', 'message' => 'Silakan login untuk mengakses fitur ini', 'code' => 401]));
     }
+
+    $userId = (int) $_SESSION['user_id'];
+    try {
+        $dbUser = DB::one("SELECT id, name, role, is_active FROM users WHERE id = ?", [$userId]);
+        if ($dbUser) {
+            if (isset($dbUser['is_active']) && (int)$dbUser['is_active'] === 0) {
+                logoutUser();
+                if (function_exists('jsonError')) {
+                    jsonError('Akun dinonaktifkan', 403);
+                }
+                http_response_code(403);
+                header('Content-Type: application/json; charset=utf-8');
+                die(json_encode(['success' => false, 'error' => 'Forbidden', 'message' => 'Akun dinonaktifkan', 'code' => 403]));
+            }
+            $_SESSION['user_name'] = $dbUser['name'];
+            $_SESSION['user_role'] = $dbUser['role'];
+            return [
+                'id'   => $userId,
+                'name' => $dbUser['name'],
+                'role' => $dbUser['role'],
+            ];
+        }
+    } catch (\Throwable $e) {
+        // Fallback jika query DB gagal
+    }
+
     return [
-        'id'   => (int) $_SESSION['user_id'],
+        'id'   => $userId,
         'name' => $_SESSION['user_name']  ?? '',
         'role' => $_SESSION['user_role']  ?? 'user',
     ];
@@ -70,9 +96,8 @@ function requirePengajar(): array {
 }
 
 function isPengajar(): bool {
-    startSecureSession();
-    return !empty($_SESSION['user_id']) &&
-           in_array($_SESSION['user_role'] ?? '', ['pengajar', 'admin']);
+    $user = getCurrentUser();
+    return $user !== null && in_array($user['role'] ?? '', ['pengajar', 'admin']);
 }
 
 function isLoggedIn(): bool {
@@ -83,10 +108,27 @@ function isLoggedIn(): bool {
 function getCurrentUser(): ?array {
     startSecureSession();
     if (empty($_SESSION['user_id'])) return null;
+    $userId = (int) $_SESSION['user_id'];
+    try {
+        $dbUser = DB::one("SELECT id, name, role, is_active FROM users WHERE id = ?", [$userId]);
+        if ($dbUser) {
+            if (isset($dbUser['is_active']) && (int)$dbUser['is_active'] === 0) {
+                return null;
+            }
+            $_SESSION['user_name'] = $dbUser['name'];
+            $_SESSION['user_role'] = $dbUser['role'];
+            return [
+                'id'   => $userId,
+                'name' => $dbUser['name'],
+                'role' => $dbUser['role'],
+            ];
+        }
+    } catch (\Throwable $e) {}
+
     return [
-        'id'   => (int) $_SESSION['user_id'],
-        'name' => $_SESSION['user_name'],
-        'role' => $_SESSION['user_role'],
+        'id'   => $userId,
+        'name' => $_SESSION['user_name'] ?? '',
+        'role' => $_SESSION['user_role'] ?? 'user',
     ];
 }
 
