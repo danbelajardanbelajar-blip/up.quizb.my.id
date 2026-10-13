@@ -60,20 +60,63 @@ function quiz_get(): void {
          FROM quizzes q INNER JOIN categories c ON c.id = q.category_id";
 
     if ($id > 0) {
-        $quiz = DB::one("$baseSelect WHERE q.id = ? AND q.is_published = 1", [$id]);
+        $quiz = DB::one("$baseSelect WHERE q.id = ?", [$id]);
     } elseif ($slug) {
-        $quiz = DB::one("$baseSelect WHERE q.slug = ? AND q.is_published = 1", [$slug]);
+        $quiz = DB::one("$baseSelect WHERE q.slug = ?", [$slug]);
     } else {
         jsonError('ID atau slug diperlukan');
     }
 
     if (!$quiz) jsonError('Quiz tidak ditemukan', 404);
+
+    // Jika kuis belum dipublikasikan, cek izin akses:
+    // Izinkan jika user adalah admin, pembuat kuis, atau kuis ditugaskan di kelas user
+    if ((int)$quiz['is_published'] !== 1) {
+        $user      = getCurrentUser();
+        $isAdmin   = $user && ($user['role'] ?? '') === 'admin';
+        $isCreator = $user && (int)($quiz['created_by'] ?? 0) === (int)$user['id'];
+
+        $assignId   = (int)($_GET['assignment_id'] ?? $_GET['assign'] ?? 0);
+        $isAssigned = false;
+
+        if ($user) {
+            if ($assignId > 0) {
+                // Verifikasi assignment aktif dan user adalah anggota kelas atau guru pemilik kelas
+                $validAssign = DB::one(
+                    "SELECT a.id FROM assignments a
+                     JOIN classes c ON c.id = a.class_id
+                     LEFT JOIN class_members cm ON cm.class_id = a.class_id AND cm.user_id = ?
+                     WHERE a.id = ? AND a.is_active = 1
+                       AND (a.quiz_id = ? OR a.id IN (SELECT assignment_id FROM assignment_quiz_packages WHERE quiz_id = ?))
+                       AND (cm.id IS NOT NULL OR c.teacher_id = ?)",
+                    [$user['id'], $assignId, $quiz['id'], $quiz['id'], $user['id']]
+                );
+                $isAssigned = (bool)$validAssign;
+            } else {
+                // Cek apakah ada assignment aktif untuk kuis ini di salah satu kelas yang diikuti user
+                $memberAssign = DB::one(
+                    "SELECT a.id FROM assignments a
+                     JOIN class_members cm ON cm.class_id = a.class_id
+                     WHERE cm.user_id = ? AND a.is_active = 1
+                       AND (a.quiz_id = ? OR a.id IN (SELECT assignment_id FROM assignment_quiz_packages WHERE quiz_id = ?))
+                     LIMIT 1",
+                    [$user['id'], $quiz['id'], $quiz['id']]
+                );
+                $isAssigned = (bool)$memberAssign;
+            }
+        }
+
+        if (!$isAdmin && !$isCreator && !$isAssigned) {
+            jsonError('Quiz tidak ditemukan', 404);
+        }
+    }
+
     jsonSuccess($quiz);
 }
 
 function quiz_questions(): void {
     $quizId       = (int)($_GET['id']            ?? 0);
-    $assignmentId = (int)($_GET['assignment_id'] ?? 0);
+    $assignmentId = (int)($_GET['assignment_id'] ?? $_GET['assign'] ?? 0);
 
     // Jika quiz_id tidak diberikan tapi assignment_id ada,
     // resolve quiz_id dari paket pertama assignment

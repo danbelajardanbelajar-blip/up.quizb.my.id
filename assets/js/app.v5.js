@@ -653,7 +653,11 @@ function QuizBApp() {
     async loadQuizDetail(id) {
       this.quizDetail.loading = true; this.quizDetail.quiz = null;
       try {
-        const quiz = await api.get('quiz.get', { id });
+        const qs = window.location.hash.split('?')[1] || '';
+        const assignId = new URLSearchParams(qs).get('assign');
+        const params = { id };
+        if (assignId) params.assignment_id = assignId;
+        const quiz = await api.get('quiz.get', params);
         this.quizDetail.quiz = quiz;
         this.pageTitle = (quiz?.title || 'Quiz') + ' — QuizB';
       } catch (e) {
