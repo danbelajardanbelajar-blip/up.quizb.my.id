@@ -132,13 +132,86 @@ function class_get(): void {
     }
     unset($a);
 
+    // Ambil kuis buatan pengajar kelas ini
+    // Untuk siswa: tampilkan kuis pengajar yang sudah dipublikasikan (is_published = 1)
+    // Untuk pengajar/admin: tampilkan semua kuis buatan pengajar ini
+    $teacherPubWhere = ($isTeacher || $user['role'] === 'admin') ? "" : "AND q.is_published = 1";
+    $teacherQuizzes = DB::all(
+        "SELECT q.id, q.title, q.slug, q.description, q.difficulty, q.time_limit, q.duration,
+                q.total_questions, q.total_attempts, q.is_published, q.created_at,
+                c.name AS category_name, c.icon AS category_icon, c.color AS category_color,
+                (SELECT MAX(score) FROM attempts WHERE user_id = ? AND quiz_id = q.id) AS my_score,
+                (SELECT COUNT(*) FROM attempts WHERE user_id = ? AND quiz_id = q.id) AS my_attempts
+         FROM quizzes q
+         LEFT JOIN categories c ON c.id = q.category_id
+         WHERE q.created_by = ? $teacherPubWhere
+         ORDER BY q.created_at DESC",
+        [$user['id'], $user['id'], (int)$class['teacher_id']]
+    );
+
+    foreach ($teacherQuizzes as &$tq) {
+        $tq['id']              = (int)$tq['id'];
+        $tq['total_questions'] = (int)$tq['total_questions'];
+        $tq['total_attempts']  = (int)$tq['total_attempts'];
+        $tq['is_published']    = (int)$tq['is_published'];
+        $tq['my_score']        = $tq['my_score'] !== null ? (int)$tq['my_score'] : null;
+        $tq['my_attempts']     = (int)$tq['my_attempts'];
+    }
+    unset($tq);
+
     jsonSuccess([
-        'class'       => $class,
-        'members'     => $members,
-        'assignments' => $assignments,
-        'is_teacher'  => $isTeacher,
+        'class'           => $class,
+        'members'         => $members,
+        'assignments'     => $assignments,
+        'teacher_quizzes' => $teacherQuizzes,
+        'is_teacher'      => $isTeacher,
     ]);
 
+}
+
+// ============================================
+// GET /api?action=class.teacher_quizzes&class_id=X
+// Pelajar / Pengajar: daftar kuis buatan pengajar kelas
+// ============================================
+function class_teacher_quizzes(): void {
+    $user    = requireAuth();
+    $classId = (int)($_GET['class_id'] ?? $_GET['id'] ?? 0);
+    if ($classId <= 0) jsonError('ID kelas tidak valid');
+
+    $class = DB::one("SELECT id, teacher_id FROM classes WHERE id = ?", [$classId]);
+    if (!$class) jsonError('Kelas tidak ditemukan', 404);
+
+    $isTeacher = in_array($user['role'], ['pengajar', 'admin']) && (int)$class['teacher_id'] === $user['id'];
+    $isMember  = DB::one("SELECT id FROM class_members WHERE class_id = ? AND user_id = ?", [$classId, $user['id']]);
+    if (!$isTeacher && !$isMember && $user['role'] !== 'admin') {
+        jsonError('Anda tidak memiliki akses ke kelas ini', 403);
+    }
+
+    $teacherPubWhere = ($isTeacher || $user['role'] === 'admin') ? "" : "AND q.is_published = 1";
+    $teacherQuizzes = DB::all(
+        "SELECT q.id, q.title, q.slug, q.description, q.difficulty, q.time_limit, q.duration,
+                q.total_questions, q.total_attempts, q.is_published, q.created_at,
+                c.name AS category_name, c.icon AS category_icon, c.color AS category_color,
+                (SELECT MAX(score) FROM attempts WHERE user_id = ? AND quiz_id = q.id) AS my_score,
+                (SELECT COUNT(*) FROM attempts WHERE user_id = ? AND quiz_id = q.id) AS my_attempts
+         FROM quizzes q
+         LEFT JOIN categories c ON c.id = q.category_id
+         WHERE q.created_by = ? $teacherPubWhere
+         ORDER BY q.created_at DESC",
+        [$user['id'], $user['id'], (int)$class['teacher_id']]
+    );
+
+    foreach ($teacherQuizzes as &$tq) {
+        $tq['id']              = (int)$tq['id'];
+        $tq['total_questions'] = (int)$tq['total_questions'];
+        $tq['total_attempts']  = (int)$tq['total_attempts'];
+        $tq['is_published']    = (int)$tq['is_published'];
+        $tq['my_score']        = $tq['my_score'] !== null ? (int)$tq['my_score'] : null;
+        $tq['my_attempts']     = (int)$tq['my_attempts'];
+    }
+    unset($tq);
+
+    jsonSuccess($teacherQuizzes);
 }
 
 // ============================================

@@ -88,9 +88,11 @@ function QuizBApp() {
       // Leave class modal (pelajar)
       leaveModal:   { show: false, loading: false, error: '' },
       // Detail page state
-      members:     [],
-      assignments: [],
-      isTeacher:   false,
+      members:        [],
+      assignments:    [],
+      teacherQuizzes: [],
+      activeTab:      'assignments',
+      isTeacher:      false,
       // Create assignment modal
       assignModal: { show: false, editId: null },
       assignForm:  { title: '', quiz_ids: [], mode: 'bebas', deadline: '', max_questions: '', shuffle_questions: null, shuffle_options: null, timer_per_question: '', duration_minutes: '', require_full_score: false, require_camera: false },
@@ -925,12 +927,14 @@ function QuizBApp() {
       this.classroom.detail = null;
       this.classroom.members = [];
       this.classroom.assignments = [];
+      this.classroom.teacherQuizzes = [];
       try {
         const data = await api.get('class.get', { id: classId });
-        this.classroom.detail      = data.class;
-        this.classroom.members     = data.members || [];
-        this.classroom.assignments = data.assignments || [];
-        this.classroom.isTeacher   = data.is_teacher || false;
+        this.classroom.detail         = data.class;
+        this.classroom.members        = data.members || [];
+        this.classroom.assignments    = data.assignments || [];
+        this.classroom.teacherQuizzes = data.teacher_quizzes || [];
+        this.classroom.isTeacher      = data.is_teacher || false;
         this.pageTitle = (data.class?.name || 'Kelas') + ' — QuizB';
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
@@ -1190,6 +1194,12 @@ function QuizBApp() {
       } finally {
         this.classroom.assignLoading = false;
       }
+    },
+
+    async openAssignWithQuiz(tq) {
+      await this.openAssignModal();
+      this.classroom.assignForm.title = 'Tugas: ' + tq.title;
+      this.classroom.assignForm.quiz_ids = [parseInt(tq.id)];
     },
 
     async openAssignModal(existingAssign = null) {
