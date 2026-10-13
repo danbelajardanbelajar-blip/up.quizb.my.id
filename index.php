@@ -73,7 +73,7 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
   <!-- Custom CSS -->
   <link rel="stylesheet" href="assets/css/app.css" />
 </head>
-<body class="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans h-[100dvh] flex flex-col md:flex-row overflow-hidden transition-colors duration-300">
+<body class="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans h-[100dvh] flex flex-col overflow-hidden transition-colors duration-300">
 
   <!-- Page Loader -->
   <div id="page-loader" class="fixed inset-0 z-[99999] flex items-center justify-center bg-white text-primary-600" style="background:#f8fafc;color:#4f46e5;">
@@ -98,8 +98,11 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
   </div>
 
   
-  <!-- ── DESKTOP SIDEBAR ── -->
-  <aside x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding'"
+  <!-- ── APP VIEWPORT CONTAINER (Sidebar + Main Content) ── -->
+  <div class="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden relative w-full">
+
+    <!-- ── DESKTOP SIDEBAR ── -->
+    <aside x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding'"
          class="hidden md:flex flex-col w-64 h-full bg-white dark:bg-gray-900 border-r border-gray-200/50 dark:border-gray-800/50 flex-shrink-0 z-50 shadow-sm relative">
     <div class="h-16 flex items-center px-6 border-b border-gray-100 dark:border-gray-800/50 flex-shrink-0">
       <a :href="user ? '#/dashboard' : '#/'" @click.prevent="navigate(user ? '/dashboard' : '/')" class="flex items-center gap-2 group">
@@ -493,6 +496,11 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
       </div>
     </div>
   </footer>
+    </div>
+    <!-- ── END MAIN CONTENT WRAPPER ── -->
+
+  </div>
+  <!-- ── END APP VIEWPORT CONTAINER ── -->
 
   <!-- Alpine.js CDN -->
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -526,7 +534,7 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
   ═══════════════════════════════════════════════ -->
   <nav x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding'"
        x-cloak
-       class="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 safe-area-pb"
+       class="md:hidden flex-shrink-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 safe-area-pb z-40"
        style="padding-bottom: env(safe-area-inset-bottom)">
     <div class="flex items-stretch h-14">
 
@@ -770,12 +778,15 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
 
 
   <!-- Impersonation Banner -->
-  <div x-show="user?.is_impersonating" style="display: none;" class="fixed bottom-0 inset-x-0 z-[100] bg-amber-500 text-amber-950 px-4 py-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] flex flex-col sm:flex-row items-center justify-between gap-3">
+  <div x-show="user?.is_impersonating"
+       x-cloak
+       style="display: none;"
+       class="flex-shrink-0 z-50 bg-amber-500 text-amber-950 px-4 py-2.5 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-amber-600/30">
     <div class="flex items-center gap-2 text-sm font-medium">
-      <span class="text-xl">???</span>
+      <span class="text-xl">⚠️</span>
       <span>Anda sedang mengakses akun <strong><span x-text="user?.name"></span></strong>. Tindakan Anda di sini adalah aksi nyata.</span>
     </div>
-    <button @click="stopImpersonating()" class="whitespace-nowrap px-4 py-1.5 bg-amber-900/10 hover:bg-amber-900/20 rounded-lg transition-colors font-bold border border-amber-900/20 text-sm">
+    <button @click="stopImpersonating()" class="whitespace-nowrap px-4 py-1.5 bg-amber-900/10 hover:bg-amber-900/20 active:bg-amber-900/30 rounded-lg transition-colors font-bold border border-amber-900/20 text-sm shadow-sm">
       Kembali ke Admin
     </button>
   </div>
