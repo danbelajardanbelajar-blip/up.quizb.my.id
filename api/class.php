@@ -132,26 +132,26 @@ function class_get(): void {
     }
     unset($a);
 
-    // Ambil kuis buatan pengajar kelas ini
-    // Untuk siswa: tampilkan kuis pengajar yang sudah dipublikasikan (is_published = 1)
-    // Untuk pengajar/admin: tampilkan semua kuis buatan pengajar ini
-    $teacherPubWhere = ($isTeacher || $user['role'] === 'admin') ? "" : "AND q.is_published = 1";
+    // Ambil kuis buatan pengajar kelas ini (atau kuis yang ditugaskan di kelas ini)
     $teacherQuizzes = DB::all(
         "SELECT q.id, q.title, q.slug, q.description, q.difficulty, q.time_limit, q.duration,
                 q.total_questions, q.total_attempts, q.is_published, q.created_at,
                 c.name AS category_name, c.icon AS category_icon, c.color AS category_color,
+                (SELECT COUNT(*) FROM questions WHERE quiz_id = q.id) AS question_count,
                 (SELECT MAX(score) FROM attempts WHERE user_id = ? AND quiz_id = q.id) AS my_score,
                 (SELECT COUNT(*) FROM attempts WHERE user_id = ? AND quiz_id = q.id) AS my_attempts
          FROM quizzes q
          LEFT JOIN categories c ON c.id = q.category_id
-         WHERE q.created_by = ? $teacherPubWhere
+         WHERE (q.created_by = ? 
+                OR q.id IN (SELECT quiz_id FROM assignments WHERE class_id = ?) 
+                OR q.id IN (SELECT aqp.quiz_id FROM assignment_quiz_packages aqp JOIN assignments a2 ON a2.id = aqp.assignment_id WHERE a2.class_id = ?))
          ORDER BY q.created_at DESC",
-        [$user['id'], $user['id'], (int)$class['teacher_id']]
+        [$user['id'], $user['id'], (int)$class['teacher_id'], $classId, $classId]
     );
 
     foreach ($teacherQuizzes as &$tq) {
         $tq['id']              = (int)$tq['id'];
-        $tq['total_questions'] = (int)$tq['total_questions'];
+        $tq['total_questions'] = !empty($tq['total_questions']) ? (int)$tq['total_questions'] : (int)($tq['question_count'] ?? 0);
         $tq['total_attempts']  = (int)$tq['total_attempts'];
         $tq['is_published']    = (int)$tq['is_published'];
         $tq['my_score']        = $tq['my_score'] !== null ? (int)$tq['my_score'] : null;
@@ -187,23 +187,25 @@ function class_teacher_quizzes(): void {
         jsonError('Anda tidak memiliki akses ke kelas ini', 403);
     }
 
-    $teacherPubWhere = ($isTeacher || $user['role'] === 'admin') ? "" : "AND q.is_published = 1";
     $teacherQuizzes = DB::all(
         "SELECT q.id, q.title, q.slug, q.description, q.difficulty, q.time_limit, q.duration,
                 q.total_questions, q.total_attempts, q.is_published, q.created_at,
                 c.name AS category_name, c.icon AS category_icon, c.color AS category_color,
+                (SELECT COUNT(*) FROM questions WHERE quiz_id = q.id) AS question_count,
                 (SELECT MAX(score) FROM attempts WHERE user_id = ? AND quiz_id = q.id) AS my_score,
                 (SELECT COUNT(*) FROM attempts WHERE user_id = ? AND quiz_id = q.id) AS my_attempts
          FROM quizzes q
          LEFT JOIN categories c ON c.id = q.category_id
-         WHERE q.created_by = ? $teacherPubWhere
+         WHERE (q.created_by = ? 
+                OR q.id IN (SELECT quiz_id FROM assignments WHERE class_id = ?) 
+                OR q.id IN (SELECT aqp.quiz_id FROM assignment_quiz_packages aqp JOIN assignments a2 ON a2.id = aqp.assignment_id WHERE a2.class_id = ?))
          ORDER BY q.created_at DESC",
-        [$user['id'], $user['id'], (int)$class['teacher_id']]
+        [$user['id'], $user['id'], (int)$class['teacher_id'], $classId, $classId]
     );
 
     foreach ($teacherQuizzes as &$tq) {
         $tq['id']              = (int)$tq['id'];
-        $tq['total_questions'] = (int)$tq['total_questions'];
+        $tq['total_questions'] = !empty($tq['total_questions']) ? (int)$tq['total_questions'] : (int)($tq['question_count'] ?? 0);
         $tq['total_attempts']  = (int)$tq['total_attempts'];
         $tq['is_published']    = (int)$tq['is_published'];
         $tq['my_score']        = $tq['my_score'] !== null ? (int)$tq['my_score'] : null;

@@ -70,7 +70,7 @@ function quiz_get(): void {
     if (!$quiz) jsonError('Quiz tidak ditemukan', 404);
 
     // Jika kuis belum dipublikasikan, cek izin akses:
-    // Izinkan jika user adalah admin, pembuat kuis, atau kuis ditugaskan di kelas user
+    // Izinkan jika user adalah admin, pembuat kuis, kuis ditugaskan di kelas user, ATAU user adalah murid di kelas yang diajar pembuat kuis
     if ((int)$quiz['is_published'] !== 1) {
         $user      = getCurrentUser();
         $isAdmin   = $user && ($user['role'] ?? '') === 'admin';
@@ -78,6 +78,7 @@ function quiz_get(): void {
 
         $assignId   = (int)($_GET['assignment_id'] ?? $_GET['assign'] ?? 0);
         $isAssigned = false;
+        $isTeacherStudent = false;
 
         if ($user) {
             if ($assignId > 0) {
@@ -104,9 +105,20 @@ function quiz_get(): void {
                 );
                 $isAssigned = (bool)$memberAssign;
             }
+
+            // Cek apakah user adalah murid di kelas aktif yang diajar oleh pembuat kuis
+            if (!empty($quiz['created_by'])) {
+                $isTeacherStudent = (bool)DB::one(
+                    "SELECT cm.id FROM class_members cm
+                     JOIN classes c ON c.id = cm.class_id
+                     WHERE cm.user_id = ? AND c.teacher_id = ? AND c.is_active = 1
+                     LIMIT 1",
+                    [$user['id'], (int)$quiz['created_by']]
+                );
+            }
         }
 
-        if (!$isAdmin && !$isCreator && !$isAssigned) {
+        if (!$isAdmin && !$isCreator && !$isAssigned && !$isTeacherStudent) {
             jsonError('Quiz tidak ditemukan', 404);
         }
     }
@@ -138,11 +150,34 @@ function quiz_questions(): void {
     if (!$quizId) jsonError('Quiz ID diperlukan');
 
     $user = getCurrentUser();
-    $isCreator = $user && (int)DB::one('SELECT created_by FROM quizzes WHERE id = ?', [$quizId])['created_by'] === (int)$user['id'];
-    $isAdmin = $user && $user['role'] === 'admin';
+    $quizCreatorRow = DB::one('SELECT created_by FROM quizzes WHERE id = ?', [$quizId]);
+    $createdById = $quizCreatorRow ? (int)$quizCreatorRow['created_by'] : 0;
+    $isCreator = $user && $createdById === (int)$user['id'];
+    $isAdmin = $user && ($user['role'] ?? '') === 'admin';
     $isAssigned = $assignmentId > 0;
+    $isTeacherStudent = false;
+
+    if ($user && $createdById > 0) {
+        $isTeacherStudent = (bool)DB::one(
+            "SELECT cm.id FROM class_members cm
+             JOIN classes c ON c.id = cm.class_id
+             WHERE cm.user_id = ? AND c.teacher_id = ? AND c.is_active = 1
+             LIMIT 1",
+            [$user['id'], $createdById]
+        );
+        if (!$isAssigned) {
+            $isAssigned = (bool)DB::one(
+                "SELECT a.id FROM assignments a
+                 JOIN class_members cm ON cm.class_id = a.class_id
+                 WHERE cm.user_id = ? AND a.is_active = 1
+                   AND (a.quiz_id = ? OR a.id IN (SELECT assignment_id FROM assignment_quiz_packages WHERE quiz_id = ?))
+                 LIMIT 1",
+                [$user['id'], $quizId, $quizId]
+            );
+        }
+    }
     
-    $wherePub = ($isCreator || $isAdmin || $isAssigned) ? "" : " AND is_published = 1";
+    $wherePub = ($isCreator || $isAdmin || $isAssigned || $isTeacherStudent) ? "" : " AND is_published = 1";
     $quiz = DB::one(
         "SELECT id, title, description, duration, time_limit, total_questions, passing_score, require_camera 
          FROM quizzes WHERE id = ?$wherePub",

@@ -928,6 +928,7 @@ function QuizBApp() {
       this.classroom.members = [];
       this.classroom.assignments = [];
       this.classroom.teacherQuizzes = [];
+      this.classroom.activeTab = this.classroom.activeTab || 'assignments';
       try {
         const data = await api.get('class.get', { id: classId });
         this.classroom.detail         = data.class;
