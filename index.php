@@ -237,7 +237,7 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
   </aside>
 
   <!-- ── MAIN CONTENT WRAPPER ── -->
-  <div class="flex flex-col flex-1 h-full overflow-y-auto relative w-full scroll-smooth custom-scrollbar">
+  <div class="flex flex-col flex-1 h-full overflow-y-auto overflow-x-hidden relative w-full scroll-smooth custom-scrollbar">
 
     <!-- MOBILE TOP BAR (Only visible on Mobile) -->
     <nav x-show="!currentRoute.startsWith('/play/') && currentRoute !== '/onboarding'"
