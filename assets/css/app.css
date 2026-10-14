@@ -260,9 +260,12 @@ html { scroll-behavior: smooth; }
 
 /* ---- Modal ---- */
 .modal-overlay {
-  position: fixed; inset: 0; z-index: 1000;
-  background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
-  display: flex; align-items: center; justify-content: center; padding: 1rem;
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 0.75rem;
+}
+@media (min-width: 640px) {
+  .modal-overlay { padding: 1rem; }
 }
 .modal-box {
   background: white; border-radius: 1.25rem;
