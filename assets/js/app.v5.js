@@ -382,6 +382,18 @@ function QuizBApp() {
     },
 
     onRouteChange(route, params) {
+      // Cek apakah ada pending toast (misal dari redirect penolakan izin kamera)
+      try {
+        const pendingToast = sessionStorage.getItem('quizb_pending_toast');
+        if (pendingToast) {
+          sessionStorage.removeItem('quizb_pending_toast');
+          const t = JSON.parse(pendingToast);
+          setTimeout(() => {
+            this.showToast(t.msg || t.message, t.type || 'warning', t.icon || '📷');
+          }, 300);
+        }
+      } catch (_) {}
+
       // Guard protected routes — hanya aktif setelah _userLoaded = true
       // Sebelum user selesai di-load, skip semua guard agar tidak ada redirect paksa
       if (this._userLoaded) {

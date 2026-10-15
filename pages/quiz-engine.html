@@ -27,13 +27,35 @@
     </div>
   </div>
 
+  <!-- Camera Denied Screen -->
+  <div x-show="phase==='camera_denied'" class="flex items-center justify-center min-h-screen px-4">
+    <div class="max-w-md w-full text-center p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-red-100 dark:border-red-900/30 animate-fade-in">
+      <div class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 text-red-500 flex items-center justify-center mx-auto mb-4 text-3xl">
+        📷
+      </div>
+      <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Akses Kamera Diperlukan</h2>
+      <p class="text-sm text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">
+        Kuis ini mengaktifkan pengawasan kamera (Proctoring). Agar dapat mengerjakan soal, Anda wajib mengizinkan akses kamera di browser Anda.
+      </p>
+      <div class="p-3.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-xl text-xs text-amber-800 dark:text-amber-300 text-left mb-5">
+        <p class="font-semibold mb-1">💡 Cara Mengaktifkan Izin Kamera:</p>
+        <p class="mb-0.5">1. Klik ikon 🔒 atau 📷 di sebelah kiri kolom alamat URL browser.</p>
+        <p class="mb-0.5">2. Ubah izin Kamera menjadi <strong>"Izinkan" (Allow)</strong>.</p>
+        <p>3. Muat ulang (refresh) halaman lalu mulai kuis kembali.</p>
+      </div>
+      <button @click="exitToPreviousPage()" class="btn-primary w-full py-2.5 text-sm font-semibold justify-center flex items-center gap-2">
+        <span>← Kembali ke Halaman Sebelumnya</span>
+      </button>
+    </div>
+  </div>
+
   <!-- Error -->
   <div x-show="phase==='error'" class="flex items-center justify-center min-h-screen px-4">
     <div class="text-center">
       <p class="text-5xl mb-4">😕</p>
       <p class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Gagal memuat quiz</p>
       <p class="text-gray-400 text-sm mb-6" x-text="error"></p>
-      <button @click="navigate('/quizzes')" class="btn-primary">← Kembali</button>
+      <button @click="exitToPreviousPage()" class="btn-primary">← Kembali</button>
     </div>
   </div>
 

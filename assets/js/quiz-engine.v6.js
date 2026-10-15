@@ -19,6 +19,7 @@ function QuizEngine() {
     showNav: false,
     loading: false,
     error: null,
+    assignment: null,     // data assignment jika dari tugas
     assignmentId: null,   // jika dimainkan dari tugas
     mode: 'exam',         // exam | instant | end | challenge
     challengeId: null,    // untuk mode challenge
@@ -137,6 +138,7 @@ function QuizEngine() {
         if (assignmentId) {
           try {
             const a = await api.get('assignment.get', { id: assignmentId });
+            this.assignment = a;
             if (a && a.timer_per_question != null) {
               const atpq = parseInt(a.timer_per_question, 10);
               if (Number.isFinite(atpq) && atpq > 0) this.questionTimerDefault = atpq;
@@ -215,7 +217,21 @@ function QuizEngine() {
           // Start snapshot loop after attemptId is set (which happens during loadQuiz? No, attemptId is already created in loadQuiz)
           this.startSnapshotLoop();
         } catch (e) {
-          alert('Kuis ini mewajibkan akses kamera. Harap izinkan akses kamera di browser Anda.');
+          console.warn('Akses kamera ditolak atau tidak tersedia:', e);
+          this.phase = 'camera_denied';
+          this.error = 'Kuis ini mewajibkan akses kamera (Proctoring). Anda harus mengaktifkan kamera untuk dapat mengerjakan kuis ini.';
+
+          try {
+            sessionStorage.setItem('quizb_pending_toast', JSON.stringify({
+              msg: 'Wajib mengaktifkan izin kamera untuk mengerjakan kuis ini!',
+              type: 'warning',
+              icon: '📷'
+            }));
+          } catch (_) {}
+
+          alert('⚠️ Akses Kamera Diperlukan!\n\nAgar bisa mengerjakan kuis ini, Anda wajib mengaktifkan kamera di browser.\n\nAnda akan dikembalikan ke halaman sebelumnya. Silakan izinkan akses kamera di setelan browser Anda lalu coba kembali.');
+
+          this.exitToPreviousPage();
           return;
         }
       }
@@ -228,6 +244,31 @@ function QuizEngine() {
         this.startTimer();
       }
       if (this.assignmentId) this._startHeartbeat();
+    },
+
+    // ---- Navigasi Kembali ke Halaman Sebelumnya ----
+    exitToPreviousPage() {
+      let targetFallback = '';
+      if (this.assignment && this.assignment.class_id) {
+        targetFallback = '#/classroom/' + this.assignment.class_id;
+      } else if (this.assignmentId) {
+        targetFallback = '#/classroom';
+      } else if (this.quiz && this.quiz.id) {
+        targetFallback = '#/quiz/' + this.quiz.id;
+      } else {
+        targetFallback = '#/dashboard';
+      }
+
+      if (window.history.length > 1) {
+        window.history.back();
+        setTimeout(() => {
+          if (window.location.hash.includes('/play/')) {
+            window.location.hash = targetFallback;
+          }
+        }, 350);
+      } else {
+        window.location.hash = targetFallback;
+      }
     },
 
     // ---- Snapshot Loop ----
