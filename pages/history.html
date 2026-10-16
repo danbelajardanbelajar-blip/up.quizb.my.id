@@ -26,7 +26,7 @@
            @click="navigate('/result/'+attempt.id)">
         <!-- Score Circle -->
         <div class="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0"
-             :class="attempt.score >= (attempt.passing_score||60) ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'">
+             :class="attempt.is_assignment ? (attempt.passed ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400') : 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'">
           <span x-text="attempt.score + '%'"></span>
         </div>
 
@@ -44,8 +44,8 @@
           </div>
         </div>
 
-        <!-- Status -->
-        <div class="flex items-center gap-2 flex-shrink-0">
+        <!-- Status (Hanya untuk Tugas) -->
+        <div class="flex items-center gap-2 flex-shrink-0" x-show="attempt.is_assignment">
           <span class="badge text-xs px-3 py-1 rounded-full"
                 :class="attempt.passed ? 'badge-success' : 'badge-danger'"
                 x-text="attempt.passed ? '✅ Lulus' : '❌ Gagal'"></span>

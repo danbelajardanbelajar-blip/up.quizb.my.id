@@ -77,7 +77,7 @@
              :class="modeBadgeClass" x-text="modeLabel"></div>
         <h1 class="text-xl font-bold text-gray-900 dark:text-white mb-2" x-text="quiz?.title"></h1>
         <p class="text-gray-500 dark:text-gray-400 text-sm mb-5" x-text="quiz?.description"></p>
-        <div class="grid grid-cols-3 gap-3 mb-5 text-center">
+        <div class="grid gap-3 mb-5 text-center" :class="assignmentId ? 'grid-cols-3' : 'grid-cols-2'">
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
             <div class="font-bold text-lg" x-text="questions.length"></div>
             <div class="text-xs text-gray-400">Soal</div>
@@ -86,7 +86,7 @@
             <div class="font-bold text-lg" x-text="formatTime(mode === 'exam' ? 20 * questions.length : (quiz?.time_limit||600))"></div>
             <div class="text-xs text-gray-400">Waktu</div>
           </div>
-          <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+          <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3" x-show="assignmentId">
             <div class="font-bold text-lg" x-text="(quiz?.passing_score||60)+'%'"></div>
             <div class="text-xs text-gray-400">Min Lulus</div>
           </div>

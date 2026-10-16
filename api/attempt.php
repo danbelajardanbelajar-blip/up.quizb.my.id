@@ -338,13 +338,35 @@ function attempt_result(): void {
         $answers = $filtered;
     }
 
+    // Cek apakah attempt ini merupakan bagian dari TUGAS (assignment)
+    $assignmentRow = DB::one(
+        "SELECT aa.assignment_id, a.title AS assignment_title
+         FROM assignment_attempts aa
+         JOIN assignments a ON a.id = aa.assignment_id
+         WHERE aa.attempt_id = ?
+         UNION
+         SELECT asub.assignment_id, a.title AS assignment_title
+         FROM assignment_submissions asub
+         JOIN assignments a ON a.id = asub.assignment_id
+         WHERE asub.attempt_id = ?
+         LIMIT 1",
+        [$attemptId, $attemptId]
+    );
+
+    $isAssignment = !empty($assignmentRow);
+    $attempt['is_assignment']    = $isAssignment;
+    $attempt['assignment_id']    = $isAssignment ? (int)$assignmentRow['assignment_id'] : null;
+    $attempt['assignment_title'] = $isAssignment ? $assignmentRow['assignment_title'] : null;
+    $attempt['has_kkm']          = $isAssignment;
+
     // Hitung field tambahan.
     // Gunakan jumlah baris attempt_answers sebagai total soal yang DITAMPILKAN
     // (bukan q.total_questions yang mencerminkan semua soal di database).
     $shownCount   = count($answers);
     $correctCount = (int)$attempt['correct_count'];
     $passingScore = (int)($attempt['passing_score'] ?? 60);
-    $attempt['passed']          = $attempt['score'] >= $passingScore;
+    // KKM dan status kelulusan HANYA berlaku jika attempt berasal dari TUGAS
+    $attempt['passed']          = $isAssignment ? ($attempt['score'] >= $passingScore) : null;
     $attempt['total_questions'] = $shownCount;
     $attempt['wrong_count']     = max(0, $shownCount - $correctCount);
     // Cast numerik ke int agar perbandingan === di JavaScript tidak kena type mismatch
@@ -402,7 +424,8 @@ function attempt_history(): void {
                 c.name AS category_name, c.icon AS category_icon,
                 u.name AS user_name,
                 a.mode,
-                IF(a.score >= q.passing_score, 1, 0) AS passed
+                (SELECT aa.assignment_id FROM assignment_attempts aa WHERE aa.attempt_id = a.id LIMIT 1) AS assignment_id,
+                IF(a.score >= q.passing_score, 1, 0) AS raw_passed
          FROM attempts a
          INNER JOIN quizzes q ON q.id = a.quiz_id
          INNER JOIN categories c ON c.id = q.category_id
@@ -413,9 +436,13 @@ function attempt_history(): void {
         [$user['id'], $limit, $offset]
     );
 
-    // Cast booleans
+    // Cast booleans & KKM assignment check
     foreach ($history as &$h) {
-        $h['passed'] = (bool)$h['passed'];
+        $isAssign = !empty($h['assignment_id']);
+        $h['is_assignment'] = $isAssign;
+        $h['has_kkm']       = $isAssign;
+        $h['passed']        = $isAssign ? (bool)$h['raw_passed'] : null;
+        unset($h['raw_passed']);
     }
     unset($h);
 
