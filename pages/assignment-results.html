@@ -1,6 +1,6 @@
 <!-- ASSIGNMENT RESULTS PAGE -->
 <div x-show="currentRoute.startsWith('/assignment/') && routeParams[1] === 'results'"
-     class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+     class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
 
   <div class="flex items-center gap-3 mb-6">
     <button @click="navigate('/classroom/' + (assignmentView.assignment?.class_id || ''))"
@@ -61,9 +61,9 @@
     </div>
 
     <!-- Header row -->
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
       <h2 class="text-base font-semibold text-gray-700 dark:text-gray-300">👥 Daftar Siswa</h2>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 flex-wrap">
         <button @click="loadAssignmentResults(routeParams[0])" class="btn-secondary text-sm px-4 py-2 flex items-center gap-2" :disabled="assignmentView.loading">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" :class="{'animate-spin': assignmentView.loading}">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -88,21 +88,21 @@
     <!-- Table -->
     <div class="card overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="w-full text-sm min-w-[640px]">
           <thead class="bg-gray-50 dark:bg-gray-800/60">
             <tr>
-              <th class="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 w-10">#</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600 dark:text-gray-400 w-12 whitespace-nowrap">#</th>
               <th class="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Nama Siswa</th>
-              <th class="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Skor</th>
-              <th class="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Benar</th>
-              <th class="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Waktu</th>
-              <th class="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Status</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600 dark:text-gray-400 w-20 whitespace-nowrap">Skor</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600 dark:text-gray-400 w-20 whitespace-nowrap">Benar</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600 dark:text-gray-400 w-28 whitespace-nowrap">Waktu</th>
+              <th class="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 w-36 whitespace-nowrap">Status</th>
             </tr>
           </thead>
           <tbody>
             <template x-for="(s, idx) in (assignmentView.results ? assignmentView.results.submissions : [])" :key="s.user_id">
               <tr class="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40">
-                <td class="px-4 py-3">
+                <td class="px-3 py-3 text-center whitespace-nowrap">
                   <span x-show="s.submitted_at && idx === 0" class="text-lg">🥇</span>
                   <span x-show="s.submitted_at && idx === 1" class="text-lg">🥈</span>
                   <span x-show="s.submitted_at && idx === 2" class="text-lg">🥉</span>
@@ -115,7 +115,8 @@
                           x-text="s.student_name.charAt(0).toUpperCase()"></span>
                     <div class="flex flex-col min-w-0">
                       <button @click.stop="navigate('/assignment/' + routeParams[0] + '/history/' + s.user_id)"
-                              class="font-medium text-gray-800 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors text-left truncate">
+                              :title="s.student_name"
+                              class="font-medium text-gray-800 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors text-left truncate block">
                         <span x-text="s.student_name"></span>
                       </button>
                       <template x-if="user && user.id !== s.user_id">
@@ -128,7 +129,7 @@
                     </div>
                   </div>
                 </td>
-                <td class="px-4 py-3 text-center">
+                <td class="px-3 py-3 text-center whitespace-nowrap">
                   <template x-if="s.submitted_at">
                     <button @click.stop="navigate('/result/' + s.attempt_id)"
                             title="Klik untuk melihat detail jawaban siswa"
@@ -140,18 +141,18 @@
                     <span class="text-gray-300 dark:text-gray-600 text-xs">—</span>
                   </template>
                 </td>
-                <td class="px-4 py-3 text-center text-gray-500 dark:text-gray-400"
+                <td class="px-3 py-3 text-center text-gray-500 dark:text-gray-400 whitespace-nowrap"
                     x-text="s.submitted_at && s.correct_count !== null ? s.correct_count : '—'"></td>
-                <td class="px-4 py-3 text-center text-gray-500 dark:text-gray-400"
+                <td class="px-3 py-3 text-center text-gray-500 dark:text-gray-400 whitespace-nowrap"
                     x-text="s.time_taken ? (Math.floor(s.time_taken/60) + 'm ' + (s.time_taken % 60) + 's') : '—'"></td>
-                <td class="px-4 py-3 text-center">
+                <td class="px-4 py-3 text-center whitespace-nowrap">
                   <template x-if="s.submitted_at">
                     <div>
-                      <span class="text-xs text-gray-500 dark:text-gray-400"
-                            x-text="new Date(s.submitted_at).toLocaleDateString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})"></span>
+                      <span class="text-xs text-gray-500 dark:text-gray-400 block whitespace-nowrap"
+                            x-text="formatDateTime(s.submitted_at)"></span>
                       <template x-if="s.has_snapshots">
                         <button @click.stop="viewAssignmentSnapshots(s.attempt_id, routeParams[0])" 
-                                class="mt-1 block mx-auto text-xs text-primary-600 hover:underline">
+                                class="mt-1 inline-flex items-center justify-center text-xs text-primary-600 hover:underline">
                           📷 Snapshots
                         </button>
                       </template>
