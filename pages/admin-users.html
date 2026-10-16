@@ -19,6 +19,7 @@
             <th @click="sortAdmin('users','role')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">Role <span class="text-gray-400 text-xs" x-text="sortIcon('users','role')"></span></th>
             <th @click="sortAdmin('users','total_points')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">Poin <span class="text-gray-400 text-xs" x-text="sortIcon('users','total_points')"></span></th>
             <th @click="sortAdmin('users','is_active')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800">Status <span class="text-gray-400 text-xs" x-text="sortIcon('users','is_active')"></span></th>
+            <th @click="sortAdmin('users','created_at')" class="cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800 whitespace-nowrap">Tgl Daftar <span class="text-gray-400 text-xs" x-text="sortIcon('users','created_at')"></span></th>
             <th>Aksi</th>
           </tr></thead>
           <tbody>
@@ -33,6 +34,7 @@
                 <td><span class="badge text-xs" :class="u.role==='admin'?'badge-primary':''" x-text="u.role"></span></td>
                 <td x-text="u.total_points?.toLocaleString()"></td>
                 <td><span class="badge text-xs" :class="u.is_active?'badge-success':'badge-danger'" x-text="u.is_active?'Aktif':'Nonaktif'"></span></td>
+                <td class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap" :title="u.created_at" x-text="formatDateTime(u.created_at)"></td>
                 <td>
                   <div class="flex items-center gap-2">
                     <button @click="loginAsUser(u)" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline" x-show="u.id !== user?.id" title="Login sebagai user ini">Masuk</button>
