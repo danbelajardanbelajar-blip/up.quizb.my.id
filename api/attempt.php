@@ -161,6 +161,8 @@ function attempt_submit(): void {
 
     // Bulk insert answers
     foreach ($answerRows as [$qid, $oid, $correct]) {
+        // Pada mode instant, jangan simpan baris soal yang tidak dijawab (belum sempat dikerjakan)
+        if ($mode === 'instant' && $oid === null) continue;
         DB::execute(
             'INSERT INTO attempt_answers (attempt_id, question_id, option_id, is_correct) VALUES (?,?,?,?)',
             [$attemptId, $qid, $oid, $correct]
@@ -319,6 +321,12 @@ function attempt_result(): void {
         [$attemptId]
     );
 
+    // Jika mode instant: hanya ambil soal yang memang dikerjakan/dijawab oleh user.
+    // Soal yang tidak sempat dikerjakan (karena gugur lebih awal) tidak boleh dibocorkan kunci jawabannya.
+    if (($attempt['mode'] ?? '') === 'instant') {
+        $answers = array_values(array_filter($answers, fn($a) => $a['selected_option_id'] !== null || !empty($a['selected_answer'])));
+    }
+
     // Hitung field tambahan.
     // Gunakan jumlah baris attempt_answers sebagai total soal yang DITAMPILKAN
     // (bukan q.total_questions yang mencerminkan semua soal di database).
@@ -327,7 +335,7 @@ function attempt_result(): void {
     $passingScore = (int)($attempt['passing_score'] ?? 60);
     $attempt['passed']          = $attempt['score'] >= $passingScore;
     $attempt['total_questions'] = $shownCount;
-    $attempt['wrong_count']     = $shownCount - $correctCount;
+    $attempt['wrong_count']     = max(0, $shownCount - $correctCount);
     // Cast numerik ke int agar perbandingan === di JavaScript tidak kena type mismatch
     $attempt['id']      = (int)$attempt['id'];
     $attempt['user_id'] = (int)$attempt['user_id'];

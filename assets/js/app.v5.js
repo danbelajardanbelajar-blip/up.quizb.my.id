@@ -878,6 +878,7 @@ function QuizBApp() {
       this.result.mode = modeMatch ? modeMatch[1] : null;
       try {
         const resp = await api.get('attempt.result', { id: attemptId });
+        this.result.mode = (modeMatch ? modeMatch[1] : null) || resp.attempt?.mode || 'exam';
         // API returns { attempt: {...}, answers: [...] }
         this.result.data = {
           ...resp.attempt,
