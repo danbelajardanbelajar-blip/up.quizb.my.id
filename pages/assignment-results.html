@@ -62,7 +62,22 @@
 
     <!-- Header row -->
     <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
-      <h2 class="text-base font-semibold text-gray-700 dark:text-gray-300">👥 Daftar Siswa</h2>
+      <div class="flex items-center gap-3 flex-wrap">
+        <h2 class="text-base font-semibold text-gray-700 dark:text-gray-300">👥 Daftar Siswa</h2>
+        <!-- Quick sort dropdown for mobile -->
+        <div class="md:hidden flex items-center gap-1.5 text-xs text-gray-500">
+          <span>Urut:</span>
+          <select @change="sortAssignmentResults($event.target.value)"
+                  class="form-input py-1 px-2 text-xs rounded-lg border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+            <option value="rank" :selected="assignmentView.sort.key === 'rank'">Peringkat (#)</option>
+            <option value="student_name" :selected="assignmentView.sort.key === 'student_name'">Nama Siswa</option>
+            <option value="score" :selected="assignmentView.sort.key === 'score'">Skor Tertinggi</option>
+            <option value="correct_count" :selected="assignmentView.sort.key === 'correct_count'">Jumlah Benar</option>
+            <option value="time_taken" :selected="assignmentView.sort.key === 'time_taken'">Waktu Tercepat</option>
+            <option value="submitted_at" :selected="assignmentView.sort.key === 'submitted_at'">Waktu Kumpul</option>
+          </select>
+        </div>
+      </div>
       <div class="flex items-center gap-2 flex-wrap">
         <button @click="loadAssignmentResults(routeParams[0])" class="btn-secondary text-sm px-4 py-2 flex items-center gap-2" :disabled="assignmentView.loading">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" :class="{'animate-spin': assignmentView.loading}">
@@ -89,18 +104,18 @@
     <div class="card overflow-hidden">
       <!-- MOBILE VIEW: Cards list (visible on screens < 768px, no horizontal scroll needed) -->
       <div class="md:hidden divide-y divide-gray-100 dark:divide-gray-800">
-        <template x-for="(s, idx) in (assignmentView.results ? assignmentView.results.submissions : [])" :key="s.user_id">
+        <template x-for="(s, idx) in sortedAssignmentSubmissions()" :key="s.user_id">
           <div class="p-3.5 hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition-colors">
             <!-- Top row: Rank, Avatar, Name & Score badge -->
             <div class="flex items-start justify-between gap-2.5">
               <div class="flex items-start gap-2.5 min-w-0 flex-1">
                 <!-- Rank -->
                 <div class="w-6 text-center flex-shrink-0 pt-0.5">
-                  <span x-show="s.submitted_at && idx === 0" class="text-base">🥇</span>
-                  <span x-show="s.submitted_at && idx === 1" class="text-base">🥈</span>
-                  <span x-show="s.submitted_at && idx === 2" class="text-base">🥉</span>
-                  <span x-show="!s.submitted_at || idx > 2"
-                        class="text-xs font-bold text-gray-400" x-text="idx + 1"></span>
+                  <span x-show="s.rank === 1" class="text-base" title="Peringkat 1">🥇</span>
+                  <span x-show="s.rank === 2" class="text-base" title="Peringkat 2">🥈</span>
+                  <span x-show="s.rank === 3" class="text-base" title="Peringkat 3">🥉</span>
+                  <span x-show="s.rank > 3" class="text-xs font-bold text-gray-400" x-text="s.rank"></span>
+                  <span x-show="!s.rank" class="text-gray-300 dark:text-gray-600 text-xs">—</span>
                 </div>
                 <!-- Avatar -->
                 <span class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 flex items-center justify-center text-xs font-bold flex-shrink-0"
@@ -172,23 +187,58 @@
         <table class="w-full text-sm">
           <thead class="bg-gray-50 dark:bg-gray-800/60">
             <tr>
-              <th class="text-center px-3 py-3 font-semibold text-gray-600 dark:text-gray-400 w-12 whitespace-nowrap">#</th>
-              <th class="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Nama Siswa</th>
-              <th class="text-center px-3 py-3 font-semibold text-gray-600 dark:text-gray-400 w-20 whitespace-nowrap">Skor</th>
-              <th class="text-center px-3 py-3 font-semibold text-gray-600 dark:text-gray-400 w-20 whitespace-nowrap">Benar</th>
-              <th class="text-center px-3 py-3 font-semibold text-gray-600 dark:text-gray-400 w-28 whitespace-nowrap">Waktu</th>
-              <th class="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 w-36 whitespace-nowrap">Status</th>
+              <th @click="sortAssignmentResults('rank')"
+                  class="text-center px-3 py-3 font-semibold text-gray-600 dark:text-gray-400 w-14 whitespace-nowrap cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors"
+                  title="Urutkan berdasarkan peringkat">
+                <span>#</span>
+                <span class="text-xs ml-0.5" :class="assignmentView.sort.key === 'rank' ? 'text-primary-600 dark:text-primary-400 font-bold' : 'text-gray-400'" x-text="sortIconResults('rank')"></span>
+              </th>
+
+              <th @click="sortAssignmentResults('student_name')"
+                  class="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors"
+                  title="Urutkan berdasarkan nama siswa">
+                <span>Nama Siswa</span>
+                <span class="text-xs ml-1" :class="assignmentView.sort.key === 'student_name' ? 'text-primary-600 dark:text-primary-400 font-bold' : 'text-gray-400'" x-text="sortIconResults('student_name')"></span>
+              </th>
+
+              <th @click="sortAssignmentResults('score')"
+                  class="text-center px-3 py-3 font-semibold text-gray-600 dark:text-gray-400 w-24 whitespace-nowrap cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors"
+                  title="Urutkan berdasarkan perolehan skor">
+                <span>Skor</span>
+                <span class="text-xs ml-1" :class="assignmentView.sort.key === 'score' ? 'text-primary-600 dark:text-primary-400 font-bold' : 'text-gray-400'" x-text="sortIconResults('score')"></span>
+              </th>
+
+              <th @click="sortAssignmentResults('correct_count')"
+                  class="text-center px-3 py-3 font-semibold text-gray-600 dark:text-gray-400 w-24 whitespace-nowrap cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors"
+                  title="Urutkan berdasarkan jumlah benar">
+                <span>Benar</span>
+                <span class="text-xs ml-1" :class="assignmentView.sort.key === 'correct_count' ? 'text-primary-600 dark:text-primary-400 font-bold' : 'text-gray-400'" x-text="sortIconResults('correct_count')"></span>
+              </th>
+
+              <th @click="sortAssignmentResults('time_taken')"
+                  class="text-center px-3 py-3 font-semibold text-gray-600 dark:text-gray-400 w-28 whitespace-nowrap cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors"
+                  title="Urutkan berdasarkan lama waktu pengerjaan">
+                <span>Waktu</span>
+                <span class="text-xs ml-1" :class="assignmentView.sort.key === 'time_taken' ? 'text-primary-600 dark:text-primary-400 font-bold' : 'text-gray-400'" x-text="sortIconResults('time_taken')"></span>
+              </th>
+
+              <th @click="sortAssignmentResults('submitted_at')"
+                  class="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 w-40 whitespace-nowrap cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors"
+                  title="Urutkan berdasarkan tanggal & waktu pengumpulan">
+                <span>Status</span>
+                <span class="text-xs ml-1" :class="assignmentView.sort.key === 'submitted_at' ? 'text-primary-600 dark:text-primary-400 font-bold' : 'text-gray-400'" x-text="sortIconResults('submitted_at')"></span>
+              </th>
             </tr>
           </thead>
           <tbody>
-            <template x-for="(s, idx) in (assignmentView.results ? assignmentView.results.submissions : [])" :key="s.user_id">
+            <template x-for="(s, idx) in sortedAssignmentSubmissions()" :key="s.user_id">
               <tr class="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40">
                 <td class="px-3 py-3 text-center whitespace-nowrap">
-                  <span x-show="s.submitted_at && idx === 0" class="text-lg">🥇</span>
-                  <span x-show="s.submitted_at && idx === 1" class="text-lg">🥈</span>
-                  <span x-show="s.submitted_at && idx === 2" class="text-lg">🥉</span>
-                  <span x-show="!s.submitted_at || idx > 2"
-                        class="text-gray-400 text-xs" x-text="idx + 1"></span>
+                  <span x-show="s.rank === 1" class="text-lg" title="Peringkat 1">🥇</span>
+                  <span x-show="s.rank === 2" class="text-lg" title="Peringkat 2">🥈</span>
+                  <span x-show="s.rank === 3" class="text-lg" title="Peringkat 3">🥉</span>
+                  <span x-show="s.rank > 3" class="text-gray-400 text-xs font-medium" x-text="s.rank"></span>
+                  <span x-show="!s.rank" class="text-gray-300 dark:text-gray-600 text-xs">—</span>
                 </td>
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-2">

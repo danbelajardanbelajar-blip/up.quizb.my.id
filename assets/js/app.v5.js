@@ -112,7 +112,8 @@ function QuizBApp() {
       monitor:  null,
       monitorInterval: null,
       studentHistory: null,
-      snapshotModal: { show: false, loading: false, snapshots: [] }
+      snapshotModal: { show: false, loading: false, snapshots: [] },
+      sort: { key: 'rank', dir: 'asc' }
     },
 
     // Admin state
@@ -2934,6 +2935,12 @@ function QuizBApp() {
       this.assignmentView.results = null;
       try {
         const data = await api.get('assignment.results', { id });
+        if (data && Array.isArray(data.submissions)) {
+          let rank = 1;
+          data.submissions.forEach((s) => {
+            s.rank = s.submitted_at ? rank++ : null;
+          });
+        }
         this.assignmentView.results = data;
         this.assignmentView.assignment = data.assignment;
       } catch (e) {
@@ -2941,6 +2948,55 @@ function QuizBApp() {
       } finally {
         this.assignmentView.loading = false;
       }
+    },
+
+    sortAssignmentResults(key) {
+      const s = this.assignmentView.sort;
+      if (!s) return;
+      if (s.key === key) {
+        s.dir = s.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        s.key = key;
+        s.dir = ['rank', 'student_name', 'time_taken'].includes(key) ? 'asc' : 'desc';
+      }
+    },
+
+    sortIconResults(key) {
+      const s = this.assignmentView.sort;
+      if (!s || s.key !== key) return '↕';
+      return s.dir === 'asc' ? '↑' : '↓';
+    },
+
+    sortedAssignmentSubmissions() {
+      const subs = this.assignmentView.results?.submissions || [];
+      const s = this.assignmentView.sort;
+      if (!s || !s.key) return subs;
+
+      return [...subs].sort((a, b) => {
+        let av = a[s.key];
+        let bv = b[s.key];
+
+        const aNull = (av === null || av === undefined || av === '');
+        const bNull = (bv === null || bv === undefined || bv === '');
+        if (aNull && bNull) return 0;
+        if (aNull) return 1;
+        if (bNull) return -1;
+
+        if (s.key === 'student_name') {
+          const cmp = String(av).localeCompare(String(bv), 'id', { sensitivity: 'base', numeric: true });
+          return s.dir === 'asc' ? cmp : -cmp;
+        }
+
+        if (s.key === 'submitted_at') {
+          const at = new Date(typeof av === 'string' ? av.replace(' ', 'T') : av).getTime() || 0;
+          const bt = new Date(typeof bv === 'string' ? bv.replace(' ', 'T') : bv).getTime() || 0;
+          return s.dir === 'asc' ? at - bt : bt - at;
+        }
+
+        const an = Number(av) || 0;
+        const bn = Number(bv) || 0;
+        return s.dir === 'asc' ? an - bn : bn - an;
+      });
     },
     
     async loadAssignmentStudentHistory(assignmentId, userId) {
