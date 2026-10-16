@@ -25,17 +25,9 @@ function attempt_submit(): void {
         }
 
         if (!$quizId) jsonError('Quiz ID diperlukan');
-            if (!$quizId) jsonError('Quiz ID diperlukan');
         if (!is_array($answers)) jsonError('Format jawaban tidak valid');
 
-    $user = getCurrentUser();
-    $isCreator = $user && (int)DB::one('SELECT created_by FROM quizzes WHERE id = ?', [$quizId])['created_by'] === (int)$user['id'];
-    $isAdmin = $user && $user['role'] === 'admin';
-    // attempt.submit dipanggil SEBELUM assignment_submit, jadi client tidak selalu kirim assignment_id ke sini.
-    // Tetapi jika mode !== 'exam', bisa jadi ini attempt biasa. 
-    // Untuk lebih aman, di attempt.submit kita lepaskan saja syarat is_published karena di quiz_questions (saat mulai) 
-    // sudah divalidasi. Jika dia bisa submit, artinya dia sudah berhasil get questions.
-    $quiz = DB::one('SELECT id, title, total_questions, passing_score FROM quizzes WHERE id = ?', [$quizId]);
+        $quiz = DB::one('SELECT id, title, total_questions, passing_score FROM quizzes WHERE id = ?', [$quizId]);
     
     if (!$quiz) jsonError('Quiz tidak ditemukan', 404);
 
