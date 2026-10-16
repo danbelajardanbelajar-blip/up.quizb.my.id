@@ -3108,6 +3108,52 @@ function QuizBApp() {
       this.showToast('File Excel berhasil diunduh!', 'success', '📊');
     },
 
+    async resetStudentSubmission(assignmentId, userId, studentName) {
+      if (!confirm(`Hapus hasil tugas siswa "${studentName}"?\n\nSeluruh skor, jawaban, dan rekaman pengawasan (snapshots) pengerjaan ini akan dihapus permanen agar siswa dapat mengulang mengerjakan dari awal.`)) {
+        return;
+      }
+      try {
+        const res = await api.post('assignment.reset_student', {
+          assignment_id: assignmentId,
+          user_id: userId
+        });
+        this.showToast(res.message || 'Hasil pengerjaan siswa berhasil dihapus', 'success', '🗑️');
+        await this.loadAssignmentResults(assignmentId);
+      } catch (e) {
+        this.showToast(e.message || 'Gagal menghapus hasil tugas', 'error', '❌');
+      }
+    },
+
+    async deleteAssignmentAttempt(assignmentId, attemptId, studentName) {
+      if (!confirm(`Hapus data percobaan ini untuk "${studentName}"?\n\nPercobaan ini dan rekaman snapshot terkait akan dihapus permanen.`)) {
+        return;
+      }
+      try {
+        const res = await api.post('assignment.delete_attempt', {
+          assignment_id: assignmentId,
+          attempt_id: attemptId
+        });
+        this.showToast(res.message || 'Percobaan berhasil dihapus', 'success', '🗑️');
+        const userId = this.routeParams[2];
+        if (userId) {
+          await this.loadAssignmentStudentHistory(assignmentId, userId);
+        }
+      } catch (e) {
+        this.showToast(e.message || 'Gagal menghapus percobaan', 'error', '❌');
+      }
+    },
+
+    async deleteAssignmentFromResults(assignId, classId) {
+      if (!confirm('Hapus seluruh tugas ini beserta semua data hasil pengerjaannya? Tindakan ini tidak dapat dibatalkan.')) return;
+      try {
+        await api.delete('assignment.delete', assignId);
+        this.showToast('Tugas berhasil dihapus', 'success', '🗑️');
+        this.navigate('/classroom/' + (classId || ''));
+      } catch (e) {
+        this.showToast(e.message || 'Gagal menghapus tugas', 'error', '❌');
+      }
+    },
+
     async exportClassroomToExcel(classId) {
       if (!classId) return;
       this.showToast('Menyiapkan data...', 'info', '⏳');

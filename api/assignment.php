@@ -998,3 +998,164 @@ function assignment_attempt_snapshots(): void {
 
     jsonSuccess(['snapshots' => $snapshots]);
 }
+
+// ============================================
+// POST /api?action=assignment.reset_student
+// Pengajar (atau admin) mereset/menghapus hasil tugas seorang siswa
+// Body: { assignment_id, user_id }
+// ============================================
+function assignment_reset_student(): void {
+    $user = requireAuth();
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+
+    $body         = getJsonBody();
+    $assignmentId = (int)($body['assignment_id'] ?? 0);
+    $studentId    = (int)($body['user_id'] ?? 0);
+
+    if ($assignmentId <= 0 || $studentId <= 0) jsonError('Parameter tidak valid');
+
+    $assignment = DB::one("SELECT * FROM assignments WHERE id = ?", [$assignmentId]);
+    if (!$assignment) jsonError('Tugas tidak ditemukan', 404);
+
+    if ((int)$assignment['teacher_id'] !== $user['id'] && $user['role'] !== 'admin') {
+        jsonError('Bukan tugas milik Anda', 403);
+    }
+
+    $student = DB::one("SELECT id, name FROM users WHERE id = ?", [$studentId]);
+    if (!$student) jsonError('Siswa tidak ditemukan', 404);
+
+    // 1. Kumpulkan semua attempt_id yang tercatat untuk tugas & siswa ini
+    $attemptIds = [];
+
+    $sub = DB::one(
+        "SELECT attempt_id FROM assignment_submissions WHERE assignment_id = ? AND user_id = ?",
+        [$assignmentId, $studentId]
+    );
+    if (!empty($sub['attempt_id'])) {
+        $attemptIds[] = (int)$sub['attempt_id'];
+    }
+
+    try {
+        $aa = DB::all(
+            "SELECT attempt_id FROM assignment_attempts WHERE assignment_id = ? AND user_id = ?",
+            [$assignmentId, $studentId]
+        );
+        foreach ($aa as $row) {
+            if (!empty($row['attempt_id'])) {
+                $attemptIds[] = (int)$row['attempt_id'];
+            }
+        }
+    } catch (Exception $e) {}
+
+    $attemptIds = array_values(array_unique(array_filter($attemptIds)));
+
+    // 2. Bersihkan file snapshot di disk & data di database untuk setiap attempt
+    foreach ($attemptIds as $attId) {
+        $snapshots = DB::all("SELECT image_path FROM attempt_snapshots WHERE attempt_id = ?", [$attId]);
+        foreach ($snapshots as $snap) {
+            if (!empty($snap['image_path'])) {
+                $base = basename($snap['image_path']);
+                $f1 = __DIR__ . '/../uploads/snapshots/' . $base;
+                $f2 = __DIR__ . '/../' . ltrim($snap['image_path'], '/');
+                if (file_exists($f1)) @unlink($f1);
+                elseif (file_exists($f2)) @unlink($f2);
+            }
+        }
+        DB::execute("DELETE FROM attempt_snapshots WHERE attempt_id = ?", [$attId]);
+        DB::execute("DELETE FROM attempt_answers WHERE attempt_id = ?", [$attId]);
+        DB::execute("DELETE FROM attempts WHERE id = ?", [$attId]);
+    }
+
+    // 3. Hapus catatan riwayat percobaan, progress, dan submission tugas
+    try {
+        DB::execute("DELETE FROM assignment_attempts WHERE assignment_id = ? AND user_id = ?", [$assignmentId, $studentId]);
+    } catch (Exception $e) {}
+
+    try {
+        DB::execute("DELETE FROM assignment_progress WHERE assignment_id = ? AND user_id = ?", [$assignmentId, $studentId]);
+    } catch (Exception $e) {}
+
+    DB::execute("DELETE FROM assignment_submissions WHERE assignment_id = ? AND user_id = ?", [$assignmentId, $studentId]);
+
+    jsonSuccess([
+        'message' => "Hasil tugas " . $student['name'] . " berhasil dihapus. Siswa dapat mengerjakan ulang."
+    ]);
+}
+
+// ============================================
+// POST /api?action=assignment.delete_attempt
+// Pengajar (atau admin) menghapus satu percobaan spesifik
+// Body: { assignment_id, attempt_id }
+// ============================================
+function assignment_delete_attempt(): void {
+    $user = requireAuth();
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+
+    $body         = getJsonBody();
+    $assignmentId = (int)($body['assignment_id'] ?? 0);
+    $attemptId    = (int)($body['attempt_id'] ?? 0);
+
+    if ($assignmentId <= 0 || $attemptId <= 0) jsonError('Parameter tidak valid');
+
+    $assignment = DB::one("SELECT * FROM assignments WHERE id = ?", [$assignmentId]);
+    if (!$assignment) jsonError('Tugas tidak ditemukan', 404);
+
+    if ((int)$assignment['teacher_id'] !== $user['id'] && $user['role'] !== 'admin') {
+        jsonError('Bukan tugas milik Anda', 403);
+    }
+
+    $attempt = DB::one("SELECT * FROM attempts WHERE id = ?", [$attemptId]);
+    if (!$attempt) jsonError('Percobaan tidak ditemukan', 404);
+    $studentId = (int)$attempt['user_id'];
+
+    // Hapus snapshot fisik & database
+    $snapshots = DB::all("SELECT image_path FROM attempt_snapshots WHERE attempt_id = ?", [$attemptId]);
+    foreach ($snapshots as $snap) {
+        if (!empty($snap['image_path'])) {
+            $base = basename($snap['image_path']);
+            $f1 = __DIR__ . '/../uploads/snapshots/' . $base;
+            $f2 = __DIR__ . '/../' . ltrim($snap['image_path'], '/');
+            if (file_exists($f1)) @unlink($f1);
+            elseif (file_exists($f2)) @unlink($f2);
+        }
+    }
+    DB::execute("DELETE FROM attempt_snapshots WHERE attempt_id = ?", [$attemptId]);
+    DB::execute("DELETE FROM attempt_answers WHERE attempt_id = ?", [$attemptId]);
+    DB::execute("DELETE FROM attempts WHERE id = ?", [$attemptId]);
+
+    try {
+        DB::execute("DELETE FROM assignment_attempts WHERE assignment_id = ? AND attempt_id = ?", [$assignmentId, $attemptId]);
+    } catch (Exception $e) {}
+
+    // Cek apakah attempt ini adalah submission aktif
+    $sub = DB::one(
+        "SELECT id, attempt_id FROM assignment_submissions WHERE assignment_id = ? AND user_id = ?",
+        [$assignmentId, $studentId]
+    );
+
+    if ($sub && (int)$sub['attempt_id'] === $attemptId) {
+        // Cari percobaan lain yang tersisa untuk siswa ini
+        $latestOther = null;
+        try {
+            $latestOther = DB::one(
+                "SELECT aa.attempt_id, att.completed_at 
+                 FROM assignment_attempts aa
+                 JOIN attempts att ON att.id = aa.attempt_id
+                 WHERE aa.assignment_id = ? AND aa.user_id = ?
+                 ORDER BY aa.id DESC LIMIT 1",
+                [$assignmentId, $studentId]
+            );
+        } catch (Exception $e) {}
+
+        if ($latestOther && !empty($latestOther['attempt_id'])) {
+            DB::execute(
+                "UPDATE assignment_submissions SET attempt_id = ?, submitted_at = ? WHERE id = ?",
+                [$latestOther['attempt_id'], $latestOther['completed_at'] ?? date('Y-m-d H:i:s'), $sub['id']]
+            );
+        } else {
+            DB::execute("DELETE FROM assignment_submissions WHERE id = ?", [$sub['id']]);
+        }
+    }
+
+    jsonSuccess(['message' => 'Percobaan berhasil dihapus']);
+}
