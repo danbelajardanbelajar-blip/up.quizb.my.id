@@ -15,6 +15,7 @@ function attempt_submit(): void {
         $answers       = $body['answers']          ?? [];
         $timeTaken     = max(0, min(65535, (int)($body['time_taken'] ?? 0)));
         $displayedQIds = array_values(array_filter(array_unique(array_map('intval', $body['question_ids'] ?? [])), fn($id) => $id > 0));
+        $reachedQIds   = array_values(array_filter(array_unique(array_map('intval', $body['reached_question_ids'] ?? [])), fn($id) => $id > 0));
         $playerName    = trim($body['player_name'] ?? '');
         if (mb_strlen($playerName) > 40) $playerName = mb_substr($playerName, 0, 40);
 
@@ -161,8 +162,16 @@ function attempt_submit(): void {
 
     // Bulk insert answers
     foreach ($answerRows as [$qid, $oid, $correct]) {
-        // Pada mode instant, jangan simpan baris soal yang tidak dijawab (belum sempat dikerjakan)
-        if ($mode === 'instant' && $oid === null) continue;
+        // Pada mode instant, simpan HANYA soal yang berhasil dicapai oleh peserta
+        // (baik yang dijawab benar, dijawab salah, maupun yang kehabisan waktu).
+        // Soal setelah titik gugur (unreached) TIDAK disimpan.
+        if ($mode === 'instant') {
+            if (!empty($reachedQIds)) {
+                if (!in_array($qid, $reachedQIds, true)) continue;
+            } else {
+                if ($oid === null) continue;
+            }
+        }
         DB::execute(
             'INSERT INTO attempt_answers (attempt_id, question_id, option_id, is_correct) VALUES (?,?,?,?)',
             [$attemptId, $qid, $oid, $correct]
@@ -321,10 +330,20 @@ function attempt_result(): void {
         [$attemptId]
     );
 
-    // Jika mode instant: hanya ambil soal yang memang dikerjakan/dijawab oleh user.
-    // Soal yang tidak sempat dikerjakan (karena gugur lebih awal) tidak boleh dibocorkan kunci jawabannya.
+    // Jika mode instant: hanya ambil soal yang dicapai oleh peserta.
+    // Dalam mode instant, pemain gugur pada kegagalan pertama (baik salah menjawab maupun kehabisan waktu).
+    // Maka soal yang dicapai adalah seluruh soal benar sampai dengan soal pertama yang gagal (salah/waktu habis).
+    // Soal setelah titik gugur tersebut adalah soal yang belum pernah dicapai (unreached) dan tidak boleh ditampilkan.
     if (($attempt['mode'] ?? '') === 'instant') {
-        $answers = array_values(array_filter($answers, fn($a) => $a['selected_option_id'] !== null || !empty($a['selected_answer'])));
+        $filtered = [];
+        foreach ($answers as $a) {
+            $filtered[] = $a;
+            // Berhenti di soal pertama yang tidak benar (salah menjawab atau kehabisan waktu)
+            if (empty($a['is_correct'])) {
+                break;
+            }
+        }
+        $answers = $filtered;
     }
 
     // Hitung field tambahan.

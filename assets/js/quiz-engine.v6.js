@@ -410,10 +410,22 @@ function QuizEngine() {
     onQuestionTimeout() {
       if (!this.isReviewMode || this.phase !== 'playing') return;
       if (this.mode === 'instant') {
-        // Waktu habis = tidak menjawab = game over
-        this.submitAnswers();
+        // Waktu habis = tidak menjawab = game over (dimasukkan ke result sebagai waktu habis/salah)
+        const currentQ = this.questions[this.currentIndex];
+        if (currentQ && !(currentQ.id in this.answers)) {
+          this.answers[currentQ.id] = null;
+        }
+        this.playWrong();
+        this.stopBgMusic();
+        this.stopTimer();
+        this.stopQuestionTimer();
+        setTimeout(() => this.submitAnswers(), 600);
       } else {
         // End review: lanjut soal berikutnya, atau submit jika soal terakhir
+        const currentQ = this.questions[this.currentIndex];
+        if (currentQ && !(currentQ.id in this.answers)) {
+          this.answers[currentQ.id] = null;
+        }
         if (this.currentIndex < this.questions.length - 1) {
           this.next();
         } else {
@@ -567,17 +579,29 @@ function QuizEngine() {
           timeTaken = initialTime - this.timeLeft;
         }
         
+        if (this.mode === 'instant') {
+          const currentQ = this.questions[this.currentIndex];
+          if (currentQ && !(currentQ.id in this.answers)) {
+            this.answers[currentQ.id] = null;
+          }
+        }
+
+        const reachedQuestions = (this.mode === 'instant')
+          ? this.questions.slice(0, this.currentIndex + 1)
+          : this.questions;
+
         const payload = {
-          quiz_id:      this.quiz.id,
-          mode:         this.mode || 'exam',
-          player_name:  this.playerName || undefined,
-          question_ids: this.questions.map(q => q.id),
+          quiz_id:              this.quiz.id,
+          mode:                 this.mode || 'exam',
+          player_name:          this.playerName || undefined,
+          question_ids:         this.questions.map(q => q.id),
+          reached_question_ids: reachedQuestions.map(q => q.id),
           answers: Object.entries(this.answers).map(([question_id, option_id]) => ({
             question_id: parseInt(question_id),
-            option_id:   parseInt(option_id),
+            option_id:   option_id ? parseInt(option_id) : null,
           })),
           time_taken: timeTaken,
-          snapshots: this.snapshots || []
+          snapshots:  this.snapshots || []
         };
         const result = await api.post('attempt.submit', payload);
         this.result  = result;

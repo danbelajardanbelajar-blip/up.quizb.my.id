@@ -65,7 +65,7 @@
         </div>
 
         <!-- Answer Review -->
-        <div class="card p-6 mb-6" x-show="result.data.answers && ((result.mode === 'instant' || result.data?.mode === 'instant') ? result.data.answers.some(a => a.selected_option_id != null || a.selected_answer) : result.data.answers.length > 0)">
+        <div class="card p-6 mb-6" x-show="result.data.answers && result.data.answers.length > 0">
           <div class="flex items-center justify-between mb-4">
             <h2 class="font-bold text-gray-900 dark:text-white">📋 Pembahasan Jawaban</h2>
             <span x-show="result.mode === 'instant' || result.data?.mode === 'instant'" class="text-xs text-orange-500 dark:text-orange-400 font-medium bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded-lg">
@@ -73,7 +73,7 @@
             </span>
           </div>
           <div class="space-y-4">
-            <template x-for="(a, idx) in ((result.mode === 'instant' || result.data?.mode === 'instant') ? result.data.answers.filter(a => a.selected_option_id != null || a.selected_answer) : result.data.answers)" :key="a.question_id">
+            <template x-for="(a, idx) in result.data.answers" :key="a.question_id">
               <div class="border border-gray-100 dark:border-gray-800 rounded-xl p-4">
                 <div class="flex items-start gap-2 mb-3">
                   <span class="text-sm font-bold text-gray-400 flex-shrink-0" x-text="(idx+1)+'.'"></span>
@@ -81,7 +81,7 @@
                     <p class="text-sm font-medium text-gray-800 dark:text-gray-200" x-text="a.question_text"></p>
                     <span class="inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-semibold"
                           :class="a.is_correct ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'"
-                          x-text="a.is_correct ? '✅ Benar' : '❌ Salah'"></span>
+                          x-text="a.is_correct ? '✅ Benar' : (a.selected_option_id != null || a.selected_answer ? '❌ Salah' : '⏱️ Waktu Habis')"></span>
                   </div>
                 </div>
                 <div class="space-y-2 mt-2" x-show="a.options && a.options.length > 0">
@@ -98,7 +98,7 @@
                   </template>
                 </div>
                 <div x-show="!a.options || a.options.length === 0" class="mt-2 text-sm">
-                  <p class="text-gray-500 dark:text-gray-400">Jawaban kamu: <span class="font-medium" x-text="a.selected_answer || '(tidak dijawab)'"></span></p>
+                  <p class="text-gray-500 dark:text-gray-400">Jawaban kamu: <span class="font-medium" x-text="a.selected_answer || '(tidak dijawab / waktu habis)'"></span></p>
                   <p class="text-green-600 dark:text-green-400">Jawaban benar: <span class="font-medium" x-text="a.correct_answer"></span></p>
                 </div>
                 <p x-show="a.explanation" class="mt-3 text-xs text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg px-3 py-2 italic"
