@@ -1946,289 +1946,165 @@ function _parsePdf(string $path): array {
 
 
 function _parseXlsx(string $path): array {
-
-
-
-
-    if (!class_exists('ZipArchive')) return [];
-
-
-
+    if (!class_exists('ZipArchive')) {
+        return _parseCsv($path);
+    }
 
     $zip = new ZipArchive();
+    if ($zip->open($path) !== true) {
+        // Fallback: bukan ZIP/XLSX valid, coba parse sebagai CSV jika file berupa plain text
+        return _parseCsv($path);
+    }
 
-
-
-
-    if ($zip->open($path) !== true) return [];
-
-
-
-
+    // 1. Shared Strings (case-insensitive lookup)
     $ssXml = $zip->getFromName('xl/sharedStrings.xml');
-
-
-
-
-    $wsXml = $zip->getFromName('xl/worksheets/sheet1.xml');
-
-
-
-
-    $zip->close();
-
-
-
-
-    if (!$wsXml) return [];
-
-
-
-
-
-
-
-
+    if (!$ssXml) {
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = $zip->getNameIndex($i);
+            if (strcasecmp($name, 'xl/sharedStrings.xml') === 0) {
+                $ssXml = $zip->getFromName($name);
+                break;
+            }
+        }
+    }
 
     $ss = [];
-
-
-
-
     if ($ssXml) {
-
-
-
-
         $ssObj = simplexml_load_string($ssXml);
-
-
-
-
-        foreach ($ssObj->si as $si) {
-
-
-
-
-            $text = '';
-
-
-
-
-            if (isset($si->t)) { $text = (string)$si->t; }
-
-
-
-
-            else { foreach ($si->r as $r) if (isset($r->t)) $text .= (string)$r->t; }
-
-
-
-
-            $ss[] = $text;
-
-
-
-
+        if ($ssObj && isset($ssObj->si)) {
+            foreach ($ssObj->si as $si) {
+                $text = '';
+                if (isset($si->t)) {
+                    $text = (string)$si->t;
+                } elseif (isset($si->r)) {
+                    foreach ($si->r as $r) if (isset($r->t)) $text .= (string)$r->t;
+                }
+                $ss[] = $text;
+            }
         }
-
-
-
-
     }
 
-
-
-
-
-
-
-
-
-    $ws   = simplexml_load_string($wsXml);
-
-
-
-
-    $rows = [];
-
-
-
-
-    foreach ($ws->sheetData->row as $row) {
-
-
-
-
-        $rowArr = [];
-
-
-
-
-        foreach ($row->c as $c) {
-
-
-
-
-            preg_match('/([A-Z]+)/', strtoupper((string)$c['r']), $m);
-
-
-
-
-            $colStr = $m[1] ?? 'A';
-
-
-
-
-            $colIdx = 0;
-
-
-
-
-            for ($i = 0; $i < strlen($colStr); $i++) $colIdx = $colIdx * 26 + (ord($colStr[$i]) - 64);
-
-
-
-
-            $colIdx--;
-
-
-
-
-            $type = (string)($c['t'] ?? '');
-
-
-
-
-            $val  = (string)($c->v ?? '');
-
-
-
-
-            $rowArr[$colIdx] = ($type === 's') ? ($ss[(int)$val] ?? '') : $val;
-
-
-
-
+    // 2. Kumpulkan semua candidate worksheet di xl/worksheets/
+    $candidateSheets = [];
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $name = $zip->getNameIndex($i);
+        if (preg_match('#^xl/worksheets/.*\.xml$#i', $name)) {
+            $candidateSheets[] = $name;
         }
-
-
-
-
-        if (!empty($rowArr)) $rows[] = $rowArr;
-
-
-
-
     }
 
-
-
-
-    if (empty($rows)) return [];
-
-
-
-
-
-
-
-
-
-    $start = 0;
-
-
-
-
-    $cell0 = strtolower(trim($rows[0][0] ?? ''));
-
-
-
-
-    if (in_array($cell0, ['soal', 'pertanyaan', 'question', 'no', 'nomor'])) $start = 1;
-
-
-
-
-
-
-
-
+    // Urutkan candidate: sheet1.xml diprioritaskan pertama
+    usort($candidateSheets, function($a, $b) {
+        if (stripos($a, 'sheet1.xml') !== false) return -1;
+        if (stripos($b, 'sheet1.xml') !== false) return 1;
+        return strnatcasecmp($a, $b);
+    });
 
     $questions = [];
 
+    $extractKey = function($val) {
+        $val = strtoupper(trim($val ?? ''));
+        if (in_array($val, ['A', 'B', 'C', 'D', 'E'])) return $val;
+        if (preg_match('/^(?:KUNCI\s*:\s*|JAWABAN\s*:\s*|PILIHAN\s+)?([A-E])(?:\.|\b)/i', $val, $km)) {
+            return strtoupper($km[1]);
+        }
+        return null;
+    };
 
+    foreach ($candidateSheets as $sheetPath) {
+        $wsXml = $zip->getFromName($sheetPath);
+        if (!$wsXml) continue;
 
+        $ws = simplexml_load_string($wsXml);
+        if (!$ws || !isset($ws->sheetData->row)) continue;
 
-    for ($i = $start; $i < count($rows); $i++) {
+        $rows = [];
+        foreach ($ws->sheetData->row as $row) {
+            $rowArr = [];
+            foreach ($row->c as $c) {
+                preg_match('/([A-Z]+)/', strtoupper((string)$c['r']), $m);
+                $colStr = $m[1] ?? 'A';
+                $colIdx = 0;
+                for ($k = 0; $k < strlen($colStr); $k++) {
+                    $colIdx = $colIdx * 26 + (ord($colStr[$k]) - 64);
+                }
+                $colIdx--;
 
-
-
-
-        $r = $rows[$i];
-
-
-
-
-        $q = trim($r[0] ?? '');
-
-
-
-
-        if (!$q) continue;
-
-
-
-
-        $kunci7   = strtoupper(trim($r[6] ?? ''));
-        $kunci6   = strtoupper(trim($r[5] ?? ''));
-        
-        if (in_array($kunci7, ['A','B','C','D','E'])) {
-            $correct = $kunci7;
-            $expl    = trim($r[7] ?? '');
-        } else {
-            $correct = $kunci6;
-            if (!in_array($correct, ['A','B','C','D','E'])) $correct = 'A';
-            $expl    = trim($r[6] ?? '');
+                $type = (string)($c['t'] ?? '');
+                $val  = '';
+                if ($type === 's') {
+                    // Shared string index
+                    $val = $ss[(int)$c->v] ?? '';
+                } elseif ($type === 'inlineStr') {
+                    // Inline string (Google Sheets, OpenPyXL, LibreOffice)
+                    if (isset($c->is->t)) {
+                        $val = (string)$c->is->t;
+                    } elseif (isset($c->is->r)) {
+                        foreach ($c->is->r as $r) if (isset($r->t)) $val .= (string)$r->t;
+                    }
+                } else {
+                    $val = (string)($c->v ?? '');
+                }
+                $rowArr[$colIdx] = $val;
+            }
+            if (!empty($rowArr)) $rows[] = $rowArr;
         }
 
-        $letters  = ['A', 'B', 'C', 'D', 'E'];
-        $opts     = [];
-        for ($j = 1; $j <= 5; $j++) {
+        if (empty($rows)) continue;
 
-
-
-
-            $ot = trim($r[$j] ?? '');
-
-
-
-
-            if ($ot) $opts[] = ['option_text' => $ot, 'is_correct' => ($correct === $letters[$j-1]) ? 1 : 0];
-
-
-
-
+        $start = 0;
+        $cell0 = strtolower(trim($rows[0][0] ?? ''));
+        if (in_array($cell0, ['soal', 'pertanyaan', 'question', 'no', 'nomor', '']) || preg_match('/^(soal|pertanyaan|question|no|nomor)/i', $cell0)) {
+            $start = 1;
         }
 
+        $letters = ['A', 'B', 'C', 'D', 'E'];
+        for ($i = $start; $i < count($rows); $i++) {
+            $r = $rows[$i];
+            $q = trim($r[0] ?? '');
+            if (!$q) continue;
 
+            $kunci7 = $extractKey($r[6] ?? '');
+            $kunci6 = $extractKey($r[5] ?? '');
 
+            if ($kunci7) {
+                $correct = $kunci7;
+                $expl    = trim($r[7] ?? '');
+            } else {
+                $correct = $kunci6 ?: 'A';
+                $expl    = trim($r[6] ?? '');
+            }
 
-        if (!empty($opts)) $questions[] = ['question_text' => $q, 'explanation' => $expl, 'options' => $opts];
+            $opts = [];
+            for ($j = 1; $j <= 5; $j++) {
+                $ot = trim($r[$j] ?? '');
+                if ($ot !== '') {
+                    $opts[] = [
+                        'option_text' => $ot,
+                        'is_correct'  => ($correct === $letters[$j-1]) ? 1 : 0
+                    ];
+                }
+            }
 
+            if (!empty($opts)) {
+                $questions[] = [
+                    'question_text' => $q,
+                    'explanation'   => $expl,
+                    'options'       => $opts
+                ];
+            }
+        }
 
-
-
+        if (!empty($questions)) break;
     }
 
+    $zip->close();
 
-
+    if (empty($questions)) {
+        return _parseCsv($path);
+    }
 
     return _fixCorrect($questions);
-
-
-
-
 }
 
 
@@ -2524,15 +2400,23 @@ function _parseCsv(string $path): array {
 
 
 
-        $kunci7   = strtoupper(trim($r[6] ?? ''));
-        $kunci6   = strtoupper(trim($r[5] ?? ''));
-        
-        if (in_array($kunci7, ['A','B','C','D','E'])) {
+        $extractKey = function($val) {
+            $val = strtoupper(trim($val ?? ''));
+            if (in_array($val, ['A', 'B', 'C', 'D', 'E'])) return $val;
+            if (preg_match('/^(?:KUNCI\s*:\s*|JAWABAN\s*:\s*|PILIHAN\s+)?([A-E])(?:\.|\b)/i', $val, $km)) {
+                return strtoupper($km[1]);
+            }
+            return null;
+        };
+
+        $kunci7 = $extractKey($r[6] ?? '');
+        $kunci6 = $extractKey($r[5] ?? '');
+
+        if ($kunci7) {
             $correct = $kunci7;
             $expl    = trim($r[7] ?? '');
         } else {
-            $correct = $kunci6;
-            if (!in_array($correct, ['A','B','C','D','E'])) $correct = 'A';
+            $correct = $kunci6 ?: 'A';
             $expl    = trim($r[6] ?? '');
         }
 
@@ -2728,21 +2612,15 @@ function question_import_file_parse(): void {
 
 
     } elseif (in_array($ext, ['xlsx', 'xls'])) {
-
-
-
-
         $questions = _parseXlsx($f['tmp_name']);
-
-
-
-
+        if (empty($questions)) {
+            $questions = _parseCsv($f['tmp_name']);
+        }
     } elseif ($ext === 'csv') {
-
-
-
-
         $questions = _parseCsv($f['tmp_name']);
+        if (empty($questions)) {
+            $questions = _parseXlsx($f['tmp_name']);
+        }
 
 
 
