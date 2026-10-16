@@ -140,15 +140,19 @@ function formatDate(dateStr) {
 
 function formatRelative(dateStr) {
   if (!dateStr) return '-';
-  const diff = Date.now() - new Date(dateStr).getTime();
+  const d = new Date(typeof dateStr === 'string' ? dateStr.replace(' ', 'T') : dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const diff = Date.now() - d.getTime();
+  if (diff < 0) return 'Baru saja';
   const m = Math.floor(diff / 60000);
   if (m < 1)  return 'Baru saja';
   if (m < 60) return `${m} menit lalu`;
   const h = Math.floor(m / 60);
   if (h < 24) return `${h} jam lalu`;
-  const d = Math.floor(h / 24);
-  if (d < 7)  return `${d} hari lalu`;
-  return formatDate(dateStr);
+  const days = Math.floor(h / 24);
+  if (days === 1) return 'Kemarin';
+  if (days < 7)  return `${days} hari lalu`;
+  return `${days} hari lalu (${formatDate(dateStr)})`;
 }
 
 function difficultyLabel(d) {

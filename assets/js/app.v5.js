@@ -3562,13 +3562,20 @@ function QuizBApp() {
 
     formatRelative(dateStr) {
       if (!dateStr) return '';
-      const diff = Date.now() - new Date(dateStr).getTime();
+      const d = new Date(typeof dateStr === 'string' ? dateStr.replace(' ', 'T') : dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const diff = Date.now() - d.getTime();
+      if (diff < 0) return 'baru saja';
       const m = Math.floor(diff / 60000);
       if (m < 1)  return 'baru saja';
-      if (m < 60) return `${m}m lalu`;
+      if (m < 60) return `${m} menit lalu`;
       const h = Math.floor(m / 60);
-      if (h < 24) return `${h}j lalu`;
-      return `${Math.floor(h / 24)}h lalu`;
+      if (h < 24) return `${h} jam lalu`;
+      const days = Math.floor(h / 24);
+      if (days === 1) return 'kemarin';
+      if (days < 7)  return `${days} hari lalu`;
+      const dateFormatted = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+      return `${days} hari lalu (${dateFormatted})`;
     },
 
     formatDateTime(dateStr) {
@@ -3678,13 +3685,18 @@ function globalTicker() {
 
     formatTimeAgo(dateStr) {
       if (!dateStr) return '';
-      const diff = Date.now() - new Date(dateStr).getTime();
+      const d = new Date(typeof dateStr === 'string' ? dateStr.replace(' ', 'T') : dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const diff = Date.now() - d.getTime();
+      if (diff < 0) return 'baru saja';
       const m = Math.floor(diff / 60000);
       if (m < 1)  return 'baru saja';
-      if (m < 60) return `${m}m lalu`;
+      if (m < 60) return `${m} menit lalu`;
       const h = Math.floor(m / 60);
-      if (h < 24) return `${h}j lalu`;
-      return `${Math.floor(h / 24)}h lalu`;
+      if (h < 24) return `${h} jam lalu`;
+      const days = Math.floor(h / 24);
+      if (days === 1) return 'kemarin';
+      return `${days} hari lalu`;
     },
   };
 }
@@ -3732,17 +3744,19 @@ function quizHistorySection() {
     },
 
     formatTimeAgo(dateStr) {
-      const now = new Date();
-      const date = new Date(dateStr);
-      const diffMs = now - date;
+      if (!dateStr) return '';
+      const d = new Date(typeof dateStr === 'string' ? dateStr.replace(' ', 'T') : dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const diffMs = Date.now() - d.getTime();
+      if (diffMs < 0) return 'baru saja';
       const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return 'baru saja';
+      if (diffMins < 60) return `${diffMins} menit lalu`;
       const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `${diffHours} jam lalu`;
       const diffDays = Math.floor(diffHours / 24);
-
-      if (diffMins < 1) return 'Baru saja';
-      if (diffMins < 60) return `${diffMins}m lalu`;
-            if (diffHours < 24) return `${diffHours}j lalu`;
-      return `${diffDays}h lalu`;
+      if (diffDays === 1) return 'kemarin';
+      return `${diffDays} hari lalu`;
     },
 
     formatModeLabel(mode) {

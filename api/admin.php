@@ -1023,10 +1023,18 @@ function admin_live_challenges(): void {
     unset($p);
 
     // History (Completed) Challenges
-    $history = DB::all("SELECT c.id, c.quiz_id, c.status, c.created_at, c.start_time, q.title AS quiz_title 
+    $history = DB::all("SELECT c.id, c.quiz_id, c.status, c.created_at, c.start_time,
+            COALESCE(
+                (SELECT MAX(att.completed_at) FROM challenge_participants cp JOIN attempts att ON att.id = cp.attempt_id WHERE cp.challenge_id = c.id),
+                (SELECT MAX(cp.created_at) FROM challenge_participants cp WHERE cp.challenge_id = c.id),
+                c.start_time,
+                c.created_at
+            ) AS finished_at,
+            q.title AS quiz_title 
         FROM challenges c 
         INNER JOIN quizzes q ON q.id = c.quiz_id 
-        WHERE c.status = 'completed' ORDER BY c.start_time DESC LIMIT 10");
+        WHERE c.status = 'completed' 
+        ORDER BY finished_at DESC LIMIT 12");
         
     foreach ($history as &$h) {
         $hParts = DB::all("SELECT cp.user_id, cp.is_host, cp.status, cp.score_final, cp.time_taken, u.name 
