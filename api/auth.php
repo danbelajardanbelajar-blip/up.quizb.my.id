@@ -130,6 +130,7 @@ function auth_me(): void {
     $data['quiz_questions_limit'] = (int)($data['quiz_questions_limit'] ?? 10);
     $data['shuffle_questions']    = (bool)(int)($data['shuffle_questions'] ?? 1);
     $data['shuffle_options']      = (bool)(int)($data['shuffle_options']   ?? 1);
+    $data['has_onboarded']        = (bool)(int)($data['has_onboarded']     ?? 1);
     $data['csrf'] = generateCsrfToken();
     
     startSecureSession();
