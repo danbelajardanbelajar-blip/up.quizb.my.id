@@ -407,6 +407,79 @@ function auth_google_callback(): void {
     auth_google();
 }
 
+function auth_google_native(): void {
+    ensureHasOnboardedColumnExists();
+    ensureGoogleIdColumnExists();
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+
+    $body = getBody();
+    $idToken = trim($body['id_token'] ?? '');
+    if (!$idToken) {
+        jsonError('ID Token Google tidak ditemukan', 400);
+    }
+
+    $verifyUrl = 'https://oauth2.googleapis.com/tokeninfo?id_token=' . urlencode($idToken);
+    $tokenInfo = fetchGoogleJson($verifyUrl);
+
+    if (empty($tokenInfo['sub']) || empty($tokenInfo['email'])) {
+        $errorMsg = $tokenInfo['error_description'] ?? ($tokenInfo['error'] ?? 'Verifikasi ID Token Google gagal');
+        jsonError('Token Google tidak valid: ' . $errorMsg, 401);
+    }
+
+    $googleId = $tokenInfo['sub'];
+    $email    = $tokenInfo['email'];
+    $name     = $tokenInfo['name'] ?? explode('@', $email)[0];
+
+    // Check if user exists
+    $user = DB::one(
+        'SELECT id, name, email, role, is_active, google_id, has_onboarded FROM users WHERE google_id = ? OR email = ?',
+        [$googleId, $email]
+    );
+
+    if ($user) {
+        if (!empty($user['google_id']) && $user['google_id'] != $googleId) {
+            jsonError('Email sudah terdaftar dengan akun Google lain', 409);
+        }
+        if (empty($user['google_id'])) {
+            DB::execute('UPDATE users SET google_id = ? WHERE id = ?', [$googleId, $user['id']]);
+            $user['google_id'] = $googleId;
+        }
+        if (!$user['is_active']) {
+            DB::execute('UPDATE users SET is_active = 1 WHERE id = ?', [$user['id']]);
+            $user['is_active'] = 1;
+        }
+
+        loginUser($user);
+
+        jsonSuccess([
+            'id'            => (int)$user['id'],
+            'name'          => $user['name'],
+            'email'         => $user['email'],
+            'role'          => $user['role'],
+            'has_onboarded' => (bool)($user['has_onboarded'] ?? 1),
+            'csrf_token'    => generateCsrfToken(),
+        ], 'Login Google berhasil');
+    } else {
+        // User baru: buat akun baru otomatis
+        DB::execute(
+            'INSERT INTO users (name, email, google_id, is_active, has_onboarded) VALUES (?, ?, ?, 1, 1)',
+            [$name, $email, $googleId]
+        );
+        $newUser = DB::one('SELECT id, name, email, role, has_onboarded FROM users WHERE google_id = ?', [$googleId]);
+        loginUser($newUser);
+
+        jsonSuccess([
+            'id'            => (int)$newUser['id'],
+            'name'          => $newUser['name'],
+            'email'         => $newUser['email'],
+            'role'          => $newUser['role'] ?? 'user',
+            'has_onboarded' => true,
+            'csrf_token'    => generateCsrfToken(),
+        ], 'Registrasi Google berhasil');
+    }
+}
+
+
 // ============================================
 // Verifikasi token dari link email
 // GET /api.php?action=auth.verify_email&token=XXX
