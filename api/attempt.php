@@ -19,6 +19,16 @@ function attempt_submit(): void {
         $playerName    = trim($body['player_name'] ?? '');
         if (mb_strlen($playerName) > 40) $playerName = mb_substr($playerName, 0, 40);
 
+        // Snapshot nama pemain untuk pengerjaan ini agar riwayat nama masa lalu tidak tertimpa
+        $resolvedPlayerName = null;
+        if (!empty($playerName)) {
+            $resolvedPlayerName = $playerName;
+        } elseif (!empty($user['is_anon'])) {
+            $resolvedPlayerName = $user['name'] ?? 'Anonim';
+        } else {
+            $resolvedPlayerName = $user['name'] ?? null;
+        }
+
         $mode = sanitizeString($body['mode'] ?? 'exam');
         if (!in_array($mode, ['exam', 'instant', 'end', 'challenge'], true)) {
             $mode = 'exam';
@@ -120,16 +130,24 @@ function attempt_submit(): void {
     $passingScore = (int)($quiz['passing_score'] ?? 60);
     $passed       = $score >= $passingScore ? 1 : 0;
 
-    // Insert attempt
-    DB::execute(
-        'INSERT INTO attempts (user_id, quiz_id, mode, score, total_points, correct_count, time_taken, completed_at) VALUES (?,?,?,?,?,?,?,NOW())',
-        [$user['id'], $quizId, $mode, $score, $totalPoints, $correctCount, $timeTaken]
-    );
+    // Insert attempt dengan snapshot player_name
+    try {
+        DB::execute(
+            'INSERT INTO attempts (user_id, player_name, quiz_id, mode, score, total_points, correct_count, time_taken, completed_at) VALUES (?,?,?,?,?,?,?,?,NOW())',
+            [$user['id'], $resolvedPlayerName, $quizId, $mode, $score, $totalPoints, $correctCount, $timeTaken]
+        );
+    } catch (\Throwable $e) {
+        // Fallback jika kolom player_name belum tersedia
+        DB::execute(
+            'INSERT INTO attempts (user_id, quiz_id, mode, score, total_points, correct_count, time_taken, completed_at) VALUES (?,?,?,?,?,?,?,NOW())',
+            [$user['id'], $quizId, $mode, $score, $totalPoints, $correctCount, $timeTaken]
+        );
+    }
     $attemptId = (int)DB::lastId();
 
     // [REALTIME NOTIFIKASI] Tembak sinyal ke Tahajjud API secara asinkron
     $quizTitle = $quiz['title'] ?? 'Quiz';
-    $playerNameNotif = $user['name'] ?? 'User';
+    $playerNameNotif = $resolvedPlayerName ?: ($user['name'] ?? 'User');
     $msgText = "Pengerjaan '{$quizTitle}' oleh {$playerNameNotif} selesai dengan skor {$score}";
     
     $notifyUrl = 'https://tahajjud.quizb.my.id/api_notify.php';
@@ -222,7 +240,7 @@ function attempt_submit(): void {
         'earned_points'   => $earnedPoints,
         'time_taken'      => $timeTaken,
         'passed'          => (bool)$passed,
-        'user_name'       => $user['name'],
+        'user_name'       => $resolvedPlayerName ?: $user['name'],
         'is_anon'         => $user['is_anon'] ?? false,
     ], 'Quiz berhasil diselesaikan');
     } catch (Throwable $e) {
@@ -273,7 +291,7 @@ function attempt_result(): void {
                 a.mode,
                 q.title AS quiz_title, q.total_questions, q.passing_score, q.time_limit,
                 c.name AS category_name, c.icon AS category_icon,
-                u.name AS player_name
+                COALESCE(NULLIF(a.player_name, ''), u.name) AS player_name
          FROM attempts a
          INNER JOIN quizzes q ON q.id = a.quiz_id
          INNER JOIN categories c ON c.id = q.category_id
@@ -516,7 +534,7 @@ function attempt_quiz_global_history(): void {
         "SELECT a.id, a.score, a.correct_count, a.time_taken, a.completed_at,
                 a.mode,
                 q.title AS quiz_title, q.difficulty, q.total_questions,
-                COALESCE(u.name, 'Anonymous') AS user_name,
+                COALESCE(NULLIF(a.player_name, ''), u.name, 'Anonymous') AS user_name,
                 CASE WHEN u.id IS NULL OR u.id = 0 THEN 1 ELSE 0 END AS is_anon
          FROM attempts a
          INNER JOIN quizzes q ON q.id = a.quiz_id

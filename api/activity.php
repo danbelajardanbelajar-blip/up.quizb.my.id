@@ -33,20 +33,20 @@ function _activityEnrich(array &$rows): void {
 function _activitySelect(): string {
     return "SELECT
             a.id,
-            u.id                                 AS user_id,
-            u.name                               AS user_name,
-            q.id                                 AS quiz_id,
-            q.title                              AS quiz_title,
-            q.total_questions                    AS total_questions,
-            q.passing_score                      AS passing_score,
-            c.name                               AS category_name,
-            c.icon                               AS category_icon,
+            u.id                                         AS user_id,
+            COALESCE(NULLIF(a.player_name, ''), u.name) AS user_name,
+            q.id                                         AS quiz_id,
+            q.title                                      AS quiz_title,
+            q.total_questions                            AS total_questions,
+            q.passing_score                              AS passing_score,
+            c.name                                       AS category_name,
+            c.icon                                       AS category_icon,
             a.score,
-            a.correct_count                      AS correct_answers,
+            a.correct_count                              AS correct_answers,
             a.time_taken,
             a.mode,
             a.completed_at,
-            IF(a.score >= q.passing_score, 1, 0) AS passed
+            IF(a.score >= q.passing_score, 1, 0)         AS passed
         FROM attempts a
         INNER JOIN users      u ON u.id = a.user_id
         INNER JOIN quizzes    q ON q.id = a.quiz_id
@@ -72,8 +72,8 @@ function activity_feed(): void {
     $rows = DB::all("
         SELECT
             a.id,
-            u.id                                 AS user_id,
-            u.name                               AS user_name,
+            u.id                                         AS user_id,
+            COALESCE(NULLIF(a.player_name, ''), u.name) AS user_name,
             q.id                                 AS quiz_id,
             q.title                              AS quiz_title,
             q.total_questions                    AS total_questions,

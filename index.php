@@ -20,6 +20,15 @@ if (!file_exists(__DIR__ . '/.indexes_applied')) {
     } catch (\Throwable $e) {}
     file_put_contents(__DIR__ . '/.indexes_applied', date('Y-m-d H:i:s'));
 }
+
+// --- AUTO MIGRATE ATTEMPTS PLAYER_NAME ---
+if (!file_exists(__DIR__ . '/.attempts_player_name_applied')) {
+    try {
+        $pdo = DB::getInstance();
+        $pdo->exec("ALTER TABLE attempts ADD COLUMN player_name VARCHAR(100) NULL DEFAULT NULL AFTER user_id");
+    } catch (\Throwable $e) {}
+    @file_put_contents(__DIR__ . '/.attempts_player_name_applied', date('Y-m-d H:i:s'));
+}
 // -----------------------------------------
 require_once __DIR__ . '/includes/auth.php';
 startSecureSession();

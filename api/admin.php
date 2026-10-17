@@ -493,7 +493,7 @@ function admin_stats(): void {
         'pelajar_count'     => $count("SELECT COUNT(*) AS cnt FROM users WHERE role IN ('pelajar','user')"),
         'avg_score'         => round((float)($avgRow['avg_score'] ?? 0), 1),
         'recent_attempts'   => DB::all(
-            "SELECT a.id, u.name AS user_name, q.title AS quiz_title, a.score, a.completed_at
+            "SELECT a.id, COALESCE(NULLIF(a.player_name, ''), u.name) AS user_name, q.title AS quiz_title, a.score, a.completed_at
              FROM attempts a
              JOIN users u ON a.user_id = u.id
              JOIN quizzes q ON a.quiz_id = q.id
@@ -753,7 +753,7 @@ function admin_quiz_attempts(): void {
 
     $rows = DB::all(
         "SELECT a.id, a.score, a.correct_count, a.time_taken, a.completed_at, a.mode,
-                u.name AS user_name, u.is_active
+                COALESCE(NULLIF(a.player_name, ''), u.name) AS user_name, u.is_active
          FROM attempts a
          JOIN users u ON a.user_id = u.id
          WHERE a.quiz_id = ?
