@@ -499,7 +499,8 @@ function attempt_dashboard(): void {
         "SELECT a.id, a.score, a.correct_count, a.time_taken, a.completed_at,
                 q.id AS quiz_id, q.title AS quiz_title, q.total_questions, q.difficulty, q.passing_score,
                 c.icon AS category_icon, c.name AS category_name,
-                IF(a.score >= q.passing_score, 1, 0) AS passed
+                (SELECT aa.assignment_id FROM assignment_attempts aa WHERE aa.attempt_id = a.id LIMIT 1) AS assignment_id,
+                IF(a.score >= q.passing_score, 1, 0) AS raw_passed
          FROM attempts a
          INNER JOIN quizzes q ON q.id = a.quiz_id
          INNER JOIN categories c ON c.id = q.category_id
@@ -509,7 +510,11 @@ function attempt_dashboard(): void {
     );
 
     foreach ($recent as &$r) {
-        $r['passed'] = (bool)$r['passed'];
+        $isAssign = !empty($r['assignment_id']);
+        $r['is_assignment'] = $isAssign;
+        $r['has_kkm']       = $isAssign;
+        $r['passed']        = $isAssign ? (bool)$r['raw_passed'] : null;
+        unset($r['raw_passed']);
     }
     unset($r);
 
