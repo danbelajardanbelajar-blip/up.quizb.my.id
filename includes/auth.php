@@ -196,11 +196,25 @@ function getOrCreateAnonUser(): array {
     $name  = 'Anonim ' . $city;
     $hash  = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
 
-    DB::execute(
-        "INSERT INTO users (name, email, password_hash, role, is_active) VALUES (?,?,?,'user',0)",
-        [$name, $anonEmail, $hash]
-    );
-    $userId = (int) DB::lastId();
+    try {
+        DB::execute(
+            "INSERT INTO users (name, email, password_hash, role, is_active) VALUES (?,?,?,'user',0)",
+            [$name, $anonEmail, $hash]
+        );
+        $userId = (int) DB::lastId();
+    } catch (\Throwable $e) {
+        // Jika terjadi race condition (duplicate email), ambil user yang sudah terbentuk
+        $existing = DB::one(
+            "SELECT id, name FROM users WHERE email = ?",
+            [$anonEmail]
+        );
+        if ($existing) {
+            $userId = (int) $existing['id'];
+            $name   = $existing['name'];
+        } else {
+            throw $e;
+        }
+    }
 
     $_SESSION['anon_user_id']   = $userId;
     $_SESSION['anon_user_name'] = $name;

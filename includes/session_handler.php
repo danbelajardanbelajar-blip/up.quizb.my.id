@@ -31,7 +31,8 @@ class DatabaseSessionHandler implements SessionHandlerInterface {
     }
 
     // ── Baca data session berdasarkan ID ──────────────────────
-    public function read(string $id): string|false {
+    #[\ReturnTypeWillChange]
+    public function read(string $id) {
         try {
             $stmt = $this->pdo->prepare(
                 'SELECT data FROM db_sessions WHERE id = ? LIMIT 1'
@@ -80,7 +81,8 @@ class DatabaseSessionHandler implements SessionHandlerInterface {
     }
 
     // ── Garbage collection: hapus session yang sangat lama ────
-    public function gc(int $maxLifetime): int|false {
+    #[\ReturnTypeWillChange]
+    public function gc(int $maxLifetime) {
         try {
             $threshold = time() - $this->gcMaxLifetime;
             $stmt = $this->pdo->prepare(

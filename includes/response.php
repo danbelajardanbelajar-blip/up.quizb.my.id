@@ -3,7 +3,7 @@
 // includes/response.php — JSON Response Helper
 // ============================================
 
-function jsonResponse(mixed $data, int $code = 200): never {
+function jsonResponse($data, int $code = 200): void {
     // Buang semua output yang tidak sengaja keluar (PHP warning, notice, dsb)
     // agar tidak merusak JSON atau menyebabkan response kosong
     if (ob_get_level() > 0) {
@@ -30,7 +30,7 @@ function jsonResponse(mixed $data, int $code = 200): never {
     exit;
 }
 
-function jsonSuccess(mixed $data = null, string|int $message = 'OK', ?int $code = null): never {
+function jsonSuccess($data = null, $message = 'OK', ?int $code = null): void {
     // Backward-compat: jsonSuccess($data, 201) → HTTP 201, generic message
     if (is_int($message)) {
         $code    = $message;
@@ -42,12 +42,12 @@ function jsonSuccess(mixed $data = null, string|int $message = 'OK', ?int $code 
     jsonResponse(['success' => true, 'message' => $message, 'data' => $data], $finalCode);
 }
 
-function jsonError(string $message, int $code = 400): never {
+function jsonError(string $message, int $code = 400): void {
     // Include both 'error' and 'message' keys for JS compatibility
     jsonResponse(['success' => false, 'error' => $message, 'message' => $message, 'code' => $code], $code);
 }
 
-function jsonPaginated(array $data, int $total, int $page, int $limit): never {
+function jsonPaginated(array $data, int $total, int $page, int $limit): void {
     jsonResponse([
         'success' => true,
         'data'    => $data,
@@ -78,4 +78,21 @@ function getPaginationParams(): array {
     $page  = max(1, (int)($_GET['page']  ?? 1));
     $limit = min(50, max(1, (int)($_GET['limit'] ?? 12)));
     return [$page, $limit, ($page - 1) * $limit];
+}
+
+// Backward compatibility polyfills for PHP < 8.0
+if (!function_exists('str_starts_with')) {
+    function str_starts_with(string $haystack, string $needle): bool {
+        return $needle === '' || strpos($haystack, $needle) === 0;
+    }
+}
+if (!function_exists('str_ends_with')) {
+    function str_ends_with(string $haystack, string $needle): bool {
+        return $needle === '' || substr($haystack, -strlen($needle)) === $needle;
+    }
+}
+if (!function_exists('str_contains')) {
+    function str_contains(string $haystack, string $needle): bool {
+        return $needle === '' || strpos($haystack, $needle) !== false;
+    }
 }
