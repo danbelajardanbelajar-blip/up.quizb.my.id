@@ -1,95 +1,123 @@
-<div class="max-w-2xl mx-auto px-4 py-10">
+<div class="max-w-3xl mx-auto px-4 py-10">
 
   <!-- Header -->
   <div class="text-center mb-10">
     <div class="text-5xl mb-3">🔒</div>
-    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Kebijakan Privasi</h1>
-    <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm">Terakhir diperbarui: Mei 2025</p>
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Kebijakan Privasi QuizB</h1>
+    <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm">Terakhir diperbarui: 22 Oktober 2026</p>
   </div>
 
-  <div class="space-y-5 text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+  <div class="space-y-6 text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
 
-    <div class="card p-6">
-      <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100 mb-2">1. Informasi yang Kami Kumpulkan</h2>
-      <p>Saat Anda mendaftar dan menggunakan QuizB, kami mengumpulkan informasi berikut:</p>
-      <ul class="mt-2 space-y-1 list-disc list-inside text-gray-500 dark:text-gray-400">
-        <li>Nama lengkap dan alamat email</li>
-        <li>Data aktivitas kuis (skor, riwayat percobaan, waktu pengerjaan)</li>
-        <li>Informasi perangkat dan browser (secara anonim untuk keperluan teknis)</li>
+    <!-- Pendahuluan -->
+    <div class="card p-6 shadow-sm border border-gray-100 dark:border-gray-800 rounded-2xl">
+      <h2 class="text-base font-bold text-gray-800 dark:text-gray-100 mb-2">Pendahuluan</h2>
+      <p>
+        Selamat datang di <strong>QuizB</strong> (aplikasi seluler Android dan situs web <code>https://quizb.my.id</code>).
+        Kami sangat menghargai privasi Anda dan berkomitmen untuk melindungi informasi pribadi yang Anda percayakan kepada kami.
+        Kebijakan Privasi ini menjelaskan jenis informasi yang kami kumpulkan, bagaimana informasi tersebut digunakan, disimpan, dan dilindungi saat Anda menggunakan layanan kami, termasuk aplikasi Android QuizB di Google Play Store.
+      </p>
+    </div>
+
+    <!-- 1. Informasi yang Kami Kumpulkan -->
+    <div class="card p-6 shadow-sm border border-gray-100 dark:border-gray-800 rounded-2xl">
+      <h2 class="text-base font-bold text-gray-800 dark:text-gray-100 mb-2">1. Informasi yang Kami Kumpulkan</h2>
+      <p>Saat Anda mendaftar dan menggunakan QuizB, kami mengumpulkan jenis data berikut:</p>
+      <ul class="mt-3 space-y-2 list-disc list-inside text-gray-500 dark:text-gray-400">
+        <li><strong>Informasi Akun:</strong> Nama lengkap, alamat email, foto profil (jika disediakan), dan peran pengguna (siswa, pengajar, atau umum). Password dienkripsi menggunakan algoritma hash modern (Bcrypt) dan tidak pernah disimpan dalam teks polos.</li>
+        <li><strong>Autentikasi Google Sign-In:</strong> Jika Anda memilih masuk menggunakan Google, kami menerima nama, alamat email, dan identitas publik Google Anda secara aman melalui Google Identity Services API. Kami tidak pernah meminta atau mengakses password Google Anda.</li>
+        <li><strong>Data Aktivitas Pembelajaran & Kuis:</strong> Riwayat kuis yang dikerjakan, skor, jawaban, waktu penyelesaian, status KKM penugasan kelas, dan keikutsertaan dalam papan peringkat (*Leaderboard*).</li>
+        <li><strong>Ruang Kelas & Penugasan (*Classroom*):</strong> Kode kelas, data kelas yang diikuti, pengumpulan tugas kuis, dan pesan komunikasi interaktif antar siswa dan pengajar.</li>
+        <li><strong>Informasi Perangkat & Token Notifikasi:</strong> Token registrasi Firebase Cloud Messaging (FCM Device Token) untuk keperluan pengiriman notifikasi kuis tantangan dan tugas baru. Kami juga mencatat data teknis dasar seperti model perangkat dan versi OS untuk optimalisasi performa dan pelaporan bug.</li>
       </ul>
     </div>
 
-    <div class="card p-6">
-      <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100 mb-2">2. Penggunaan Informasi</h2>
-      <p>Informasi yang dikumpulkan digunakan untuk:</p>
-      <ul class="mt-2 space-y-1 list-disc list-inside text-gray-500 dark:text-gray-400">
-        <li>Menyediakan dan meningkatkan layanan QuizB</li>
-        <li>Menampilkan statistik dan riwayat belajar Anda</li>
-        <li>Mengirim notifikasi terkait aktivitas di platform</li>
-        <li>Keamanan akun dan pencegahan penyalahgunaan</li>
+    <!-- 2. Izin Perangkat Android (Permissions) -->
+    <div class="card p-6 shadow-sm border border-gray-100 dark:border-gray-800 rounded-2xl">
+      <h2 class="text-base font-bold text-gray-800 dark:text-gray-100 mb-2">2. Izin Perangkat Android (App Permissions)</h2>
+      <p>Aplikasi Android QuizB hanya meminta izin perangkat yang benar-benar esensial untuk fungsinya:</p>
+      <ul class="mt-3 space-y-2 list-disc list-inside text-gray-500 dark:text-gray-400">
+        <li><code>POST_NOTIFICATIONS</code> (Android 13+): Digunakan secara eksklusif untuk menampilkan pemberitahuan instan saat ada tantangan kuis duel multiplayer baru dari pemain lain, pengumuman tugas kelas dari guru, atau pesan masuk. Pengguna dapat mengubah atau mematikan izin ini kapan saja melalui menu Pengaturan perangkat.</li>
+        <li><code>INTERNET</code> & <code>ACCESS_NETWORK_STATE</code>: Digunakan untuk menghubungkan aplikasi secara aman ke server kuis dan memeriksa ketersediaan koneksi data/WiFi.</li>
       </ul>
     </div>
 
-    <div class="card p-6">
-      <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100 mb-2">3. Keamanan Data</h2>
-      <p>
-        Kami berkomitmen menjaga keamanan data Anda. Password disimpan dalam bentuk terenkripsi dan tidak dapat dibaca oleh siapapun, termasuk tim kami.
-        Akses ke data pribadi dibatasi hanya untuk keperluan operasional platform.
-      </p>
-    </div>
-
-    <div class="card p-6">
-      <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100 mb-2">4. Berbagi Data dengan Pihak Ketiga</h2>
-      <p>
-        QuizB <span class="font-medium text-gray-800 dark:text-gray-100">tidak menjual, menyewakan, atau membagikan</span> data pribadi Anda kepada pihak ketiga manapun untuk keperluan komersial.
-        Data hanya dibagikan jika diwajibkan oleh hukum yang berlaku.
-      </p>
-    </div>
-
-    <div class="card p-6">
-      <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100 mb-2">5. Data Publik</h2>
-      <p>
-        Aktivitas kuis seperti skor dan riwayat percobaan dapat ditampilkan secara publik di halaman Aktivitas dan Leaderboard sebagai bagian dari fitur platform.
-        Jika Anda tidak ingin data Anda muncul secara publik, Anda dapat menghubungi kami untuk pengaturan lebih lanjut.
-      </p>
-    </div>
-
-    <div class="card p-6">
-      <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100 mb-2">6. Hak Pengguna</h2>
-      <p>Anda memiliki hak untuk:</p>
-      <ul class="mt-2 space-y-1 list-disc list-inside text-gray-500 dark:text-gray-400">
-        <li>Mengakses data pribadi yang kami simpan</li>
-        <li>Meminta koreksi data yang tidak akurat</li>
-        <li>Meminta penghapusan akun dan seluruh data Anda</li>
+    <!-- 3. Penggunaan Informasi -->
+    <div class="card p-6 shadow-sm border border-gray-100 dark:border-gray-800 rounded-2xl">
+      <h2 class="text-base font-bold text-gray-800 dark:text-gray-100 mb-2">3. Penggunaan Informasi</h2>
+      <p>Kami menggunakan data yang dikumpulkan hanya untuk tujuan yang sah, antara lain:</p>
+      <ul class="mt-3 space-y-2 list-disc list-inside text-gray-500 dark:text-gray-400">
+        <li>Menyediakan, memelihara, dan meningkatkan seluruh fitur kuis, evaluasi, dan ruang kelas di QuizB.</li>
+        <li>Memfasilitasi fitur duel multiplayer dan sistem notifikasi tantangan secara *real-time*.</li>
+        <li>Menghitung skor, peringkat di leaderboard, dan memantau kemajuan belajar siswa bagi pengajar.</li>
+        <li>Menjaga keamanan akun dan mencegah kecurangan atau penyalahgunaan platform.</li>
       </ul>
     </div>
 
-    <div class="card p-6">
-      <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100 mb-2">7. Cookie</h2>
-      <p>
-        QuizB menggunakan session cookie yang diperlukan untuk menjaga status login Anda. Kami tidak menggunakan cookie iklan atau pelacakan pihak ketiga.
+    <!-- 4. Layanan Pihak Ketiga (Third-Party Services) -->
+    <div class="card p-6 shadow-sm border border-gray-100 dark:border-gray-800 rounded-2xl">
+      <h2 class="text-base font-bold text-gray-800 dark:text-gray-100 mb-2">4. Layanan Pihak Ketiga</h2>
+      <p>Aplikasi QuizB memanfaatkan beberapa layanan pihak ketiga terpercaya dari Google untuk mendukung operasional:</p>
+      <ul class="mt-3 space-y-2 list-disc list-inside text-gray-500 dark:text-gray-400">
+        <li><strong>Google Play Services / Google Sign-In:</strong> Memfasilitasi pendaftaran dan masuk akun yang cepat dan aman.</li>
+        <li><strong>Firebase Cloud Messaging (Google LLC):</strong> Mengirimkan push notifikasi tantangan kuis dan tugas ke perangkat pengguna.</li>
+      </ul>
+      <p class="mt-3 text-xs text-gray-500">
+        Penggunaan data oleh layanan pihak ketiga tersebut tunduk pada kebijakan privasi masing-masing penyedia:
+        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 underline">Kebijakan Privasi Google</a>.
       </p>
     </div>
 
-    <div class="card p-6">
-      <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100 mb-2">8. Perubahan Kebijakan</h2>
+    <!-- 5. Keamanan & Perlindungan Data -->
+    <div class="card p-6 shadow-sm border border-gray-100 dark:border-gray-800 rounded-2xl">
+      <h2 class="text-base font-bold text-gray-800 dark:text-gray-100 mb-2">5. Keamanan & Perlindungan Data</h2>
       <p>
-        Kebijakan privasi ini dapat diperbarui sewaktu-waktu. Perubahan signifikan akan diberitahukan melalui notifikasi di platform.
-        Dengan terus menggunakan QuizB setelah perubahan, Anda menyetujui kebijakan yang diperbarui.
+        QuizB <span class="font-bold text-gray-800 dark:text-gray-100">tidak menjual, memperdagangkan, menyewakan, atau memberikan data pribadi Anda</span> kepada pihak ketiga untuk kepentingan iklan komersial maupun pemasaran.
+      </p>
+      <p class="mt-2">
+        Seluruh transmisi data antara aplikasi seluler dan server kami dienkripsi menggunakan protokol HTTPS/TLS berstandar industri. Penyimpanan lokal di perangkat menggunakan ruang privat aplikasi yang tidak dapat diakses oleh aplikasi lain.
       </p>
     </div>
 
-    <div class="card p-6">
-      <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100 mb-2">9. Hubungi Kami</h2>
-      <p>Jika ada pertanyaan terkait kebijakan privasi ini, silakan hubungi kami melalui:</p>
-      <div class="mt-3 space-y-2">
-        <p>✉️ <a href="mailto:zenhkm@gmail.com" class="text-primary-600 dark:text-primary-400 hover:underline">zenhkm@gmail.com</a></p>
-        <p>📱 <a href="https://wa.me/6285743399595" target="_blank" rel="noopener" class="text-primary-600 dark:text-primary-400 hover:underline">085743399595</a></p>
+    <!-- 6. Privasi Pengguna Anak & Siswa -->
+    <div class="card p-6 shadow-sm border border-gray-100 dark:border-gray-800 rounded-2xl">
+      <h2 class="text-base font-bold text-gray-800 dark:text-gray-100 mb-2">6. Privasi Pengguna Siswa & Pelajar</h2>
+      <p>
+        Sebagai platform kuis edukatif yang juga digunakan dalam lingkungan sekolah dan madrasah, kami sangat memperhatikan privasi peserta didik. Kami tidak mengumpulkan data pribadi di luar kebutuhan pembelajaran, tidak menyajikan iklan yang tidak pantas, dan data hasil belajar hanya dapat dipantau oleh pengajar kelas terkait.
+      </p>
+    </div>
+
+    <!-- 7. Hak Pengguna & Prosedur Penghapusan Akun/Data -->
+    <div class="card p-6 shadow-sm border border-gray-100 dark:border-gray-800 rounded-2xl">
+      <h2 class="text-base font-bold text-gray-800 dark:text-gray-100 mb-2">7. Hak Pengguna & Penghapusan Akun/Data (Account Deletion)</h2>
+      <p>Anda memiliki hak penuh atas data pribadi Anda:</p>
+      <ul class="mt-3 space-y-2 list-disc list-inside text-gray-500 dark:text-gray-400">
+        <li><strong>Akses & Pembaruan:</strong> Anda dapat melihat dan memperbarui nama serta kata sandi kapan saja melalui menu Edit Profil di aplikasi.</li>
+        <li><strong>Penghapusan Akun & Data (*Data Deletion Request*):</strong> Sesuai kebijakan Google Play, Anda berhak meminta penghapusan permanen akun beserta seluruh data riwayat kuis, tugas, dan pesan. Untuk mengajukan penghapusan akun, Anda dapat menghubungi kami melalui email ke <a href="mailto:zenhkm@gmail.com" class="text-primary-600 dark:text-primary-400 font-medium underline">zenhkm@gmail.com</a> dengan subjek <em>"Permohonan Hapus Akun QuizB"</em> atau melalui WhatsApp ke <a href="https://wa.me/6285743399595" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 font-medium underline">085743399595</a>. Akun dan seluruh data Anda akan dihapus secara permanen dari basis data kami selambat-lambatnya dalam 7 (tujuh) hari kerja.</li>
+      </ul>
+    </div>
+
+    <!-- 8. Perubahan Kebijakan Privasi -->
+    <div class="card p-6 shadow-sm border border-gray-100 dark:border-gray-800 rounded-2xl">
+      <h2 class="text-base font-bold text-gray-800 dark:text-gray-100 mb-2">8. Perubahan Kebijakan Privasi</h2>
+      <p>
+        Kami dapat memperbarui Kebijakan Privasi ini dari waktu ke waktu untuk mencerminkan peningkatan fitur atau pemenuhan regulasi hukum terbaru. Setiap perubahan akan diumumkan pada halaman ini dan diberitahukan melalui aplikasi jika terdapat perubahan yang bersifat mendasar.
+      </p>
+    </div>
+
+    <!-- 9. Kontak Pengembang -->
+    <div class="card p-6 shadow-sm border border-gray-100 dark:border-gray-800 rounded-2xl">
+      <h2 class="text-base font-bold text-gray-800 dark:text-gray-100 mb-2">9. Kontak & Pertanyaan</h2>
+      <p>Jika Anda memiliki pertanyaan, masukan, atau kendala terkait Kebijakan Privasi ini, silakan hubungi tim pengembang kami:</p>
+      <div class="mt-3 space-y-2 text-gray-700 dark:text-gray-300">
+        <p>📧 <strong>Email:</strong> <a href="mailto:zenhkm@gmail.com" class="text-primary-600 dark:text-primary-400 hover:underline">zenhkm@gmail.com</a></p>
+        <p>📱 <strong>WhatsApp / Telepon:</strong> <a href="https://wa.me/6285743399595" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline">+62 857-4339-9595</a></p>
+        <p>🌐 <strong>Website Resmi:</strong> <a href="https://quizb.my.id" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline">https://quizb.my.id</a></p>
       </div>
     </div>
 
   </div>
 
-  <p class="text-center text-xs text-gray-400 dark:text-gray-600 mt-8">© 2025 QuizB. Seluruh hak dilindungi.</p>
+  <p class="text-center text-xs text-gray-400 dark:text-gray-600 mt-10">© 2026 QuizB. Seluruh hak cipta dilindungi.</p>
 
 </div>
