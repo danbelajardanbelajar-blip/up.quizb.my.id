@@ -5,6 +5,7 @@
 # ---- Konfigurasi sensitif (JANGAN push ke Git!) ----
 config/db.php
 config/*.env
+config/firebase-service-account*.json
 .env
 .env.*
 
