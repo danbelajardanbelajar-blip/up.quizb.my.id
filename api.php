@@ -9,7 +9,7 @@ ob_start();
 // CORS & Headers
 header('Access-Control-Allow-Origin: ' . ($_SERVER['HTTP_ORIGIN'] ?? '*'));
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token');
+header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token, X-Requested-With, X-App-Platform');
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Expose-Headers: X-CSRF-Token');
 header('Content-Type: application/json; charset=utf-8');
@@ -67,9 +67,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 // Validate CSRF for state-changing requests
 $method = $_SERVER['REQUEST_METHOD'];
 if (in_array($method, ['POST', 'PUT', 'DELETE'])) {
-    // Allow action=auth.login and auth.register without CSRF (first-time)
     $action = $_GET['action'] ?? '';
-    if (!in_array($action, ['auth.login', 'auth.register', 'auth.logout', 'auth.google', 'auth.google_native', 'auth.resend_verification', 'auth.update_fcm_token'])) {
+
+    // Check if request is from Android native app
+    $isMobileApp = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'id.my.quizb.android')
+                || (!empty($_SERVER['HTTP_X_APP_PLATFORM']) && strtolower($_SERVER['HTTP_X_APP_PLATFORM']) === 'android')
+                || (isset($_SERVER['HTTP_USER_AGENT']) && strpos($_SERVER['HTTP_USER_AGENT'], 'QuizB-Android') !== false);
+
+    // Endpoints exempted from CSRF (Auth & Mobile/Realtime Duel state changes)
+    $csrfExemptActions = [
+        'auth.login', 'auth.register', 'auth.logout', 'auth.google', 'auth.google_native', 
+        'auth.resend_verification', 'auth.update_fcm_token',
+        'challenge.create', 'challenge.accept', 'challenge.decline', 'challenge.sync', 'challenge.submit'
+    ];
+
+    if (!$isMobileApp && !in_array($action, $csrfExemptActions, true)) {
         validateCsrfToken();
     }
 }
