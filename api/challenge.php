@@ -53,9 +53,15 @@ function challenge_create(): void {
         pushNotification(
             $target['id'],
             'challenge',
-            $user['name'] . ' menantangmu dalam Duel Grup! ⚔️',
+            $user['name'] . ' menantangmu dalam Duel! ⚔️',
             'Buktikan siapa yang tercepat di kuis "' . $quiz['title'] . '"',
-            '/play/' . $quizId . '?mode=challenge&cid=' . $challengeId
+            '/play/' . $quizId . '?mode=challenge&cid=' . $challengeId,
+            [
+                'challenge_id'    => (string)$challengeId,
+                'quiz_id'         => (string)$quizId,
+                'quiz_title'      => (string)$quiz['title'],
+                'challenger_name' => (string)$user['name']
+            ]
         );
     }
 
@@ -172,6 +178,23 @@ function challenge_accept(): void {
             DB::execute("UPDATE challenges SET status = 'completed' WHERE id = ?", [$challengeId]);
         }
     }
+
+    // Beri tahu penantang utama bahwa lawan telah menerima tantangan
+    if ((int)$c['challenger_id'] !== (int)$user['id']) {
+        pushNotification(
+            (int)$c['challenger_id'],
+            'challenge_accepted',
+            '⚔️ ' . $user['name'] . ' menerima tantanganmu!',
+            'Tantangan duel kuis telah diterima, bersiaplah!',
+            '/play/' . $c['quiz_id'] . '?mode=challenge&cid=' . $challengeId,
+            [
+                'challenge_id'    => (string)$challengeId,
+                'quiz_id'         => (string)$c['quiz_id'],
+                'challenger_name' => (string)$user['name']
+            ]
+        );
+    }
+
     jsonSuccess([], 'Tantangan diterima. Menunggu yang lain...');
 }
 

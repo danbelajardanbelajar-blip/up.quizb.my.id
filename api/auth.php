@@ -568,3 +568,52 @@ function auth_resend_verification(): void {
     }
     jsonSuccess(null, 'Email konfirmasi berhasil dikirim ulang. Cek inbox kamu.');
 }
+
+
+function ensureFcmTokenTableExists(): void {
+    try {
+        DB::execute("CREATE TABLE IF NOT EXISTS user_fcm_tokens (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            token VARCHAR(500) NOT NULL,
+            device_info VARCHAR(255) DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_user_token (user_id, token(191)),
+            INDEX idx_user_id (user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $col = DB::one("SHOW COLUMNS FROM users LIKE 'fcm_token'");
+        if (!$col) {
+            DB::execute("ALTER TABLE users ADD COLUMN fcm_token VARCHAR(500) DEFAULT NULL");
+        }
+    } catch (Throwable $e) {
+        error_log('[FCM Table Setup Error] ' . $e->getMessage());
+    }
+}
+
+function auth_update_fcm_token(): void {
+    ensureFcmTokenTableExists();
+    $user = requireAuth();
+    $body = getBody();
+    $token = trim($body['fcm_token'] ?? '');
+
+    if (empty($token)) {
+        jsonError('FCM token tidak boleh kosong', 400);
+    }
+
+    try {
+        DB::execute(
+            "INSERT INTO user_fcm_tokens (user_id, token, updated_at) VALUES (?, ?, NOW()) 
+             ON DUPLICATE KEY UPDATE updated_at = NOW()",
+            [$user['id'], $token]
+        );
+
+        DB::execute("UPDATE users SET fcm_token = ? WHERE id = ?", [$token, $user['id']]);
+
+        jsonSuccess([], 'FCM token berhasil disimpan');
+    } catch (Throwable $e) {
+        error_log('[FCM Save Error] ' . $e->getMessage());
+        jsonError('Gagal menyimpan FCM token: ' . $e->getMessage(), 500);
+    }
+}
