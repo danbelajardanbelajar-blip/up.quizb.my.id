@@ -158,6 +158,8 @@ function sendFcmNotification(int|array $userIds, string $title, string $body = '
         // Cek Service Account Firebase untuk FCM HTTP v1 (Google API Standar)
         $saPaths = [
             __DIR__ . '/../config/firebase-service-account.json',
+            __DIR__ . '/../config/firebase service account.json',
+            __DIR__ . '/../config/firebase_service_account.json',
             __DIR__ . '/../config/service-account.json',
             __DIR__ . '/../firebase-service-account.json'
         ];
@@ -166,6 +168,12 @@ function sendFcmNotification(int|array $userIds, string $title, string $body = '
             if (file_exists($p)) {
                 $activeSaPath = $p;
                 break;
+            }
+        }
+        if (!$activeSaPath) {
+            $globFiles = glob(__DIR__ . '/../config/*firebase*.json') ?: [];
+            if (!empty($globFiles)) {
+                $activeSaPath = $globFiles[0];
             }
         }
 
