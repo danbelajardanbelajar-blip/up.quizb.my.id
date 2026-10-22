@@ -377,6 +377,13 @@ function attempt_result(): void {
     $attempt['assignment_title'] = $isAssignment ? $assignmentRow['assignment_title'] : null;
     $attempt['has_kkm']          = $isAssignment;
 
+    // Cek apakah attempt ini merupakan bagian dari TANTANGAN (challenge)
+    $challengeParticipant = DB::one(
+        "SELECT challenge_id FROM challenge_participants WHERE attempt_id = ? LIMIT 1",
+        [$attemptId]
+    );
+    $attempt['challenge_id'] = !empty($challengeParticipant) ? (int)$challengeParticipant['challenge_id'] : null;
+
     // Hitung field tambahan.
     // Gunakan jumlah baris attempt_answers sebagai total soal yang DITAMPILKAN
     // (bukan q.total_questions yang mencerminkan semua soal di database).

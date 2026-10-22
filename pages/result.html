@@ -30,88 +30,9 @@
   <div x-show="!result.loading && result.data" class="animate-slide-up">
     <template x-if="result.data">
       <div>
-        <!-- Score Card -->
-        <div class="card p-8 text-center mb-6">
-          <div class="text-5xl mb-3" x-text="scoreGrade(result.data.score).emoji"></div>
-          <h1 class="text-xl font-bold text-gray-700 dark:text-gray-200 mb-1" x-text="scoreGrade(result.data.score).label"></h1>
-          <div class="text-7xl font-extrabold my-4" :class="scoreGrade(result.data.score).color"
-               x-text="result.data.score + '%'"></div>
-          <p class="text-gray-500 dark:text-gray-400 text-sm" x-text="result.data.quiz_title || result.data.quiz?.title"></p>
-          <p class="text-xs text-gray-400 mt-1" x-text="'Dimainkan oleh: ' + (result.data.player_name || 'Kamu')"></p>
-
-          <!-- Stats -->
-          <div class="grid grid-cols-3 gap-4 mt-6">
-            <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-3">
-              <div class="font-bold text-lg text-green-600 dark:text-green-400" x-text="result.data.correct_count || 0"></div>
-              <div class="text-xs text-gray-500 mt-0.5">Benar</div>
-            </div>
-            <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-3">
-              <div class="font-bold text-lg text-red-500 dark:text-red-400"
-                   x-text="(result.data.wrong_count ?? (result.data.total_questions - result.data.correct_count)) || 0"></div>
-              <div class="text-xs text-gray-500 mt-0.5">Salah</div>
-            </div>
-            <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
-              <div class="font-bold text-lg text-gray-700 dark:text-gray-200" x-text="formatTime(result.data.time_taken||0)"></div>
-              <div class="text-xs text-gray-500 mt-0.5">Waktu</div>
-            </div>
-          </div>
-
-          <!-- Pass/Fail Badge (Hanya tampil jika pengerjaan berasal dari TUGAS) -->
-          <div x-show="result.assignId || result.data?.is_assignment || result.data?.has_kkm"
-               class="mt-5 inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold"
-               :class="result.data?.passed ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'">
-            <span x-text="result.data?.passed ? '✅ Lulus' : '❌ Tidak Lulus'"></span>
-            <span class="text-xs opacity-70" x-text="'(Min. ' + (result.data?.passing_score||result.data?.quiz?.passing_score||60) + '%)'"></span>
-          </div>
-        </div>
-
-        <!-- Answer Review -->
-        <div class="card p-6 mb-6" x-show="result.data.answers && result.data.answers.length > 0">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="font-bold text-gray-900 dark:text-white">📋 Pembahasan Jawaban</h2>
-            <span x-show="result.mode === 'instant' || result.data?.mode === 'instant'" class="text-xs text-orange-500 dark:text-orange-400 font-medium bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded-lg">
-              ⚡ Soal yang dikerjakan saja
-            </span>
-          </div>
-          <div class="space-y-4">
-            <template x-for="(a, idx) in result.data.answers" :key="a.question_id">
-              <div class="border border-gray-100 dark:border-gray-800 rounded-xl p-4">
-                <div class="flex items-start gap-2 mb-3">
-                  <span class="text-sm font-bold text-gray-400 flex-shrink-0" x-text="(idx+1)+'.'"></span>
-                  <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200" x-text="a.question_text"></p>
-                    <span class="inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-semibold"
-                          :class="a.is_correct ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'"
-                          x-text="a.is_correct ? '✅ Benar' : (a.selected_option_id != null || a.selected_answer ? '❌ Salah' : '⏱️ Waktu Habis')"></span>
-                  </div>
-                </div>
-                <div class="space-y-2 mt-2" x-show="a.options && a.options.length > 0">
-                  <template x-for="opt in a.options" :key="opt.id">
-                    <div class="flex items-center gap-2 text-sm px-3 py-2 rounded-lg"
-                         :class="{
-                           'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 font-medium': opt.is_correct,
-                           'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400': (opt.id === a.selected_option_id) && !opt.is_correct,
-                           'text-gray-500 dark:text-gray-400': !opt.is_correct && (opt.id !== a.selected_option_id),
-                         }">
-                      <span x-text="opt.is_correct ? '✅' : (opt.id === a.selected_option_id ? '❌' : '○')"></span>
-                      <span x-text="opt.option_text"></span>
-                    </div>
-                  </template>
-                </div>
-                <div x-show="!a.options || a.options.length === 0" class="mt-2 text-sm">
-                  <p class="text-gray-500 dark:text-gray-400">Jawaban kamu: <span class="font-medium" x-text="a.selected_answer || '(tidak dijawab / waktu habis)'"></span></p>
-                  <p class="text-green-600 dark:text-green-400">Jawaban benar: <span class="font-medium" x-text="a.correct_answer"></span></p>
-                </div>
-                <p x-show="a.explanation" class="mt-3 text-xs text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg px-3 py-2 italic"
-                   x-text="'💡 ' + a.explanation"></p>
-              </div>
-            </template>
-          </div>
-        </div>
-
-        <!-- Challenge Result Card -->
+        <!-- Challenge Result Card (Card Juara di Atas) -->
         <template x-if="result.challengeId">
-          <div class="card p-5 mb-4 border-2 border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20">
+          <div class="card p-5 mb-6 border-2 border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20">
             <div class="flex items-center gap-3 mb-4">
               <span class="text-2xl">⚔️</span>
               <div>
@@ -198,6 +119,85 @@
             </button>
           </div>
         </template>
+
+        <!-- Score Card -->
+        <div class="card p-8 text-center mb-6">
+          <div class="text-5xl mb-3" x-text="scoreGrade(result.data.score).emoji"></div>
+          <h1 class="text-xl font-bold text-gray-700 dark:text-gray-200 mb-1" x-text="scoreGrade(result.data.score).label"></h1>
+          <div class="text-7xl font-extrabold my-4" :class="scoreGrade(result.data.score).color"
+               x-text="result.data.score + '%'"></div>
+          <p class="text-gray-500 dark:text-gray-400 text-sm" x-text="result.data.quiz_title || result.data.quiz?.title"></p>
+          <p class="text-xs text-gray-400 mt-1" x-text="'Dimainkan oleh: ' + (result.data.player_name || 'Kamu')"></p>
+
+          <!-- Stats -->
+          <div class="grid grid-cols-3 gap-4 mt-6">
+            <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-3">
+              <div class="font-bold text-lg text-green-600 dark:text-green-400" x-text="result.data.correct_count || 0"></div>
+              <div class="text-xs text-gray-500 mt-0.5">Benar</div>
+            </div>
+            <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-3">
+              <div class="font-bold text-lg text-red-500 dark:text-red-400"
+                   x-text="(result.data.wrong_count ?? (result.data.total_questions - result.data.correct_count)) || 0"></div>
+              <div class="text-xs text-gray-500 mt-0.5">Salah</div>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+              <div class="font-bold text-lg text-gray-700 dark:text-gray-200" x-text="formatTime(result.data.time_taken||0)"></div>
+              <div class="text-xs text-gray-500 mt-0.5">Waktu</div>
+            </div>
+          </div>
+
+          <!-- Pass/Fail Badge (Hanya tampil jika pengerjaan berasal dari TUGAS) -->
+          <div x-show="result.assignId || result.data?.is_assignment || result.data?.has_kkm"
+               class="mt-5 inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold"
+               :class="result.data?.passed ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'">
+            <span x-text="result.data?.passed ? '✅ Lulus' : '❌ Tidak Lulus'"></span>
+            <span class="text-xs opacity-70" x-text="'(Min. ' + (result.data?.passing_score||result.data?.quiz?.passing_score||60) + '%)'"></span>
+          </div>
+        </div>
+
+        <!-- Answer Review -->
+        <div class="card p-6 mb-6" x-show="result.data.answers && result.data.answers.length > 0">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-bold text-gray-900 dark:text-white">📋 Pembahasan Jawaban</h2>
+            <span x-show="result.mode === 'instant' || result.data?.mode === 'instant'" class="text-xs text-orange-500 dark:text-orange-400 font-medium bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded-lg">
+              ⚡ Soal yang dikerjakan saja
+            </span>
+          </div>
+          <div class="space-y-4">
+            <template x-for="(a, idx) in result.data.answers" :key="a.question_id">
+              <div class="border border-gray-100 dark:border-gray-800 rounded-xl p-4">
+                <div class="flex items-start gap-2 mb-3">
+                  <span class="text-sm font-bold text-gray-400 flex-shrink-0" x-text="(idx+1)+'.'"></span>
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200" x-text="a.question_text"></p>
+                    <span class="inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-semibold"
+                          :class="a.is_correct ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'"
+                          x-text="a.is_correct ? '✅ Benar' : (a.selected_option_id != null || a.selected_answer ? '❌ Salah' : '⏱️ Waktu Habis')"></span>
+                  </div>
+                </div>
+                <div class="space-y-2 mt-2" x-show="a.options && a.options.length > 0">
+                  <template x-for="opt in a.options" :key="opt.id">
+                    <div class="flex items-center gap-2 text-sm px-3 py-2 rounded-lg"
+                         :class="{
+                           'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 font-medium': opt.is_correct,
+                           'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400': (opt.id === a.selected_option_id) && !opt.is_correct,
+                           'text-gray-500 dark:text-gray-400': !opt.is_correct && (opt.id !== a.selected_option_id),
+                         }">
+                      <span x-text="opt.is_correct ? '✅' : (opt.id === a.selected_option_id ? '❌' : '○')"></span>
+                      <span x-text="opt.option_text"></span>
+                    </div>
+                  </template>
+                </div>
+                <div x-show="!a.options || a.options.length === 0" class="mt-2 text-sm">
+                  <p class="text-gray-500 dark:text-gray-400">Jawaban kamu: <span class="font-medium" x-text="a.selected_answer || '(tidak dijawab / waktu habis)'"></span></p>
+                  <p class="text-green-600 dark:text-green-400">Jawaban benar: <span class="font-medium" x-text="a.correct_answer"></span></p>
+                </div>
+                <p x-show="a.explanation" class="mt-3 text-xs text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg px-3 py-2 italic"
+                   x-text="'💡 ' + a.explanation"></p>
+              </div>
+            </template>
+          </div>
+        </div>
 
         <!-- Kumpulkan ke Tugas (disembunyikan saat admin/pengajar mereview hasil orang lain) -->
         <div x-show="result.assignId && !(result.data?.user_id !== user?.id && (user?.role === 'admin' || user?.role === 'pengajar'))"

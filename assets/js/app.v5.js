@@ -882,6 +882,9 @@ function QuizBApp() {
         if (resp.attempt?.assignment_id) {
           this.result.assignId = this.result.assignId || resp.attempt.assignment_id;
         }
+        if (resp.attempt?.challenge_id) {
+          this.result.challengeId = this.result.challengeId || resp.attempt.challenge_id;
+        }
         // API returns { attempt: {...}, answers: [...] }
         this.result.data = {
           ...resp.attempt,
