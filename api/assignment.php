@@ -562,7 +562,8 @@ function assignment_student_history(): void {
 
     $assignment = DB::one("SELECT * FROM assignments WHERE id = ?", [$assignmentId]);
     if (!$assignment) jsonError('Tugas tidak ditemukan', 404);
-    if ((int)$assignment['teacher_id'] !== $user['id'] && $user['role'] !== 'admin') {
+    // Guru pemilik tugas, Admin, ATAU siswa yang bersangkutan dapat melihat riwayat pengerjaan
+    if ((int)$assignment['teacher_id'] !== (int)$user['id'] && $user['role'] !== 'admin' && (int)$studentId !== (int)$user['id']) {
         jsonError('Bukan tugas milik Anda', 403);
     }
 
