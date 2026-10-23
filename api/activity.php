@@ -61,7 +61,8 @@ function _activitySelect(): string {
  */
 function activity_feed(): void {
     [$page, $limit, $offset] = getPaginationParams();
-    $limit = min(100, max(5, $limit));
+    $limit = min(100, max(5, (int)($_GET['limit'] ?? $limit)));
+    $offset = ($page - 1) * $limit;
 
     // Hitung dari SELURUH isi tabel attempts (tanpa filter is_published/is_active)
     // agar total dan offset mencerminkan urutan global yang sesungguhnya.
