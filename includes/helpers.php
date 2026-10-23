@@ -290,3 +290,23 @@ function broadcastNewQuestion(int $quizId, int $excludeUserId = 0): void {
         error_log('[broadcastNewQuestion] ' . $e->getMessage());
     }
 }
+
+/**
+ * Broadcast notifikasi update aplikasi ke seluruh user aktif.
+ */
+function broadcastAppUpdate(string $versionName = '1.0.1', string $description = 'Pembaruan aplikasi QuizB telah tersedia di Google Play Store dengan fitur Pengawasan Kamera dan Pesan Langsung.'): void {
+    try {
+        $recipients = DB::all("SELECT id FROM users WHERE is_active = 1");
+        foreach ($recipients as $rec) {
+            pushNotification(
+                (int)$rec['id'],
+                'app_update',
+                '🚀 Pembaruan Aplikasi QuizB Versi ' . $versionName,
+                $description,
+                'https://play.google.com/store/apps/details?id=id.my.quizb.android'
+            );
+        }
+    } catch (Throwable $e) {
+        error_log('[broadcastAppUpdate] ' . $e->getMessage());
+    }
+}

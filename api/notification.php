@@ -85,3 +85,17 @@ function notification_delete(): void {
     }
     jsonSuccess([], 'Notifikasi dihapus');
 }
+
+// POST — broadcast update aplikasi ke semua user (hanya admin/pengajar)
+function notification_broadcast_update(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $user = requireAuth();
+    if (($user['role'] ?? '') !== 'admin' && ($user['role'] ?? '') !== 'teacher') {
+        jsonError('Akses ditolak', 403);
+    }
+    $body = getBody();
+    $version = trim($body['version'] ?? '1.0.1');
+    $desc = trim($body['description'] ?? 'Pembaruan aplikasi QuizB versi ' . $version . ' telah tersedia di Google Play Store.');
+    broadcastAppUpdate($version, $desc);
+    jsonSuccess([], 'Notifikasi pembaruan aplikasi berhasil dikirim');
+}
