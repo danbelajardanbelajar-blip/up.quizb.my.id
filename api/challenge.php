@@ -152,7 +152,12 @@ function challenge_list(): void {
     }
     unset($h);
     
-    jsonSuccess(['incoming' => $incoming, 'outgoing' => $outgoing, 'history' => $history]);
+    jsonSuccess([
+        'incoming' => $incoming,
+        'outgoing' => $outgoing,
+        'history'  => $history,
+        'received' => $history
+    ]);
 }
 
 function challenge_accept(): void {

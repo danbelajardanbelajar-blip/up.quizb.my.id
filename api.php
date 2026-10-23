@@ -78,7 +78,8 @@ if (in_array($method, ['POST', 'PUT', 'DELETE'])) {
     $csrfExemptActions = [
         'auth.login', 'auth.register', 'auth.logout', 'auth.google', 'auth.google_native', 
         'auth.resend_verification', 'auth.update_fcm_token',
-        'challenge.create', 'challenge.accept', 'challenge.decline', 'challenge.sync', 'challenge.submit'
+        'challenge.create', 'challenge.accept', 'challenge.decline', 'challenge.sync', 'challenge.submit',
+        'message.send', 'message.delete'
     ];
 
     if (!$isMobileApp && !in_array($action, $csrfExemptActions, true)) {

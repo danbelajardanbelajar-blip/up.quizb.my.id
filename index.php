@@ -29,6 +29,36 @@ if (!file_exists(__DIR__ . '/.attempts_player_name_applied')) {
     } catch (\Throwable $e) {}
     @file_put_contents(__DIR__ . '/.attempts_player_name_applied', date('Y-m-d H:i:s'));
 }
+
+// --- AUTO MIGRATE MESSAGES TABLES ---
+if (!file_exists(__DIR__ . '/.messages_tables_applied')) {
+    try {
+        $pdo = DB::getInstance();
+        $pdo->exec("CREATE TABLE IF NOT EXISTS message_threads (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user1_id INT NOT NULL,
+            user2_id INT NOT NULL,
+            last_message_at DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
+            created_at DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
+            KEY idx_user1 (user1_id),
+            KEY idx_user2 (user2_id),
+            KEY idx_last_msg (last_message_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS messages (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            thread_id INT NOT NULL,
+            sender_id INT NOT NULL,
+            body TEXT NOT NULL,
+            is_read TINYINT(1) DEFAULT 0,
+            created_at DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
+            KEY idx_thread (thread_id),
+            KEY idx_sender (sender_id),
+            KEY idx_is_read (is_read)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (\Throwable $e) {}
+    @file_put_contents(__DIR__ . '/.messages_tables_applied', date('Y-m-d H:i:s'));
+}
 // -----------------------------------------
 require_once __DIR__ . '/includes/auth.php';
 startSecureSession();

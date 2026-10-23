@@ -9,7 +9,7 @@ function _getOrCreateThread(int $uid, int $otherId): int {
     $u2 = max($uid, $otherId);
     $t  = DB::one("SELECT id FROM message_threads WHERE user1_id = ? AND user2_id = ?", [$u1, $u2]);
     if ($t) return (int)$t['id'];
-    DB::execute("INSERT INTO message_threads (user1_id, user2_id) VALUES (?, ?)", [$u1, $u2]);
+    DB::execute("INSERT INTO message_threads (user1_id, user2_id, last_message_at) VALUES (?, ?, NOW())", [$u1, $u2]);
     return (int)DB::conn()->lastInsertId();
 }
 
@@ -31,7 +31,7 @@ function message_threads(): void {
          JOIN users u1 ON u1.id = t.user1_id
          JOIN users u2 ON u2.id = t.user2_id
          WHERE t.user1_id = ? OR t.user2_id = ?
-         ORDER BY t.last_message_at DESC
+         ORDER BY COALESCE(t.last_message_at, t.created_at, NOW()) DESC
          LIMIT 60",
         [$uid, $uid, $uid, $uid, $uid]
     );
@@ -174,7 +174,9 @@ function message_open_thread(): void {
 function message_search_users(): void {
     $user = requireAuth();
     $q    = trim($_GET['q'] ?? '');
-    if (strlen($q) < 2) jsonError('Ketikkan minimal 2 karakter');
+    if (strlen($q) < 2) {
+        jsonSuccess([]);
+    }
 
     $users = DB::all(
         "SELECT id, name, email FROM users

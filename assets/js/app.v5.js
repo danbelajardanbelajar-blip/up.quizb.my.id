@@ -2916,7 +2916,8 @@ function QuizBApp() {
         }
 
         this.challenge.incoming     = data.incoming      || [];
-        this.challenge.received     = data.received      || [];
+        this.challenge.received     = data.received      || data.history || [];
+        this.challenge.history      = data.history       || data.received || [];
         this.challenge.outgoing     = data.outgoing      || [];
         this.challenge.pendingCount = data.pending_count || 0;
       } catch (_) {
