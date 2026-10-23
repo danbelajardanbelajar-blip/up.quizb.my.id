@@ -61,7 +61,7 @@ function _activitySelect(): string {
  */
 function activity_feed(): void {
     [$page, $limit, $offset] = getPaginationParams();
-    $limit = min(30, max(5, $limit));
+    $limit = min(100, max(5, $limit));
 
     // Hitung dari SELURUH isi tabel attempts (tanpa filter is_published/is_active)
     // agar total dan offset mencerminkan urutan global yang sesungguhnya.
@@ -114,7 +114,7 @@ function activity_user_history(): void {
     if (!$user) jsonError('User tidak ditemukan', 404);
 
     [$page, $limit, $offset] = getPaginationParams();
-    $limit = min(30, max(5, $limit));
+    $limit = min(100, max(5, $limit));
 
     $total = (int)DB::one(
         "SELECT COUNT(*) AS cnt
@@ -157,7 +157,7 @@ function activity_quiz_history(): void {
     if (!$quiz) jsonError('Quiz tidak ditemukan', 404);
 
     [$page, $limit, $offset] = getPaginationParams();
-    $limit = min(30, max(5, $limit));
+    $limit = min(100, max(5, $limit));
 
     $total = (int)DB::one(
         "SELECT COUNT(*) AS cnt
@@ -198,7 +198,7 @@ function activity_mode_history(): void {
     if (!in_array($mode, $allowed, true)) jsonError('Mode tidak valid');
 
     [$page, $limit, $offset] = getPaginationParams();
-    $limit = min(30, max(5, $limit));
+    $limit = min(100, max(5, $limit));
 
     $total = (int)DB::one(
         "SELECT COUNT(*) AS cnt
