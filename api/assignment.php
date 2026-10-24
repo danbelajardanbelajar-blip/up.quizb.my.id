@@ -991,9 +991,16 @@ function assignment_attempt_snapshots(): void {
         [$attemptId]
     );
 
-    // Bikin URL path full jika diperlukan
+    // Bikin URL path full absolut agar kompatibel baik di web maupun di Android (Coil)
+    $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'quizb.my.id';
+    $baseUrl = $scheme . '://' . $host;
     foreach ($snapshots as &$s) {
-        $s['image_path'] = 'uploads/snapshots/' . basename($s['image_path']);
+        $cleanPath = ltrim($s['image_path'], '/');
+        if (!str_starts_with($cleanPath, 'uploads/snapshots/')) {
+            $cleanPath = 'uploads/snapshots/' . basename($cleanPath);
+        }
+        $s['image_path'] = $baseUrl . '/' . $cleanPath;
     }
     unset($s);
 

@@ -319,26 +319,81 @@ function QuizEngine() {
       }, 2000);
     },
     
-    takeAndUploadSnapshot() {
+    async takeAndUploadSnapshot() {
       if (!this.cameraStream) return;
-      
       if (!this.snapshots) this.snapshots = [];
 
-      const video = document.createElement('video');
-      video.srcObject = this.cameraStream;
-      video.play().then(() => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 640;
-        canvas.height = 480;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imgBase64 = canvas.toDataURL('image/jpeg', 0.5);
-        this.snapshots.push(imgBase64);
-      }).catch(() => {});
+      try {
+        const track = this.cameraStream.getVideoTracks()[0];
+        if (!track || track.readyState !== 'live') return;
+
+        // Metoda 1: ImageCapture modern API (didukung Chrome/Android Chrome)
+        if (typeof ImageCapture !== 'undefined') {
+          try {
+            const capturer = new ImageCapture(track);
+            const blob = await capturer.takePhoto();
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              if (reader.result) {
+                this.snapshots.push(reader.result);
+              }
+            };
+            reader.readAsDataURL(blob);
+            return;
+          } catch (e) {
+            // Fallback ke Canvas jika ImageCapture gagal
+          }
+        }
+
+        // Metoda 2: Gunakan video element yang stabil & frame sudah didecode
+        let video = this._proctorVideo;
+        if (!video) {
+          video = document.createElement('video');
+          video.muted = true;
+          video.playsInline = true;
+          video.autoplay = true;
+          video.srcObject = this.cameraStream;
+          await video.play().catch(() => {});
+          this._proctorVideo = video;
+        }
+
+        // Pastikan video sudah memiliki frame aktual (bukan 0 width atau blank)
+        if (video.videoWidth === 0 || video.readyState < 2) {
+          await new Promise(r => {
+            const onReady = () => {
+              video.removeEventListener('loadeddata', onReady);
+              r();
+            };
+            video.addEventListener('loadeddata', onReady);
+            setTimeout(r, 600);
+          });
+        }
+
+        const width = video.videoWidth || 640;
+        const height = video.videoHeight || 480;
+        if (width > 0 && height > 0) {
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.min(width, 640);
+          canvas.height = Math.round((canvas.width / width) * height);
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imgBase64 = canvas.toDataURL('image/jpeg', 0.6);
+          this.snapshots.push(imgBase64);
+        }
+      } catch (err) {
+        console.error('Proctoring snapshot error:', err);
+      }
     },
     
     stopCamera() {
       if (this.snapshotInterval) clearInterval(this.snapshotInterval);
+      if (this._proctorVideo) {
+        try {
+          this._proctorVideo.pause();
+          this._proctorVideo.srcObject = null;
+        } catch (e) {}
+        this._proctorVideo = null;
+      }
       if (this.cameraStream) {
         this.cameraStream.getTracks().forEach(t => t.stop());
         this.cameraStream = null;

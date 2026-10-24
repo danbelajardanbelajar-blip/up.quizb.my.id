@@ -926,6 +926,17 @@ function admin_attempt_snapshots(): void {
     if ($attemptId <= 0) jsonError('ID tidak valid');
 
     $snapshots = DB::all("SELECT id, image_path, created_at FROM attempt_snapshots WHERE attempt_id = ? ORDER BY created_at ASC", [$attemptId]);
+    $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'quizb.my.id';
+    $baseUrl = $scheme . '://' . $host;
+    foreach ($snapshots as &$s) {
+        $cleanPath = ltrim($s['image_path'], '/');
+        if (!str_starts_with($cleanPath, 'uploads/snapshots/')) {
+            $cleanPath = 'uploads/snapshots/' . basename($cleanPath);
+        }
+        $s['image_path'] = $baseUrl . '/' . $cleanPath;
+    }
+    unset($s);
     jsonSuccess(['snapshots' => $snapshots]);
 }
 
