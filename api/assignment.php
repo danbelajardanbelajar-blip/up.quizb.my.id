@@ -397,12 +397,15 @@ function assignment_submit(): void {
     $assignment = DB::one("SELECT * FROM assignments WHERE id = ? AND is_active = 1", [$assignmentId]);
     if (!$assignment) jsonError('Tugas tidak ditemukan atau tidak aktif', 404);
 
-    // Verifikasi anggota kelas
+    // Verifikasi anggota kelas (atau pengajar / admin yang sedang menguji pengerjaan tugas)
     $member = DB::one(
         "SELECT id FROM class_members WHERE class_id = ? AND user_id = ?",
         [$assignment['class_id'], $user['id']]
     );
-    if (!$member) jsonError('Anda bukan anggota kelas ini', 403);
+    $isTeacherOrAdmin = ($user['role'] === 'admin') || ((int)$assignment['teacher_id'] === (int)$user['id']);
+    if (!$member && !$isTeacherOrAdmin) {
+        jsonError('Anda bukan anggota kelas ini', 403);
+    }
 
     // Verifikasi attempt milik user dan quiz-nya ada dalam packages assignment ini
     // (mendukung single maupun multiple quiz packages)
@@ -521,19 +524,19 @@ function assignment_results(): void {
         [$assignment['class_id']]
     )['c'];
 
-    // Semua submission
+    // Semua submission (dari anggota kelas terdaftar, maupun pengajar/admin yang menguji tugas)
     $submissions = DB::all(
         "SELECT u.id AS user_id, u.name AS student_name, u.email,
                 s.submitted_at,
                 att.id AS attempt_id, att.score, att.correct_count, att.time_taken, att.total_points,
                 (SELECT 1 FROM attempt_snapshots WHERE attempt_id = att.id LIMIT 1) AS has_snapshots
-         FROM class_members cm
-         JOIN users u ON u.id = cm.user_id
+         FROM users u
+         LEFT JOIN class_members cm ON cm.user_id = u.id AND cm.class_id = ?
          LEFT JOIN assignment_submissions s ON s.assignment_id = ? AND s.user_id = u.id
          LEFT JOIN attempts att ON att.id = s.attempt_id
-         WHERE cm.class_id = ?
-         ORDER BY att.score DESC, s.submitted_at ASC",
-        [$id, $assignment['class_id']]
+         WHERE cm.class_id IS NOT NULL OR s.assignment_id IS NOT NULL
+         ORDER BY (s.submitted_at IS NOT NULL) DESC, att.score DESC, s.submitted_at ASC",
+        [$assignment['class_id'], $id]
     );
 
     $submitted = array_filter($submissions, fn($s) => !empty($s['submitted_at']));

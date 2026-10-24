@@ -196,7 +196,7 @@ function quiz_questions(): void {
         // Cari assignment — bisa punya satu atau multiple quiz packages
         $assignment = DB::one(
             'SELECT id, quiz_id, max_questions, shuffle_questions, shuffle_options, 
-                    timer_per_question, duration_minutes
+                    timer_per_question, duration_minutes, require_camera
              FROM assignments WHERE id = ? AND is_active = 1',
             [$assignmentId]
         );
@@ -206,9 +206,12 @@ function quiz_questions(): void {
             if ($assignment['shuffle_questions'] !== null) $shuffleQuestions = (bool)(int)$assignment['shuffle_questions'];
             if ($assignment['shuffle_options']   !== null) $shuffleOptions   = (bool)(int)$assignment['shuffle_options'];
 
-            // Expose timer_per_question and exam_duration (seconds) to client when playing from assignment
+            // Expose timer_per_question, exam_duration, and require_camera to client when playing from assignment
             $quiz['timer_per_question'] = $assignment['timer_per_question'] !== null ? (int)$assignment['timer_per_question'] : null;
             $quiz['exam_duration'] = $assignment['duration_minutes'] !== null ? ((int)$assignment['duration_minutes'] * 60) : null;
+            if (!empty($assignment['require_camera'])) {
+                $quiz['require_camera'] = (int)$assignment['require_camera'];
+            }
         }
     }
 
