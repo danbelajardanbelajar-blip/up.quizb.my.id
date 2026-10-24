@@ -249,13 +249,13 @@
           <div class="text-center py-6">
             <p class="text-4xl mb-3">🎉</p>
             <p class="font-bold text-gray-900 dark:text-white mb-1">Tantangan Terkirim!</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4" x-text="'Menunggu ' + (challengeModal.selectedUser?.name || 'lawan') + ' menerima tantangan.'"></p>
-            <p class="text-xs text-gray-400 mb-6">Kamu bisa mengerjakan quiz sekarang. Hasil akan dibandingkan ketika lawan selesai.</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-2" x-text="'Menunggu ' + ((challengeModal.selectedUsers && challengeModal.selectedUsers.length > 0) ? challengeModal.selectedUsers.map(u => u.name).join(', ') : 'lawan') + ' menerima tantangan.'"></p>
+            <p class="text-xs text-gray-400 mb-6">Mengalihkan ke Menu Tantangan untuk memantau lobby secara langsung...</p>
             <div class="flex gap-3 mt-4">
-              <button @click="challengeModal.show=false; if(challengeModal.pollInterval) clearInterval(challengeModal.pollInterval)" class="btn-secondary flex-1 py-2 text-sm">Tutup (Lanjut Menunggu di Latar Belakang)</button>
+              <button @click="navigate('/challenges'); challengeModal.show=false;" class="btn-primary flex-1 py-2 text-sm">Lihat Lobby Tantangan Sekarang →</button>
             </div>
-            <div class="mt-4 flex items-center justify-center gap-2 text-sm font-medium text-primary-600">
-              <span class="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></span>
+            <div class="mt-4 flex items-center justify-center gap-2 text-sm font-medium text-amber-600 dark:text-amber-400">
+              <span class="w-4 h-4 border-2 border-amber-600 dark:border-amber-400 border-t-transparent rounded-full animate-spin"></span>
               Menunggu musuh menerima...
             </div>
           </div>
