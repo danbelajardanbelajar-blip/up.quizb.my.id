@@ -506,9 +506,22 @@
             </div>
 
             <!-- Dropdown pemilih quiz -->
-            <div class="relative">
+            <div class="relative"
+                 x-data="{
+                   search: '',
+                   get filteredQuizzes() {
+                     const keyword = this.search.trim().toLocaleLowerCase('id');
+                     return this.classroom.quizListForAssign.filter(q =>
+                       String(q.title || '').toLocaleLowerCase('id').includes(keyword)
+                     );
+                   }
+                 }"
+                 @click.outside="classroom.assignQuizDropdownOpen = false"
+                 @keydown.escape.stop="classroom.assignQuizDropdownOpen = false; $refs.assignQuizToggle.focus()">
               <button type="button"
-                      @click="classroom.assignQuizDropdownOpen = !classroom.assignQuizDropdownOpen"
+                      x-ref="assignQuizToggle"
+                      :aria-expanded="classroom.assignQuizDropdownOpen"
+                      @click="classroom.assignQuizDropdownOpen = !classroom.assignQuizDropdownOpen; if (classroom.assignQuizDropdownOpen) { search = ''; $nextTick(() => $refs.assignQuizSearch.focus()); }"
                       class="form-input w-full cursor-pointer bg-white dark:bg-gray-800 flex items-center justify-between text-left">
                 <span x-show="classroom.assignForm.quiz_ids.length === 0" class="text-gray-400">— Pilih dan tambahkan paket soal —</span>
                 <span x-show="classroom.assignForm.quiz_ids.length > 0"  class="text-gray-500">— Tambahkan paket soal lain —</span>
@@ -521,7 +534,6 @@
 
               <!-- Dropdown list -->
               <div x-show="classroom.assignQuizDropdownOpen"
-                   @click.outside="classroom.assignQuizDropdownOpen = false"
                    x-transition:enter="transition ease-out duration-100"
                    x-transition:enter-start="transform opacity-0 scale-95"
                    x-transition:enter-end="transform opacity-100 scale-100"
@@ -529,6 +541,16 @@
                    x-transition:leave-start="transform opacity-100 scale-100"
                    x-transition:leave-end="transform opacity-0 scale-95"
                    class="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-20 overflow-hidden">
+
+                <div class="p-3 border-b border-gray-100 dark:border-gray-700">
+                  <input type="search"
+                         x-ref="assignQuizSearch"
+                         x-model="search"
+                         @keydown.enter.prevent
+                         class="form-input w-full"
+                         aria-label="Cari paket soal berdasarkan judul"
+                         placeholder="Cari quiz atau paket soal…" />
+                </div>
 
                 <!-- Loading state -->
                 <div x-show="classroom.quizListLoading" class="px-4 py-5 text-center text-sm text-gray-400">
@@ -542,10 +564,15 @@
                   Tidak ada paket soal tersedia
                 </div>
 
+                <div x-show="!classroom.quizListLoading && classroom.quizListForAssign.length > 0 && filteredQuizzes.length === 0"
+                     class="px-4 py-5 text-center text-sm text-gray-400" role="status">
+                  Tidak ada paket soal yang cocok. Coba kata kunci lain.
+                </div>
+
                 <!-- Quiz list -->
-                <div x-show="!classroom.quizListLoading && classroom.quizListForAssign.length > 0"
+                <div x-show="!classroom.quizListLoading && filteredQuizzes.length > 0"
                      class="max-h-64 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
-                  <template x-for="q in classroom.quizListForAssign" :key="q.id">
+                  <template x-for="q in filteredQuizzes" :key="q.id">
                     <button type="button"
                             @click="
                               if (!classroom.assignForm.quiz_ids.includes(q.id)) {
