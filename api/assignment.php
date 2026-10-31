@@ -480,8 +480,13 @@ function assignment_submit(): void {
             foreach ($oldAttempts as $oa) {
                 $oldSnaps = DB::all("SELECT image_path FROM attempt_snapshots WHERE attempt_id = ?", [$oa['attempt_id']]);
                 foreach ($oldSnaps as $snap) {
-                    $file = __DIR__ . '/../' . ltrim($snap['image_path'], '/');
-                    if (file_exists($file)) @unlink($file);
+                    if (!empty($snap['image_path'])) {
+                        $base = basename($snap['image_path']);
+                        $f1 = __DIR__ . '/../uploads/snapshots/' . $base;
+                        $f2 = __DIR__ . '/../' . ltrim($snap['image_path'], '/');
+                        if (file_exists($f1)) @unlink($f1);
+                        elseif (file_exists($f2)) @unlink($f2);
+                    }
                 }
                 // Hapus record snapshot-nya saja, BUKAN attempts-nya
                 DB::execute("DELETE FROM attempt_snapshots WHERE attempt_id = ?", [$oa['attempt_id']]);
