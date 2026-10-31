@@ -327,25 +327,37 @@ function QuizEngine() {
         const track = this.cameraStream.getVideoTracks()[0];
         if (!track || track.readyState !== 'live') return;
 
-        // Metoda 1: ImageCapture modern API (didukung Chrome/Android Chrome)
-        if (typeof ImageCapture !== 'undefined') {
+        const MAX_WIDTH = 640;
+        const JPEG_QUALITY = 0.65;
+
+        // Metoda 1: ImageCapture grabFrame (Sangat cepat, menangkap frame aktif tanpa freeze/shutter & ukuran terstandarisasi)
+        if (typeof ImageCapture !== 'undefined' && typeof ImageCapture.prototype.grabFrame === 'function') {
           try {
             const capturer = new ImageCapture(track);
-            const blob = await capturer.takePhoto();
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              if (reader.result) {
-                this.snapshots.push(reader.result);
+            const bitmap = await capturer.grabFrame();
+            if (bitmap && bitmap.width > 0 && bitmap.height > 0) {
+              const canvas = document.createElement('canvas');
+              const targetWidth = Math.min(bitmap.width, MAX_WIDTH);
+              const targetHeight = Math.round((targetWidth / bitmap.width) * bitmap.height);
+              canvas.width = targetWidth;
+              canvas.height = targetHeight;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(bitmap, 0, 0, targetWidth, targetHeight);
+              const imgBase64 = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
+              if (imgBase64 && imgBase64.length > 50) {
+                this.snapshots.push(imgBase64);
               }
-            };
-            reader.readAsDataURL(blob);
-            return;
+              if (typeof bitmap.close === 'function') {
+                bitmap.close();
+              }
+              return;
+            }
           } catch (e) {
-            // Fallback ke Canvas jika ImageCapture gagal
+            // Fallback ke Canvas Video jika grabFrame gagal
           }
         }
 
-        // Metoda 2: Gunakan video element yang stabil & frame sudah didecode
+        // Metoda 2: Gunakan video element yang stabil & canvas (kompatibel penuh dengan Safari, Firefox, iOS, dll)
         let video = this._proctorVideo;
         if (!video) {
           video = document.createElement('video');
@@ -373,12 +385,16 @@ function QuizEngine() {
         const height = video.videoHeight || 480;
         if (width > 0 && height > 0) {
           const canvas = document.createElement('canvas');
-          canvas.width = Math.min(width, 640);
-          canvas.height = Math.round((canvas.width / width) * height);
+          const targetWidth = Math.min(width, MAX_WIDTH);
+          const targetHeight = Math.round((targetWidth / width) * height);
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
           const ctx = canvas.getContext('2d');
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const imgBase64 = canvas.toDataURL('image/jpeg', 0.6);
-          this.snapshots.push(imgBase64);
+          ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+          const imgBase64 = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
+          if (imgBase64 && imgBase64.length > 50) {
+            this.snapshots.push(imgBase64);
+          }
         }
       } catch (err) {
         console.error('Proctoring snapshot error:', err);

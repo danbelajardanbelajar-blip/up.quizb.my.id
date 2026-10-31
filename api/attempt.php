@@ -200,9 +200,8 @@ function attempt_submit(): void {
             if ($imgData) {
                 $fileName = 'snap_' . $attemptId . '_' . time() . '_' . $idx . '.jpg';
                 $filePath = $dir . '/' . $fileName;
-                if (file_put_contents($filePath, $imgData)) {
-                    chmod($filePath, 0644);
-                    DB::execute('INSERT INTO attempt_snapshots (attempt_id, image_path) VALUES (?, ?)', [$attemptId, '/uploads/snapshots/' . $fileName]);
+                if (attempt_save_optimized_snapshot($imgData, $filePath)) {
+                    DB::execute('INSERT INTO attempt_snapshots (attempt_id, image_path) VALUES (?, ?)', [$attemptId, 'uploads/snapshots/' . $fileName]);
                 }
             }
         }
@@ -574,6 +573,49 @@ function quiz_global_history(): void {
     attempt_quiz_global_history();
 }
 
+/**
+ * Helper menyimpan gambar snapshot dengan optimasi & kompresi server-side (GD).
+ * Membatasi lebar maks 640px dan kualitas JPEG 70% agar hemat disk dan aman.
+ */
+function attempt_save_optimized_snapshot(string $imgData, string $filePath, int $maxWidth = 640, int $quality = 70): bool {
+    if (extension_loaded('gd') && function_exists('imagecreatefromstring')) {
+        $src = @imagecreatefromstring($imgData);
+        if ($src !== false) {
+            $origW = imagesx($src);
+            $origH = imagesy($src);
+            if ($origW > 0 && $origH > 0) {
+                if ($origW > $maxWidth) {
+                    $newW = $maxWidth;
+                    $newH = (int)round(($maxWidth / $origW) * $origH);
+                    $dst = imagecreatetruecolor($newW, $newH);
+                    imagecopyresampled($dst, $src, 0, 0, 0, 0, $newW, $newH, $origW, $origH);
+                    $saved = imagejpeg($dst, $filePath, $quality);
+                    imagedestroy($dst);
+                    imagedestroy($src);
+                    if ($saved) {
+                        @chmod($filePath, 0644);
+                        return true;
+                    }
+                } elseif (strlen($imgData) > 120 * 1024) {
+                    $saved = imagejpeg($src, $filePath, $quality);
+                    imagedestroy($src);
+                    if ($saved) {
+                        @chmod($filePath, 0644);
+                        return true;
+                    }
+                }
+            }
+            imagedestroy($src);
+        }
+    }
+
+    $saved = (file_put_contents($filePath, $imgData) !== false);
+    if ($saved) {
+        @chmod($filePath, 0644);
+    }
+    return $saved;
+}
+
 // ============================================
 // Upload Snapshot (Proctoring Real-time)
 // POST /api?action=attempt.upload_snapshot
@@ -599,7 +641,8 @@ function attempt_upload_snapshot(): void {
     if (!is_dir($dir)) mkdir($dir, 0755, true);
 
     $fileName = 'snap_' . $attemptId . '_' . time() . '_' . rand(100, 999) . '.jpg';
-    if (file_put_contents($dir . '/' . $fileName, $imgData)) {
+    $filePath = $dir . '/' . $fileName;
+    if (attempt_save_optimized_snapshot($imgData, $filePath)) {
         DB::execute('INSERT INTO attempt_snapshots (attempt_id, image_path) VALUES (?, ?)', [$attemptId, 'uploads/snapshots/' . $fileName]);
         jsonResponse(['success' => true]);
     } else {
