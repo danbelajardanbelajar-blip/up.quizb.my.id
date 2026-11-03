@@ -10,7 +10,18 @@ function QuizBApp() {
     routeParams: [],
     user: null,
     _userLoaded: false, // Flag: true setelah loadUser() selesai — guard route tidak boleh aktif sebelum ini
+    themeMode: store.get('themeMode', 'system'),
     darkMode: store.get('darkMode', false),
+    colorTheme: store.get('colorTheme', 'indigo'),
+    colorThemes: [
+      { id: 'indigo',  name: 'Indigo',       desc: 'Modern & Ikonik',        preview: '#6366f1' },
+      { id: 'emerald', name: 'Emerald',      desc: 'Hijau Zamrud Segar',     preview: '#10b981' },
+      { id: 'blue',    name: 'Ocean Blue',   desc: 'Biru Samudra Bersih',    preview: '#3b82f6' },
+      { id: 'rose',    name: 'Rose Red',     desc: 'Merah Delima Dinamis',   preview: '#f43f5e' },
+      { id: 'amber',   name: 'Warm Amber',   desc: 'Emas Senja Hangat',      preview: '#f59e0b' },
+      { id: 'violet',  name: 'Royal Violet', desc: 'Ungu Elegan & Mewah',    preview: '#8b5cf6' },
+      { id: 'cyan',    name: 'Cyan Glow',    desc: 'Toska Cerah Modern',     preview: '#06b6d4' }
+    ],
     mobileMenu: false,
     mobileSearch: false,
     search: { q: '', results: [], loading: false, total: 0 },
@@ -218,8 +229,8 @@ function QuizBApp() {
     // ---- Lifecycle ----
     async init() {
       try {
-        // Dark mode
-        this.applyDark();
+        // Initialize Theme System (Light/Dark/System + Color Palette)
+        this.initTheme();
 
         // Save the original intended hash BEFORE any redirect may change it.
         const initialHash = window.location.hash || '#/';
@@ -3788,12 +3799,76 @@ function QuizBApp() {
       await this.loadQuizzes(true);
     }, 300),
 
-    // ---- Dark Mode ----
-    toggleDark() {
-      this.darkMode = !this.darkMode;
+    // ---- Theme Management (Mode & Color Presets) ----
+    initTheme() {
+      // 1. Color Theme
+      this.colorTheme = store.get('colorTheme', 'indigo');
+      this.applyColorTheme();
+
+      // 2. Theme Mode (Light / Dark / System)
+      const savedMode = store.get('themeMode', null);
+      if (savedMode) {
+        this.themeMode = savedMode;
+      } else {
+        const legacyDark = store.get('darkMode', null);
+        this.themeMode = legacyDark !== null ? (legacyDark ? 'dark' : 'light') : 'system';
+      }
+      this.updateDarkModeState();
+
+      // Listen to OS system color-scheme changes
+      if (window.matchMedia) {
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        if (mediaQuery.addEventListener) {
+          mediaQuery.addEventListener('change', (e) => {
+            if (this.themeMode === 'system') {
+              this.darkMode = e.matches;
+              this.applyDark();
+            }
+          });
+        }
+      }
+    },
+
+    updateDarkModeState() {
+      if (this.themeMode === 'dark') {
+        this.darkMode = true;
+      } else if (this.themeMode === 'light') {
+        this.darkMode = false;
+      } else {
+        // system
+        this.darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
       store.set('darkMode', this.darkMode);
       this.applyDark();
     },
+
+    setThemeMode(mode) {
+      if (!['light', 'dark', 'system'].includes(mode)) return;
+      this.themeMode = mode;
+      store.set('themeMode', mode);
+      this.updateDarkModeState();
+      const label = { light: 'Mode Terang aktif', dark: 'Mode Gelap aktif', system: 'Tema mengikuti sistem perangkat' }[mode];
+      this.showToast(label, 'info', mode === 'dark' ? '🌙' : mode === 'light' ? '☀️' : '💻');
+    },
+
+    setColorTheme(themeId) {
+      const found = this.colorThemes.find(t => t.id === themeId);
+      if (!found) return;
+      this.colorTheme = themeId;
+      store.set('colorTheme', themeId);
+      this.applyColorTheme();
+      this.showToast(`Warna tema ${found.name} diterapkan!`, 'success', '🎨');
+    },
+
+    applyColorTheme() {
+      document.documentElement.setAttribute('data-color-theme', this.colorTheme || 'indigo');
+    },
+
+    toggleDark() {
+      const next = !this.darkMode;
+      this.setThemeMode(next ? 'dark' : 'light');
+    },
+
     applyDark() {
       document.documentElement.classList.toggle('dark', this.darkMode);
     },

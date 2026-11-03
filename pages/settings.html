@@ -57,7 +57,102 @@
 
   <div class="mb-8">
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">⚙️ Pengaturan</h1>
-    <p class="text-gray-500 dark:text-gray-400 mt-1">Sesuaikan preferensi pengalaman quiz kamu</p>
+    <p class="text-gray-500 dark:text-gray-400 mt-1">Sesuaikan preferensi pengalaman quiz dan tampilan antarmuka kamu</p>
+  </div>
+
+  <!-- Appearance & Theme Card -->
+  <div class="card p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <span>🎨</span>
+          <span>Tampilan &amp; Tema</span>
+        </h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          Sesuaikan mode pencahayaan dan variasi warna tema aplikasi sesuai kenyamanan kamu.
+        </p>
+      </div>
+      <span class="text-xs px-2.5 py-1 rounded-full font-semibold uppercase tracking-wider bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
+        Preferensi
+      </span>
+    </div>
+
+    <!-- Mode Pencahayaan (Light, Dark, System) -->
+    <div class="mb-6">
+      <label class="form-label text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold mb-2.5 block">
+        Mode Pencahayaan
+      </label>
+      <div class="grid grid-cols-3 gap-3">
+        <!-- Terang -->
+        <button type="button" @click="setThemeMode('light')"
+                class="flex flex-col items-center justify-center p-3.5 rounded-xl border-2 transition-all group cursor-pointer"
+                :class="themeMode === 'light' 
+                  ? 'border-primary-500 bg-primary-50/60 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 shadow-sm ring-2 ring-primary-500/20' 
+                  : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900'">
+          <span class="text-2xl mb-1.5 transform group-hover:scale-110 transition-transform">☀️</span>
+          <span class="text-xs font-bold">Terang</span>
+          <span class="text-[10px] text-gray-400 mt-0.5">Light Mode</span>
+        </button>
+
+        <!-- Gelap -->
+        <button type="button" @click="setThemeMode('dark')"
+                class="flex flex-col items-center justify-center p-3.5 rounded-xl border-2 transition-all group cursor-pointer"
+                :class="themeMode === 'dark' 
+                  ? 'border-primary-500 bg-primary-50/60 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 shadow-sm ring-2 ring-primary-500/20' 
+                  : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900'">
+          <span class="text-2xl mb-1.5 transform group-hover:scale-110 transition-transform">🌙</span>
+          <span class="text-xs font-bold">Gelap</span>
+          <span class="text-[10px] text-gray-400 mt-0.5">Dark Mode</span>
+        </button>
+
+        <!-- Sistem -->
+        <button type="button" @click="setThemeMode('system')"
+                class="flex flex-col items-center justify-center p-3.5 rounded-xl border-2 transition-all group cursor-pointer"
+                :class="themeMode === 'system' 
+                  ? 'border-primary-500 bg-primary-50/60 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 shadow-sm ring-2 ring-primary-500/20' 
+                  : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900'">
+          <span class="text-2xl mb-1.5 transform group-hover:scale-110 transition-transform">💻</span>
+          <span class="text-xs font-bold">Sistem</span>
+          <span class="text-[10px] text-gray-400 mt-0.5">Ikuti OS/HP</span>
+        </button>
+      </div>
+    </div>
+
+    <hr class="border-gray-100 dark:border-gray-800 my-5" />
+
+    <!-- Variasi Tema Warna (7 Pilihan Warna) -->
+    <div>
+      <div class="flex items-center justify-between mb-2.5">
+        <label class="form-label text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold block m-0">
+          Variasi Warna Aksen Tema
+        </label>
+        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">
+          Warna aktif: <strong class="text-primary-600 dark:text-primary-400 capitalize" x-text="colorTheme"></strong>
+        </span>
+      </div>
+      <p class="text-xs text-gray-400 mb-4">
+        Pilih nuansa warna utama yang diterapkan ke seluruh tombol, badge, sorotan jawaban, dan navigasi aplikasi.
+      </p>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <template x-for="t in colorThemes" :key="t.id">
+          <button type="button" @click="setColorTheme(t.id)"
+                  class="flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left relative overflow-hidden group cursor-pointer"
+                  :class="colorTheme === t.id
+                    ? 'border-primary-500 bg-white dark:bg-gray-800 shadow-md ring-2 ring-primary-500/25 scale-[1.02]'
+                    : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 bg-gray-50/50 dark:bg-gray-850'">
+            <div class="w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform"
+                 :style="'background:' + t.preview">
+              <span x-show="colorTheme === t.id" class="text-xs font-black">✓</span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="text-xs font-bold text-gray-800 dark:text-gray-100 truncate" x-text="t.name"></p>
+              <p class="text-[10px] text-gray-400 truncate" x-text="t.desc"></p>
+            </div>
+          </button>
+        </template>
+      </div>
+    </div>
   </div>
 
   <!-- Quiz Settings Card -->
