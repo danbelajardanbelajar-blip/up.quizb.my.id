@@ -182,6 +182,7 @@ function QuizBApp() {
     challenge: {
       incoming: [], received: [], outgoing: [], loading: false, pendingCount: 0,
       pollInterval: null,
+      invite: null, inviteBusy: false, inviteError: '', inviteSeen: [], inviteUserId: null,
     },
 
     // Notifications
@@ -244,8 +245,7 @@ function QuizBApp() {
 
         // Start challenge + notification polling for logged-in users
         if (this.user) {
-          this.loadChallenges();
-          this.challenge.pollInterval = setInterval(() => this.loadChallenges(), 20000);
+          this.startChallengePolling();
           this.pollCounts();
         }
 
@@ -537,6 +537,7 @@ function QuizBApp() {
         const data = await api.post('auth.login', { email: f.email, password: f.password });
         this.user = { id: data.id, name: data.name, email: data.email, role: data.role, has_onboarded: data.has_onboarded };
         api._csrfToken = data.csrf_token || null;
+        this.startChallengePolling();
         this.showToast(`Selamat datang, ${this.user.name}!`, 'success', '👋');
         this.navigate('/dashboard');
       } catch (e) {
@@ -597,6 +598,11 @@ function QuizBApp() {
     async logout() {
       try { await api.post('auth.logout'); } catch {}
       this.user = null;
+      clearInterval(this.challenge.pollInterval);
+      this.challenge.pollInterval = null;
+      this.challenge.invite = null;
+      this.challenge.incoming = [];
+      this.challenge.pendingCount = 0;
       api._csrfToken = null;
       this.showToast('Sampai jumpa!', 'info', '👋');
       this.navigate('/');
@@ -2891,11 +2897,73 @@ function QuizBApp() {
     },
 
     // ---- Challenge ----
+    startChallengePolling() {
+      clearInterval(this.challenge.pollInterval);
+      this.loadChallenges(true);
+      this.challenge.pollInterval = setInterval(() => this.loadChallenges(true), 10000);
+    },
+
+    syncChallengeInvite() {
+      if (!this.user || this.challenge.inviteBusy) return;
+      const state = this.challenge;
+      const userId = String(this.user.id);
+      if (state.inviteUserId !== userId) {
+        state.inviteUserId = userId;
+        state.invite = null;
+        state.inviteSeen = [];
+        try {
+          const seen = JSON.parse(sessionStorage.getItem('quizb.challengeInvites.' + userId) || '[]');
+          if (Array.isArray(seen)) state.inviteSeen = seen.map(String);
+        } catch (_) { /* Storage may be unavailable. */ }
+      }
+      if (state.invite && !state.incoming.some(c => String(c.id) === String(state.invite.id))) {
+        state.invite = null;
+      }
+      if (state.invite) return;
+      const next = state.incoming.find(c => !state.inviteSeen.includes(String(c.id)));
+      if (!next) return;
+      state.invite = next;
+      state.inviteError = '';
+      state.inviteSeen.push(String(next.id));
+      try {
+        sessionStorage.setItem('quizb.challengeInvites.' + userId, JSON.stringify(state.inviteSeen));
+      } catch (_) { /* Keep the in-memory list when storage is unavailable. */ }
+    },
+
+    dismissChallengeInvite() {
+      if (this.challenge.inviteBusy) return;
+      this.challenge.invite = null;
+      this.challenge.inviteError = '';
+      this.syncChallengeInvite();
+    },
+
+    async respondToChallengeInvite(accept) {
+      const state = this.challenge;
+      if (!state.invite || state.inviteBusy) return;
+      const invite = state.invite;
+      state.inviteBusy = true;
+      state.inviteError = '';
+      try {
+        await api.post(accept ? 'challenge.accept' : 'challenge.decline', { challenge_id: parseInt(invite.id, 10) });
+        state.incoming = state.incoming.filter(c => String(c.id) !== String(invite.id));
+        state.pendingCount = state.incoming.length;
+        state.invite = null;
+        if (accept) this.navigate('/play/' + invite.quiz_id + '?mode=challenge&cid=' + invite.id);
+      } catch (e) {
+        state.inviteError = e.message || 'Tantangan belum berhasil diproses. Silakan coba lagi.';
+      } finally {
+        state.inviteBusy = false;
+      }
+      if (!state.invite) await this.loadChallenges(true);
+    },
+
     async loadChallenges(silent = false) {
       if (!this.user) return;
+      const userId = this.user.id;
       if (!silent) this.challenge.loading = true;
       try {
         const data = await api.get('challenge.list');
+        if (!this.user || this.user.id !== userId) return;
         
         // Cek jika ada lawan yang baru saja menerima tantangan (pending -> playing)
         if (this.challenge.outgoing && this.challenge.outgoing.length > 0) {
@@ -2919,7 +2987,8 @@ function QuizBApp() {
         this.challenge.received     = data.received      || data.history || [];
         this.challenge.history      = data.history       || data.received || [];
         this.challenge.outgoing     = data.outgoing      || [];
-        this.challenge.pendingCount = data.pending_count || 0;
+        this.challenge.pendingCount = data.pending_count ?? this.challenge.incoming.length;
+        this.syncChallengeInvite();
       } catch (_) {
         // silently fail (polling — jangan ganggu UX)
       } finally {

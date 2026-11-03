@@ -261,6 +261,39 @@ html { scroll-behavior: smooth; }
 .dark .data-table td { color: #d1d5db; border-color: #1f2937; }
 .dark .data-table tr:hover td { background: #1f2937; }
 
+/* ---- Incoming challenge dialog ---- */
+.challenge-invite { padding: 0; margin: auto; border: 1px solid #ffffff30; border-radius: 28px; width: min(440px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; background: #fff; color: #111827; box-shadow: 0 32px 100px #0006; }
+.challenge-invite::backdrop { background: rgb(3 7 18 / 78%); backdrop-filter: blur(8px); }
+.challenge-invite[open] { animation: challengeInviteIn .25s ease-out; }
+.challenge-invite-hero { position: relative; overflow: hidden; padding: 28px 24px 30px; text-align: center; color: #fff; background: radial-gradient(ellipse at 15% 0%, #a78bfa55, transparent 65%), linear-gradient(135deg, #312e81, #6d28d9 65%, #4338ca); }
+.challenge-invite-eyebrow { display: block; font-size: 10px; font-weight: 800; letter-spacing: .25em; color: #ddd6fe; }
+.challenge-invite-close { position: absolute; right: 16px; top: 16px; width: 32px; height: 32px; border-radius: 50%; background: #ffffff18; color: #fff; }
+.challenge-invite-emblem { display: grid; place-items: center; width: 80px; height: 80px; margin: 24px auto 20px; border: 1px solid #ffffff40; border-radius: 24px; background: #ffffff15; box-shadow: 0 8px 32px #1e1b4b55; font-size: 38px; transform: rotate(-6deg); }
+.challenge-invite-kicker { font-size: 9px; letter-spacing: .16em; font-weight: 700; color: #c4b5fd; }
+.challenge-invite-hero h2 { margin: 8px 0; font-size: 30px; font-weight: 800; letter-spacing: -.04em; line-height: 1.2; }
+.challenge-invite-hero #challenge-invite-description { font-size: 13px; color: #ddd6fe; line-height: 1.6; }
+.challenge-invite-content { padding: 24px; }
+.challenge-invite-player { display: flex; align-items: center; gap: 12px; }
+.challenge-invite-avatar { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 16px; background: #ede9fe; color: #7c3aed; font-size: 20px; font-weight: 800; }
+.challenge-invite-versus { margin-left: auto; font-size: 11px; font-weight: 900; color: #9ca3af; }
+.challenge-invite-you { font-size: 13px; font-weight: 700; color: #6d28d9; }
+.challenge-invite-quiz { display: flex; gap: 12px; align-items: center; margin-top: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 16px; background: #f9fafb; }
+.challenge-invite-accept { display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; margin-top: 24px; padding: 14px 16px; border-radius: 14px; background: linear-gradient(110deg, #7c3aed, #4f46e5); color: #fff; font-size: 14px; font-weight: 700; box-shadow: 0 6px 18px #7c3aed30; transition: filter .15s, transform .15s; }
+.challenge-invite-accept:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.challenge-invite-secondary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+.challenge-invite-secondary button { padding: 12px 8px; border: 1px solid #e5e7eb; border-radius: 12px; font-size: 12px; font-weight: 600; color: #6b7280; transition: background .15s; }
+.challenge-invite-secondary button:hover { background: #f3f4f6; }
+.challenge-invite button:focus-visible { outline: 3px solid #a78bfa; outline-offset: 3px; }
+.challenge-invite button:disabled { opacity: .55; cursor: wait; transform: none; }
+.challenge-invite-note { margin-top: 16px; text-align: center; font-size: 11px; line-height: 1.7; color: #9ca3af; }
+.dark .challenge-invite { background: #111827; border-color: #374151; }
+.dark .challenge-invite-quiz { background: #1f2937; border-color: #374151; }
+.dark .challenge-invite-secondary button { border-color: #374151; color: #d1d5db; }
+.dark .challenge-invite-secondary button:hover { background: #1f2937; }
+.dark .challenge-invite-you { color: #c4b5fd; }
+@keyframes challengeInviteIn { from { opacity: 0; transform: translateY(16px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .challenge-invite[open] { animation: none; } .challenge-invite-accept { transition: none; } }
+
 /* ---- Modal ---- */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 9999;

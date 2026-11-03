@@ -1,0 +1,49 @@
+<!-- Native dialog keeps keyboard focus inside and makes the page behind it inert. -->
+<dialog class="challenge-invite" aria-labelledby="challenge-invite-title" aria-describedby="challenge-invite-description"
+        x-effect="if (user && challenge.invite) { if (!$el.open) $el.showModal(); } else if ($el.open) { $el.close(); }"
+        @cancel.prevent="dismissChallengeInvite()">
+  <template x-if="challenge.invite">
+    <div>
+      <div class="challenge-invite-hero">
+        <span class="challenge-invite-eyebrow">QUIZB DUEL</span>
+        <button type="button" class="challenge-invite-close" aria-label="Tutup tantangan untuk nanti"
+                :disabled="challenge.inviteBusy" @click="dismissChallengeInvite()">✕</button>
+        <div class="challenge-invite-emblem" aria-hidden="true">⚔️</div>
+        <p class="challenge-invite-kicker">SAATNYA UNJUK KEMAMPUAN</p>
+        <h2 id="challenge-invite-title">Kamu ditantang!</h2>
+        <p id="challenge-invite-description">Ada lawan yang siap menguji pengetahuanmu.</p>
+      </div>
+      <div class="challenge-invite-content">
+        <div class="challenge-invite-player">
+          <span class="challenge-invite-avatar" aria-hidden="true"
+                x-text="(challenge.invite.challenger_name || '?').charAt(0).toUpperCase()"></span>
+          <div class="min-w-0">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Penantangmu</p>
+            <p class="font-bold text-gray-900 dark:text-white break-words" x-text="challenge.invite.challenger_name"></p>
+          </div>
+          <span class="challenge-invite-versus" aria-hidden="true">VS</span>
+          <span class="challenge-invite-you">Kamu</span>
+        </div>
+        <div class="challenge-invite-quiz">
+          <span class="text-xl" aria-hidden="true">🎯</span>
+          <div class="min-w-0">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Arena kuis</p>
+            <p class="font-semibold text-gray-900 dark:text-white break-words" x-text="challenge.invite.quiz_title"></p>
+          </div>
+        </div>
+        <p x-show="challenge.inviteError" x-text="challenge.inviteError" role="alert"
+           class="text-sm text-red-600 dark:text-red-400 mt-4"></p>
+        <button type="button" class="challenge-invite-accept" :disabled="challenge.inviteBusy"
+                @click="respondToChallengeInvite(true)">
+          <span x-text="challenge.inviteBusy ? 'Memproses…' : 'Terima & mulai bermain'"></span>
+          <span aria-hidden="true">→</span>
+        </button>
+        <div class="challenge-invite-secondary">
+          <button type="button" :disabled="challenge.inviteBusy" @click="respondToChallengeInvite(false)">Tolak tantangan</button>
+          <button type="button" autofocus :disabled="challenge.inviteBusy" @click="dismissChallengeInvite()">Nanti saja</button>
+        </div>
+        <p class="challenge-invite-note">Belum siap? Tantangan tetap tersedia di menu Tantangan.</p>
+      </div>
+    </div>
+  </template>
+</dialog>

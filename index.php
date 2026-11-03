@@ -126,6 +126,8 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
   </div>
   <noscript><style>#page-loader{display:none!important;}</style></noscript>
 
+  <?php include 'pages/challenge-invite.html'; ?>
+
   <!-- Toast Notification -->
   <div x-show="toast.show" x-transition:enter="transition ease-out duration-300"
        x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
