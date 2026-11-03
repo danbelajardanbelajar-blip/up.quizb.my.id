@@ -1,0 +1,58 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const timers = new Map(); let timerId = 0;
+const ctx = {console, URL, URLSearchParams, store:{get:(key,fallback)=>fallback}, debounce:fn=>fn,
+  window:{location:{hash:'',origin:'https://quizb.my.id',assign:url=>ctx.assigned=url}},
+  document:{getElementById:()=>null},sessionStorage:{getItem:()=>null,setItem:()=>{}},
+  setInterval:(fn,ms)=>{timers.set(++timerId,{fn,ms});return timerId},clearInterval:id=>timers.delete(id),setTimeout:()=>0,clearTimeout:()=>{},api:{}};
+vm.createContext(ctx);
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../assets/js/app.v5.js'),'utf8'),ctx);
+const app=ctx.QuizBApp();app.showToast=()=>{};app.startChallengePolling=()=>{};
+const user={id:1,name:'Test',role:'user',has_onboarded:1};
+const check=(ok,label)=>{assert(ok,label);console.log('PASS:',label)};
+const tick=()=>new Promise(resolve=>setImmediate(resolve));
+(async()=>{
+ let countCalls=0;
+ ctx.api.post=async()=>({...user});ctx.api.get=async()=>{countCalls++;return {notifications:3,messages:2}};
+ app.loginForm.email='audit@example.invalid';app.loginForm.password='sample';await app.login();
+ check(countCalls===1 && timers.size===1,'Login from guest starts one count poller');
+ await app.pollCounts();check(timers.size===1,'Starting polling twice does not duplicate intervals');
+ app.notif.list=[{id:5,title:'Private A'}];app.msgs.chat=[{body:'Private message A'}];
+ await app.logout();check(app.notif.list.length===0&&app.notif.unreadCount===0&&app.msgs.chat.length===0&&timers.size===0,'Logout clears private caches, badges, and timers');
+ app.user={...user};let release;
+ ctx.api.getFull=()=>new Promise(resolve=>release=resolve);
+ const oldList=app.loadNotifications();app.resetPrivateSession();app.user={...user,id:2};
+ release({data:[{id:1,title:'Old account'}],meta:{total:1}});await oldList;
+ check(app.notif.list.length===0,'Late notification list from previous account is ignored');
+ ctx.api.get=()=>new Promise(resolve=>release=resolve);
+ const oldCounts=app.fetchNotificationCounts();app.resetPrivateSession();app.user={...user};
+ release({notifications:99,messages:99});await oldCounts;
+ check(app.notif.unreadCount===0,'Late badge response from previous session is ignored');
+ const all=Array.from({length:80},(_,i)=>({id:80-i,is_read:false,title:'Item '+(80-i)}));
+ ctx.api.getFull=async(action,{page,limit})=>({data:all.slice((page-1)*limit,page*limit),meta:{total:80}});
+ await app.loadNotifications();await app.loadNotifications(true);
+ check(app.notif.list.length===60&&app.notif.page===2,'Load more exposes older notifications');
+ app.notif.show=true;ctx.api.get=async()=>({notifications:80,messages:0});await app.fetchNotificationCounts();await tick();
+ check(app.notif.list.length===60,'Polling refresh preserves loaded pages in open panel');
+ ctx.api.getFull=async()=>{throw Error('offline')};await app.loadNotifications();
+ check(app.notif.error.length>0&&app.notif.list.length===60,'Network failures expose retry error while preserving previous results');
+ let reads=0;ctx.api.post=()=>{reads++;return new Promise(resolve=>release=resolve)};
+ ctx.api.get=async()=>({notifications:2,messages:0});app.notif.show=false;app.notif.unreadCount=3;
+ const n={id:5,is_read:false};const one=app.clickNotif(n);const two=app.clickNotif(n);release({});await Promise.all([one,two]);await tick();
+ check(reads===1&&app.notif.unreadCount===2,'Double click marks and decrements one notification once');
+ await app.clickNotif({id:6,is_read:true,type:'app_update',link:'https://play.google.com/store/apps/details?id=id.my.quizb.android'});
+ check(ctx.assigned?.startsWith('https://play.google.com/'),'App update opens external store URL');
+ ctx.assigned=null;await app.clickNotif({id:7,is_read:true,link:'https://untrusted.invalid/path'});
+ check(ctx.assigned===null,'Untrusted external notification URLs are rejected');
+ app.loadChallenges=async()=>{app.challenge.incoming=[{id:7,quiz_id:11}]};
+ await app.clickNotif({id:8,is_read:true,type:'challenge',link:'/play/11?mode=challenge&cid=7'});
+ check(ctx.window.location.hash==='#/challenges'&&app.challenge.invite.id===7,'Challenge notification opens acceptance UI instead of entering play unaccepted');
+ app.currentRoute='/messages';ctx.window.location.hash='#/messages?thread=7';
+ ctx.api.get=async action=>action==='message.thread'?{id:7,other_id:2}:[];
+ let opened=null;app.openThread=async thread=>opened=thread.id;await app.openMessageRoute();
+ check(opened===7,'Message notification deep link resolves the requested thread');
+ app.resetPrivateSession();app.user=null;
+ console.log('All notification frontend regression checks passed.');
+})().catch(error=>{console.error(error);process.exit(1)});

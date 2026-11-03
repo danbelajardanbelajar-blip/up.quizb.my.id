@@ -271,11 +271,12 @@ function sendFcmNotification(int|array $userIds, string $title, string $body = '
  */
 function broadcastNewQuestion(int $quizId, int $excludeUserId = 0): void {
     try {
-        $quiz = DB::one('SELECT title FROM quizzes WHERE id = ?', [$quizId]);
+        $quiz = DB::one('SELECT title, is_published FROM quizzes WHERE id = ?', [$quizId]);
+        if (!$quiz || (int)$quiz['is_published'] !== 1) return;
         $quizTitle = $quiz['title'] ?? 'Quiz';
 
         $recipients = DB::all(
-            "SELECT id FROM users WHERE is_active = 1" . ($excludeUserId > 0 ? " AND id != $excludeUserId" : "")
+            "SELECT id FROM users WHERE is_active = 1 AND id != ?", [$excludeUserId]
         );
         foreach ($recipients as $rec) {
             pushNotification(

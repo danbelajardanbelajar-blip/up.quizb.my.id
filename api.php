@@ -77,7 +77,7 @@ if (in_array($method, ['POST', 'PUT', 'DELETE'])) {
     // Endpoints exempted from CSRF (Auth & Mobile/Realtime Duel state changes)
     $csrfExemptActions = [
         'auth.login', 'auth.register', 'auth.logout', 'auth.google', 'auth.google_native', 
-        'auth.resend_verification', 'auth.update_fcm_token',
+        'auth.resend_verification', 'auth.update_fcm_token', 'auth.unregister_fcm_token',
         'challenge.create', 'challenge.accept', 'challenge.decline', 'challenge.sync', 'challenge.submit',
         'message.send', 'message.delete'
     ];

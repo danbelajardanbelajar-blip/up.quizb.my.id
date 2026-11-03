@@ -29,6 +29,9 @@ function QuizBApp() {
     pageTitle: 'QuizB — Platform Kuis Modern',
     toast: { show: false, message: '', type: 'success', icon: '✅' },
     _toastTimer: null,
+    _privateGeneration: 0,
+    _notifListRequest: 0,
+    _notifCountsRequest: 0,
 
     // Nav items — dinamis di getter, tapi definisikan base dulu
     get navItems() {
@@ -207,7 +210,7 @@ function QuizBApp() {
       total: 0,
       page: 1,
       show: false,
-      loading: false,
+      loading: false, error: '', busy: false, readingIds: [], pollInterval: null, revision: 0, trigger: null,
     },
 
     // Messages
@@ -485,13 +488,7 @@ function QuizBApp() {
       if (/^\/assignment\/\d+\/history\/\d+$/.test(route)) this.loadAssignmentStudentHistory(params[0], params[2]);
       if (/^\/assignment\/\d+\/monitor$/.test(route)) this.loadAssignmentMonitor(params[0]);
       if (route === '/messages') {
-        // Refresh thread list
-        this.loadMsgThreads();
-        // Jika ada thread aktif, reload chat-nya dan scroll ke bawah
-        if (this.msgs.activeThread) {
-          this.loadChat(this.msgs.activeThread.id, 1).then(() => this._scrollChatBottom());
-          if (!this.msgs.pollInterval) this._startMsgPoll(this.msgs.activeThread.id);
-        }
+        this.openMessageRoute();
       } else {
         // Saat meninggalkan halaman pesan, hentikan polling
         if (this.msgs.pollInterval) this.clearMsgPoll();
@@ -550,9 +547,11 @@ function QuizBApp() {
       try {
         // API auth.login returns flat: { id, name, email, role, csrf_token }
         const data = await api.post('auth.login', { email: f.email, password: f.password });
+        this.resetPrivateSession();
         this.user = { id: data.id, name: data.name, email: data.email, role: data.role, has_onboarded: data.has_onboarded };
         api._csrfToken = data.csrf_token || null;
         this.startChallengePolling();
+        this.pollCounts();
         this.showToast(`Selamat datang, ${this.user.name}!`, 'success', '👋');
         this.navigate('/dashboard');
       } catch (e) {
@@ -611,7 +610,8 @@ function QuizBApp() {
     },
 
     async logout() {
-      try { await api.post('auth.logout'); } catch {}
+      try { await api.post('auth.logout'); } catch (e) { this.showToast('Logout gagal. Silakan coba lagi.', 'error'); return; }
+      this.resetPrivateSession();
       this.user = null;
       clearInterval(this.challenge.pollInterval);
       this.challenge.pollInterval = null;
@@ -2995,31 +2995,35 @@ function QuizBApp() {
 
     async respondToChallengeInvite(accept) {
       const state = this.challenge;
+      if (!this.user) return;
+      const uid = this.user.id, generation = this._privateGeneration;
       if (!state.invite || state.inviteBusy) return;
       const invite = state.invite;
       state.inviteBusy = true;
       state.inviteError = '';
       try {
         await api.post(accept ? 'challenge.accept' : 'challenge.decline', { challenge_id: parseInt(invite.id, 10) });
+        if (!this.privateSessionMatches(uid, generation)) return;
         state.incoming = state.incoming.filter(c => String(c.id) !== String(invite.id));
         state.pendingCount = state.incoming.length;
         state.invite = null;
         if (accept) this.navigate('/play/' + invite.quiz_id + '?mode=challenge&cid=' + invite.id);
       } catch (e) {
+        if (!this.privateSessionMatches(uid, generation)) return;
         state.inviteError = e.message || 'Tantangan belum berhasil diproses. Silakan coba lagi.';
       } finally {
-        state.inviteBusy = false;
+        if (this.privateSessionMatches(uid, generation)) state.inviteBusy = false;
       }
       if (!state.invite) await this.loadChallenges(true);
     },
 
     async loadChallenges(silent = false) {
       if (!this.user) return;
-      const userId = this.user.id;
+      const userId = this.user.id, generation = this._privateGeneration;
       if (!silent) this.challenge.loading = true;
       try {
         const data = await api.get('challenge.list');
-        if (!this.user || this.user.id !== userId) return;
+        if (!this.privateSessionMatches(userId, generation)) return;
         
         // Cek jika ada lawan yang baru saja menerima tantangan (pending -> playing)
         if (this.challenge.outgoing && this.challenge.outgoing.length > 0) {
@@ -3031,6 +3035,7 @@ function QuizBApp() {
                 // Auto-redirect ke halaman bermain
                 this.showToast('Lawan telah menerima tantangan! Bersiap...', 'success', '⚔️');
                 setTimeout(() => {
+                  if (!this.privateSessionMatches(userId, generation)) return;
                   this.navigate('/play/' + newC.quiz_id + '?mode=challenge&cid=' + newC.id);
                 }, 1000);
                 break;
@@ -3048,7 +3053,7 @@ function QuizBApp() {
       } catch (_) {
         // silently fail (polling — jangan ganggu UX)
       } finally {
-        this.challenge.loading = false;
+        if (this.privateSessionMatches(userId, generation)) this.challenge.loading = false;
       }
     },
 
@@ -3462,86 +3467,193 @@ function QuizBApp() {
     // ============================================================
     // NOTIFICATIONS
     // ============================================================
-    async loadNotifications() {
+    resetPrivateSession() {
+      this._privateGeneration++;
+      clearInterval(this.notif.pollInterval);
+      clearInterval(this.challenge.pollInterval);
+      clearInterval(this.challenge.fastPollInterval);
+      this.clearMsgPoll();
+      this._notifListRequest++;
+      this._notifCountsRequest++;
+      Object.assign(this.notif, { unreadCount: 0, list: [], total: 0, page: 1, show: false,
+        loading: false, error: '', busy: false, readingIds: [], pollInterval: null, revision: 0, trigger: null });
+      Object.assign(this.msgs, { unreadCount: 0, threads: [], activeThread: null, chat: [], chatTotal: 0, input: '' });
+      Object.assign(this.challenge, { incoming: [], received: [], outgoing: [], pendingCount: 0,
+        invite: null, inviteBusy: false, inviteError: '', inviteSeen: [], inviteUserId: null, pollInterval: null, fastPollInterval: null });
+    },
+
+    privateSessionMatches(userId, generation) {
+      return this.user && String(this.user.id) === String(userId) && this._privateGeneration === generation;
+    },
+
+    toggleNotifications(trigger) {
+      if (this.notif.show) { this.closeNotifications(); return; }
+      this.notif.trigger = trigger;
+      this.notif.show = true;
+      this.notif.page = 1;
+      this.loadNotifications();
+      this.fetchNotificationCounts();
+    },
+
+    closeNotifications() {
+      this.notif.show = false;
+      this.notif.trigger?.focus?.();
+    },
+
+    async loadNotifications(more = false) {
+      if (!this.user || this.notif.loading) return;
+      const uid = this.user.id, generation = this._privateGeneration;
+      const request = ++this._notifListRequest, revision = this.notif.revision;
+      const target = more ? this.notif.page + 1 : this.notif.page;
       this.notif.loading = true;
+      this.notif.error = '';
       try {
-        const resp = await api.getFull('notification.list', { page: this.notif.page, limit: 30 });
-        this.notif.list  = resp.data       || [];
-        this.notif.total = resp.meta?.total || 0;
+        const responses = await Promise.all(Array.from({ length: target }, (_, i) =>
+          api.getFull('notification.list', { page: i + 1, limit: 30 })));
+        if (!this.privateSessionMatches(uid, generation) || request !== this._notifListRequest || revision !== this.notif.revision) return;
+        const unique = new Map();
+        for (const response of responses) for (const item of response.data || []) unique.set(item.id, item);
+        this.notif.list = Array.from(unique.values());
+        this.notif.total = Number(responses[0]?.meta?.total || 0);
+        this.notif.page = target;
       } catch (e) {
-        console.error('loadNotifications:', e);
+        if (this.privateSessionMatches(uid, generation) && request === this._notifListRequest)
+          this.notif.error = 'Notifikasi gagal dimuat. Periksa koneksi lalu coba lagi.';
       } finally {
-        this.notif.loading = false;
+        if (this.privateSessionMatches(uid, generation) && request === this._notifListRequest) this.notif.loading = false;
       }
     },
 
     async markAllNotifRead() {
+      if (!this.user || this.notif.busy || this.notif.readingIds.length) return;
+      const uid = this.user.id, generation = this._privateGeneration;
+      this.notif.busy = true;
+      this.notif.revision++;
       try {
         await api.post('notification.mark_read', { all: true });
-        this.notif.list = this.notif.list.map(n => ({ ...n, is_read: 1 }));
+        if (!this.privateSessionMatches(uid, generation)) return;
+        this.notif.list = this.notif.list.map(n => ({ ...n, is_read: true }));
         this.notif.unreadCount = 0;
-      } catch (e) { /* silent */ }
+        await this.fetchNotificationCounts();
+      } catch (e) { if (this.privateSessionMatches(uid, generation)) this.notif.error = 'Gagal menandai notifikasi. Silakan coba lagi.'; }
+      finally { if (this.privateSessionMatches(uid, generation)) this.notif.busy = false; }
     },
 
     async clearReadNotif() {
+      if (!this.user || this.notif.busy || this.notif.readingIds.length) return;
+      const uid = this.user.id, generation = this._privateGeneration;
+      this.notif.busy = true;
+      this.notif.revision++;
       try {
-        await api.delete('notification.delete', 0); // 0 = clear all read (backend checks)
-        this.notif.list = this.notif.list.filter(n => !n.is_read);
-        this.notif.total = this.notif.list.length;
-      } catch (e) { /* silent */ }
+        await api.delete('notification.delete', 0);
+        if (!this.privateSessionMatches(uid, generation)) return;
+        this.notif.page = 1;
+        this.notif.loading = false;
+        this._notifListRequest++;
+        await this.loadNotifications();
+        await this.fetchNotificationCounts();
+      } catch (e) { if (this.privateSessionMatches(uid, generation)) this.notif.error = 'Gagal menghapus notifikasi. Silakan coba lagi.'; }
+      finally { if (this.privateSessionMatches(uid, generation)) this.notif.busy = false; }
     },
 
     async clickNotif(n) {
-      if (!n.is_read) {
-        try {
+      if (!this.user || this.notif.busy || this.notif.readingIds.includes(n.id)) return;
+      const uid = this.user.id, generation = this._privateGeneration;
+      this.notif.readingIds.push(n.id);
+      this.notif.revision++;
+      try {
+        if (!n.is_read) {
           await api.post('notification.mark_read', { id: n.id });
-          n.is_read = 1;
+          if (!this.privateSessionMatches(uid, generation)) return;
+          n.is_read = true;
           this.notif.unreadCount = Math.max(0, this.notif.unreadCount - 1);
-        } catch (e) { /* silent */ }
-      }
-      this.notif.show = false;
-
-      // Notif new_user → buka public-history dengan filter user yang baru daftar
-      if (n.type === 'new_user' && n.link) {
-        const m = n.link.match(/user_id=(\d+)/);
-        if (m) {
-          this.openPublicHistory('user', parseInt(m[1]), '');
+        }
+        if (!this.privateSessionMatches(uid, generation)) return;
+        this.closeNotifications();
+        if (n.type === 'new_user' && n.link) {
+          const match = n.link.match(/user_id=(\d+)/);
+          if (match) { this.openPublicHistory('user', Number(match[1]), ''); return; }
+        }
+        if (n.type === 'challenge') {
+          const match = (n.link || '').match(/[?&]cid=(\d+)/);
+          this.navigate('/challenges');
+          await this.loadChallenges(true);
+          if (!this.privateSessionMatches(uid, generation)) return;
+          const invite = this.challenge.incoming.find(c => String(c.id) === match?.[1]);
+          if (invite) { this.challenge.invite = invite; this.challenge.inviteError = ''; }
+          else this.showToast('Tantangan sudah direspons atau tidak tersedia. Periksa riwayat tantangan.', 'info', '⚔️');
           return;
         }
+        if (n.link && /^https:\/\//i.test(n.link)) {
+          const url = new URL(n.link);
+          if (url.origin === window.location.origin) this.navigate(url.hash.slice(1) || url.pathname + url.search);
+          else if (url.hostname === 'play.google.com') window.location.assign(url.href);
+          else this.showToast('Tautan notifikasi tidak diizinkan.', 'warning');
+        } else if (n.link && /^\/(?!\/)/.test(n.link)) this.navigate(n.link);
+      } catch (e) { if (this.privateSessionMatches(uid, generation)) this.notif.error = 'Notifikasi belum berhasil dibuka. Silakan coba lagi.'; }
+      finally {
+        if (this.privateSessionMatches(uid, generation)) {
+          this.notif.readingIds = this.notif.readingIds.filter(id => id !== n.id);
+          this.fetchNotificationCounts();
+        }
       }
+    },
 
-      if (n.link) this.navigate(n.link);
+    async fetchNotificationCounts() {
+      if (!this.user) return;
+      const uid = this.user.id, generation = this._privateGeneration, revision = this.notif.revision;
+      const request = ++this._notifCountsRequest;
+      try {
+        const data = await api.get('notification.counts');
+        if (!this.privateSessionMatches(uid, generation) || request !== this._notifCountsRequest || revision !== this.notif.revision) return;
+        this.notif.unreadCount = Number(data.notifications || 0);
+        this.msgs.unreadCount = Number(data.messages || 0);
+        if (this.notif.show && !this.notif.busy && !this.notif.readingIds.length) this.loadNotifications();
+      } catch (_) { /* Keep the last verified count; the panel reports list failures. */ }
     },
 
     async pollCounts() {
-      const fetchCounts = async () => {
-        if (!this.user) return;
-        try {
-          const data = await api.get('notification.counts');
-          this.notif.unreadCount = data.notifications || 0;
-          this.msgs.unreadCount  = data.messages       || 0;
-        } catch (e) { /* silent */ }
-      };
-      await fetchCounts();
-      setInterval(fetchCounts, 20000);
+      clearInterval(this.notif.pollInterval);
+      this.notif.pollInterval = setInterval(() => this.fetchNotificationCounts(), 20000);
+      await this.fetchNotificationCounts();
     },
 
     // ============================================================
     // MESSAGES
     // ============================================================
     async loadMsgThreads() {
+      if (!this.user) return;
+      const uid = this.user.id, generation = this._privateGeneration;
       this.msgs.loading = true;
       try {
         const data = await api.get('message.threads');
+        if (!this.privateSessionMatches(uid, generation)) return;
         this.msgs.threads = Array.isArray(data) ? data : (data?.data || []);
       } catch (e) {
         console.error('loadMsgThreads:', e);
       } finally {
-        this.msgs.loading = false;
+        if (this.privateSessionMatches(uid, generation)) this.msgs.loading = false;
       }
     },
 
+    async openMessageRoute() {
+      if (!this.user) return;
+      const uid = this.user.id, generation = this._privateGeneration;
+      await this.loadMsgThreads();
+      if (!this.privateSessionMatches(uid, generation) || this.currentRoute !== '/messages') return;
+      const id = new URLSearchParams(window.location.hash.split('?')[1] || '').get('thread');
+      try {
+        if (id && /^\d+$/.test(id)) {
+          const thread = await api.get('message.thread', { thread_id: Number(id) });
+          if (!this.privateSessionMatches(uid, generation) || this.currentRoute !== '/messages') return;
+          await this.openThread(thread);
+        } else if (this.msgs.activeThread) await this.openThread(this.msgs.activeThread);
+      } catch (e) { if (this.privateSessionMatches(uid, generation)) this.showToast('Percakapan tidak tersedia untuk akun ini.', 'error'); }
+    },
+
     async openThread(th) {
+      if (!this.user) return;
+      const uid = this.user.id, generation = this._privateGeneration;
       // Kurangi unreadCount segera sebelum server merespons
       const wasUnread = (int => int > 0 ? int : 0)(th.unread_count || 0);
       if (wasUnread > 0) {
@@ -3553,24 +3665,23 @@ function QuizBApp() {
       this.msgs.chatPage = 1;
       this.msgs.chatTotal = 0;
       await this.loadChat(th.id, 1);
+      if (!this.privateSessionMatches(uid, generation)) return;
       this._startMsgPoll(th.id);
 
       // Tandai thread lokal sebagai sudah dibaca
       const t = this.msgs.threads.find(t => t.id === th.id);
       if (t) t.unread_count = 0;
 
-      // Refresh count dari server untuk akurasi
-      try {
-        const counts = await api.get('notification.counts');
-        this.msgs.unreadCount = counts.messages || 0;
-        this.notif.unreadCount = counts.notifications || 0;
-      } catch (_) {}
+      await this.fetchNotificationCounts();
     },
 
     async loadChat(threadId, page) {
+      if (!this.user) return;
+      const uid = this.user.id, generation = this._privateGeneration;
       this.msgs.chatLoading = true;
       try {
         const resp = await api.getFull('message.thread_messages', { thread_id: threadId, page, limit: 30 });
+        if (!this.privateSessionMatches(uid, generation) || this.msgs.activeThread?.id !== threadId) return;
         const rows = resp.data || [];
         if (page === 1) {
           this.msgs.chat = rows;
@@ -3587,7 +3698,7 @@ function QuizBApp() {
       } catch (e) {
         console.error('loadChat:', e);
       } finally {
-        this.msgs.chatLoading = false;
+        if (this.privateSessionMatches(uid, generation)) this.msgs.chatLoading = false;
       }
     },
 
@@ -3688,9 +3799,7 @@ function QuizBApp() {
           // Jika ada pesan baru masuk, refresh unread count
           if (this.msgs.chat.length !== prevLen) {
             try {
-              const counts = await api.get('notification.counts');
-              this.msgs.unreadCount  = counts.messages      || 0;
-              this.notif.unreadCount = counts.notifications || 0;
+              await this.fetchNotificationCounts();
             } catch (_) {}
           }
         } else {

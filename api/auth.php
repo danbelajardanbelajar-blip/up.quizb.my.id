@@ -112,6 +112,10 @@ function auth_register(): void {
 }
 
 function auth_logout(): void {
+    $user = getCurrentUser();
+    $body = getBody();
+    $token = trim((string)($body['fcm_token'] ?? $_SESSION['fcm_token'] ?? ''));
+    if ($user && $token !== '') revokeFcmToken((int)$user['id'], $token);
     logoutUser();
     jsonSuccess(null, 'Logout berhasil');
 }
@@ -593,16 +597,26 @@ function ensureFcmTokenTableExists(): void {
 }
 
 function auth_update_fcm_token(): void {
-    ensureFcmTokenTableExists();
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
     $user = requireAuth();
+    ensureFcmTokenTableExists();
     $body = getBody();
     $token = trim($body['fcm_token'] ?? '');
 
-    if (empty($token)) {
+    if ($token === '' || strlen($token) > 500) {
         jsonError('FCM token tidak boleh kosong', 400);
     }
 
+    $pdo = DB::conn();
+    $lock = 'quizb_token_' . substr(hash('sha256', $token), 0, 40);
+    $locked = false;
     try {
+        $locked = (int)(DB::one('SELECT GET_LOCK(?, 5) AS acquired', [$lock])['acquired'] ?? 0) === 1;
+        if (!$locked) throw new RuntimeException('Device registration busy');
+        $pdo->beginTransaction();
+        // Transfer this installation to the current account, including legacy bindings.
+        DB::execute('DELETE FROM user_fcm_tokens WHERE token = ?', [$token]);
+        DB::execute('UPDATE users SET fcm_token = NULL WHERE fcm_token = ?', [$token]);
         DB::execute(
             "INSERT INTO user_fcm_tokens (user_id, token, updated_at) VALUES (?, ?, NOW()) 
              ON DUPLICATE KEY UPDATE updated_at = NOW()",
@@ -610,10 +624,31 @@ function auth_update_fcm_token(): void {
         );
 
         DB::execute("UPDATE users SET fcm_token = ? WHERE id = ?", [$token, $user['id']]);
-
-        jsonSuccess([], 'FCM token berhasil disimpan');
+        $pdo->commit();
+        $_SESSION['fcm_token'] = $token;
     } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
         error_log('[FCM Save Error] ' . $e->getMessage());
-        jsonError('Gagal menyimpan FCM token: ' . $e->getMessage(), 500);
+        jsonError('Gagal menyimpan perangkat notifikasi. Silakan coba lagi.', 500);
+    } finally {
+        if ($locked) DB::one('SELECT RELEASE_LOCK(?) AS released', [$lock]);
     }
+    jsonSuccess([], 'FCM token berhasil disimpan');
+}
+
+function revokeFcmToken(int $userId, string $token): void {
+    ensureFcmTokenTableExists();
+    DB::execute('DELETE FROM user_fcm_tokens WHERE user_id = ? AND token = ?', [$userId, $token]);
+    DB::execute('UPDATE users SET fcm_token = NULL WHERE id = ? AND fcm_token = ?', [$userId, $token]);
+    unset($_SESSION['fcm_token']);
+}
+
+function auth_unregister_fcm_token(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $user = requireAuth();
+    $body = getBody();
+    $token = trim((string)($body['fcm_token'] ?? $_SESSION['fcm_token'] ?? ''));
+    if ($token === '') jsonError('Sertakan token perangkat');
+    revokeFcmToken((int)$user['id'], $token);
+    jsonSuccess([], 'Perangkat notifikasi dilepas');
 }

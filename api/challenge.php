@@ -4,6 +4,8 @@
 // ============================================
 
 // POST — buat tantangan baru
+require_once __DIR__ . '/../includes/challenge_lifecycle.php';
+
 function challenge_create(): void {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
     $user = requireAuth();
@@ -70,12 +72,14 @@ function challenge_create(): void {
 
 function challenge_list(): void {
     $user = requireAuth();
-    $incoming = DB::all("SELECT c.id, c.quiz_id, c.status, c.created_at, q.title AS quiz_title, u.name AS challenger_name, u.id AS challenger_id FROM challenge_participants cp INNER JOIN challenges c ON c.id = cp.challenge_id INNER JOIN quizzes q ON q.id = c.quiz_id INNER JOIN users u ON u.id = c.challenger_id WHERE cp.user_id = ? AND cp.status = 'pending' AND c.status = 'pending' ORDER BY c.created_at DESC LIMIT 20", [$user['id']]);
+    ensureChallengeDismissals();
+    expirePendingChallenges();
+    $incoming = DB::all("SELECT c.id, c.quiz_id, c.status, c.created_at, c.expires_at, c.message, q.total_questions, q.title AS quiz_title, u.name AS challenger_name, u.id AS challenger_id FROM challenge_participants cp INNER JOIN challenges c ON c.id = cp.challenge_id INNER JOIN quizzes q ON q.id = c.quiz_id INNER JOIN users u ON u.id = c.challenger_id WHERE cp.user_id = ? AND cp.status = 'pending' AND c.status = 'pending' AND NOT EXISTS (SELECT 1 FROM challenge_dismissals d WHERE d.user_id = cp.user_id AND d.challenge_id = c.id) ORDER BY c.created_at DESC LIMIT 20", [$user['id']]);
     
     // Fetch base challenges without heavy subqueries
-    $outgoing = DB::all("SELECT c.id, c.quiz_id, c.status, c.created_at, q.title AS quiz_title, c.winner_id, w.name AS winner_name, cp.score_final, cp.time_taken FROM challenges c INNER JOIN challenge_participants cp ON cp.challenge_id = c.id AND cp.user_id = c.challenger_id INNER JOIN quizzes q ON q.id = c.quiz_id LEFT JOIN users w ON w.id = c.winner_id WHERE c.challenger_id = ? ORDER BY c.created_at DESC LIMIT 20", [$user['id']]);
+    $outgoing = DB::all("SELECT c.id, c.quiz_id, c.status, c.created_at, q.title AS quiz_title, c.winner_id, w.name AS winner_name, cp.score_final, cp.time_taken FROM challenges c INNER JOIN challenge_participants cp ON cp.challenge_id = c.id AND cp.user_id = c.challenger_id INNER JOIN quizzes q ON q.id = c.quiz_id LEFT JOIN users w ON w.id = c.winner_id WHERE c.challenger_id = ? AND NOT EXISTS (SELECT 1 FROM challenge_dismissals d WHERE d.user_id = c.challenger_id AND d.challenge_id = c.id) ORDER BY c.created_at DESC LIMIT 20", [$user['id']]);
     
-    $history = DB::all("SELECT c.id, c.quiz_id, c.status, c.created_at, q.title AS quiz_title, c.winner_id, w.name as winner_name, cp.score_final, cp.time_taken, cp.status as my_status FROM challenge_participants cp INNER JOIN challenges c ON c.id = cp.challenge_id INNER JOIN quizzes q ON q.id = c.quiz_id LEFT JOIN users w ON w.id = c.winner_id WHERE cp.user_id = ? AND c.status = 'completed' ORDER BY c.created_at DESC LIMIT 20", [$user['id']]);
+    $history = DB::all("SELECT c.id, c.quiz_id, c.status, c.created_at, q.title AS quiz_title, c.winner_id, w.name as winner_name, cp.score_final, cp.time_taken, cp.status as my_status, host.name AS challenger_name, c.challenger_id FROM challenge_participants cp INNER JOIN challenges c ON c.id = cp.challenge_id INNER JOIN quizzes q ON q.id = c.quiz_id LEFT JOIN users w ON w.id = c.winner_id JOIN users host ON host.id = c.challenger_id WHERE cp.user_id = ? AND cp.is_host = 0 AND (cp.status != 'pending' OR c.status != 'pending') AND NOT EXISTS (SELECT 1 FROM challenge_dismissals d WHERE d.user_id = cp.user_id AND d.challenge_id = c.id) ORDER BY c.created_at DESC LIMIT 20", [$user['id']]);
     
     // Eager load participants to calculate statistics in PHP
     $allChallengeIds = [];
@@ -167,22 +171,7 @@ function challenge_accept(): void {
     $challengeId = (int)($body['challenge_id'] ?? 0);
 
     if (!$challengeId) jsonError('Challenge ID diperlukan');
-    $cp = DB::one("SELECT * FROM challenge_participants WHERE challenge_id = ? AND user_id = ?", [$challengeId, $user['id']]);
-    if (!$cp || $cp['status'] !== 'pending') jsonError('Tantangan tidak valid', 404);
-    $c = DB::one("SELECT * FROM challenges WHERE id = ?", [$challengeId]);
-    if (!$c || $c['status'] !== 'pending') jsonError('Tantangan kadaluarsa', 400);
-
-    DB::execute("UPDATE challenge_participants SET status = 'accepted' WHERE id = ?", [$cp['id']]);
-    $pendingCount = DB::one("SELECT COUNT(*) as c FROM challenge_participants WHERE challenge_id = ? AND status = 'pending'", [$challengeId])['c'];
-    
-    if ($pendingCount == 0) {
-        $acceptedCount = DB::one("SELECT COUNT(*) as c FROM challenge_participants WHERE challenge_id = ? AND status = 'accepted'", [$challengeId])['c'];
-        if ($acceptedCount > 1) {
-            DB::execute("UPDATE challenges SET status = 'playing', start_time = DATE_ADD(NOW(), INTERVAL 5 SECOND) WHERE id = ?", [$challengeId]);
-        } else {
-            DB::execute("UPDATE challenges SET status = 'completed' WHERE id = ?", [$challengeId]);
-        }
-    }
+    $c = respondToChallenge($challengeId, (int)$user['id'], true);
 
     // Beri tahu penantang utama bahwa lawan telah menerima tantangan
     if ((int)$c['challenger_id'] !== (int)$user['id']) {
@@ -208,6 +197,9 @@ function challenge_status(): void {
     $challengeId = (int)($_GET['id'] ?? 0);
     if (!$challengeId) jsonError('Challenge ID diperlukan');
 
+    expirePendingChallenges();
+    $member = DB::one('SELECT user_id FROM challenge_participants WHERE challenge_id = ? AND user_id = ?', [$challengeId, $user['id']]);
+    if (!$member && $user['role'] !== 'admin') jsonError('Akses ditolak', 403);
     $c = DB::one("SELECT c.*, q.title as quiz_title, NOW() as server_now FROM challenges c JOIN quizzes q ON q.id = c.quiz_id WHERE c.id = ?", [$challengeId]);
     if (!$c) jsonError('Not found', 404);
 
@@ -229,6 +221,8 @@ function challenge_sync(): void {
     $score = (int)($body['score'] ?? 0);
     $qIndex = (int)($body['q_index'] ?? 0);
     if (!$challengeId) jsonError('Challenge ID diperlukan');
+    $member = DB::one("SELECT user_id FROM challenge_participants WHERE challenge_id = ? AND user_id = ? AND status = 'accepted'", [$challengeId, $user['id']]);
+    if (!$member) jsonError('Akses ditolak', 403);
 
     $c = DB::one("SELECT status, start_time FROM challenges WHERE id = ?", [$challengeId]);
     if (!$c) jsonError('Tantangan tidak ditemukan', 404);
@@ -300,7 +294,10 @@ function challenge_submit(): void {
     $attemptId   = (int)($body['attempt_id'] ?? 0);
     if (!$challengeId || !$attemptId) jsonError('parameter diperlukan');
 
-    $attempt = DB::one("SELECT score, time_taken FROM attempts WHERE id = ?", [$attemptId]);
+    $room = DB::one("SELECT c.quiz_id FROM challenges c JOIN challenge_participants cp ON cp.challenge_id = c.id
+                    WHERE c.id = ? AND cp.user_id = ? AND cp.status = 'accepted'", [$challengeId, $user['id']]);
+    if (!$room) jsonError('Akses ditolak', 403);
+    $attempt = DB::one("SELECT score, time_taken FROM attempts WHERE id = ? AND user_id = ? AND quiz_id = ? AND mode = 'challenge'", [$attemptId, $user['id'], $room['quiz_id']]);
     if (!$attempt) jsonError('Attempt invalid', 404);
 
     DB::execute("UPDATE challenge_participants SET attempt_id = ?, score_final = ?, time_taken = ? WHERE challenge_id = ? AND user_id = ?", [$attemptId, $attempt['score'], $attempt['time_taken'], $challengeId, $user['id']]);
@@ -337,13 +334,28 @@ function challenge_delete(): void {
     $challengeId = (int)($_GET['id'] ?? 0);
     if (!$challengeId) jsonError('Challenge ID diperlukan');
 
-    $c = DB::one("SELECT id FROM challenges WHERE id = ?", [$challengeId]);
+    expirePendingChallenges();
+    $c = DB::one("SELECT id, challenger_id, status FROM challenges WHERE id = ?", [$challengeId]);
     if (!$c) jsonError('Tantangan tidak ditemukan', 404);
-
-    // Hapus peserta dan tantangan
-    DB::execute("DELETE FROM challenge_participants WHERE challenge_id = ?", [$challengeId]);
-    DB::execute("DELETE FROM challenges WHERE id = ?", [$challengeId]);
-
+    $participant = DB::one('SELECT status FROM challenge_participants WHERE challenge_id = ? AND user_id = ?', [$challengeId, $user['id']]);
+    if (!$participant && $user['role'] !== 'admin') jsonError('Akses ditolak', 403);
+    if ((int)$c['challenger_id'] !== (int)$user['id'] && $user['role'] !== 'admin') {
+        // Participants hide their own card; they cannot delete anyone else's game.
+        ensureChallengeDismissals();
+        if ($c['status'] === 'pending' && $participant['status'] === 'pending') respondToChallenge($challengeId, (int)$user['id'], false);
+        DB::execute('INSERT IGNORE INTO challenge_dismissals (user_id, challenge_id) VALUES (?, ?)', [$user['id'], $challengeId]);
+    } else {
+        if ($c['status'] === 'playing') jsonError('Tantangan sedang berlangsung dan tidak dapat dihapus.', 409);
+        ensureChallengeDismissals();
+        $pdo = DB::conn();
+        $pdo->beginTransaction();
+        try {
+            DB::execute('DELETE FROM challenge_participants WHERE challenge_id = ?', [$challengeId]);
+            DB::execute('DELETE FROM challenges WHERE id = ?', [$challengeId]);
+            DB::execute('DELETE FROM challenge_dismissals WHERE challenge_id = ?', [$challengeId]);
+            $pdo->commit();
+        } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
+    }
     jsonSuccess([], 'Tantangan berhasil dihapus.');
 }
 
@@ -355,23 +367,7 @@ function challenge_decline(): void {
     $challengeId = (int)($body['challenge_id'] ?? 0);
 
     if (!$challengeId) jsonError('Challenge ID diperlukan');
-    $cp = DB::one("SELECT * FROM challenge_participants WHERE challenge_id = ? AND user_id = ?", [$challengeId, $user['id']]);
-    if (!$cp || $cp['status'] !== 'pending') jsonError('Tantangan tidak valid', 404);
-    $c = DB::one("SELECT * FROM challenges WHERE id = ?", [$challengeId]);
-    if (!$c || $c['status'] !== 'pending') jsonError('Tantangan kadaluarsa', 400);
-
-    DB::execute("UPDATE challenge_participants SET status = 'declined' WHERE id = ?", [$cp['id']]);
-
-    // Check if there are no pending participants left
-    $pendingCount = DB::one("SELECT COUNT(*) as c FROM challenge_participants WHERE challenge_id = ? AND status = 'pending'", [$challengeId])['c'];
-    if ($pendingCount == 0) {
-        $acceptedCount = DB::one("SELECT COUNT(*) as c FROM challenge_participants WHERE challenge_id = ? AND status = 'accepted'", [$challengeId])['c'];
-        if ($acceptedCount > 1) {
-            DB::execute("UPDATE challenges SET status = 'playing', start_time = DATE_ADD(NOW(), INTERVAL 5 SECOND) WHERE id = ?", [$challengeId]);
-        } else {
-            DB::execute("UPDATE challenges SET status = 'completed' WHERE id = ?", [$challengeId]);
-        }
-    }
+    respondToChallenge($challengeId, (int)$user['id'], false);
 
     jsonSuccess([], 'Tantangan ditolak.');
 }

@@ -14,6 +14,21 @@ function _getOrCreateThread(int $uid, int $otherId): int {
 }
 
 // GET — daftar thread dengan preview pesan terakhir + jumlah belum dibaca
+function message_thread(): void {
+    $user = requireAuth();
+    $id = (int)($_GET['thread_id'] ?? 0);
+    $uid = (int)$user['id'];
+    $thread = DB::one("SELECT t.id,
+        CASE WHEN t.user1_id = ? THEN t.user2_id ELSE t.user1_id END AS other_id,
+        CASE WHEN t.user1_id = ? THEN u2.name ELSE u1.name END AS other_name
+        FROM message_threads t JOIN users u1 ON u1.id = t.user1_id JOIN users u2 ON u2.id = t.user2_id
+        WHERE t.id = ? AND (t.user1_id = ? OR t.user2_id = ?)", [$uid, $uid, $id, $uid, $uid]);
+    if (!$thread) jsonError('Percakapan tidak ditemukan', 404);
+    $thread['id'] = (int)$thread['id'];
+    $thread['other_id'] = (int)$thread['other_id'];
+    jsonSuccess($thread);
+}
+
 function message_threads(): void {
     $user = requireAuth();
     $uid  = (int)$user['id'];

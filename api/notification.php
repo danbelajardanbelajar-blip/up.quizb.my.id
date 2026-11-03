@@ -8,6 +8,7 @@ function notification_list(): void {
     $user = requireAuth();
     [$page, $limit, $offset] = getPaginationParams();
     $limit = min(30, max(1, $limit));
+    $offset = ($page - 1) * $limit;
 
     $total = (int)(DB::one(
         "SELECT COUNT(*) AS cnt FROM notifications WHERE user_id = ? AND type != 'message'",
@@ -17,7 +18,7 @@ function notification_list(): void {
     $rows = DB::all(
         "SELECT id, type, title, body, link, is_read, created_at
          FROM notifications WHERE user_id = ? AND type != 'message'
-         ORDER BY created_at DESC LIMIT ? OFFSET ?",
+         ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
         [$user['id'], $limit, $offset]
     );
     foreach ($rows as &$r) {
@@ -55,13 +56,16 @@ function notification_mark_read(): void {
     $body = getBody();
     $id   = isset($body['id']) ? (int)$body['id'] : null;
 
+    if ($id !== null && $id <= 0) jsonError('ID notifikasi tidak valid');
     if ($id) {
         DB::execute(
             "UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?",
             [$id, $user['id']]
         );
-    } else {
+    } elseif (!empty($body['all'])) {
         DB::execute("UPDATE notifications SET is_read = 1 WHERE user_id = ?", [$user['id']]);
+    } else {
+        jsonError('Sertakan id atau all');
     }
     jsonSuccess([], 'Ditandai sudah dibaca');
 }
@@ -86,11 +90,11 @@ function notification_delete(): void {
     jsonSuccess([], 'Notifikasi dihapus');
 }
 
-// POST — broadcast update aplikasi ke semua user (hanya admin/pengajar)
+// POST — broadcast global hanya untuk administrator.
 function notification_broadcast_update(): void {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
     $user = requireAuth();
-    if (($user['role'] ?? '') !== 'admin' && ($user['role'] ?? '') !== 'teacher') {
+    if (($user['role'] ?? '') !== 'admin') {
         jsonError('Akses ditolak', 403);
     }
     $body = getBody();

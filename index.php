@@ -153,6 +153,7 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
   </script>
 
   <!-- Custom CSS -->
+  <link rel="stylesheet" href="assets/css/notifications.css?v=<?= @filemtime(__DIR__ . '/assets/css/notifications.css') ?: 1 ?>" />
   <link rel="stylesheet" href="assets/css/app.css?v=<?= @filemtime(__DIR__ . '/assets/css/app.css') ?: 2 ?>" />
   <link rel="stylesheet" href="assets/css/discovery.css?v=<?= @filemtime(__DIR__ . '/assets/css/discovery.css') ?: 1 ?>" />
 </head>
@@ -259,33 +260,11 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
         <template x-if="user">
           <div class="flex items-center gap-2">
             <div class="relative" x-data="{ isOpen: false }">
-              <button @click="isOpen=!isOpen; if(isOpen) loadNotifications()" class="relative p-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Notifikasi">
+              <button @click="toggleNotifications($event.currentTarget)" data-notification-toggle :aria-expanded="notif.show" aria-controls="notification-panel-desktop" class="relative p-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Notifikasi">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
                 <span x-show="notif.unreadCount > 0" class="absolute top-0.5 right-0.5 min-w-[1.1rem] h-[1.1rem] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5" x-text="notif.unreadCount > 99 ? '99+' : notif.unreadCount"></span>
               </button>
-              <div x-show="isOpen" @click.outside="isOpen=false" x-transition class="absolute bottom-full left-0 mb-2 w-80 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 z-50 flex flex-col overflow-hidden" style="max-height:480px">
-                   <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
-                     <span class="font-semibold text-sm text-gray-800 dark:text-gray-100">🔔 Notifikasi</span>
-                     <div class="flex items-center gap-2">
-                       <button x-show="notif.unreadCount > 0" @click="markAllNotifRead()" class="text-xs text-primary-600 dark:text-primary-400 hover:underline">Baca semua</button>
-                       <button x-show="notif.list.some(n => n.is_read)" @click="clearReadNotif()" class="text-xs text-gray-400 hover:text-red-500 hover:underline">Hapus yg dibaca</button>
-                     </div>
-                   </div>
-                   <div class="overflow-y-auto flex-1 custom-scrollbar">
-                     <div x-show="notif.loading" class="flex justify-center py-8"><div class="w-5 h-5 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div></div>
-                     <div x-show="!notif.loading && notif.list.length === 0" class="text-center py-10 text-gray-400"><p class="text-3xl mb-2">🔔</p><p class="text-xs">Tidak ada notifikasi</p></div>
-                     <template x-for="n in notif.list" :key="n.id">
-                       <div @click="clickNotif(n); isOpen=false" class="flex items-start gap-3 px-4 py-3 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors" :class="!n.is_read ? 'bg-primary-50/50 dark:bg-primary-900/10' : ''">
-                         <div class="w-8 h-8 rounded-full flex items-center justify-center text-lg flex-shrink-0 mt-0.5" :class="!n.is_read ? 'bg-primary-100 dark:bg-primary-900/40' : 'bg-gray-100 dark:bg-gray-800'" x-text="{challenge:'⚔️',challenge_result:'🏆',message:'💬',system:'📢',new_user:'👤',new_question:'📝'}[n.type] || '🔔'"></div>
-                         <div class="flex-1 min-w-0">
-                           <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug" :class="!n.is_read ? 'font-semibold' : ''" x-text="n.title"></p>
-                           <p class="text-xs text-gray-300 dark:text-gray-600 mt-1" x-text="formatRelative(n.created_at)"></p>
-                         </div>
-                         <div x-show="!n.is_read" class="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0 mt-2"></div>
-                       </div>
-                     </template>
-                   </div>
-              </div>
+              <?php $notificationPanelMobile = false; include __DIR__ . '/pages/notification-panel.php'; ?>
             </div>
             <button @click="navigate('/messages')" class="relative p-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Pesan">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
@@ -720,7 +699,7 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
 
         <!-- Login: tombol Notifikasi -->
         <template x-if="user">
-        <button @click="isOpen=!isOpen; isOpen && loadNotifications()"
+        <button @click="toggleNotifications($event.currentTarget)" data-notification-toggle :aria-expanded="notif.show" aria-controls="notification-panel-mobile"
                 class="w-full h-full flex flex-col items-center justify-center gap-0.5 transition-colors relative"
                 :class="isOpen ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'">
           <span class="relative inline-flex">
@@ -737,47 +716,7 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
 
         <!-- Notif slide-up panel (mobile) — hanya muncul saat login -->
         <template x-if="user">
-        <div x-show="isOpen" @click.outside="isOpen=false" x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
-             x-transition:leave="transition ease-in duration-150"
-             x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4"
-             class="absolute bottom-full right-0 mb-2 w-80 max-h-[70vh] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden z-50"
-             style="right: -4rem">
-          <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
-            <span class="font-semibold text-sm text-gray-800 dark:text-gray-100">🔔 Notifikasi</span>
-            <div class="flex items-center gap-2">
-              <button x-show="notif.unreadCount > 0" @click="markAllNotifRead()"
-                      class="text-xs text-primary-600 dark:text-primary-400 hover:underline">Baca semua</button>
-              <button x-show="notif.list.some(n => n.is_read)" @click="clearReadNotif()"
-                      class="text-xs text-gray-400 hover:text-red-500 hover:underline">Hapus yg dibaca</button>
-              <button @click="isOpen=false" class="text-gray-400 hover:text-gray-600 text-lg leading-none ml-1">×</button>
-            </div>
-          </div>
-          <div class="overflow-y-auto flex-1">
-            <div x-show="notif.loading" class="flex justify-center py-8">
-              <div class="w-5 h-5 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
-            </div>
-            <div x-show="!notif.loading && notif.list.length === 0" class="text-center py-10 text-gray-400">
-              <p class="text-3xl mb-2">🔔</p>
-              <p class="text-xs">Tidak ada notifikasi</p>
-            </div>
-            <template x-for="n in notif.list" :key="n.id">
-              <div @click="clickNotif(n); isOpen=false"
-                   class="flex items-start gap-3 px-4 py-3 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
-                   :class="!n.is_read ? 'bg-primary-50/50 dark:bg-primary-900/10' : ''">
-                <div class="w-8 h-8 rounded-full flex items-center justify-center text-lg flex-shrink-0 mt-0.5"
-                     :class="!n.is_read ? 'bg-primary-100 dark:bg-primary-900/40' : 'bg-gray-100 dark:bg-gray-800'"
-                     x-text="{challenge:'⚔️',challenge_result:'🏆',message:'💬',system:'📢',new_user:'👤',new_question:'📝'}[n.type] || '🔔'"></div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug"
-                     :class="!n.is_read ? 'font-semibold' : ''" x-text="n.title"></p>
-                  <p class="text-xs text-gray-300 dark:text-gray-600 mt-1" x-text="formatRelative(n.created_at)"></p>
-                </div>
-                <div x-show="!n.is_read" class="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0 mt-2"></div>
-              </div>
-            </template>
-          </div>
-        </div>
+        <?php $notificationPanelMobile = true; include __DIR__ . '/pages/notification-panel.php'; ?>
         </template>
 
       </div>
