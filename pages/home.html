@@ -1,106 +1,189 @@
 <!-- HOME PAGE -->
-<div x-data="{ engine: null }">
+<div x-data="{ engine: null, localQuery: '' }">
 
   <!-- HERO -->
-  <section class="hero-gradient text-white py-24 px-4 relative overflow-hidden">
+  <section class="hero-gradient text-white py-20 sm:py-28 px-4 relative overflow-hidden">
     <div class="absolute inset-0 overflow-hidden pointer-events-none">
       <div class="absolute -top-40 -right-40 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl animate-pulse-slow"></div>
       <div class="absolute -bottom-20 -left-20 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl animate-pulse-slow" style="animation-delay:1s"></div>
     </div>
     <div class="relative max-w-4xl mx-auto text-center">
-      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm font-medium mb-6 backdrop-blur">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs sm:text-sm font-medium mb-6 backdrop-blur">
         <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-        Platform kuis online terpercaya
+        Platform Kuis &amp; Pembelajaran Interaktif
       </div>
-      <h1 class="text-4xl sm:text-6xl font-extrabold mb-6 leading-tight">
+      <h1 class="text-3xl sm:text-5xl md:text-6xl font-extrabold mb-6 leading-tight tracking-tight">
         Uji Pengetahuanmu<br/>
-        <span class="bg-gradient-to-r from-primary-300 to-blue-300 bg-clip-text text-transparent">Bersama QuizB</span>
+        <span class="bg-gradient-to-r from-primary-300 via-emerald-300 to-teal-200 bg-clip-text text-transparent">Bersama QuizB</span>
       </h1>
-      <p class="text-lg sm:text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
-        Ratusan kuis interaktif dari berbagai kategori, leaderboard global, dan analisis hasil yang mendalam.
+      <p class="text-base sm:text-lg text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">
+        Ratusan kuis interaktif dari berbagai rumpun pelajaran, duel tantangan real-time, manajemen tugas kelas, dan analisis hasil yang mendalam.
       </p>
-      <div class="flex flex-wrap items-center justify-center gap-4">
-        <button @click="navigate('/quizzes')" class="btn-primary text-base px-8 py-3 shadow-xl">
-          🚀 Mulai Quiz Sekarang
+
+      <!-- Interactive Hero Search Bar -->
+      <div class="max-w-xl mx-auto mb-8">
+        <div class="flex items-center bg-white/10 dark:bg-gray-900/60 backdrop-blur-md rounded-2xl border border-white/25 p-1.5 shadow-2xl focus-within:border-primary-400 focus-within:ring-2 focus-within:ring-primary-400/30 transition-all">
+          <span class="pl-3.5 pr-2 text-white/70 text-lg">🔍</span>
+          <input type="text"
+                 x-model="localQuery"
+                 @keydown.enter="if(localQuery.trim().length >= 2) { quizzes.search = localQuery.trim(); quizzes.page = 1; navigate('/quizzes'); loadQuizzes(true); }"
+                 placeholder="Cari topik kuis (misal: Biologi, Sejarah, UTBK)..."
+                 class="w-full bg-transparent text-white placeholder-gray-300 text-sm sm:text-base outline-none py-2 px-1">
+          <button @click="if(localQuery.trim().length >= 2) { quizzes.search = localQuery.trim(); quizzes.page = 1; navigate('/quizzes'); loadQuizzes(true); }"
+                  class="btn-primary text-xs sm:text-sm px-4 sm:px-6 py-2.5 rounded-xl flex-shrink-0 shadow-md">
+            Cari Kuis
+          </button>
+        </div>
+        <!-- Quick search tags -->
+        <div class="flex items-center justify-center gap-2 mt-3 text-xs text-gray-300 flex-wrap">
+          <span class="opacity-75">Coba cari:</span>
+          <button @click="quizzes.search='Matematika'; navigate('/quizzes'); loadQuizzes(true);" class="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors">📐 Matematika</button>
+          <button @click="quizzes.search='Sains'; navigate('/quizzes'); loadQuizzes(true);" class="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors">🔬 Sains</button>
+          <button @click="quizzes.search='Sejarah'; navigate('/quizzes'); loadQuizzes(true);" class="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors">📜 Sejarah</button>
+          <button @click="quizzes.search='Bahasa'; navigate('/quizzes'); loadQuizzes(true);" class="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors">🌍 Bahasa</button>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-12">
+        <button @click="navigate('/quizzes')" class="btn-primary text-sm sm:text-base px-7 py-3 shadow-xl">
+          🚀 Jelajahi Semua Kuis
         </button>
-        <button @click="navigate('/categories')" class="px-8 py-3 rounded-xl border border-white/30 text-white font-semibold hover:bg-white/10 transition-all text-base backdrop-blur">
-          📂 Jelajahi Kategori
+        <button @click="navigate('/categories')" class="px-7 py-3 rounded-xl border border-white/30 text-white font-semibold hover:bg-white/10 transition-all text-sm sm:text-base backdrop-blur">
+          📂 Lihat Kategori
         </button>
       </div>
-      <!-- Stats — data dari database -->
-      <div class="mt-16 grid grid-cols-3 gap-6 max-w-lg mx-auto">
-        <div class="glass py-4 px-2 text-center">
-          <div class="text-2xl font-bold"
+
+      <!-- Stats Counters -->
+      <div class="grid grid-cols-3 gap-3 sm:gap-6 max-w-lg mx-auto">
+        <div class="glass py-3.5 px-2 text-center rounded-2xl">
+          <div class="text-xl sm:text-2xl font-bold text-white"
                x-text="home.stats.total_questions >= 1000
                  ? Math.floor(home.stats.total_questions/1000) + 'K+'
                  : (home.stats.total_questions || '...') + '+'">...</div>
-          <div class="text-xs text-gray-400 mt-1">Soal Aktif</div>
+          <div class="text-[11px] sm:text-xs text-gray-300 mt-1">Soal Aktif</div>
         </div>
-        <div class="glass py-4 px-2 text-center">
-          <div class="text-2xl font-bold"
+        <div class="glass py-3.5 px-2 text-center rounded-2xl">
+          <div class="text-xl sm:text-2xl font-bold text-white"
                x-text="home.stats.total_quizzes ? home.stats.total_quizzes + '+' : '...'">...</div>
-          <div class="text-xs text-gray-400 mt-1">Quiz Tersedia</div>
+          <div class="text-[11px] sm:text-xs text-gray-300 mt-1">Kuis Tersedia</div>
         </div>
-        <div class="glass py-4 px-2 text-center">
-          <div class="text-2xl font-bold"
+        <div class="glass py-3.5 px-2 text-center rounded-2xl">
+          <div class="text-xl sm:text-2xl font-bold text-white"
                x-text="home.stats.total_categories ? home.stats.total_categories + '+' : '...'">...</div>
-          <div class="text-xs text-gray-400 mt-1">Kategori</div>
+          <div class="text-[11px] sm:text-xs text-gray-300 mt-1">Kategori Topik</div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- FEATURED QUIZZES -->
+  <!-- VALUE PROPOSITION / FITUR UNGGULAN SECTION -->
+  <section class="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-b border-gray-100 dark:border-gray-800">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <span class="text-xs font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/40 px-3 py-1 rounded-full">
+        Keunggulan QuizB
+      </span>
+      <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-3">
+        Dirancang untuk Pengalaman Belajar Terbaik
+      </h2>
+      <p class="text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-2">
+        QuizB menggabungkan kemudahan kuis mandiri dengan interaksi kelas dan kompetisi seru.
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <!-- Fitur 1 -->
+      <div class="card p-6 flex flex-col justify-between hover:border-primary-500/40 transition-all duration-200 group">
+        <div>
+          <div class="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+            ⚡
+          </div>
+          <h3 class="font-bold text-gray-900 dark:text-white text-base mb-2">3 Mode Bermain Fleksibel</h3>
+          <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+            Pilih <strong>Mode Bebas</strong> untuk santai, <strong>Mode Instan</strong> untuk pembahasan langsung per nomor, atau <strong>Mode Ujian</strong> berbatas waktu.
+          </p>
+        </div>
+      </div>
+
+      <!-- Fitur 2 -->
+      <div class="card p-6 flex flex-col justify-between hover:border-primary-500/40 transition-all duration-200 group">
+        <div>
+          <div class="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+            ⚔️
+          </div>
+          <h3 class="font-bold text-gray-900 dark:text-white text-base mb-2">Mode Tantangan 1 vs 1</h3>
+          <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+            Tantang teman atau sesama pelajar dalam duel kuis real-time. Buktikan siapa yang tercepat dan memiliki skor akurasi tertinggi!
+          </p>
+        </div>
+      </div>
+
+      <!-- Fitur 3 -->
+      <div class="card p-6 flex flex-col justify-between hover:border-primary-500/40 transition-all duration-200 group">
+        <div>
+          <div class="w-12 h-12 rounded-2xl bg-primary-100 dark:bg-primary-950/40 text-primary-600 dark:text-primary-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+            🏫
+          </div>
+          <h3 class="font-bold text-gray-900 dark:text-white text-base mb-2">Manajemen Kelas &amp; Tugas</h3>
+          <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+            Pengajar dapat membuat kelas digital, menetapkan batas waktu tugas, serta memantau integritas dengan sistem snapshot kamera berkala.
+          </p>
+        </div>
+      </div>
+
+      <!-- Fitur 4 -->
+      <div class="card p-6 flex flex-col justify-between hover:border-primary-500/40 transition-all duration-200 group">
+        <div>
+          <div class="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+            📈
+          </div>
+          <h3 class="font-bold text-gray-900 dark:text-white text-base mb-2">Analisis &amp; Peringkat</h3>
+          <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+            Pantau perkembangan pemahaman lewat riwayat skor, statistik akurasi, dan raih posisi teratas di papan peringkat global.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURED / RECENTLY PLAYED SECTION -->
   <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12">
     <?php include __DIR__ . '/recently-played.html'; ?>
   </div>
 
-  <section class="bg-gray-100 dark:bg-gray-900 py-16" x-show="!discovery.loading && discovery.quizzes.length > 0">
+  <!-- POPULAR QUIZZES GRID -->
+  <section class="bg-gray-50 dark:bg-gray-900/60 py-16 mt-6 border-y border-gray-100 dark:border-gray-800" x-show="!home.loading && home.featured.length > 0">
     <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between mb-8">
         <div>
-          <h2 class="text-2xl font-bold text-gray-900 dark:text-white">⭐ Quiz Unggulan</h2>
-          <p class="text-gray-500 dark:text-gray-400 mt-1">Mulai dari yang paling populer</p>
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <span>⭐</span>
+            <span>Quiz Unggulan</span>
+          </h2>
+          <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Koleksi kuis terpopuler yang paling banyak dimainkan</p>
         </div>
-        <button @click="navigate('/quizzes')" class="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline">Lihat semua →</button>
+        <button @click="navigate('/quizzes')" class="text-sm font-semibold text-primary-600 dark:text-primary-400 hover:underline">Lihat semua →</button>
       </div>
 
-      <!-- Skeleton -->
-      <div x-show="home.loading" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <template x-for="i in 6">
-          <div class="card p-5 space-y-3">
-            <div class="skeleton h-5 w-3/4 rounded"></div>
-            <div class="skeleton h-4 w-full rounded"></div>
-            <div class="skeleton h-4 w-2/3 rounded"></div>
-            <div class="flex gap-2 mt-3">
-              <div class="skeleton h-6 w-16 rounded-full"></div>
-              <div class="skeleton h-6 w-20 rounded-full"></div>
-            </div>
-          </div>
-        </template>
-      </div>
-
-      <!-- Cards -->
-      <div x-show="!home.loading" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Cards Grid -->
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <template x-for="quiz in home.featured" :key="quiz.id">
-          <div class="card card-hover p-5 cursor-pointer group" @click="navigate('/quiz/'+quiz.id)">
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">📝</span>
-              <span class="badge text-xs px-2 py-0.5 rounded-full font-medium"
-                    :class="difficultyClass(quiz.difficulty)" x-text="difficultyLabel(quiz.difficulty)"></span>
+          <div class="card card-hover p-5 cursor-pointer group flex flex-col justify-between" @click="navigate('/quiz/'+quiz.id)">
+            <div>
+              <div class="flex items-start justify-between mb-3">
+                <span class="text-2xl">📝</span>
+                <span class="badge text-xs px-2.5 py-0.5 rounded-full font-medium"
+                      :class="difficultyClass(quiz.difficulty)" x-text="difficultyLabel(quiz.difficulty)"></span>
+              </div>
+              <h3 class="font-bold text-gray-800 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2 mb-2" x-text="quiz.title"></h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-4" x-text="quiz.description || 'Uji pemahamanmu dalam kuis menarik ini.'"></p>
             </div>
-            <h3 class="font-semibold text-gray-800 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2 mb-2" x-text="quiz.title"></h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-4" x-text="quiz.description || 'Tidak ada deskripsi.'"></p>
-            <div class="flex items-center gap-3 text-xs text-gray-400">
-              <span>❓ <span x-text="quiz.question_count"></span> soal</span>
-              <span>👥 <span x-text="quiz.attempt_count || 0"></span></span>
+            <div class="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-400">
+              <span class="font-medium text-gray-600 dark:text-gray-300">❓ <span x-text="quiz.question_count"></span> Soal</span>
+              <span>👥 <span x-text="quiz.attempt_count || 0"></span>x Dimainkan</span>
             </div>
           </div>
         </template>
-        <div x-show="!home.loading && home.featured.length === 0" class="col-span-3 text-center py-12 text-gray-400">
-          <p class="text-4xl mb-3">📭</p>
-          <p>Belum ada quiz tersedia</p>
-        </div>
       </div>
     </div>
   </section>
@@ -109,16 +192,19 @@
   <section class="w-full py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
     <div class="flex items-center justify-between mb-8">
       <div>
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">📂 Jelajahi Kategori</h2>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">Pilih topik yang kamu minati</p>
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <span>📂</span>
+          <span>Jelajahi Berdasarkan Kategori</span>
+        </h2>
+        <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Pilih bidang minat dan mata pelajaran favoritmu</p>
       </div>
-      <button @click="navigate('/categories')" class="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline">Lihat semua →</button>
+      <button @click="navigate('/categories')" class="text-sm font-semibold text-primary-600 dark:text-primary-400 hover:underline">Lihat semua →</button>
     </div>
 
     <!-- Skeleton -->
     <div x-show="home.loading" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
       <template x-for="i in 6">
-        <div class="skeleton h-24 rounded-xl"></div>
+        <div class="skeleton h-24 rounded-2xl"></div>
       </template>
     </div>
 
@@ -126,9 +212,9 @@
     <div x-show="!home.loading" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
       <template x-for="cat in home.categories.slice(0,6)" :key="cat.id">
         <button @click="quizzes.categoryId=cat.id; navigate('/quizzes')"
-                class="card card-hover p-4 text-center group cursor-pointer border-0">
-          <div class="text-3xl mb-2" x-text="cat.icon"></div>
-          <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" x-text="cat.name"></div>
+                class="card card-hover p-4 text-center group cursor-pointer border border-gray-100 dark:border-gray-800">
+          <div class="text-3xl mb-2 group-hover:scale-110 transition-transform" x-text="cat.icon"></div>
+          <div class="text-sm font-bold text-gray-800 dark:text-gray-200 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" x-text="cat.name"></div>
           <div class="text-xs text-gray-400 mt-1" x-text="cat.quiz_count + ' quiz'"></div>
         </button>
       </template>
@@ -136,12 +222,15 @@
   </section>
 
   <!-- RUMPUN / MATA PELAJARAN SECTION -->
-  <section class="w-full py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
+  <section class="w-full py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-gray-100 dark:border-gray-800"
            x-data="{ activeGroup: null }">
     <div class="flex items-center justify-between mb-8">
       <div>
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">🗂️ Rumpun Mata Pelajaran</h2>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">Pilih rumpun untuk menjelajahi kategori di dalamnya</p>
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <span>🗂️</span>
+          <span>Rumpun Mata Pelajaran</span>
+        </h2>
+        <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Pilih rumpun kurikulum untuk melihat sub-kategori di dalamnya</p>
       </div>
     </div>
 
@@ -158,7 +247,7 @@
         <template x-for="grp in home.groups" :key="grp.id">
           <button
             @click="activeGroup = (activeGroup === grp.id ? null : grp.id)"
-            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 border-2 shadow-sm"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 border-2 shadow-sm cursor-pointer"
             :class="activeGroup === grp.id
               ? 'text-white border-transparent shadow-md scale-105'
               : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'"
@@ -172,18 +261,17 @@
         </template>
       </div>
 
-      <!-- Expanded panel — satu panel untuk grup aktif saja (x-if + x-data find) -->
+      <!-- Expanded panel -->
       <template x-if="activeGroup !== null">
         <div x-data="{ ag: home.groups.find(g => g.id === activeGroup) || null }"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 -translate-y-1"
              x-transition:enter-end="opacity-100 translate-y-0"
-             class="rounded-2xl border-2 p-5 mt-2"
+             class="rounded-2xl border-2 p-6 mt-2"
              :style="ag ? 'border-color:' + ag.color + '55; background:' + ag.color + '0d' : ''">
 
           <template x-if="ag">
             <div>
-              <!-- Header -->
               <div class="flex items-center gap-2 mb-5">
                 <span x-text="ag.icon" class="text-2xl"></span>
                 <h3 class="font-bold text-gray-900 dark:text-white text-lg" x-text="ag.name"></h3>
@@ -195,11 +283,11 @@
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                   <template x-for="cat in ag.categories" :key="cat.id">
                     <button @click="quizzes.categoryId = cat.id; navigate('/quizzes')"
-                            class="flex items-center gap-2 p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-sm transition-all text-left group">
+                            class="flex items-center gap-2 p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 hover:border-primary-400 dark:hover:border-primary-600 hover:shadow-sm transition-all text-left group cursor-pointer">
                       <span class="text-xl flex-shrink-0" x-text="cat.icon"></span>
                       <div class="min-w-0">
                         <p class="text-xs font-semibold text-gray-800 dark:text-gray-200 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors truncate" x-text="cat.name"></p>
-                        <p class="text-xs text-gray-400 mt-0.5" x-text="cat.quiz_count + ' quiz'"></p>
+                        <p class="text-[11px] text-gray-400 mt-0.5" x-text="cat.quiz_count + ' quiz'"></p>
                       </div>
                     </button>
                   </template>
@@ -216,23 +304,42 @@
       </template>
     </div>
 
-    <!-- Empty state (no groups configured) -->
+    <!-- Empty state -->
     <div x-show="!home.loading && home.groups.length === 0" class="text-center py-8 text-gray-400">
       <p class="text-3xl mb-2">🗂️</p>
       <p class="text-sm">Rumpun belum dikonfigurasi</p>
     </div>
   </section>
 
+  <!-- HIGH-CONVERSION CTA SECTION (Only visible for non-logged-in users) -->
+  <section x-show="!user" class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+    <div class="card p-8 sm:p-12 relative overflow-hidden bg-gradient-to-br from-primary-500/10 via-emerald-500/5 to-transparent border-2 border-primary-500/20 text-center">
+      <div class="max-w-2xl mx-auto relative z-10">
+        <span class="text-3xl mb-3 inline-block">🎯</span>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-gray-900 dark:text-white mb-4 tracking-tight">
+          Siap Mengasah Kemampuanmu?
+        </h2>
+        <p class="text-gray-600 dark:text-gray-300 text-sm sm:text-base mb-8 leading-relaxed">
+          Bergabunglah sekarang untuk menyimpan progres kuis, mengikuti tugas kelas, dan menantang temanmu dalam duel pengetahuan seru.
+        </p>
 
-  <!-- CTA SECTION -->
-  <section x-show="!user" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-    <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Siap Mulai Tantangan?</h2>
-    <p class="text-gray-500 dark:text-gray-400 mb-8">Daftar sekarang dan mulai perjalanan belajarmu bersama ribuan pengguna QuizB.</p>
-    <div class="flex items-center justify-center gap-4">
-      <button @click="navigate('/register')" class="btn-primary px-8 py-3 text-base">✨ Daftar Gratis</button>
-      <button @click="navigate('/login')" class="btn-secondary px-8 py-3 text-base">Masuk</button>
+        <!-- Trust Points -->
+        <div class="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-8">
+          <span class="flex items-center gap-1.5"><strong class="text-green-500">✓</strong> 100% Gratis</span>
+          <span class="flex items-center gap-1.5"><strong class="text-green-500">✓</strong> Tanpa Instalasi Aplikasi</span>
+          <span class="flex items-center gap-1.5"><strong class="text-green-500">✓</strong> Akses di Semua Perangkat</span>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-center gap-4">
+          <button @click="navigate('/register')" class="btn-primary px-8 py-3.5 text-base shadow-xl">
+            ✨ Daftar Gratis Sekarang
+          </button>
+          <button @click="navigate('/login')" class="btn-secondary px-8 py-3.5 text-base">
+            Sudah Punya Akun? Masuk
+          </button>
+        </div>
+      </div>
     </div>
   </section>
 
 </div>
-

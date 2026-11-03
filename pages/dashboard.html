@@ -1,32 +1,121 @@
 <!-- DASHBOARD PAGE -->
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-  <div class="mb-8">
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-      👋 Halo, <span x-text="user?.name?.split(' ')[0]"></span>!
-    </h1>
-    <p class="text-gray-500 dark:text-gray-400 mt-1">Pantau progres belajarmu</p>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+
+  <!-- 1. GREETING & QUICK ACTION HUB -->
+  <div class="card p-6 sm:p-8 mb-8 bg-gradient-to-r from-primary-500/10 via-primary-500/5 to-transparent border border-primary-500/20">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <div>
+        <div class="flex flex-wrap items-center gap-3">
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+            👋 Halo, <span x-text="user?.name?.split(' ')[0]"></span>!
+          </h1>
+          <span class="badge text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wider"
+                :class="user?.role === 'admin' ? 'badge-primary' : user?.role === 'pengajar' ? 'badge-warning' : 'badge-success'"
+                x-text="{ admin: '⚙️ Admin', pengajar: '👨‍🏫 Pengajar', user: '🎓 Pelajar', pelajar: '🎓 Pelajar' }[user?.role] || user?.role">
+          </span>
+        </div>
+        <p class="text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-1">
+          Pantau progres belajar, selesaikan tugas aktif, dan raih skor terbaikmu hari ini.
+        </p>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div class="flex flex-wrap items-center gap-2.5 flex-shrink-0">
+        <button @click="navigate('/quizzes')" class="btn-primary text-xs sm:text-sm px-4 py-2.5 shadow-md">
+          🚀 Mulai Quiz
+        </button>
+        <button @click="navigate('/challenges')" class="btn-secondary text-xs sm:text-sm px-4 py-2.5 relative">
+          <span>⚔️ Tantangan</span>
+          <span x-show="challenge?.pendingCount > 0"
+                class="ml-1.5 px-1.5 py-0.2 bg-red-500 text-white text-[10px] font-black rounded-full"
+                x-text="challenge?.pendingCount"></span>
+        </button>
+        <button @click="navigate('/classroom')" class="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-xs sm:text-sm font-semibold">
+          🏫 Kelas Saya
+        </button>
+      </div>
+    </div>
   </div>
 
-  <!-- =====================================================
-       SECTION TUGAS — hanya untuk pelajar & pengajar
-       ===================================================== -->
+  <!-- 2. PERSONAL STATS CARDS (Top Priority — Langsung terlihat di atas tanpa scroll) -->
+  <div class="mb-8">
+    <!-- Skeleton -->
+    <div x-show="dashboard.loading" class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+      <template x-for="i in 4">
+        <div class="card p-5 space-y-3">
+          <div class="skeleton h-4 w-24 rounded"></div>
+          <div class="skeleton h-8 w-16 rounded"></div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Active Stats -->
+    <div x-show="!dashboard.loading" class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+      <!-- Total Poin -->
+      <div class="card p-5 flex items-center gap-4 hover:border-primary-400 dark:hover:border-primary-600 transition-all group">
+        <div class="w-12 h-12 rounded-2xl bg-primary-100 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-105 transition-transform">
+          🏆
+        </div>
+        <div class="min-w-0">
+          <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">Total Poin</p>
+          <p class="text-2xl sm:text-3xl font-extrabold text-primary-600 dark:text-primary-400 truncate" x-text="(dashboard.stats?.total_points || 0).toLocaleString()"></p>
+        </div>
+      </div>
+
+      <!-- Quiz Dikerjakan -->
+      <div class="card p-5 flex items-center gap-4 hover:border-blue-400 dark:hover:border-blue-600 transition-all group">
+        <div class="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-105 transition-transform">
+          📝
+        </div>
+        <div class="min-w-0">
+          <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">Kuis Dikerjakan</p>
+          <p class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white truncate" x-text="dashboard.stats?.quizzes_taken || 0"></p>
+        </div>
+      </div>
+
+      <!-- Rata-rata Skor -->
+      <div class="card p-5 flex items-center gap-4 hover:border-emerald-400 dark:hover:border-emerald-600 transition-all group">
+        <div class="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-105 transition-transform">
+          🎯
+        </div>
+        <div class="min-w-0">
+          <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">Rata-rata Skor</p>
+          <p class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white truncate" x-text="(dashboard.stats?.avg_score || 0) + '%'"></p>
+        </div>
+      </div>
+
+      <!-- Skor Tertinggi -->
+      <div class="card p-5 flex items-center gap-4 hover:border-yellow-400 dark:hover:border-yellow-600 transition-all group">
+        <div class="w-12 h-12 rounded-2xl bg-yellow-100 dark:bg-yellow-950/60 text-yellow-600 dark:text-yellow-400 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-105 transition-transform">
+          ⭐
+        </div>
+        <div class="min-w-0">
+          <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">Skor Tertinggi</p>
+          <p class="text-2xl sm:text-3xl font-extrabold text-yellow-500 truncate" x-text="(dashboard.stats?.best_score || 0) + '%'"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. SECTION TUGAS — hanya untuk pelajar & pengajar -->
   <template x-if="user && ['pelajar','pengajar','admin','user'].includes(user.role)">
     <div class="mb-8">
 
       <!-- Header section -->
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h2 class="text-lg font-bold text-gray-900 dark:text-white">
-            <span x-text="['pelajar', 'user'].includes(dashboard.assignmentsRole) ? '📚 Tugas Saya' : '📋 Tugas Aktif'"></span>
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <span>📚</span>
+            <span x-text="['pelajar', 'user'].includes(dashboard.assignmentsRole) ? 'Tugas Saya' : 'Tugas Aktif Kelas'"></span>
           </h2>
           <p class="text-xs text-gray-400 mt-0.5"
              x-text="['pelajar', 'user'].includes(dashboard.assignmentsRole)
-               ? 'Tugas dari kelas yang kamu ikuti'
-               : 'Tugas yang kamu buat untuk kelasmu'"></p>
+               ? 'Tugas dari kelas yang kamu ikuti — selesaikan sebelum tenggat waktu'
+               : 'Tugas yang kamu buat untuk siswa kelasmu'"></p>
         </div>
         <button @click="navigate('/classroom')"
                 class="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline">
-          Lihat kelas →
+          Lihat semua kelas →
         </button>
       </div>
 
@@ -47,8 +136,8 @@
            class="card p-8 text-center text-gray-400">
         <p class="text-3xl mb-2">📭</p>
         <p class="text-sm" x-text="['pelajar', 'user'].includes(dashboard.assignmentsRole)
-          ? 'Tidak ada tugas aktif saat ini'
-          : 'Belum ada tugas yang dibuat'"></p>
+          ? 'Tidak ada tugas aktif saat ini. Kamu bebas belajar kuis mandiri!'
+          : 'Belum ada tugas yang dibuat untuk kelas.'"></p>
         <button x-show="!['pelajar', 'user'].includes(dashboard.assignmentsRole)"
                 @click="navigate('/classroom')"
                 class="mt-3 btn-primary text-sm px-4 py-1.5">Buka Kelas</button>
@@ -58,23 +147,23 @@
       <template x-if="!dashboard.assignmentsLoading && ['pelajar', 'user'].includes(dashboard.assignmentsRole) && dashboard.assignments.length > 0">
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <template x-for="a in dashboard.assignments" :key="a.id">
-            <div class="card p-4 flex flex-col gap-3 border-l-4 transition-shadow hover:shadow-md"
+            <div class="card p-5 flex flex-col gap-3 border-l-4 transition-all hover:shadow-md"
                  :class="{
-                   'border-green-400':  a.status === 'done',
-                   'border-red-400':    a.status === 'overdue',
-                   'border-yellow-400': a.status === 'incomplete',
-                   'border-primary-400': a.status === 'pending',
+                   'border-green-500':  a.status === 'done',
+                   'border-red-500':    a.status === 'overdue',
+                   'border-yellow-500': a.status === 'incomplete',
+                   'border-primary-500': a.status === 'pending',
                  }">
 
               <!-- Kelas & status badge -->
               <div class="flex items-center justify-between gap-2">
-                <span class="text-xs font-medium text-gray-500 dark:text-gray-400 truncate"
+                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 truncate"
                       x-text="'🏫 ' + a.class_name"></span>
-                <span class="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0"
+                <span class="text-xs px-2.5 py-0.5 rounded-full font-medium flex-shrink-0"
                       :class="{
                         'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400': a.status === 'done',
                         'bg-red-100 dark:bg-red-900/30 text-red-500':                           a.status === 'overdue',
-                        'bg-yellow-100 text-yellow-800':                                                      a.status === 'incomplete',
+                        'bg-yellow-100 text-yellow-800':                                        a.status === 'incomplete',
                         'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400': a.status === 'pending',
                       }"
                       x-text="a.status === 'done' ? '✅ Selesai' : (a.status === 'overdue' ? '⏰ Lewat Waktu' : (a.status === 'incomplete' ? '⚠️ Belum Selesai' : '📌 Belum Dikerjakan'))">
@@ -83,22 +172,22 @@
 
               <!-- Judul tugas -->
               <div>
-                <p class="font-semibold text-gray-800 dark:text-gray-100 leading-snug" x-text="a.title"></p>
+                <p class="font-bold text-gray-800 dark:text-gray-100 leading-snug" x-text="a.title"></p>
                 <template x-if="a.quiz_packages && a.quiz_packages.length > 1">
-                  <p class="text-xs text-gray-400 mt-0.5">
-                    <span x-text="a.quiz_packages.length + ' paket soal'"></span>
+                  <p class="text-xs text-gray-400 mt-1">
+                    <span x-text="a.quiz_packages.length + ' paket kuis'"></span>
                     <span class="mx-1">·</span>
-                    <span x-text="a.quiz_packages.reduce((sum, pkg) => sum + (pkg.total_questions || 0), 0) + ' soal'"></span>
+                    <span x-text="a.quiz_packages.reduce((sum, pkg) => sum + (pkg.total_questions || 0), 0) + ' total soal'"></span>
                   </p>
                 </template>
                 <template x-if="!a.quiz_packages || a.quiz_packages.length === 0 || a.quiz_packages.length === 1">
-                  <p class="text-xs text-gray-400 mt-0.5" x-text="a.quiz_title + ' · ' + a.total_questions + ' soal'"></p>
+                  <p class="text-xs text-gray-400 mt-1" x-text="a.quiz_title + ' · ' + a.total_questions + ' soal'"></p>
                 </template>
               </div>
 
               <!-- Deadline -->
               <div x-show="a.deadline" class="flex items-center gap-1.5 text-xs"
-                   :class="a.status === 'overdue' ? 'text-red-500' : 'text-gray-400'">
+                   :class="a.status === 'overdue' ? 'text-red-500 font-semibold' : 'text-gray-400'">
                 <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -108,9 +197,9 @@
 
               <!-- Skor jika sudah selesai -->
               <div x-show="a.status === 'done'"
-                   class="text-xs text-gray-500 dark:text-gray-400">
-                <span x-show="a.my_score !== null">Skor kamu: <span class="font-bold text-primary-600 dark:text-primary-400" x-text="a.my_score + ' pts'"></span></span>
-                <button @click.prevent="openAssignmentAttempts(a.id)" class="ml-3 text-xs text-primary-600 hover:underline">📜 Riwayat</button>
+                   class="text-xs text-gray-500 dark:text-gray-400 flex items-center justify-between">
+                <span x-show="a.my_score !== null">Skor kamu: <strong class="text-primary-600 dark:text-primary-400" x-text="a.my_score + ' pts'"></strong></span>
+                <button @click.prevent="openAssignmentAttempts(a.id)" class="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline">📜 Riwayat</button>
               </div>
 
               <!-- Tombol aksi -->
@@ -134,55 +223,16 @@
                               else navigate('/play/' + (hasMultiPkg ? '0' : qid) + '?mode=' + a.mode + '&assign=' + a.id);
                             })()"
                           class="w-full btn-primary text-sm py-2">
-                    🔄 Kerjakan
+                    🔄 Kerjakan Ulang
                   </button>
                   <button @click="navigate('/classroom/' + a.class_id)"
-                          class="w-full text-sm py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                    Lihat Kelas
+                          class="w-full text-xs py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    Buka Kelas
                   </button>
                 </div>
               </template>
             </div>
           </template>
-
-      <!-- Assignment Attempts Modal (student) -->
-      <div x-show="dashboardAttemptModal.show" @click.self="closeAssignmentAttempts()" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none">
-        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
-          <div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
-            <div>
-              <h3 class="font-bold text-lg text-gray-900 dark:text-white" x-text="dashboardAttemptModal.assignment ? dashboardAttemptModal.assignment.title : 'Percobaan'">Percobaan</h3>
-              <p class="text-xs text-gray-400" x-text="dashboardAttemptModal.assignment ? dashboardAttemptModal.assignment.class_name : ''"></p>
-            </div>
-            <button @click="closeAssignmentAttempts()" class="text-gray-400 hover:text-gray-600">&times;</button>
-          </div>
-          <div class="p-4">
-            <div x-show="dashboardAttemptModal.loading" class="text-center py-6">
-              <div class="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-3"></div>
-              <div class="text-sm text-gray-500">Memuat percobaan…</div>
-            </div>
-            <div x-show="!dashboardAttemptModal.loading">
-              <div x-show="dashboardAttemptModal.error" class="text-red-500 text-sm mb-3" x-text="dashboardAttemptModal.error"></div>
-              <div x-show="dashboardAttemptModal.attempts.length === 0" class="text-center text-gray-400 py-6">
-                <p class="text-lg">Belum ada percobaan untuk quiz ini</p>
-              </div>
-              <div x-show="dashboardAttemptModal.attempts.length > 0" class="space-y-3">
-                <template x-for="att in dashboardAttemptModal.attempts" :key="att.id">
-                  <div class="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-gray-800">
-                    <div>
-                      <p class="font-semibold text-gray-800 dark:text-gray-100" x-text="'Skor: ' + (att.score !== null ? att.score + '%' : '-')"></p>
-                      <p class="text-xs text-gray-400" x-text="att.completed_at ? new Date(att.completed_at).toLocaleString('id-ID') : 'Belum selesai'"></p>
-                    </div>
-                    <div class="text-right">
-                      <p class="text-sm font-bold" x-text="att.correct_count !== null ? att.correct_count + ' benar' : '-' "></p>
-                      <p class="text-xs text-gray-400" x-text="att.time_taken ? (Math.floor(att.time_taken/60) + 'm ' + (att.time_taken%60) + 's') : '-' "></p>
-                    </div>
-                  </div>
-                </template>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
         </div>
       </template>
 
@@ -233,96 +283,125 @@
   </template>
   <!-- ===== END SECTION TUGAS ===== -->
 
-  <!-- Skeleton -->
-  <div x-show="dashboard.loading" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-    <template x-for="i in 4">
-      <div class="card p-5 space-y-3">
-        <div class="skeleton h-4 w-24 rounded"></div>
-        <div class="skeleton h-8 w-16 rounded"></div>
+  <!-- Assignment Attempts Modal (student) -->
+  <div x-show="dashboardAttemptModal.show" @click.self="closeAssignmentAttempts()" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" style="display:none">
+    <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-gray-100 dark:border-gray-800">
+      <div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
+        <div>
+          <h3 class="font-bold text-lg text-gray-900 dark:text-white" x-text="dashboardAttemptModal.assignment ? dashboardAttemptModal.assignment.title : 'Riwayat Percobaan'">Riwayat Percobaan</h3>
+          <p class="text-xs text-gray-400" x-text="dashboardAttemptModal.assignment ? dashboardAttemptModal.assignment.class_name : ''"></p>
+        </div>
+        <button @click="closeAssignmentAttempts()" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1">&times;</button>
       </div>
-    </template>
+      <div class="p-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
+        <div x-show="dashboardAttemptModal.loading" class="text-center py-6">
+          <div class="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-3"></div>
+          <div class="text-sm text-gray-500">Memuat percobaan…</div>
+        </div>
+        <div x-show="!dashboardAttemptModal.loading">
+          <div x-show="dashboardAttemptModal.error" class="text-red-500 text-sm mb-3" x-text="dashboardAttemptModal.error"></div>
+          <div x-show="dashboardAttemptModal.attempts.length === 0" class="text-center text-gray-400 py-6">
+            <p class="text-lg">Belum ada percobaan untuk kuis ini</p>
+          </div>
+          <div x-show="dashboardAttemptModal.attempts.length > 0" class="space-y-3">
+            <template x-for="att in dashboardAttemptModal.attempts" :key="att.id">
+              <div class="flex items-center justify-between p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-850">
+                <div>
+                  <p class="font-bold text-gray-800 dark:text-gray-100" x-text="'Skor: ' + (att.score !== null ? att.score + '%' : '-')"></p>
+                  <p class="text-xs text-gray-400" x-text="att.completed_at ? new Date(att.completed_at).toLocaleString('id-ID') : 'Belum selesai'"></p>
+                </div>
+                <div class="text-right">
+                  <p class="text-sm font-bold text-green-600 dark:text-green-400" x-text="att.correct_count !== null ? att.correct_count + ' benar' : '-' "></p>
+                  <p class="text-xs text-gray-400" x-text="att.time_taken ? (Math.floor(att.time_taken/60) + 'm ' + (att.time_taken%60) + 's') : '-' "></p>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- FEATURED QUIZZES -->
+  <!-- 4. PVP CHALLENGE SPOTLIGHT CARD -->
+  <div class="card p-6 mb-8 border-2 border-primary-500/20 bg-gradient-to-r from-primary-500/10 via-purple-500/5 to-transparent relative overflow-hidden">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative z-10">
+      <div class="flex items-start sm:items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-primary-100 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 flex items-center justify-center text-2xl flex-shrink-0 shadow-sm">
+          ⚔️
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 class="font-bold text-base sm:text-lg text-gray-900 dark:text-white">Mode Tantangan 1 vs 1</h3>
+            <span x-show="challenge?.pendingCount > 0"
+                  class="badge bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-bounce">
+              <span x-text="challenge?.pendingCount"></span> Menunggu!
+            </span>
+          </div>
+          <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            Ajak temanmu duel kuis real-time dan buktikan siapa yang paling cepat &amp; tepat!
+          </p>
+        </div>
+      </div>
+      <button @click="navigate('/challenges')"
+              class="btn-primary text-xs sm:text-sm px-5 py-2.5 flex-shrink-0 shadow-md">
+        <span>⚔️ Buka Tantangan</span>
+        <span aria-hidden="true">→</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 5. RECENTLY PLAYED & FEATURED QUIZZES -->
   <?php include __DIR__ . '/recently-played.html'; ?>
 
-  <div class="mb-8" x-show="!discovery.loading && discovery.quizzes.length > 0">
+  <div class="my-8" x-show="!discovery.loading && discovery.quizzes.length > 0">
     <div class="flex items-center justify-between mb-4">
       <div>
-        <h2 class="font-bold text-gray-900 dark:text-white text-lg">⭐ Quiz Unggulan</h2>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Mulai dari yang paling populer</p>
+        <h2 class="font-bold text-gray-900 dark:text-white text-lg flex items-center gap-2">
+          <span>⭐</span>
+          <span>Kuis Unggulan Lainnya</span>
+        </h2>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Rekomendasi kuis pilihan untuk melatih wawasan</p>
       </div>
-      <button @click="navigate('/quizzes')" class="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline">Lihat semua →</button>
+      <button @click="navigate('/quizzes')" class="text-sm font-semibold text-primary-600 dark:text-primary-400 hover:underline">Lihat semua →</button>
     </div>
 
-    <!-- Skeleton -->
-    <div x-show="dashboard.loading" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      <template x-for="i in 3">
-        <div class="card p-4 space-y-3">
-          <div class="skeleton h-5 w-3/4 rounded"></div>
-          <div class="skeleton h-4 w-full rounded"></div>
-          <div class="skeleton h-4 w-2/3 rounded"></div>
-          <div class="flex gap-2 mt-3">
-            <div class="skeleton h-5 w-16 rounded-full"></div>
-            <div class="skeleton h-5 w-20 rounded-full"></div>
-          </div>
-        </div>
-      </template>
-    </div>
-
-    <!-- Cards -->
-    <div x-show="!dashboard.loading" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <!-- Cards Grid -->
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <template x-for="quiz in home.featured.slice(0,3)" :key="quiz.id">
-        <div class="card card-hover p-4 cursor-pointer group" @click="navigate('/quiz/'+quiz.id)">
-          <div class="flex items-start justify-between mb-2">
-            <span class="text-xl">📝</span>
-            <span class="badge text-[10px] px-2 py-0.5 rounded-full font-medium"
-                  :class="difficultyClass(quiz.difficulty)" x-text="difficultyLabel(quiz.difficulty)"></span>
+        <div class="card card-hover p-4 cursor-pointer group flex flex-col justify-between" @click="navigate('/quiz/'+quiz.id)">
+          <div>
+            <div class="flex items-start justify-between mb-2">
+              <span class="text-xl">📝</span>
+              <span class="badge text-[10px] px-2 py-0.5 rounded-full font-medium"
+                    :class="difficultyClass(quiz.difficulty)" x-text="difficultyLabel(quiz.difficulty)"></span>
+            </div>
+            <h3 class="font-bold text-gray-800 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-1 mb-1" x-text="quiz.title"></h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-3" x-text="quiz.description || 'Uji pemahamanmu sekarang.'"></p>
           </div>
-          <h3 class="font-semibold text-gray-800 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-1 mb-1" x-text="quiz.title"></h3>
-          <p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-3" x-text="quiz.description || 'Tidak ada deskripsi.'"></p>
-          <div class="flex items-center gap-3 text-[10px] text-gray-400">
-            <span>❓ <span x-text="quiz.question_count"></span> soal</span>
-            <span>👥 <span x-text="quiz.attempt_count || 0"></span></span>
+          <div class="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800 text-[10px] text-gray-400">
+            <span>❓ <span x-text="quiz.question_count"></span> Soal</span>
+            <span>👥 <span x-text="quiz.attempt_count || 0"></span>x Dikerjakan</span>
           </div>
         </div>
       </template>
-      <div x-show="home.featured.length === 0" class="col-span-3 text-center py-6 text-gray-400">
-        <p class="text-2xl mb-2">📭</p>
-        <p class="text-sm">Belum ada quiz tersedia</p>
-      </div>
     </div>
   </div>
 
-  <!-- Stats Cards -->
-  <div x-show="!dashboard.loading" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-    <div class="card p-5">
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Poin</p>
-      <p class="text-3xl font-extrabold text-primary-600 dark:text-primary-400" x-text="(dashboard.stats?.total_points||0).toLocaleString()"></p>
-    </div>
-    <div class="card p-5">
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Quiz Dikerjakan</p>
-      <p class="text-3xl font-extrabold text-gray-800 dark:text-gray-100" x-text="dashboard.stats?.quizzes_taken||0"></p>
-    </div>
-    <div class="card p-5">
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Rata-rata Skor</p>
-      <p class="text-3xl font-extrabold text-gray-800 dark:text-gray-100" x-text="(dashboard.stats?.avg_score||0) + '%'"></p>
-    </div>
-    <div class="card p-5">
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Skor Tertinggi</p>
-      <p class="text-3xl font-extrabold text-yellow-500" x-text="(dashboard.stats?.best_score||0) + '%'"></p>
-    </div>
-  </div>
-
-  <!-- Recent Activity -->
+  <!-- 6. RECENT ACTIVITY SECTION -->
   <div class="card p-6">
     <div class="flex items-center justify-between mb-5">
-      <h2 class="font-bold text-gray-900 dark:text-white">📋 Aktivitas Terbaru</h2>
-      <button @click="navigate('/history')" class="text-sm text-primary-600 dark:text-primary-400 hover:underline">Lihat semua →</button>
+      <div>
+        <h2 class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <span>📋</span>
+          <span>Aktivitas Terbaru Kamu</span>
+        </h2>
+        <p class="text-xs text-gray-400 mt-0.5">Daftar kuis yang baru saja kamu selesaikan</p>
+      </div>
+      <button @click="navigate('/history')" class="text-sm font-semibold text-primary-600 dark:text-primary-400 hover:underline">Lihat semua riwayat →</button>
     </div>
 
     <div x-show="dashboard.loading" class="space-y-3">
-      <template x-for="i in 5">
+      <template x-for="i in 4">
         <div class="flex items-center gap-4">
           <div class="skeleton w-10 h-10 rounded-xl"></div>
           <div class="flex-1 space-y-2">
@@ -336,27 +415,36 @@
 
     <div x-show="!dashboard.loading" class="divide-y divide-gray-100 dark:divide-gray-800">
       <template x-for="attempt in dashboard.recent" :key="attempt.id">
-        <div class="flex items-center gap-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 -mx-2 px-2 rounded-lg transition-colors"
+        <div class="flex items-center gap-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 -mx-2 px-2 rounded-xl transition-colors"
              @click="navigate('/result/'+attempt.id)">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0"
-               :class="attempt.is_assignment ? (attempt.passed ? 'bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400') : 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'">
+          <div class="w-11 h-11 rounded-xl flex items-center justify-center font-extrabold text-sm flex-shrink-0"
+               :class="attempt.is_assignment
+                 ? (attempt.passed ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400')
+                 : 'bg-primary-50 dark:bg-primary-950/40 text-primary-600 dark:text-primary-400 border border-primary-500/20'">
             <span x-text="attempt.score + '%'"></span>
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate" x-text="attempt.quiz_title"></p>
-            <p class="text-xs text-gray-400" x-text="formatRelative(attempt.completed_at)"></p>
+            <p class="text-sm font-bold text-gray-800 dark:text-gray-100 truncate" x-text="attempt.quiz_title"></p>
+            <p class="text-xs text-gray-400 mt-0.5" x-text="formatRelative(attempt.completed_at)"></p>
           </div>
-          <span class="badge text-xs px-2 py-0.5 rounded-full flex-shrink-0"
-                x-show="attempt.is_assignment"
-                :class="attempt.passed ? 'badge-success' : 'badge-danger'"
-                x-text="attempt.passed ? 'Lulus' : 'Gagal'"></span>
+          <div class="flex items-center gap-2">
+            <span class="badge text-xs px-2.5 py-0.5 rounded-full flex-shrink-0"
+                  x-show="attempt.is_assignment"
+                  :class="attempt.passed ? 'badge-success' : 'badge-danger'"
+                  x-text="attempt.passed ? 'Lulus' : 'Gagal'"></span>
+            <span class="text-gray-300 dark:text-gray-600 text-xs hidden sm:inline">Review →</span>
+          </div>
         </div>
       </template>
-      <div x-show="!dashboard.loading && dashboard.recent.length===0" class="text-center py-10 text-gray-400">
+
+      <!-- Empty recent -->
+      <div x-show="!dashboard.loading && dashboard.recent.length === 0" class="text-center py-10 text-gray-400">
         <p class="text-3xl mb-2">📭</p>
-        <p class="text-sm">Belum ada aktivitas</p>
-        <button @click="navigate('/quizzes')" class="mt-3 btn-primary text-sm px-4 py-1.5">Mulai Quiz</button>
+        <p class="text-sm font-medium">Belum ada riwayat aktivitas kuis</p>
+        <p class="text-xs text-gray-400 mt-1">Mulai kuis pertamamu untuk melihat hasil dan akumulasi poin di sini.</p>
+        <button @click="navigate('/quizzes')" class="mt-4 btn-primary text-sm px-5 py-2 shadow-md">🚀 Mulai Quiz Sekarang</button>
       </div>
     </div>
   </div>
+
 </div>
