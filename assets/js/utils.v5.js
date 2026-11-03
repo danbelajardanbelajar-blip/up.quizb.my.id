@@ -7,17 +7,29 @@ const API_BASE = '/api.php';
 // ---- HTTP Client ----
 const api = {
   _csrfToken: null,
+  _sessionVersion: 0,
+  invalidateSession() { this._sessionVersion++; this._csrfToken = null; },
+  _assertSession(version) {
+    if (version !== this._sessionVersion) {
+      const error = new Error('Sesi akun berubah. Silakan ulangi tindakan.');
+      error.code = 'SESSION_CHANGED';
+      throw error;
+    }
+  },
 
   // Ambil CSRF token: prioritaskan cache, lalu fetch dari server
   async _getToken() {
+    const session = this._sessionVersion;
     if (this._csrfToken) return this._csrfToken;
     try {
       const r = await fetch(`${API_BASE}?action=auth.csrf`, { credentials: 'same-origin' });
       // Baca dari header (butuh Access-Control-Expose-Headers)
+      this._assertSession(session);
       const fromHeader = r.headers.get('X-CSRF-Token');
       if (fromHeader) { this._csrfToken = fromHeader; return this._csrfToken; }
       // Fallback: baca dari JSON body { data: { token: '...' } }
       const json = await r.json();
+      this._assertSession(session);
       const fromBody = json?.data?.token || json?.token || null;
       if (fromBody) this._csrfToken = fromBody;
     } catch (_) {}
@@ -43,28 +55,36 @@ const api = {
   },
 
   async get(action, params = {}) {
+    const session = this._sessionVersion;
     const qs = new URLSearchParams({ action, ...params, _t: Date.now() });
     const r = await fetch(`${API_BASE}?${qs}`, { credentials: 'same-origin' });
+    this._assertSession(session);
     const ct = r.headers.get('X-CSRF-Token');
     if (ct) this._csrfToken = ct;
     const data = await this._parseJson(r);
+    this._assertSession(session);
     if (!r.ok) throw new Error(data.message || data.error || 'Request failed');
     return data.data;
   },
 
   // Kembalikan seluruh response (untuk endpoint paginated yang butuh .meta)
   async getFull(action, params = {}) {
+    const session = this._sessionVersion;
     const qs = new URLSearchParams({ action, ...params, _t: Date.now() });
     const r = await fetch(`${API_BASE}?${qs}`, { credentials: 'same-origin' });
+    this._assertSession(session);
     const ct = r.headers.get('X-CSRF-Token');
     if (ct) this._csrfToken = ct;
     const data = await this._parseJson(r);
+    this._assertSession(session);
     if (!r.ok) throw new Error(data.message || data.error || 'Request failed');
     return data; // { success, data: [...], meta: {...} }
   },
 
   async post(action, body = {}) {
+    const session = this._sessionVersion;
     const token = await this._getToken();
+    this._assertSession(session);
     const r = await fetch(`${API_BASE}?action=${action}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token || '' },
@@ -72,6 +92,8 @@ const api = {
       credentials: 'same-origin',
     });
     const data = await this._parseJson(r, 'Gagal menghubungi server');
+    this._assertSession(session);
+    this._assertSession(session);
     const ct = r.headers.get('X-CSRF-Token');
     if (ct) this._csrfToken = ct;
     if (!r.ok) throw new Error(data.message || 'Request failed');
@@ -79,7 +101,9 @@ const api = {
   },
 
   async put(action, id, body = {}) {
+    const session = this._sessionVersion;
     const token = await this._getToken();
+    this._assertSession(session);
     const r = await fetch(`${API_BASE}?action=${action}&id=${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token || '' },
@@ -87,12 +111,15 @@ const api = {
       credentials: 'same-origin',
     });
     const data = await this._parseJson(r);
+    this._assertSession(session);
     if (!r.ok) throw new Error(data.message || 'Request failed');
     return data.data;
   },
 
   async delete(action, id, body = null) {
+    const session = this._sessionVersion;
     const token = await this._getToken();
+    this._assertSession(session);
     const url = id ? `${API_BASE}?action=${action}&id=${id}` : `${API_BASE}?action=${action}`;
     const opts = {
       method: 'DELETE',
@@ -105,13 +132,16 @@ const api = {
     }
     const r = await fetch(url, opts);
     const data = await this._parseJson(r);
+    this._assertSession(session);
     if (!r.ok) throw new Error(data.message || data.error || 'Request failed');
     return data.data;
   },
 
   // Upload multipart file (FormData) — DO NOT set Content-Type, browser sets boundary
   async upload(action, formData) {
+    const session = this._sessionVersion;
     const token = await this._getToken();
+    this._assertSession(session);
     const r = await fetch(`${API_BASE}?action=${action}`, {
       method: 'POST',
       headers: { 'X-CSRF-Token': token || '' },
@@ -119,6 +149,8 @@ const api = {
       credentials: 'same-origin',
     });
     const data = await this._parseJson(r, 'Upload gagal');
+    this._assertSession(session);
+    this._assertSession(session);
     const ct = r.headers.get('X-CSRF-Token');
     if (ct) this._csrfToken = ct;
     if (!r.ok) throw new Error(data.message || 'Upload gagal');

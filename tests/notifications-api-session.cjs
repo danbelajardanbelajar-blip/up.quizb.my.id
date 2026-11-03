@@ -1,0 +1,21 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
+let reply;
+const context={console,URLSearchParams,Date,setTimeout,clearTimeout,fetch:()=>new Promise(resolve=>reply=resolve),localStorage:{getItem:()=>null,setItem:()=>{}}};
+vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(__dirname,'../assets/js/utils.v5.js'),'utf8')+'\nglobalThis.testApi=api;',context);
+const api=context.testApi;
+const response=(data,token)=>({ok:true,headers:{get:()=>token},text:async()=>JSON.stringify({success:true,data})});
+(async()=>{
+ const old=api.getFull('notification.list');api.invalidateSession();api._csrfToken='new-account-token';
+ reply(response([{title:'Private A'}],'old-account-token'));
+ await assert.rejects(old,error=>error.code==='SESSION_CHANGED');assert.equal(api._csrfToken,'new-account-token');
+ console.log('PASS: old GET response cannot return private data or overwrite new CSRF token');
+ api._csrfToken='token';const post=api.post('notification.mark_read',{id:1});
+ await new Promise(resolve=>setImmediate(resolve));api.invalidateSession();reply(response({},'stale-token'));
+ await assert.rejects(post,error=>error.code==='SESSION_CHANGED');assert.equal(api._csrfToken,null);
+ console.log('PASS: old mutation response cannot alter the next session CSRF token');
+ let sends=0;context.fetch=()=>{sends++;return new Promise(resolve=>reply=resolve)};
+ const awaitingToken=api.post('message.send',{body:'Private A'});api.invalidateSession();
+ reply({headers:{get:()=>'stale-csrf'},json:async()=>({data:{token:'stale-csrf'}})});
+ await assert.rejects(awaitingToken,error=>error.code==='SESSION_CHANGED');assert.equal(sends,1);
+ console.log('PASS: pending CSRF lookup cannot send old account mutation under new session');
+})().catch(error=>{console.error(error);process.exit(1)});

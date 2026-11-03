@@ -1,6 +1,6 @@
 <?php $panelId = !empty($notificationPanelMobile) ? 'notification-panel-mobile' : 'notification-panel-desktop'; ?>
 <section id="<?= $panelId ?>" x-show="notif.show" x-cloak x-transition.opacity
-         @click.outside="if (notif.show && !$event.target.closest('[data-notification-toggle]')) closeNotifications()"
+         @click.outside="if (notif.show && !$event.target.closest('[data-notification-toggle]')) closeNotifications(false)"
          @keydown.escape.stop.prevent="closeNotifications()"
          aria-labelledby="<?= $panelId ?>-title"
          class="notification-panel <?= !empty($notificationPanelMobile) ? 'notification-panel-mobile' : 'notification-panel-desktop' ?>">

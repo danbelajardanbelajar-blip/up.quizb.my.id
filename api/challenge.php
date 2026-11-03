@@ -350,6 +350,11 @@ function challenge_delete(): void {
         $pdo = DB::conn();
         $pdo->beginTransaction();
         try {
+            $lockedRoom = DB::one('SELECT status FROM challenges WHERE id = ? FOR UPDATE', [$challengeId]);
+            if (!$lockedRoom || $lockedRoom['status'] === 'playing') {
+                $pdo->rollBack();
+                jsonError('Tantangan tidak dapat dihapus saat ini.', 409);
+            }
             DB::execute('DELETE FROM challenge_participants WHERE challenge_id = ?', [$challengeId]);
             DB::execute('DELETE FROM challenges WHERE id = ?', [$challengeId]);
             DB::execute('DELETE FROM challenge_dismissals WHERE challenge_id = ?', [$challengeId]);

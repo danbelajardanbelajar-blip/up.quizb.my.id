@@ -3469,17 +3469,19 @@ function QuizBApp() {
     // ============================================================
     resetPrivateSession() {
       this._privateGeneration++;
+      api.invalidateSession?.();
       clearInterval(this.notif.pollInterval);
       clearInterval(this.challenge.pollInterval);
       clearInterval(this.challenge.fastPollInterval);
       this.clearMsgPoll();
       this._notifListRequest++;
       this._notifCountsRequest++;
-      Object.assign(this.notif, { unreadCount: 0, list: [], total: 0, page: 1, show: false,
-        loading: false, error: '', busy: false, readingIds: [], pollInterval: null, revision: 0, trigger: null });
-      Object.assign(this.msgs, { unreadCount: 0, threads: [], activeThread: null, chat: [], chatTotal: 0, input: '' });
-      Object.assign(this.challenge, { incoming: [], received: [], outgoing: [], pendingCount: 0,
-        invite: null, inviteBusy: false, inviteError: '', inviteSeen: [], inviteUserId: null, pollInterval: null, fastPollInterval: null });
+      clearInterval(this.assignmentView.monitorInterval);
+      clearInterval(this.admin.liveChallenges.interval);
+      const fresh = QuizBApp();
+      for (const key of ['notif', 'msgs', 'challenge', 'dashboard', 'history', 'classroom', 'result', 'assignmentView', 'admin', 'dashboardAttemptModal', 'loginForm', 'registerForm', 'googleSetupForm', 'settings']) {
+        Object.assign(this[key], fresh[key]);
+      }
     },
 
     privateSessionMatches(userId, generation) {
@@ -3490,14 +3492,15 @@ function QuizBApp() {
       if (this.notif.show) { this.closeNotifications(); return; }
       this.notif.trigger = trigger;
       this.notif.show = true;
+      this.$nextTick?.(() => document.getElementById(trigger?.getAttribute('aria-controls'))?.querySelector('button')?.focus());
       this.notif.page = 1;
       this.loadNotifications();
       this.fetchNotificationCounts();
     },
 
-    closeNotifications() {
+    closeNotifications(restoreFocus = true) {
       this.notif.show = false;
-      this.notif.trigger?.focus?.();
+      if (restoreFocus) this.notif.trigger?.focus?.();
     },
 
     async loadNotifications(more = false) {

@@ -112,6 +112,7 @@ function auth_register(): void {
 }
 
 function auth_logout(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
     $user = getCurrentUser();
     $body = getBody();
     $token = trim((string)($body['fcm_token'] ?? $_SESSION['fcm_token'] ?? ''));
@@ -575,6 +576,8 @@ function auth_resend_verification(): void {
 
 
 function ensureFcmTokenTableExists(): void {
+    static $ready = false;
+    if ($ready) return;
     try {
         DB::execute("CREATE TABLE IF NOT EXISTS user_fcm_tokens (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -591,8 +594,10 @@ function ensureFcmTokenTableExists(): void {
         if (!$col) {
             DB::execute("ALTER TABLE users ADD COLUMN fcm_token VARCHAR(500) DEFAULT NULL");
         }
+        $ready = true;
     } catch (Throwable $e) {
         error_log('[FCM Table Setup Error] ' . $e->getMessage());
+        throw $e;
     }
 }
 
@@ -610,6 +615,7 @@ function auth_update_fcm_token(): void {
     $pdo = DB::conn();
     $lock = 'quizb_token_' . substr(hash('sha256', $token), 0, 40);
     $locked = false;
+    $failed = false;
     try {
         $locked = (int)(DB::one('SELECT GET_LOCK(?, 5) AS acquired', [$lock])['acquired'] ?? 0) === 1;
         if (!$locked) throw new RuntimeException('Device registration busy');
@@ -628,19 +634,30 @@ function auth_update_fcm_token(): void {
         $_SESSION['fcm_token'] = $token;
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
-        error_log('[FCM Save Error] ' . $e->getMessage());
-        jsonError('Gagal menyimpan perangkat notifikasi. Silakan coba lagi.', 500);
+        error_log('[FCM Save Error] ' . get_class($e));
+        $failed = true;
     } finally {
         if ($locked) DB::one('SELECT RELEASE_LOCK(?) AS released', [$lock]);
     }
+    if ($failed) jsonError('Gagal menyimpan perangkat notifikasi. Silakan coba lagi.', 500);
     jsonSuccess([], 'FCM token berhasil disimpan');
 }
 
 function revokeFcmToken(int $userId, string $token): void {
     ensureFcmTokenTableExists();
-    DB::execute('DELETE FROM user_fcm_tokens WHERE user_id = ? AND token = ?', [$userId, $token]);
-    DB::execute('UPDATE users SET fcm_token = NULL WHERE id = ? AND fcm_token = ?', [$userId, $token]);
-    unset($_SESSION['fcm_token']);
+    $lock = 'quizb_token_' . substr(hash('sha256', $token), 0, 40);
+    if ((int)(DB::one('SELECT GET_LOCK(?, 5) AS acquired', [$lock])['acquired'] ?? 0) !== 1) throw new RuntimeException('Device busy');
+    try {
+        if (in_array($token, pushDeviceTokens($userId), true)) {
+            // Retire historical duplicates too, so an older owner cannot become active again.
+            DB::execute('DELETE FROM user_fcm_tokens WHERE token = ?', [$token]);
+            DB::execute('UPDATE users SET fcm_token = NULL WHERE fcm_token = ?', [$token]);
+        } else {
+            DB::execute('DELETE FROM user_fcm_tokens WHERE user_id = ? AND token = ?', [$userId, $token]);
+            DB::execute('UPDATE users SET fcm_token = NULL WHERE id = ? AND fcm_token = ?', [$userId, $token]);
+        }
+        unset($_SESSION['fcm_token']);
+    } finally { DB::one('SELECT RELEASE_LOCK(?) AS released', [$lock]); }
 }
 
 function auth_unregister_fcm_token(): void {

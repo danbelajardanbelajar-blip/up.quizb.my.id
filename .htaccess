@@ -1,5 +1,7 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  # Internal code, credentials and Git history must never be served over HTTP.
+  RewriteRule ^(?:\.git|config|bin|tests)(?:/|$) - [F,L,NC]
 
   # Jika ada pengunjung yang mengakses up.quizb.my.id secara langsung di browser
   RewriteCond %{HTTP_HOST} ^(www\.)?up\.quizb\.my\.id$ [NC]

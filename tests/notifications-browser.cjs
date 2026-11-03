@@ -20,6 +20,13 @@ const root=path.resolve(__dirname,'..');
  await page.goto('http://quizb.test/');await page.getByText('Notifikasi',{exact:true}).click();
  const mobile=page.locator('#notification-panel-mobile');await mobile.waitFor({state:'visible'});
  await page.waitForFunction(()=>app.notif.list.length===30&&!app.notif.loading);
+ if(process.env.QUIZB_SCREENSHOTS){
+  fs.mkdirSync(process.env.QUIZB_SCREENSHOTS,{recursive:true});
+  await mobile.screenshot({path:path.join(process.env.QUIZB_SCREENSHOTS,'notifications-mobile.png')});
+  await page.evaluate(()=>document.documentElement.classList.add('dark'));
+  await mobile.screenshot({path:path.join(process.env.QUIZB_SCREENSHOTS,'notifications-dark.png')});
+  await page.evaluate(()=>document.documentElement.classList.remove('dark'));
+ }
  assert.equal(await mobile.locator('.notification-body').first().textContent(),'Materi baru di kuis Biologi Kelas X');
  for(const width of [320,375,430]){
   await page.setViewportSize({width,height:812});

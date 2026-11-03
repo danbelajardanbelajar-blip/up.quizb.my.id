@@ -32,8 +32,13 @@ function respondToChallenge(int $id, int $userId, bool $accept): array {
     $pdo->beginTransaction();
     try {
         // Serialize responses in one room so simultaneous accepts cannot leave it pending.
-        $room = DB::one('SELECT * FROM challenges WHERE id = ? FOR UPDATE', [$id]);
+        $room = DB::one('SELECT *, (expires_at IS NOT NULL AND expires_at <= NOW()) AS expired_now FROM challenges WHERE id = ? FOR UPDATE', [$id]);
         $participant = DB::one('SELECT * FROM challenge_participants WHERE challenge_id = ? AND user_id = ?', [$id, $userId]);
+        if ($room && $room['status'] === 'pending' && (int)$room['expired_now'] === 1) {
+            DB::execute("UPDATE challenges SET status = 'expired' WHERE id = ?", [$id]);
+            $pdo->commit();
+            jsonError('Tantangan sudah kedaluwarsa.', 409);
+        }
         if (!$room || $room['status'] !== 'pending' || !$participant || $participant['status'] !== 'pending') {
             $pdo->rollBack();
             jsonError('Tantangan sudah direspons, kedaluwarsa, atau tidak tersedia.', 409);

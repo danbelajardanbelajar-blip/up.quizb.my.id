@@ -32,7 +32,7 @@ require __DIR__.'/../api/notification.php';
 require __DIR__.'/../api/challenge.php';
 require __DIR__.'/../api/message.php';
 
-foreach(['challenge_dismissals','challenge_participants','challenges','notifications','user_fcm_tokens','message_threads','messages','quizzes','users'] as $table) DB::execute("DROP TABLE IF EXISTS $table");
+foreach(['notification_push_deliveries','notification_push_jobs','challenge_dismissals','challenge_participants','challenges','notifications','user_fcm_tokens','message_threads','messages','quizzes','users'] as $table) DB::execute("DROP TABLE IF EXISTS $table");
 DB::execute("CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(100), is_active INT DEFAULT 1, fcm_token VARCHAR(500) NULL)");
 DB::execute("CREATE TABLE quizzes (id INT PRIMARY KEY, title VARCHAR(100), is_published INT, total_questions INT DEFAULT 10)");
 DB::execute("CREATE TABLE notifications (id INT AUTO_INCREMENT PRIMARY KEY,user_id INT,type VARCHAR(50),title VARCHAR(200),body TEXT,link TEXT,is_read INT DEFAULT 0,created_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
