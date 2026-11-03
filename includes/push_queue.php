@@ -3,6 +3,11 @@
 function ensurePushQueue(): void {
     static $ready = false;
     if ($ready) return;
+    try {
+        DB::one('SELECT 1 FROM notification_push_jobs LIMIT 0');
+        $ready = true;
+        return;
+    } catch (Throwable $e) {}
     if (DB::conn()->inTransaction()) throw new RuntimeException('Initialize push schema before starting a transaction');
     DB::execute("CREATE TABLE IF NOT EXISTS notification_push_jobs (
         id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL,

@@ -1,13 +1,13 @@
 # Deployment notifikasi QuizB — Rumahweb
 
-Source di server: `/home/quic1934/public_html/subdomain/u.quizb.my.id/`.
+Source di server: `/home/quic1934/public_html/up.quizb.my.id/`.
 Alamat publik: `https://quizb.my.id/`, dipetakan oleh konfigurasi domain utama.
 Jalankan Git pull pada folder source tersebut, bukan pada folder domain utama yang berbeda.
 
 ## Setelah pull
 
 ```sh
-cd /home/quic1934/public_html/subdomain/u.quizb.my.id
+cd /home/quic1934/public_html/up.quizb.my.id
 git pull --ff-only
 ```
 
@@ -63,7 +63,7 @@ Buka cPanel → Cron Jobs, pilih setiap menit: `* * * * *`.
 Jika `command -v php` menghasilkan `/usr/local/bin/php`, perintahnya:
 
 ```sh
-/usr/local/bin/php -q /home/quic1934/public_html/subdomain/u.quizb.my.id/bin/notification-worker.php --limit=100 --seconds=40 >> /home/quic1934/quizb-notifications.log 2>&1
+/usr/local/bin/php -q /home/quic1934/public_html/up.quizb.my.id/bin/notification-worker.php --limit=100 --seconds=40 >> /home/quic1934/quizb-notifications.log 2>&1
 ```
 
 Jika hasilnya path lain, ganti hanya `/usr/local/bin/php` dengan path absolut tersebut. Log sengaja ditempatkan di luar `public_html`. Hindari memasukkan service-account atau token perangkat ke command cron.
@@ -77,7 +77,7 @@ Tanpa cron, notifikasi web/DB dan popup browser tetap bekerja, tetapi push Andro
 ## Pemeriksaan dan pemulihan
 
 ```sh
-cd /home/quic1934/public_html/subdomain/u.quizb.my.id
+cd /home/quic1934/public_html/up.quizb.my.id
 php bin/notification-worker.php --check
 php bin/notification-worker.php --limit=20 --seconds=20
 ```
