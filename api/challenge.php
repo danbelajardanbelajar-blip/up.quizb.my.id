@@ -203,7 +203,35 @@ function challenge_status(): void {
     $c = DB::one("SELECT c.*, q.title as quiz_title, NOW() as server_now FROM challenges c JOIN quizzes q ON q.id = c.quiz_id WHERE c.id = ?", [$challengeId]);
     if (!$c) jsonError('Not found', 404);
 
+    // Otomatis tandai 'completed' jika semua peserta yang menerima tantangan telah men-submit kuisnya
+    if ($c['status'] !== 'completed') {
+        $totalAccepted = (int)(DB::one("SELECT COUNT(*) as c FROM challenge_participants WHERE challenge_id = ? AND status = 'accepted'", [$challengeId])['c'] ?? 0);
+        $totalSubmitted = (int)(DB::one("SELECT COUNT(*) as c FROM challenge_participants WHERE challenge_id = ? AND attempt_id IS NOT NULL", [$challengeId])['c'] ?? 0);
+        if ($totalAccepted > 0 && $totalSubmitted >= $totalAccepted) {
+            $winner = DB::one("SELECT user_id FROM challenge_participants WHERE challenge_id = ? AND attempt_id IS NOT NULL ORDER BY score_final DESC, time_taken ASC LIMIT 1", [$challengeId]);
+            DB::execute("UPDATE challenges SET status = 'completed', winner_id = ? WHERE id = ?", [$winner['user_id'] ?? null, $challengeId]);
+            $c['status'] = 'completed';
+            $c['winner_id'] = $winner['user_id'] ?? null;
+        }
+    }
+
     $participants = DB::all("SELECT cp.user_id, cp.status, cp.progress, cp.score_final, cp.time_taken, u.name, cp.is_host FROM challenge_participants cp JOIN users u ON u.id = cp.user_id WHERE cp.challenge_id = ?", [$challengeId]);
+    
+    $now = time();
+    foreach ($participants as &$p) {
+        $prog = $p['progress'] ? json_decode($p['progress'], true) : null;
+        $p['progress_data'] = $prog;
+        $p['is_submitted'] = ($p['score_final'] !== null);
+        $p['live_score'] = $p['is_submitted'] ? (int)$p['score_final'] : (isset($prog['s']) ? (int)$prog['s'] : 0);
+        $p['q_index'] = isset($prog['q']) ? (int)$prog['q'] : 0;
+        if ($c['status'] === 'playing' && !$p['is_submitted'] && $prog && !empty($prog['last_ping'])) {
+            $p['disconnected'] = ($now - (int)$prog['last_ping'] > 25);
+        } else {
+            $p['disconnected'] = false;
+        }
+    }
+    unset($p);
+
     $c['participants'] = $participants;
     
     $c['is_participant'] = false;

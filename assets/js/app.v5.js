@@ -80,7 +80,7 @@ function QuizBApp() {
     // Modal: attempts for an assignment (student)
     dashboardAttemptModal: { show: false, loading: false, attempts: [], assignment: null, error: '' },
     history:     { list: [], loading: true, total: 0, page: 1 },
-    result:      { data: null, loading: true, assignId: null, assignSubmitted: false, assignSubmitting: false, assignError: '', challengeId: null, challengeData: null, mode: null },
+    result:      { data: null, loading: true, assignId: null, assignSubmitted: false, assignSubmitting: false, assignError: '', challengeId: null, challengeData: null, mode: null, pollInterval: null },
 
     // ---- Classroom State ----
     classroom: {
@@ -492,6 +492,12 @@ function QuizBApp() {
       } else {
         // Saat meninggalkan halaman pesan, hentikan polling
         if (this.msgs.pollInterval) this.clearMsgPoll();
+      }
+      if (!route.startsWith('/result/')) {
+        if (this.result && this.result.pollInterval) {
+          clearInterval(this.result.pollInterval);
+          this.result.pollInterval = null;
+        }
       }
       if (route === '/search') {
         if (this.search.q.trim().length >= 2) this.loadSearch(this.search.q);
@@ -933,9 +939,33 @@ function QuizBApp() {
           },
         };
         // Load challenge status jika ada challengeId
+        if (this.result.pollInterval) {
+          clearInterval(this.result.pollInterval);
+          this.result.pollInterval = null;
+        }
         if (this.result.challengeId) {
           try {
             this.result.challengeData = await api.get('challenge.status', { id: this.result.challengeId });
+            // Jika tantangan belum selesai, jalankan auto-polling setiap 2.5 detik untuk live progress
+            if (this.result.challengeData && this.result.challengeData.status !== 'completed') {
+              this.result.pollInterval = setInterval(async () => {
+                if (!window.location.hash.includes('/result/')) {
+                  clearInterval(this.result.pollInterval);
+                  this.result.pollInterval = null;
+                  return;
+                }
+                try {
+                  const updated = await api.get('challenge.status', { id: this.result.challengeId });
+                  if (updated) {
+                    this.result.challengeData = updated;
+                    if (updated.status === 'completed') {
+                      clearInterval(this.result.pollInterval);
+                      this.result.pollInterval = null;
+                    }
+                  }
+                } catch (_) {}
+              }, 2500);
+            }
           } catch (_) {}
         }
       } catch (e) {
