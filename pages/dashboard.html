@@ -244,7 +244,9 @@
   </div>
 
   <!-- FEATURED QUIZZES -->
-  <div class="mb-8">
+  <?php include __DIR__ . '/recently-played.html'; ?>
+
+  <div class="mb-8" x-show="!discovery.loading && discovery.quizzes.length > 0">
     <div class="flex items-center justify-between mb-4">
       <div>
         <h2 class="font-bold text-gray-900 dark:text-white text-lg">⭐ Quiz Unggulan</h2>

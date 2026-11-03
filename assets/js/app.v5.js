@@ -51,6 +51,10 @@ function QuizBApp() {
 
     // ---- Page Data ----
     home:        { featured: [], categories: [], groups: [], loading: true, stats: { total_questions: 0, total_quizzes: 0, total_categories: 0, total_users: 0 } },
+    discovery: { quizzes: [], loading: true },
+    get discoveryQuizzes() {
+      return this.discovery.quizzes.length ? this.discovery.quizzes : this.home.featured.slice(0, 6);
+    },
     categories:  { list: [], loading: true },
     quizzes:     { list: [], loading: true, total: 0, page: 1, categoryId: 0, search: '', difficulty: '' },
     quizDetail:  { quiz: null, loading: true },
@@ -610,6 +614,7 @@ function QuizBApp() {
 
     // ---- Page Loaders ----
     async loadHome() {
+      this.loadRecentlyPlayed();
       this.home.loading = true;
       try {
         const [cats, quizData, stats, groups] = await Promise.all([
@@ -794,7 +799,20 @@ function QuizBApp() {
       }
     },
 
+    async loadRecentlyPlayed() {
+      this.discovery.loading = true;
+      try {
+        const data = await api.get('quiz.recently_played');
+        this.discovery.quizzes = Array.isArray(data) ? data : [];
+      } catch (_) {
+        this.discovery.quizzes = [];
+      } finally {
+        this.discovery.loading = false;
+      }
+    },
+
     async loadDashboard() {
+      this.loadRecentlyPlayed();
       this.dashboard.loading = true;
       try {
         // API attempt.dashboard returns { user, stats, recent }

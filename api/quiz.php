@@ -49,6 +49,30 @@ function quiz_list(): void {
     jsonPaginated($quizzes, (int)$total, $page, $limit);
 }
 
+// Public discovery: one card per published quiz, ordered by its latest completed play.
+function quiz_recently_played(): void {
+    $quizzes = DB::all(
+        "SELECT q.id, q.title, q.description, q.difficulty,
+                q.total_questions AS question_count, q.total_attempts AS attempt_count,
+                c.name AS category_name, c.icon AS category_icon,
+                recent.last_played_at
+         FROM (
+             SELECT a.quiz_id, MAX(a.completed_at) AS last_played_at
+             FROM attempts a
+             LEFT JOIN users u ON u.id = a.user_id
+             WHERE a.completed_at IS NOT NULL
+               AND (a.user_id IS NULL OR u.is_active = 1)
+             GROUP BY a.quiz_id
+         ) recent
+         INNER JOIN quizzes q ON q.id = recent.quiz_id
+         INNER JOIN categories c ON c.id = q.category_id
+         WHERE q.is_published = 1 AND q.total_questions > 0
+         ORDER BY recent.last_played_at DESC, q.id DESC
+         LIMIT 6"
+    );
+    jsonSuccess($quizzes);
+}
+
 function quiz_get(): void {
     $id   = (int)($_GET['id']   ?? 0);
     $slug = sanitizeString($_GET['slug'] ?? '');

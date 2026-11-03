@@ -1,0 +1,51 @@
+<section class="discovery-section" x-data="{}" x-id="['discovery-title']" :aria-labelledby="$id('discovery-title')" :aria-busy="discovery.loading">
+  <div class="discovery-heading">
+    <div>
+      <span class="discovery-eyebrow"><span aria-hidden="true"></span> TEMUKAN TANTANGANMU</span>
+      <h2 :id="$id('discovery-title')" x-text="discovery.quizzes.length ? 'Baru Dimainkan' : 'Pilihan untuk Kamu'">Baru Dimainkan</h2>
+      <p x-text="discovery.quizzes.length ? 'Kuis yang baru saja dimainkan komunitas. Sekarang giliranmu.' : 'Mulai petualanganmu dengan kuis unggulan pilihan QuizB.'"></p>
+    </div>
+    <a href="#/quizzes" @click.prevent="navigate('/quizzes')" class="discovery-browse">Jelajahi kuis <span aria-hidden="true">↗</span></a>
+  </div>
+
+  <div x-show="discovery.loading || (user ? dashboard.loading : home.loading)" class="discovery-grid" aria-label="Memuat rekomendasi kuis">
+    <template x-for="i in 3" :key="i">
+      <div class="discovery-card discovery-skeleton" aria-hidden="true">
+        <div class="skeleton h-10 w-10 rounded-xl"></div>
+        <div class="skeleton h-5 w-3/4 rounded mt-5"></div>
+        <div class="skeleton h-4 w-full rounded mt-3"></div>
+        <div class="skeleton h-10 w-full rounded-xl mt-8"></div>
+      </div>
+    </template>
+  </div>
+
+  <div x-show="!discovery.loading && !(user ? dashboard.loading : home.loading)" class="discovery-grid">
+    <template x-for="(quiz, index) in discoveryQuizzes" :key="quiz.id">
+      <article class="discovery-card" :class="index === 0 ? 'discovery-card-spotlight' : ''">
+        <div class="discovery-card-top">
+          <span class="discovery-icon" aria-hidden="true" x-text="quiz.category_icon || '🎯'"></span>
+          <span class="discovery-pill" x-text="difficultyLabel(quiz.difficulty)"></span>
+        </div>
+        <p class="discovery-category" x-text="quiz.category_name || 'Pengetahuan umum'"></p>
+        <h3 x-text="quiz.title"></h3>
+        <p class="discovery-description" x-text="quiz.description || 'Uji pengetahuanmu dan temukan hal baru di setiap pertanyaan.'"></p>
+        <div class="discovery-meta">
+          <span><strong x-text="Number(quiz.question_count || 0).toLocaleString('id-ID')"></strong> soal</span>
+          <span aria-hidden="true">·</span>
+          <span x-show="discovery.quizzes.length" x-text="quiz.last_played_at ? 'Dimainkan ' + formatRelative(quiz.last_played_at) : 'Baru dimainkan'"></span>
+          <span x-show="!discovery.quizzes.length">Pilihan unggulan</span>
+        </div>
+        <a :href="'#/quiz/' + quiz.id" @click.prevent="navigate('/quiz/' + quiz.id)" class="discovery-play">
+          <span x-text="discovery.quizzes.length ? 'Ikut Kerjakan' : 'Mulai Kerjakan'"></span>
+          <span aria-hidden="true">→</span>
+        </a>
+      </article>
+    </template>
+    <div x-show="discoveryQuizzes.length === 0" class="discovery-empty">
+      <span aria-hidden="true">🎯</span>
+      <h3>Tantangan berikutnya menantimu</h3>
+      <p>Belum ada rekomendasi kuis saat ini. Jelajahi kategori untuk menemukan topik favoritmu.</p>
+      <a href="#/categories" @click.prevent="navigate('/categories')">Jelajahi kategori →</a>
+    </div>
+  </div>
+</section>

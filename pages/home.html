@@ -51,7 +51,11 @@
   </section>
 
   <!-- FEATURED QUIZZES -->
-  <section class="bg-gray-100 dark:bg-gray-900 py-16">
+  <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12">
+    <?php include __DIR__ . '/recently-played.html'; ?>
+  </div>
+
+  <section class="bg-gray-100 dark:bg-gray-900 py-16" x-show="!discovery.loading && discovery.quizzes.length > 0">
     <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between mb-8">
         <div>
