@@ -203,15 +203,33 @@ function challenge_status(): void {
     $c = DB::one("SELECT c.*, q.title as quiz_title, NOW() as server_now FROM challenges c JOIN quizzes q ON q.id = c.quiz_id WHERE c.id = ?", [$challengeId]);
     if (!$c) jsonError('Not found', 404);
 
-    // Otomatis tandai 'completed' jika semua peserta yang menerima tantangan telah men-submit kuisnya
-    if ($c['status'] !== 'completed') {
-        $totalAccepted = (int)(DB::one("SELECT COUNT(*) as c FROM challenge_participants WHERE challenge_id = ? AND status = 'accepted'", [$challengeId])['c'] ?? 0);
-        $totalSubmitted = (int)(DB::one("SELECT COUNT(*) as c FROM challenge_participants WHERE challenge_id = ? AND attempt_id IS NOT NULL", [$challengeId])['c'] ?? 0);
-        if ($totalAccepted > 0 && $totalSubmitted >= $totalAccepted) {
+    // Otomatis sinkronkan status 'completed' dan winner
+    $totalAccepted = (int)(DB::one("SELECT COUNT(*) as c FROM challenge_participants WHERE challenge_id = ? AND status = 'accepted'", [$challengeId])['c'] ?? 0);
+    $totalSubmitted = (int)(DB::one("SELECT COUNT(*) as c FROM challenge_participants WHERE challenge_id = ? AND attempt_id IS NOT NULL", [$challengeId])['c'] ?? 0);
+
+    if ($totalAccepted > 0 && $totalSubmitted >= $totalAccepted) {
+        if ($c['status'] !== 'completed' || empty($c['winner_id'])) {
             $winner = DB::one("SELECT user_id FROM challenge_participants WHERE challenge_id = ? AND attempt_id IS NOT NULL ORDER BY score_final DESC, time_taken ASC LIMIT 1", [$challengeId]);
             DB::execute("UPDATE challenges SET status = 'completed', winner_id = ? WHERE id = ?", [$winner['user_id'] ?? null, $challengeId]);
             $c['status'] = 'completed';
             $c['winner_id'] = $winner['user_id'] ?? null;
+        }
+    } else if ($totalSubmitted < $totalAccepted && $c['status'] === 'completed') {
+        // Cek jika status sempat prematur 'completed' padahal ada lawan yang masih aktif bermain (ping < 60s)
+        $now = time();
+        $unsubmitted = DB::all("SELECT progress FROM challenge_participants WHERE challenge_id = ? AND attempt_id IS NULL AND status = 'accepted'", [$challengeId]);
+        $hasActiveOpponent = false;
+        foreach ($unsubmitted as $up) {
+            $uprog = $up['progress'] ? json_decode($up['progress'], true) : null;
+            if ($uprog && !empty($uprog['last_ping']) && ($now - (int)$uprog['last_ping'] < 60)) {
+                $hasActiveOpponent = true;
+                break;
+            }
+        }
+        if ($hasActiveOpponent) {
+            DB::execute("UPDATE challenges SET status = 'playing', winner_id = NULL WHERE id = ?", [$challengeId]);
+            $c['status'] = 'playing';
+            $c['winner_id'] = null;
         }
     }
 
@@ -225,7 +243,7 @@ function challenge_status(): void {
         $p['live_score'] = $p['is_submitted'] ? (int)$p['score_final'] : (isset($prog['s']) ? (int)$prog['s'] : 0);
         $p['q_index'] = isset($prog['q']) ? (int)$prog['q'] : 0;
         if ($c['status'] === 'playing' && !$p['is_submitted'] && $prog && !empty($prog['last_ping'])) {
-            $p['disconnected'] = ($now - (int)$prog['last_ping'] > 25);
+            $p['disconnected'] = ($now - (int)$prog['last_ping'] > 35);
         } else {
             $p['disconnected'] = false;
         }
@@ -255,17 +273,22 @@ function challenge_sync(): void {
     $c = DB::one("SELECT status, start_time FROM challenges WHERE id = ?", [$challengeId]);
     if (!$c) jsonError('Tantangan tidak ditemukan', 404);
 
-    // Ambil partisipan duluan
-    $participants = DB::all("SELECT cp.user_id, cp.progress, u.name, cp.score_final FROM challenge_participants cp JOIN users u ON u.id = cp.user_id WHERE cp.challenge_id = ? AND cp.status = 'accepted'", [$challengeId]);
+    // Ambil partisipan duluan (sertakan attempt_id untuk mengecek siapa yang sudah submit)
+    $participants = DB::all("SELECT cp.user_id, cp.progress, u.name, cp.score_final, cp.attempt_id FROM challenge_participants cp JOIN users u ON u.id = cp.user_id WHERE cp.challenge_id = ? AND cp.status = 'accepted'", [$challengeId]);
 
     $now = time();
     $needsUpdate = false;
     $myNewProgress = null;
+    $totalSubmitted = 0;
     $activeCount = 0;
 
     // Evaluasi progress dan ping
     foreach ($participants as &$p) {
         $prog = $p['progress'] ? json_decode($p['progress'], true) : null;
+        $isSubmitted = ($p['attempt_id'] !== null || $p['score_final'] !== null);
+        if ($isSubmitted) {
+            $totalSubmitted++;
+        }
         
         if ((int)$p['user_id'] === (int)$user['id']) {
             $oldScore = isset($prog['s']) ? (int)$prog['s'] : -1;
@@ -287,8 +310,13 @@ function challenge_sync(): void {
             }
         }
 
-        if ($c['status'] === 'playing' && $prog && !empty($prog['last_ping'])) {
-            if ($now - $prog['last_ping'] > 25) {
+        if ($isSubmitted) {
+            // Partisipan yang sudah submit TIDAK BOLEH dianggap disconnected!
+            $p['disconnected'] = false;
+            $p['is_submitted'] = true;
+            $activeCount++;
+        } else if ($c['status'] === 'playing' && $prog && !empty($prog['last_ping'])) {
+            if ($now - (int)$prog['last_ping'] > 35) {
                 $p['disconnected'] = true;
             } else { 
                 $p['disconnected'] = false; 
@@ -306,8 +334,10 @@ function challenge_sync(): void {
         DB::execute("UPDATE challenge_participants SET progress = ? WHERE challenge_id = ? AND user_id = ?", [$myNewProgress, $challengeId, $user['id']]);
     }
 
-    if ($c['status'] === 'playing' && $activeCount <= 1 && count($participants) > 1) {
-        DB::execute("UPDATE challenges SET status = 'completed' WHERE id = ?", [$challengeId]);
+    // Jika SEMUA partisipan telah men-submit, selesaikan game
+    if (count($participants) > 0 && $totalSubmitted >= count($participants)) {
+        $winner = DB::one("SELECT user_id FROM challenge_participants WHERE challenge_id = ? AND attempt_id IS NOT NULL ORDER BY score_final DESC, time_taken ASC LIMIT 1", [$challengeId]);
+        DB::execute("UPDATE challenges SET status = 'completed', winner_id = ? WHERE id = ?", [$winner['user_id'] ?? null, $challengeId]);
         $c['status'] = 'completed';
     }
 

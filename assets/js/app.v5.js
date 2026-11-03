@@ -946,8 +946,15 @@ function QuizBApp() {
         if (this.result.challengeId) {
           try {
             this.result.challengeData = await api.get('challenge.status', { id: this.result.challengeId });
-            // Jika tantangan belum selesai, jalankan auto-polling setiap 2.5 detik untuk live progress
-            if (this.result.challengeData && this.result.challengeData.status !== 'completed') {
+            // Cek apakah seluruh partisipan sudah benar-benar selesai (score_final terisi)
+            const isFullyCompleted = (data) => {
+              if (!data || data.status !== 'completed') return false;
+              const participants = data.participants || [];
+              return participants.length > 0 && participants.every(p => p.score_final !== null && p.score_final !== undefined);
+            };
+
+            // Jika tantangan belum selesai untuk seluruh pemain, jalankan auto-polling setiap 2.5 detik
+            if (this.result.challengeData && !isFullyCompleted(this.result.challengeData)) {
               this.result.pollInterval = setInterval(async () => {
                 if (!window.location.hash.includes('/result/')) {
                   clearInterval(this.result.pollInterval);
@@ -958,7 +965,7 @@ function QuizBApp() {
                   const updated = await api.get('challenge.status', { id: this.result.challengeId });
                   if (updated) {
                     this.result.challengeData = updated;
-                    if (updated.status === 'completed') {
+                    if (isFullyCompleted(updated)) {
                       clearInterval(this.result.pollInterval);
                       this.result.pollInterval = null;
                     }

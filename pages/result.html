@@ -59,7 +59,7 @@
             </template>
 
             <!-- KONDISI 1: TANTANGAN BELUM SELESAI (Menunggu lawan menyelesaikan kuis) -->
-            <template x-if="result.challengeData && result.challengeData.status !== 'completed'">
+            <template x-if="result.challengeData && (result.challengeData.status !== 'completed' || (result.challengeData.participants || []).some(p => p.score_final === null && !p.is_submitted))">
               <div class="space-y-4">
                 <!-- Info banner -->
                 <div class="flex items-center justify-between bg-amber-50 dark:bg-amber-900/20 border border-amber-200/80 dark:border-amber-800/40 rounded-xl px-4 py-3 text-xs text-amber-800 dark:text-amber-300">
@@ -121,11 +121,15 @@
             </template>
 
             <!-- KONDISI 2: TANTANGAN SUDAH SELESAI (Completed - Menampilkan Juara) -->
-            <template x-if="result.challengeData && result.challengeData.status === 'completed'">
+            <template x-if="result.challengeData && result.challengeData.status === 'completed' && !(result.challengeData.participants || []).some(p => p.score_final === null && !p.is_submitted)">
               <div class="mt-2" x-data="{
                 sortedParticipants: [...result.challengeData.participants].sort((a,b) => {
-                  if (b.score_final !== a.score_final) return b.score_final - a.score_final;
-                  return (a.time_taken || 999999) - (b.time_taken || 999999);
+                  const scoreA = (a.score_final !== null && a.score_final !== undefined) ? Number(a.score_final) : -1;
+                  const scoreB = (b.score_final !== null && b.score_final !== undefined) ? Number(b.score_final) : -1;
+                  if (scoreB !== scoreA) return scoreB - scoreA;
+                  const timeA = (a.time_taken !== null && a.time_taken !== undefined) ? Number(a.time_taken) : 999999;
+                  const timeB = (b.time_taken !== null && b.time_taken !== undefined) ? Number(b.time_taken) : 999999;
+                  return timeA - timeB;
                 }),
                 getRank(uid) {
                   return this.sortedParticipants.findIndex(p => p.user_id == uid) + 1;
