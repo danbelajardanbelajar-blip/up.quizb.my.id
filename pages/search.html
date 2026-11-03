@@ -9,13 +9,20 @@
   </div>
 
   <!-- Search Input -->
-  <div class="relative mb-6">
+  <form role="search" autocomplete="off" @submit.prevent="if(search.q.trim().length >= 2) loadSearch(search.q)" class="relative mb-6">
     <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
          fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
     </svg>
     <input type="search"
+           name="page_search_query"
+           id="main-search-input"
+           autocomplete="off"
+           autocorrect="off"
+           autocapitalize="off"
+           spellcheck="false"
+           data-lpignore="true"
            x-ref="searchInput"
            x-model="search.q"
            @input.debounce.300ms="loadSearch(search.q)"
@@ -23,14 +30,15 @@
            placeholder="Ketik nama kuis, topik, kategori..."
            class="w-full pl-11 pr-4 py-3 text-base bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-400 transition-all"/>
     <!-- Clear button -->
-    <button x-show="search.q"
+    <button type="button"
+            x-show="search.q"
             @click="search.q=''; search.results=[]; $refs.searchInput.focus()"
             class="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
       </svg>
     </button>
-  </div>
+  </form>
 
   <!-- Loading -->
   <div x-show="search.loading" class="flex flex-col items-center justify-center py-16 gap-3">

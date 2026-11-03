@@ -35,19 +35,19 @@
         </div>
         <div>
           <label class="form-label" for="reg-name">Nama Lengkap</label>
-          <input id="reg-name" type="text" x-model="registerForm.name" class="form-input" placeholder="Nama kamu" required />
+          <input id="reg-name" name="name" type="text" x-model="registerForm.name" class="form-input" placeholder="Nama kamu" autocomplete="name" required />
         </div>
         <div>
           <label class="form-label" for="reg-email">Email</label>
-          <input id="reg-email" type="email" x-model="registerForm.email" class="form-input" placeholder="kamu@email.com" required />
+          <input id="reg-email" name="email" type="email" x-model="registerForm.email" class="form-input" placeholder="kamu@email.com" autocomplete="email" required />
         </div>
         <div>
           <label class="form-label" for="reg-password">Password</label>
-          <input id="reg-password" type="password" x-model="registerForm.password" class="form-input" placeholder="Min. 6 karakter" required />
+          <input id="reg-password" name="password" type="password" x-model="registerForm.password" class="form-input" placeholder="Min. 6 karakter" autocomplete="new-password" required />
         </div>
         <div>
           <label class="form-label" for="reg-confirm">Konfirmasi Password</label>
-          <input id="reg-confirm" type="password" x-model="registerForm.password_confirm" class="form-input" placeholder="Ulangi password" required />
+          <input id="reg-confirm" name="password_confirm" type="password" x-model="registerForm.password_confirm" class="form-input" placeholder="Ulangi password" autocomplete="new-password" required />
         </div>
         <button type="submit" class="btn-primary w-full py-3 text-base" :disabled="registerForm.loading">
           <span x-show="registerForm.loading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></span>

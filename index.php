@@ -199,18 +199,27 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
       </a>
     </div>
     <div class="px-4 py-4 border-b border-gray-100 dark:border-gray-800/50 flex-shrink-0" x-data="{ focused: false }">
-      <div class="relative">
+      <form role="search" autocomplete="off" @submit.prevent="if(search.q.trim().length >= 2) { if(currentRoute !== '/search') navigate('/search'); loadSearch(search.q); }" class="relative">
         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
         </svg>
-        <input type="search" x-model="search.q"
+        <input type="search"
+               name="quiz_search_query"
+               id="sidebar-quiz-search"
+               x-model="search.q"
+               autocomplete="off"
+               autocorrect="off"
+               autocapitalize="off"
+               spellcheck="false"
+               data-lpignore="true"
                @focus="focused = true"
-               @input.debounce.300ms="if(search.q.trim().length >= 2) { if(currentRoute !== '/search') navigate('/search'); loadSearch(search.q); } else { search.results = []; }"
+               @blur="focused = false"
+               @input.debounce.300ms="if(focused && search.q.trim().length >= 2) { if(currentRoute !== '/search') navigate('/search'); loadSearch(search.q); } else if(focused && !search.q.trim()) { search.results = []; }"
                @keydown.escape="search.q=''; search.results=[]; $el.blur(); focused=false"
-               @keydown.enter="search.q.trim().length >= 2 && (currentRoute !== '/search' ? navigate('/search') : loadSearch(search.q))"
+               @keydown.enter.prevent="search.q.trim().length >= 2 && (currentRoute !== '/search' ? navigate('/search') : loadSearch(search.q))"
                placeholder="Cari quiz..."
                class="w-full pl-9 pr-3 py-2 text-sm bg-gray-100 dark:bg-gray-800 border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-400 focus:bg-white dark:focus:bg-gray-700 transition-all placeholder-gray-400"/>
-      </div>
+      </form>
     </div>
     <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1 custom-scrollbar">
       <template x-for="item in navItems" :key="item.href || item.label">
