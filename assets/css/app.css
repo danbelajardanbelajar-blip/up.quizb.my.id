@@ -8,20 +8,7 @@
 html { scroll-behavior: smooth; }
 
 /* ---- Color Themes & CSS Variables ---- */
-:root, [data-color-theme="indigo"] {
-  --color-primary-50: 238 242 255;
-  --color-primary-100: 224 231 255;
-  --color-primary-200: 199 210 254;
-  --color-primary-300: 165 180 252;
-  --color-primary-400: 129 140 248;
-  --color-primary-500: 99 102 241;
-  --color-primary-600: 79 70 229;
-  --color-primary-700: 67 56 202;
-  --color-primary-800: 55 48 163;
-  --color-primary-900: 49 46 129;
-}
-
-[data-color-theme="emerald"] {
+:root, [data-color-theme="emerald"] {
   --color-primary-50: 236 253 245;
   --color-primary-100: 209 250 229;
   --color-primary-200: 167 243 208;
@@ -32,6 +19,19 @@ html { scroll-behavior: smooth; }
   --color-primary-700: 4 120 87;
   --color-primary-800: 6 95 70;
   --color-primary-900: 6 78 59;
+}
+
+[data-color-theme="indigo"] {
+  --color-primary-50: 238 242 255;
+  --color-primary-100: 224 231 255;
+  --color-primary-200: 199 210 254;
+  --color-primary-300: 165 180 252;
+  --color-primary-400: 129 140 248;
+  --color-primary-500: 99 102 241;
+  --color-primary-600: 79 70 229;
+  --color-primary-700: 67 56 202;
+  --color-primary-800: 55 48 163;
+  --color-primary-900: 49 46 129;
 }
 
 [data-color-theme="blue"] {

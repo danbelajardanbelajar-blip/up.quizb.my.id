@@ -106,7 +106,7 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
         } else {
           document.documentElement.classList.remove('dark');
         }
-        var color = localStorage.getItem('quizb_colorTheme') || 'indigo';
+        var color = localStorage.getItem('quizb_colorTheme') || 'emerald';
         document.documentElement.setAttribute('data-color-theme', color);
       } catch (e) {}
     })();

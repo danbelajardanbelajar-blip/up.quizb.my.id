@@ -12,10 +12,10 @@ function QuizBApp() {
     _userLoaded: false, // Flag: true setelah loadUser() selesai — guard route tidak boleh aktif sebelum ini
     themeMode: store.get('themeMode', 'system'),
     darkMode: store.get('darkMode', false),
-    colorTheme: store.get('colorTheme', 'indigo'),
+    colorTheme: store.get('colorTheme', 'emerald'),
     colorThemes: [
+      { id: 'emerald', name: 'Emerald',      desc: 'Hijau Zamrud (Default)', preview: '#10b981' },
       { id: 'indigo',  name: 'Indigo',       desc: 'Modern & Ikonik',        preview: '#6366f1' },
-      { id: 'emerald', name: 'Emerald',      desc: 'Hijau Zamrud Segar',     preview: '#10b981' },
       { id: 'blue',    name: 'Ocean Blue',   desc: 'Biru Samudra Bersih',    preview: '#3b82f6' },
       { id: 'rose',    name: 'Rose Red',     desc: 'Merah Delima Dinamis',   preview: '#f43f5e' },
       { id: 'amber',   name: 'Warm Amber',   desc: 'Emas Senja Hangat',      preview: '#f59e0b' },
@@ -3802,7 +3802,7 @@ function QuizBApp() {
     // ---- Theme Management (Mode & Color Presets) ----
     initTheme() {
       // 1. Color Theme
-      this.colorTheme = store.get('colorTheme', 'indigo');
+      this.colorTheme = store.get('colorTheme', 'emerald');
       this.applyColorTheme();
 
       // 2. Theme Mode (Light / Dark / System)
@@ -3861,7 +3861,7 @@ function QuizBApp() {
     },
 
     applyColorTheme() {
-      document.documentElement.setAttribute('data-color-theme', this.colorTheme || 'indigo');
+      document.documentElement.setAttribute('data-color-theme', this.colorTheme || 'emerald');
     },
 
     toggleDark() {
