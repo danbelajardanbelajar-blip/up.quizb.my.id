@@ -31,7 +31,12 @@
           <div><label class="form-label">Judul *</label><input x-model="admin.form.title" class="form-input" placeholder="Judul quiz" /></div>
           <div><label class="form-label">Deskripsi</label><textarea x-model="admin.form.description" class="form-input" rows="2" placeholder="Deskripsi..."></textarea></div>
           <div>
-            <label class="form-label">Kategori *</label>
+            <label class="form-label flex items-center justify-between">
+              <span>Kategori *</span>
+              <span x-show="admin.form.category_id && !admin.form._newCat" class="text-xs text-primary-600 dark:text-primary-400 font-normal">
+                (Otomatis terpilih dari kategori aktif)
+              </span>
+            </label>
             <!-- Dropdown normal -->
             <select x-show="!admin.form._newCat"
                     x-model.number="admin.form.category_id" class="form-input">

@@ -2292,6 +2292,10 @@ function QuizBApp() {
     openAdminModal(type, data = {}) {
       this.admin.modal = { show: true, type };
       this.admin.form  = { ...data };
+      // Jika menambah quiz saat kategori sedang aktif, otomatis set category_id
+      if (type === 'quiz_create' && !this.admin.form.category_id && this.admin.contentCategoryFilter) {
+        this.admin.form.category_id = Number(this.admin.contentCategoryFilter);
+      }
       this.admin.formError = '';
       // Pastikan groups sudah dimuat untuk dropdown di form kategori
       if ((type === 'category_create' || type === 'category_edit') && !this.admin.groups.length) {

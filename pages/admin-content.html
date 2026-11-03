@@ -7,7 +7,7 @@
       <div class="flex flex-wrap gap-2">
         <button @click="openAdminModal('group_create', { icon: '📚', color: '#6366f1', order_num: admin.groups.length + 1 })" class="btn-secondary text-sm px-4 py-2">+ Rumpun</button>
         <button @click="openAdminModal('category_create', { icon: '📂', color: '#6366f1' })" class="btn-secondary text-sm px-4 py-2">+ Kategori</button>
-        <button @click="openAdminModal('quiz_create',{is_published:1,difficulty:'medium',time_limit:600,passing_score:60})" class="btn-primary text-sm px-4 py-2">+ Quiz</button>
+        <button @click="openAdminModal('quiz_create',{is_published:1,difficulty:'medium',time_limit:600,passing_score:60,category_id: admin.contentCategoryFilter || ''})" class="btn-primary text-sm px-4 py-2">+ Quiz</button>
         <button @click="openImportFileModal()" class="btn-secondary text-sm px-4 py-2">📥 Import Soal</button>
         <button @click="openImportQuizbModal()" class="btn-secondary text-sm px-4 py-2">🌐 Import QuizB</button>
       </div>
@@ -65,7 +65,8 @@
                         <p class="text-xs text-gray-500 dark:text-gray-400" x-text="getCategoryQuizCount(cat.id) + ' quiz'"></p>
                       </div>
                     </div>
-                    <div class="flex gap-2 text-xs flex-shrink-0">
+                    <div class="flex gap-2 text-xs flex-shrink-0 items-center">
+                      <button @click.stop="openAdminModal('quiz_create', { is_published: 1, difficulty: 'medium', time_limit: 600, passing_score: 60, category_id: cat.id })" class="text-primary-600 dark:text-primary-400 hover:underline font-medium">+ Quiz</button>
                       <button @click.stop="openAdminModal('category_edit', cat)" class="text-blue-500 hover:underline">Edit</button>
                       <button @click.stop="deleteAdminItem('category', cat.id)" class="text-red-500 hover:underline">Hapus</button>
                     </div>
@@ -109,7 +110,8 @@
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5" x-text="getCategoryQuizCount(cat.id) + ' quiz'"></p>
                   </div>
                 </div>
-                <div class="flex gap-2 text-xs flex-shrink-0">
+                <div class="flex gap-2 text-xs flex-shrink-0 items-center">
+                  <button @click.stop="openAdminModal('quiz_create', { is_published: 1, difficulty: 'medium', time_limit: 600, passing_score: 60, category_id: cat.id })" class="text-primary-600 dark:text-primary-400 hover:underline font-medium">+ Quiz</button>
                   <button @click.stop="openAdminModal('category_edit', cat)" class="text-blue-500 hover:underline">Edit</button>
                   <button @click.stop="deleteAdminItem('category', cat.id)" class="text-red-500 hover:underline">Hapus</button>
                 </div>
@@ -163,9 +165,13 @@
                 <span class="badge badge-secondary text-xs" x-text="admin.questionsTotal + ' soal'"></span>
               </div>
             </template>
-            <!-- Saat lihat daftar quiz: badge + reset -->
+            <!-- Saat lihat daftar quiz: tambah quiz + badge + reset -->
             <template x-if="!admin.contentSelectedQuiz && admin.contentCategoryFilter">
               <div class="flex items-center gap-2">
+                <button @click="openAdminModal('quiz_create', { is_published: 1, difficulty: 'medium', time_limit: 600, passing_score: 60, category_id: admin.contentCategoryFilter })"
+                        class="btn-primary text-xs px-2.5 py-1 flex items-center gap-1 font-medium shadow-sm">
+                  <span>+ Quiz</span>
+                </button>
                 <span class="badge badge-primary text-sm" x-text="getFilteredQuizzes().length + ' quiz'"></span>
                 <button @click="admin.contentCategoryFilter = null; admin.contentOpenCategories = []; admin.contentSelectedQuiz = null;"
                         class="text-xs text-gray-500 hover:text-red-500 transition-colors">✕ Reset</button>
@@ -219,7 +225,11 @@
             </table>
           </div>
           <div x-show="getFilteredQuizzes().length === 0" class="text-center py-10 text-gray-500 text-sm italic">
-            Tidak ada quiz untuk kategori ini.
+            <p>Tidak ada quiz untuk kategori ini.</p>
+            <button @click="openAdminModal('quiz_create', { is_published: 1, difficulty: 'medium', time_limit: 600, passing_score: 60, category_id: admin.contentCategoryFilter })"
+                    class="mt-3 btn-primary text-xs px-3 py-1.5 not-italic inline-flex items-center gap-1 font-medium">
+              + Tambah Quiz Pertama
+            </button>
           </div>
         </div>
 
