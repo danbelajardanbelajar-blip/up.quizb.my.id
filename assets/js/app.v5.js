@@ -2330,15 +2330,33 @@ function QuizBApp() {
             const newQuiz = await api.post('admin.quiz_create', f);
             this.showToast('Quiz berhasil dibuat', 'success', '✅');
             this.closeAdminModal();
-            const calledFromContent = this.admin.tab === 'content';
-            await this.loadAdminTab('quizzes');
-            await this.openQuizQuestions(newQuiz);
-            // Jika dibuat dari tab Konten, set sourceTab agar tombol back kembali ke Konten
-            if (calledFromContent) this.admin.questionsSourceTab = 'content';
+            const isContentPage = this.admin.tab === 'content' || this.currentRoute === '/admin/content';
+            if (isContentPage) {
+              await this.loadAdminTab('content');
+              if (newQuiz && newQuiz.category_id) {
+                const catId = Number(newQuiz.category_id);
+                if (!this.admin.contentOpenCategories.includes(catId)) {
+                  this.admin.contentOpenCategories.push(catId);
+                }
+                this.admin.contentCategoryFilter = catId;
+                const catObj = (this.admin.categories || []).find(c => Number(c.id) === catId);
+                if (catObj && catObj.group_id && !this.admin.contentOpenGroups.includes(catObj.group_id)) {
+                  this.admin.contentOpenGroups.push(catObj.group_id);
+                }
+              }
+              const created = (this.admin.contentQuizzes || []).find(q => Number(q.id) === Number(newQuiz?.id)) || newQuiz;
+              await this.selectContentQuiz(created);
+            } else {
+              await this.loadAdminTab(this.admin.tab);
+              await this.openQuizQuestions(newQuiz);
+            }
             return;
           } else {
             await api.put('admin.quiz_update', f.id, f);
             this.showToast('Quiz berhasil diperbarui', 'success', '✅');
+            if (this.admin.contentSelectedQuiz?.id === f.id) {
+              this.admin.contentSelectedQuiz = { ...this.admin.contentSelectedQuiz, ...f };
+            }
           }
         } else if (type === 'category_create') {
           await api.post('admin.category_create', f);
@@ -2363,7 +2381,8 @@ function QuizBApp() {
         }
         this.closeAdminModal();
         if (type !== 'question_create' && type !== 'question_edit') {
-          await this.loadAdminTab(this.admin.tab);
+          const tabToLoad = (this.currentRoute === '/admin/content') ? 'content' : this.admin.tab;
+          await this.loadAdminTab(tabToLoad);
         }
       } catch (e) {
         this.admin.formError = e.message;
@@ -2661,6 +2680,10 @@ function QuizBApp() {
         });
         this.admin.questionsAll   = (qData.questions || []).map(q => ({ ...q, _sel: false }));
         this.admin.questionsTotal = qData.total     || 0;
+        const quizInContent = (this.admin.contentQuizzes || []).find(q => Number(q.id) === Number(this.admin.questionsQuizFilter));
+        if (quizInContent) {
+          quizInContent.question_count = this.admin.questionsTotal;
+        }
       } catch (e) {
         this.showToast(e.message, 'error', '❌');
       } finally {
