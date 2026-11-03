@@ -1,51 +1,84 @@
-<section class="discovery-section" x-data="{}" x-id="['discovery-title']" :aria-labelledby="$id('discovery-title')" :aria-busy="discovery.loading">
-  <div class="discovery-heading">
+<!-- RECENTLY PLAYED / DISCOVERY SECTION -->
+<section class="mb-8" x-data="{}" x-id="['discovery-title']" :aria-labelledby="$id('discovery-title')" :aria-busy="discovery.loading">
+  <!-- Sleek Header -->
+  <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
     <div>
-      <span class="discovery-eyebrow"><span aria-hidden="true"></span> TEMUKAN TANTANGANMU</span>
-      <h2 :id="$id('discovery-title')" x-text="discovery.quizzes.length ? 'Baru Dimainkan' : 'Pilihan untuk Kamu'">Baru Dimainkan</h2>
-      <p x-text="discovery.quizzes.length ? 'Kuis yang baru saja dimainkan komunitas. Sekarang giliranmu.' : 'Mulai petualanganmu dengan kuis unggulan pilihan QuizB.'"></p>
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-primary-500 animate-pulse"></span>
+        <span class="text-[11px] font-bold tracking-wider uppercase text-primary-600 dark:text-primary-400">Komunitas &amp; Rekomendasi</span>
+      </div>
+      <h2 :id="$id('discovery-title')" class="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white mt-1"
+          x-text="discovery.quizzes.length ? '🔥 Baru Dimainkan' : '✨ Pilihan untuk Kamu'">Baru Dimainkan</h2>
+      <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5"
+         x-text="discovery.quizzes.length ? 'Kuis yang baru saja diselesaikan komunitas. Giliranmu sekarang!' : 'Koleksi kuis pilihan terpopuler untuk menguji wawasanmu.'"></p>
     </div>
-    <a href="#/quizzes" @click.prevent="navigate('/quizzes')" class="discovery-browse">Jelajahi kuis <span aria-hidden="true">↗</span></a>
+    <button @click="navigate('/quizzes')"
+            class="inline-flex items-center gap-1.5 text-xs font-bold text-primary-600 dark:text-primary-400 hover:underline flex-shrink-0 self-start sm:self-auto cursor-pointer">
+      Jelajahi Semua <span aria-hidden="true">→</span>
+    </button>
   </div>
 
+  <!-- Skeletons Loading -->
   <div x-show="discovery.loading || (user ? dashboard.loading : home.loading)" class="discovery-grid" aria-label="Memuat rekomendasi kuis">
     <template x-for="i in 3" :key="i">
-      <div class="discovery-card discovery-skeleton" aria-hidden="true">
-        <div class="skeleton h-10 w-10 rounded-xl"></div>
-        <div class="skeleton h-5 w-3/4 rounded mt-5"></div>
-        <div class="skeleton h-4 w-full rounded mt-3"></div>
-        <div class="skeleton h-10 w-full rounded-xl mt-8"></div>
+      <div class="discovery-card space-y-3 p-4">
+        <div class="flex items-center justify-between">
+          <div class="skeleton h-8 w-8 rounded-xl"></div>
+          <div class="skeleton h-4 w-16 rounded-full"></div>
+        </div>
+        <div class="skeleton h-4 w-3/4 rounded mt-2"></div>
+        <div class="skeleton h-3 w-full rounded"></div>
+        <div class="skeleton h-4 w-1/2 rounded mt-3"></div>
       </div>
     </template>
   </div>
 
+  <!-- Content Grid -->
   <div x-show="!discovery.loading && !(user ? dashboard.loading : home.loading)" class="discovery-grid">
     <template x-for="(quiz, index) in discoveryQuizzes" :key="quiz.id">
-      <article class="discovery-card" :class="index === 0 ? 'discovery-card-spotlight' : ''">
-        <div class="discovery-card-top">
-          <span class="discovery-icon" aria-hidden="true" x-text="quiz.category_icon || '🎯'"></span>
-          <span class="discovery-pill" x-text="difficultyLabel(quiz.difficulty)"></span>
+      <article class="discovery-card group cursor-pointer"
+               :class="index === 0 ? 'discovery-card-spotlight' : ''"
+               @click="navigate('/quiz/' + quiz.id)">
+        <!-- Top: Category + Difficulty -->
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-8 h-8 rounded-xl bg-primary-100 dark:bg-primary-950/60 text-primary-700 dark:text-primary-300 flex items-center justify-center text-base flex-shrink-0 group-hover:scale-105 transition-transform"
+                  x-text="quiz.category_icon || '🎯'"></span>
+            <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 truncate"
+                  x-text="quiz.category_name || 'Pengetahuan Umum'"></span>
+          </div>
+          <span class="badge text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0"
+                :class="difficultyClass(quiz.difficulty)"
+                x-text="difficultyLabel(quiz.difficulty)"></span>
         </div>
-        <p class="discovery-category" x-text="quiz.category_name || 'Pengetahuan umum'"></p>
-        <h3 x-text="quiz.title"></h3>
-        <p class="discovery-description" x-text="quiz.description || 'Uji pengetahuanmu dan temukan hal baru di setiap pertanyaan.'"></p>
-        <div class="discovery-meta">
-          <span><strong x-text="Number(quiz.question_count || 0).toLocaleString('id-ID')"></strong> soal</span>
-          <span aria-hidden="true">·</span>
-          <span x-show="discovery.quizzes.length" x-text="quiz.last_played_at ? 'Dimainkan ' + formatRelative(quiz.last_played_at) : 'Baru dimainkan'"></span>
-          <span x-show="!discovery.quizzes.length">Pilihan unggulan</span>
+
+        <!-- Middle: Title & Description -->
+        <h3 class="font-bold text-sm text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-1 mb-1"
+            x-text="quiz.title"></h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mb-3"
+           x-text="quiz.description || 'Uji pemahaman dan wawasanmu pada kuis ini.'"></p>
+
+        <!-- Bottom: Meta & Action -->
+        <div class="flex items-center justify-between pt-2.5 border-t border-gray-100 dark:border-gray-800 text-[11px] text-gray-400 mt-auto">
+          <div class="flex items-center gap-1.5 truncate">
+            <span class="font-medium text-gray-600 dark:text-gray-300">❓ <strong x-text="Number(quiz.question_count || 0).toLocaleString('id-ID')"></strong> soal</span>
+            <span>·</span>
+            <span x-text="quiz.last_played_at ? formatRelative(quiz.last_played_at) : (discovery.quizzes.length ? 'Baru dimainkan' : 'Unggulan')"></span>
+          </div>
+          <span class="inline-flex items-center gap-1 font-bold text-xs text-primary-600 dark:text-primary-400 group-hover:translate-x-0.5 transition-transform flex-shrink-0">
+            <span x-text="discovery.quizzes.length ? 'Ikut' : 'Mulai'"></span>
+            <span aria-hidden="true">→</span>
+          </span>
         </div>
-        <a :href="'#/quiz/' + quiz.id" @click.prevent="navigate('/quiz/' + quiz.id)" class="discovery-play">
-          <span x-text="discovery.quizzes.length ? 'Ikut Kerjakan' : 'Mulai Kerjakan'"></span>
-          <span aria-hidden="true">→</span>
-        </a>
       </article>
     </template>
-    <div x-show="discoveryQuizzes.length === 0" class="discovery-empty">
-      <span aria-hidden="true">🎯</span>
-      <h3>Tantangan berikutnya menantimu</h3>
-      <p>Belum ada rekomendasi kuis saat ini. Jelajahi kategori untuk menemukan topik favoritmu.</p>
-      <a href="#/categories" @click.prevent="navigate('/categories')">Jelajahi kategori →</a>
+
+    <!-- Empty State -->
+    <div x-show="discoveryQuizzes.length === 0" class="col-span-full card p-6 text-center text-gray-400">
+      <p class="text-2xl mb-1">🎯</p>
+      <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Belum ada rekomendasi kuis saat ini</p>
+      <p class="text-xs text-gray-400 mt-1">Jelajahi kategori untuk menemukan topik kuis favoritmu.</p>
+      <button @click="navigate('/categories')" class="mt-3 text-xs font-bold text-primary-600 dark:text-primary-400 hover:underline">Jelajahi Kategori →</button>
     </div>
   </div>
 </section>
