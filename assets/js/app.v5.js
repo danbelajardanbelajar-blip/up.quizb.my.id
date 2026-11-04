@@ -974,6 +974,8 @@ function QuizBApp() {
       const cidMatch = window.location.hash.match(/[?&]cid=(\d+)/);
       this.result.challengeId = cidMatch ? cidMatch[1] : null;
       this.result.challengeData = null;
+      const tidMatch = window.location.hash.match(/[?&]tid=(\d+)/);
+      this.result.tournamentId = tidMatch ? tidMatch[1] : null;
       const modeMatch = window.location.hash.match(/[?&]mode=([a-z]+)/);
       this.result.mode = modeMatch ? modeMatch[1] : null;
       try {
@@ -3414,7 +3416,7 @@ function QuizBApp() {
         if (!silent) this.tournament.detailLoading = false;
       }
 
-      // Live sync every 3 seconds while on tournament detail page
+      // Live sync every 1.5 seconds while on tournament detail page
       if (!this.tournament.detailInterval) {
         this.tournament.detailInterval = setInterval(() => {
           if (this.currentRoute.startsWith('/tournament/') && this.tournament.detail?.status !== 'cancelled') {
@@ -3423,7 +3425,7 @@ function QuizBApp() {
             clearInterval(this.tournament.detailInterval);
             this.tournament.detailInterval = null;
           }
-        }, 3000);
+        }, 1500);
       }
     },
 

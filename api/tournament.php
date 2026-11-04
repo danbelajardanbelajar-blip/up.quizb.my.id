@@ -290,7 +290,21 @@ function tournament_detail(): void {
 
         // Cek disconnect (> 35 detik tanpa ping jika turnamen sedang in_progress dan belum submit)
         if ($t['status'] === 'in_progress' && !$p['is_submitted'] && $prog && !empty($prog['last_ping'])) {
-            $p['disconnected'] = ($now - (int)$prog['last_ping'] > 35);
+            $diffPing = $now - (int)$prog['last_ping'];
+            $p['disconnected'] = ($diffPing > 35);
+
+            // Jika peserta terputus > 45 detik tanpa ping, otomatis finalisasi dengan skor terakhir agar peserta lain tidak menunggu lama
+            if ($diffPing > 45) {
+                $finalScore = (int)($prog['s'] ?? 0);
+                DB::execute(
+                    "UPDATE tournament_participants SET score_final = ?, time_taken = 999999 WHERE id = ?",
+                    [$finalScore, $p['id']]
+                );
+                $p['score_final'] = $finalScore;
+                $p['time_taken'] = 999999;
+                $p['is_submitted'] = true;
+                $totalSubmitted++;
+            }
         } else {
             $p['disconnected'] = false;
         }

@@ -760,6 +760,7 @@ function QuizEngine() {
         const payload = {
           quiz_id:              this.quiz.id,
           mode:                 this.mode || 'exam',
+          tournament_id:        this.tournamentId ? parseInt(this.tournamentId) : undefined,
           player_name:          this.playerName || undefined,
           question_ids:         this.questions.map(q => q.id),
           reached_question_ids: reachedQuestions.map(q => q.id),
@@ -794,26 +795,22 @@ function QuizEngine() {
           } catch (_) {}
         }
 
-        // Jika dari tournament: submit hasil ke turnamen
+        // Jika dari tournament: submit hasil ke turnamen (non-blocking di latar belakang)
         if (this.tournamentId) {
-          try {
-            const finalScore = result.score !== undefined ? result.score : Math.round(((result.score_percentage || ((result.correct || 0) / (result.total || 1) * 100))));
-            await api.post('tournament.submit', {
-              tournament_id: parseInt(this.tournamentId),
-              attempt_id:    result.attempt_id ? parseInt(result.attempt_id) : null,
-              score_final:   finalScore,
-              time_taken:    result.time_taken || timeTaken || 0,
-            });
-          } catch (err) {
-            console.error('Failed to submit tournament score:', err);
-          }
+          const finalScore = result.score !== undefined ? result.score : Math.round(((result.score_percentage || ((result.correct || 0) / (result.total || 1) * 100))));
+          api.post('tournament.submit', {
+            tournament_id: parseInt(this.tournamentId),
+            attempt_id:    result.attempt_id ? parseInt(result.attempt_id) : null,
+            score_final:   finalScore,
+            time_taken:    result.time_taken || timeTaken || 0,
+          }).catch(() => {});
 
           // Tandai bahwa turnamen ini sudah disubmit di sisi browser peserta agar tidak redirect loop
           try {
             sessionStorage.setItem('tournament_submitted_' + this.tournamentId, '1');
           } catch (_) {}
 
-          // Arahkan langsung ke papan peringkat turnamen
+          // Arahkan langsung ke papan peringkat turnamen tanpa delay
           window.location.hash = `#/tournament/${this.tournamentId}`;
           return;
         }

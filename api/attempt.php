@@ -157,13 +157,46 @@ function attempt_submit(): void {
     ]);
     
     $ch = curl_init($notifyUrl);
-    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 200); // Set timeout sangat singkat (200ms) agar benar-benar non-blocking
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, 150);
+    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 250);
     curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_exec($ch);
-    curl_close($ch);
+    @curl_exec($ch);
+    @curl_close($ch);
+
+    // [TOURNAMENT] Jika dari turnamen, langsung rekam skor ke tabel peserta tanpa delay
+    $tournamentId = (int)($body['tournament_id'] ?? 0);
+    if ($tournamentId > 0 && !empty($user['id'])) {
+        try {
+            DB::execute(
+                "UPDATE tournament_participants SET attempt_id = ?, score_final = ?, time_taken = ?, status = 'accepted'
+                 WHERE tournament_id = ? AND user_id = ?",
+                [$attemptId, $score, $timeTaken, $tournamentId, $user['id']]
+            );
+
+            // Cek jika seluruh peserta kompetisi sudah submit
+            $tRoom = DB::one("SELECT creator_id FROM tournaments WHERE id = ?", [$tournamentId]);
+            if ($tRoom) {
+                $cId = (int)$tRoom['creator_id'];
+                $totalAcc = (int)(DB::one("SELECT COUNT(*) as c FROM tournament_participants WHERE tournament_id = ? AND status = 'accepted' AND user_id != ?", [$tournamentId, $cId])['c'] ?? 0);
+                $totalSub = (int)(DB::one("SELECT COUNT(*) as c FROM tournament_participants WHERE tournament_id = ? AND status = 'accepted' AND score_final IS NOT NULL AND user_id != ?", [$tournamentId, $cId])['c'] ?? 0);
+                if ($totalAcc > 0 && $totalSub >= $totalAcc) {
+                    $win = DB::one(
+                        "SELECT user_id FROM tournament_participants
+                         WHERE tournament_id = ? AND score_final IS NOT NULL AND status = 'accepted' AND user_id != ?
+                         ORDER BY score_final DESC, time_taken ASC LIMIT 1",
+                        [$tournamentId, $cId]
+                    );
+                    $winId = $win['user_id'] ?? null;
+                    DB::execute("UPDATE tournaments SET status = 'completed', winner_id = ?, end_time = NOW() WHERE id = ?", [$winId, $tournamentId]);
+                }
+            }
+        } catch (\Throwable $te) {
+            error_log("[attempt_submit tournament sync] " . $te->getMessage());
+        }
+    }
 
     // Simpan attempt_id di session untuk akses result tanpa login
     startSecureSession();

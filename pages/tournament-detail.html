@@ -206,16 +206,22 @@
 
             <!-- Kasus B4: Peserta sudah selesai mengerjakan kuis -->
             <template x-if="tournament.detail?.my_participant?.is_submitted || sessionStorage.getItem('tournament_submitted_' + tournament.detail?.id)">
-              <div class="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800 flex items-center justify-between gap-3 text-xs">
+              <div class="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
                 <div class="flex items-center gap-2.5">
                   <span class="text-2xl">✅</span>
                   <div>
                     <p class="font-bold text-emerald-900 dark:text-emerald-200">Kamu telah menyelesaikan kuis turnamen!</p>
                     <p class="text-emerald-700 dark:text-emerald-400 text-[11px]">
-                      Skor: <strong x-text="tournament.detail.my_participant.score_final + '%'"></strong> • Waktu: <strong x-text="formatDuration(tournament.detail.my_participant.time_taken || 0)"></strong>. Pantau posisi juaramu di bawah.
+                      Skor: <strong x-text="(tournament.detail?.my_participant?.score_final !== null && tournament.detail?.my_participant?.score_final !== undefined) ? tournament.detail.my_participant.score_final + '%' : 'Tersimpan'"></strong> • Waktu: <strong x-text="formatDuration(tournament.detail?.my_participant?.time_taken || 0)"></strong>. Pantau posisi juaramu di bawah.
                     </p>
                   </div>
                 </div>
+                <template x-if="tournament.detail?.my_participant?.attempt_id">
+                  <button @click="navigate('/result/' + tournament.detail.my_participant.attempt_id + '?mode=tournament&tid=' + tournament.detail.id)"
+                          class="py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs whitespace-nowrap shadow transition-transform hover:scale-105">
+                    📄 Pembahasan & Skor Detail →
+                  </button>
+                </template>
               </div>
             </template>
           </div>
