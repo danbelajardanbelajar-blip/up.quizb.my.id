@@ -669,6 +669,12 @@ function QuizEngine() {
       this._stopHeartbeat();
       this.stopBgMusic();            // 🔇 hentikan musik saat submit
       this.stopCamera();
+      this.stopTimer();
+      this.stopQuestionTimer();
+      if (this.syncInterval) {
+        clearInterval(this.syncInterval);
+        this.syncInterval = null;
+      }
       this.loading = true;
       try {
         let timeTaken = 0;
