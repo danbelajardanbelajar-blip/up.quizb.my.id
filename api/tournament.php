@@ -446,7 +446,7 @@ function tournament_sync(): void {
     ensureTournamentTables();
     $body = getBody();
     $id = (int)($body['tournament_id'] ?? 0);
-    $score = (int)($body['score'] ?? 0);
+    $score = isset($body['live_score']) ? (int)$body['live_score'] : (int)($body['score'] ?? 0);
     $qIndex = (int)($body['q_index'] ?? 0);
     if (!$id) jsonError('Tournament ID diperlukan');
 

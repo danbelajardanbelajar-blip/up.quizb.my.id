@@ -25,6 +25,7 @@ function QuizEngine() {
     challengeId: null,    // untuk mode challenge
     tournamentId: null,   // untuk mode tournament
     heartbeatInterval: null,
+    user: null,            // data user yang sedang login
     playerName: '',        // nama tamu (dari localStorage, opsional)
     questionTimeLeft: 0,    // timer per soal (instant/end mode)
     participants: [],       // { name, score, disconnected, ... }
@@ -92,6 +93,19 @@ function QuizEngine() {
 
     // ---- Alpine init: watch currentIndex to reset question timer ----
     init() {
+      // Ambil user saat ini
+      if (window._quizbUser) {
+        this.user = window._quizbUser;
+      } else {
+        try {
+          const appData = document.querySelector('[x-data*="QuizBApp"]')?._x_dataStack?.[0];
+          if (appData?.user) {
+            this.user = appData.user;
+            window._quizbUser = appData.user;
+          }
+        } catch (_) {}
+      }
+
       this.$watch('currentIndex', () => {
         if (this.isReviewMode && this.phase === 'playing') {
           this.startQuestionTimer();
@@ -329,25 +343,41 @@ function QuizEngine() {
     // ---- Tournament Sync ----
     startTournamentSync() {
       if (this.syncInterval) clearInterval(this.syncInterval);
-      this.syncInterval = setInterval(async () => {
+
+      const doSync = async () => {
         if (this.phase !== 'playing') return;
+        const myUid = this.user?.id || window._quizbUser?.id || (window.Alpine && document.querySelector('[x-data*="QuizBApp"]')?._x_dataStack?.[0]?.user?.id) || 0;
         try {
           const res = await api.post('tournament.sync', {
             tournament_id: this.tournamentId,
+            score: this.myScore,
             live_score: this.myScore,
             q_index: this.currentIndex
           });
           if (res && res.participants) {
-            this.participants = res.participants.map(p => ({
-              id: p.user_id,
-              name: p.name,
-              score: p.user_id == (this.user?.id || 0) ? this.myScore : (p.score_final !== null && p.score_final !== undefined ? Number(p.score_final) : (p.live_score ?? 0)),
-              q_index: p.q_index ?? 0,
-              submitted: p.is_submitted || false
-            }));
+            this.participants = res.participants.map(p => {
+              const isMe = (p.user_id == myUid);
+              const scoreVal = isMe
+                ? this.myScore
+                : (p.score_final !== null && p.score_final !== undefined ? Number(p.score_final) : (p.live_score ?? 0));
+              return {
+                id: p.user_id,
+                name: p.name,
+                is_me: isMe,
+                score: scoreVal,
+                q_index: p.q_index ?? 0,
+                submitted: p.is_submitted || false,
+                disconnected: p.disconnected || false
+              };
+            });
           }
         } catch(e) {}
-      }, 2500);
+      };
+
+      // Jalankan sync langsung saat start agar lawan langsung muncul
+      doSync();
+      // Polling setiap 1.5 detik agar realtime & responsif
+      this.syncInterval = setInterval(doSync, 1500);
     },
     
     async takeAndUploadSnapshot() {
@@ -550,9 +580,38 @@ function QuizEngine() {
       this.myScore = Math.round((correct / (this.questions.length || 1)) * 100);
       
       // Update local participants array for instant UI feedback
+      const myUid = this.user?.id || window._quizbUser?.id || (window.Alpine && document.querySelector('[x-data*="QuizBApp"]')?._x_dataStack?.[0]?.user?.id) || 0;
       if ((this.mode === 'challenge' || this.mode === 'tournament') && this.participants) {
-          const me = this.participants.find(p => p.id == (this.user?.id || 0));
+          const me = this.participants.find(p => p.id == myUid || p.is_me);
           if (me) me.score = this.myScore;
+      }
+
+      // Sync langsung ke server saat memilih jawaban pada turnamen
+      if (this.mode === 'tournament' && this.tournamentId) {
+        api.post('tournament.sync', {
+          tournament_id: this.tournamentId,
+          score: this.myScore,
+          live_score: this.myScore,
+          q_index: this.currentIndex
+        }).then(res => {
+          if (res && res.participants) {
+            this.participants = res.participants.map(p => {
+              const isMe = (p.user_id == myUid);
+              const scoreVal = isMe
+                ? this.myScore
+                : (p.score_final !== null && p.score_final !== undefined ? Number(p.score_final) : (p.live_score ?? 0));
+              return {
+                id: p.user_id,
+                name: p.name,
+                is_me: isMe,
+                score: scoreVal,
+                q_index: p.q_index ?? 0,
+                submitted: p.is_submitted || false,
+                disconnected: p.disconnected || false
+              };
+            });
+          }
+        }).catch(() => {});
       }
 
       // Hentikan timer soal saat jawaban dipilih

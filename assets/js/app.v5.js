@@ -574,6 +574,7 @@ function QuizBApp() {
           shuffle_questions:    data.shuffle_questions    ?? true,
           shuffle_options:      data.shuffle_options      ?? true,
         } : null;
+        window._quizbUser = this.user;
         // Sync settings state
         if (this.user) {
           this.settings.limit            = this.user.quiz_questions_limit;
