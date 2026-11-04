@@ -3406,19 +3406,6 @@ function QuizBApp() {
       try {
         const data = await api.get('tournament.detail', { id });
         this.tournament.detail = data.tournament || data;
-        const current = this.tournament.detail;
-
-        // Jika peserta membuka saat turnamen sudah in_progress, langsung bawa ke kuis
-        if (!current.is_creator &&
-            current.my_status === 'accepted' &&
-            current.status === 'in_progress' &&
-            !current.my_participant?.is_submitted) {
-          if (this.currentRoute.startsWith('/tournament/')) {
-            this.showToast('🚀 Turnamen sedang berlangsung! Membuka soal kuis...', 'info');
-            this.navigate('/play/' + current.quiz_id + '?mode=tournament&tid=' + current.id);
-            return;
-          }
-        }
       } catch (e) {
         console.error('loadTournamentDetail error:', e);
         this.showToast(e.message || 'Gagal memuat detail turnamen', 'error');
@@ -3442,15 +3429,21 @@ function QuizBApp() {
     async refreshTournamentDetail() {
       if (!this.tournament.detail?.id) return;
       try {
+        const oldStatus = this.tournament.detail?.status;
         const data = await api.get('tournament.detail', { id: this.tournament.detail.id });
-        this.tournament.detail = data.tournament || data;
-        const current = this.tournament.detail;
+        const current = data.tournament || data;
+        this.tournament.detail = current;
 
-        // Auto-start kuis untuk peserta saat Juri klik Mulai (status jadi in_progress)
+        // Auto-start kuis untuk peserta HANYA saat ada transisi host klik Mulai (open -> in_progress)
+        const isSubmitted = current.my_participant?.is_submitted ||
+                            current.my_participant?.score_final !== null ||
+                            Boolean(sessionStorage.getItem('tournament_submitted_' + current.id));
+
         if (!current.is_creator &&
             current.my_status === 'accepted' &&
+            oldStatus === 'open' &&
             current.status === 'in_progress' &&
-            !current.my_participant?.is_submitted) {
+            !isSubmitted) {
           if (this.currentRoute.startsWith('/tournament/')) {
             this.showToast('🚀 Turnamen telah dimulai oleh Juri! Membuka soal kuis...', 'info');
             this.navigate('/play/' + current.quiz_id + '?mode=tournament&tid=' + current.id);

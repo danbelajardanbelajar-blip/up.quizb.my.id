@@ -187,19 +187,19 @@
               </div>
             </template>
 
-            <!-- Kasus B3: Turnamen Sedang Berlangsung & Peserta belum submit (Otomatis masuk kuis) -->
+            <!-- Kasus B3: Turnamen Sedang Berlangsung & Peserta belum submit -->
             <template x-if="tournament.detail?.my_status === 'accepted' && tournament.detail?.status === 'in_progress' && !tournament.detail?.my_participant?.is_submitted">
-              <div class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between gap-3 animate-pulse">
+              <div class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
                   <span class="text-3xl">🚀</span>
                   <div>
                     <p class="font-extrabold text-sm">Turnamen Sedang Berlangsung!</p>
-                    <p class="text-xs text-emerald-100">Kuis dimulai secara otomatis oleh Juri. Sedang mengalihkan ke lembar soal...</p>
+                    <p class="text-xs text-emerald-100">Kuis telah dimulai oleh Juri. Silakan mulai kerjakan kuis.</p>
                   </div>
                 </div>
                 <button @click="navigate('/play/' + tournament.detail.quiz_id + '?mode=tournament&tid=' + tournament.detail.id)"
-                        class="bg-white/20 hover:bg-white/30 text-white text-xs py-2 px-4 rounded-xl border border-white/30 font-semibold whitespace-nowrap">
-                  Buka Kuis Manual →
+                        class="bg-white text-emerald-700 hover:bg-emerald-50 font-bold text-xs py-2 px-4 rounded-xl shadow whitespace-nowrap">
+                  ▶ Masuk Kuis
                 </button>
               </div>
             </template>

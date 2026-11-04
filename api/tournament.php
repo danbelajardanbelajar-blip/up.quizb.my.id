@@ -301,7 +301,7 @@ function tournament_detail(): void {
     if ($t['status'] === 'in_progress' && $totalAccepted > 0 && $totalSubmitted >= $totalAccepted) {
         $winner = DB::one(
             "SELECT user_id FROM tournament_participants
-             WHERE tournament_id = ? AND attempt_id IS NOT NULL AND status = 'accepted' AND user_id != ?
+             WHERE tournament_id = ? AND score_final IS NOT NULL AND status = 'accepted' AND user_id != ?
              ORDER BY score_final DESC, time_taken ASC LIMIT 1",
             [$id, $t['creator_id']]
         );
@@ -499,8 +499,8 @@ function tournament_submit(): void {
     ensureTournamentTables();
     $body = getBody();
     $tournamentId = (int)($body['tournament_id'] ?? 0);
-    $attemptId    = (int)($body['attempt_id'] ?? 0);
-    if (!$tournamentId || !$attemptId) jsonError('Parameter turnamen dan attempt diperlukan');
+    $attemptId    = isset($body['attempt_id']) ? (int)$body['attempt_id'] : 0;
+    if (!$tournamentId) jsonError('Parameter tournament_id diperlukan');
 
     $room = DB::one("SELECT quiz_id, status, creator_id FROM tournaments WHERE id = ?", [$tournamentId]);
     if (!$room) jsonError('Turnamen tidak ditemukan', 404);
@@ -514,23 +514,34 @@ function tournament_submit(): void {
         jsonError('Anda bukan peserta aktif turnamen ini', 403);
     }
 
-    $attempt = DB::one("SELECT score, time_taken FROM attempts WHERE id = ? AND user_id = ? AND quiz_id = ?", [$attemptId, $user['id'], $room['quiz_id']]);
-    if (!$attempt) jsonError('Attempt kuis tidak valid', 404);
+    $scoreFinal = isset($body['score_final']) ? (int)$body['score_final'] : null;
+    $timeTaken  = isset($body['time_taken']) ? (int)$body['time_taken'] : null;
+
+    if ($attemptId > 0) {
+        $attempt = DB::one("SELECT score, time_taken FROM attempts WHERE id = ? AND user_id = ? AND quiz_id = ?", [$attemptId, $user['id'], $room['quiz_id']]);
+        if ($attempt) {
+            if ($scoreFinal === null) $scoreFinal = (int)$attempt['score'];
+            if ($timeTaken === null)  $timeTaken  = (int)$attempt['time_taken'];
+        }
+    }
+
+    if ($scoreFinal === null) $scoreFinal = 0;
+    if ($timeTaken === null)  $timeTaken  = 0;
 
     DB::execute(
-        "UPDATE tournament_participants SET attempt_id = ?, score_final = ?, time_taken = ?
+        "UPDATE tournament_participants SET attempt_id = ?, score_final = ?, time_taken = ?, status = 'accepted'
          WHERE tournament_id = ? AND user_id = ?",
-        [$attemptId, $attempt['score'], $attempt['time_taken'], $tournamentId, $user['id']]
+        [$attemptId > 0 ? $attemptId : null, $scoreFinal, $timeTaken, $tournamentId, $user['id']]
     );
 
     // Cek apakah seluruh peserta yang accepted sudah submit (tanpa menghitung creator)
     $totalAccepted = (int)(DB::one("SELECT COUNT(*) as c FROM tournament_participants WHERE tournament_id = ? AND status = 'accepted' AND user_id != ?", [$tournamentId, $room['creator_id']])['c'] ?? 0);
-    $totalSubmitted = (int)(DB::one("SELECT COUNT(*) as c FROM tournament_participants WHERE tournament_id = ? AND status = 'accepted' AND attempt_id IS NOT NULL AND user_id != ?", [$tournamentId, $room['creator_id']])['c'] ?? 0);
+    $totalSubmitted = (int)(DB::one("SELECT COUNT(*) as c FROM tournament_participants WHERE tournament_id = ? AND status = 'accepted' AND score_final IS NOT NULL AND user_id != ?", [$tournamentId, $room['creator_id']])['c'] ?? 0);
 
     if ($totalAccepted > 0 && $totalSubmitted >= $totalAccepted) {
         $winner = DB::one(
             "SELECT user_id FROM tournament_participants
-             WHERE tournament_id = ? AND attempt_id IS NOT NULL AND status = 'accepted' AND user_id != ?
+             WHERE tournament_id = ? AND score_final IS NOT NULL AND status = 'accepted' AND user_id != ?
              ORDER BY score_final DESC, time_taken ASC LIMIT 1",
             [$tournamentId, $room['creator_id']]
         );
