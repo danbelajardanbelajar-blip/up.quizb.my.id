@@ -37,7 +37,7 @@
                 <span x-text="tournament.detail?.status === 'open' ? '🟢 Pendaftaran / Persiapan' : (tournament.detail?.status === 'in_progress' ? '🔥 Tanding Berlangsung' : (tournament.detail?.status === 'completed' ? '✓ Turnamen Selesai' : 'Dibatalkan'))"></span>
               </span>
               <span x-show="tournament.detail?.is_creator" class="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 px-2 py-0.5 rounded-full font-bold">
-                👑 Kamu adalah Host
+                👑 Anda adalah Juri / Pengawas
               </span>
             </div>
             <h1 class="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white" x-text="tournament.detail?.title"></h1>
@@ -63,7 +63,7 @@
           <p class="font-bold text-gray-900 dark:text-white truncate" x-text="tournament.detail?.quiz_title"></p>
         </div>
         <div class="bg-white/80 dark:bg-gray-800/80 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
-          <p class="text-gray-400 mb-0.5">Penyelenggara (Host)</p>
+          <p class="text-gray-400 mb-0.5">Juri / Penyelenggara</p>
           <p class="font-bold text-gray-900 dark:text-white truncate" x-text="tournament.detail?.creator_name"></p>
         </div>
         <div class="bg-white/80 dark:bg-gray-800/80 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
@@ -79,70 +79,119 @@
 
       <!-- ACTION BANNER (Berdasarkan status user & room) -->
       <div>
-        <!-- Kasus A: User masih pending (Belum terima/tolak undangan) -->
-        <template x-if="tournament.detail?.my_status === 'pending'">
-          <div class="bg-amber-100/70 dark:bg-amber-900/40 p-4 rounded-xl border border-amber-300 dark:border-amber-700 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div class="flex items-center gap-2.5">
-              <span class="text-2xl">📬</span>
+        <!-- PANEL A: JURI / PENYELENGGARA (Pembuat Turnamen) -->
+        <template x-if="tournament.detail?.is_creator">
+          <div class="space-y-3">
+            <!-- Juri saat status Open (Menunggu/Memulai) -->
+            <div x-show="tournament.detail?.status === 'open'"
+                 class="bg-primary-50 dark:bg-primary-900/30 p-4 rounded-xl border border-primary-200 dark:border-primary-800 flex flex-col sm:flex-row items-center justify-between gap-3">
               <div>
-                <p class="font-bold text-xs text-amber-900 dark:text-amber-200">Kamu diundang ke turnamen ini!</p>
-                <p class="text-[11px] text-amber-700 dark:text-amber-300">Terima undangan untuk ikut bertanding merebut juara bersama peserta lain.</p>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-primary-100 dark:bg-primary-800 text-primary-800 dark:text-primary-200 font-bold">👑 Panel Juri / Pengawas</span>
+                </div>
+                <p class="font-bold text-xs text-primary-900 dark:text-primary-200">Lobby Turnamen Siap!</p>
+                <p class="text-[11px] text-primary-700 dark:text-primary-400">Sebagai juri, Anda memimpin turnamen ini. Klik tombol di samping untuk memulai turnamen saat para peserta sudah siap bertanding.</p>
               </div>
-            </div>
-            <div class="flex items-center gap-2 w-full sm:w-auto">
-              <button @click="acceptTournament(tournament.detail.id)" class="btn-primary flex-1 sm:flex-none text-xs py-2 px-4 font-bold rounded-xl">
-                🏆 Terima & Ikut
+              <button @click="startTournament(tournament.detail.id)"
+                      class="btn-primary w-full sm:w-auto text-xs py-2.5 px-6 font-extrabold rounded-xl shadow-md whitespace-nowrap">
+                🚀 Mulai Turnamen Sekarang!
               </button>
-              <button @click="declineTournament(tournament.detail.id)" class="btn-secondary flex-1 sm:flex-none text-xs py-2 px-4 rounded-xl text-red-600">
-                Tolak
-              </button>
             </div>
-          </div>
-        </template>
 
-        <!-- Kasus B: User adalah Host dan Turnamen masih Open (Bisa mulai turnamen) -->
-        <template x-if="tournament.detail?.is_creator && tournament.detail?.status === 'open'">
-          <div class="bg-primary-50 dark:bg-primary-900/30 p-4 rounded-xl border border-primary-200 dark:border-primary-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div>
-              <p class="font-bold text-xs text-primary-900 dark:text-primary-200">Lobby Turnamen Siap!</p>
-              <p class="text-[11px] text-primary-700 dark:text-primary-400">Tekan tombol di bawah untuk memulai turnamen saat para peserta sudah siap.</p>
-            </div>
-            <button @click="startTournament(tournament.detail.id)"
-                    class="btn-primary w-full sm:w-auto text-xs py-2.5 px-6 font-extrabold rounded-xl shadow-md">
-              🚀 Mulai Turnamen Sekarang!
-            </button>
-          </div>
-        </template>
-
-        <!-- Kasus C: Turnamen Sedang Berlangsung & User sudah Accepted tapi belum submit -->
-        <template x-if="tournament.detail?.my_status === 'accepted' && (tournament.detail?.status === 'in_progress' || tournament.detail?.status === 'open') && !tournament.detail?.my_participant?.is_submitted">
-          <div class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-4 rounded-xl shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3 animate-pulse">
-            <div class="flex items-center gap-3">
-              <span class="text-3xl">🎯</span>
-              <div>
-                <p class="font-extrabold text-sm">Turnamen Siap Dimainkan!</p>
-                <p class="text-xs text-emerald-100">Kerjakan kuis sekarang. Skor dan durasimu akan langsung dihitung di papan klasemen.</p>
+            <!-- Juri saat status In Progress (Sedang Memantau Live) -->
+            <div x-show="tournament.detail?.status === 'in_progress'"
+                 class="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-200 dark:border-amber-800 flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <span class="text-2xl animate-pulse">👑</span>
+                <div>
+                  <p class="font-bold text-xs text-amber-900 dark:text-amber-200">Mode Juri / Pengawas: Turnamen Sedang Berlangsung 🔥</p>
+                  <p class="text-[11px] text-amber-700 dark:text-amber-300">
+                    Anda bertindak sebagai juri/pengawas dan tidak bertanding. Pantau skor dan progres pengerjaan seluruh peserta secara langsung pada tabel klasemen di bawah.
+                  </p>
+                </div>
               </div>
             </div>
-            <button @click="navigate('/play/' + tournament.detail.quiz_id + '?mode=tournament&tid=' + tournament.detail.id)"
-                    class="bg-white text-emerald-700 hover:bg-emerald-50 font-extrabold text-xs py-2.5 px-6 rounded-xl shadow transition-transform hover:scale-105 w-full sm:w-auto text-center">
-              ▶ Mulai Mengerjakan Kuis
-            </button>
+
+            <!-- Juri saat status Completed -->
+            <div x-show="tournament.detail?.status === 'completed'"
+                 class="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800 flex items-center gap-3">
+              <span class="text-2xl">🏆</span>
+              <div>
+                <p class="font-bold text-xs text-emerald-900 dark:text-emerald-200">Turnamen Telah Selesai!</p>
+                <p class="text-[11px] text-emerald-700 dark:text-emerald-400">Seluruh peserta yang bertanding telah menyelesaikan kuis. Peringkat juara telah ditetapkan pada papan klasemen.</p>
+              </div>
+            </div>
           </div>
         </template>
 
-        <!-- Kasus D: User sudah selesai mengerjakan kuis -->
-        <template x-if="tournament.detail?.my_participant?.is_submitted">
-          <div class="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800 flex items-center justify-between gap-3 text-xs">
-            <div class="flex items-center gap-2.5">
-              <span class="text-2xl">✅</span>
-              <div>
-                <p class="font-bold text-emerald-900 dark:text-emerald-200">Kamu telah menyelesaikan kuis turnamen!</p>
-                <p class="text-emerald-700 dark:text-emerald-400 text-[11px]">
-                  Skor: <strong x-text="tournament.detail.my_participant.score_final + '%'"></strong> • Waktu: <strong x-text="formatDuration(tournament.detail.my_participant.time_taken || 0)"></strong>. Pantau posisi juaramu di bawah.
-                </p>
+        <!-- PANEL B: PESERTA YANG DIUNDANG (BUKAN JURI) -->
+        <template x-if="!tournament.detail?.is_creator">
+          <div>
+            <!-- Kasus B1: User masih pending (Belum terima/tolak undangan) -->
+            <template x-if="tournament.detail?.my_status === 'pending'">
+              <div class="bg-amber-100/70 dark:bg-amber-900/40 p-4 rounded-xl border border-amber-300 dark:border-amber-700 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5">
+                  <span class="text-2xl">📬</span>
+                  <div>
+                    <p class="font-bold text-xs text-amber-900 dark:text-amber-200">Kamu diundang ke turnamen ini!</p>
+                    <p class="text-[11px] text-amber-700 dark:text-amber-300">Terima undangan untuk ikut bertanding merebut juara bersama peserta lain.</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                  <button @click="acceptTournament(tournament.detail.id)" class="btn-primary flex-1 sm:flex-none text-xs py-2 px-4 font-bold rounded-xl">
+                    🏆 Terima & Ikut
+                  </button>
+                  <button @click="declineTournament(tournament.detail.id)" class="btn-secondary flex-1 sm:flex-none text-xs py-2 px-4 rounded-xl text-red-600">
+                    Tolak
+                  </button>
+                </div>
               </div>
-            </div>
+            </template>
+
+            <!-- Kasus B2: Peserta sudah accepted tapi turnamen masih open (Menunggu Juri Memulai) -->
+            <template x-if="tournament.detail?.my_status === 'accepted' && tournament.detail?.status === 'open'">
+              <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800 flex items-center gap-3">
+                <span class="text-2xl animate-bounce">⏳</span>
+                <div>
+                  <p class="font-bold text-xs text-blue-900 dark:text-blue-200">Kamu Telah Siap di Lobby Turnamen!</p>
+                  <p class="text-[11px] text-blue-700 dark:text-blue-300">
+                    Menunggu Juri (<span class="font-semibold" x-text="tournament.detail.creator_name"></span>) memulai jalannya pertandingan. Siapkan dirimu!
+                  </p>
+                </div>
+              </div>
+            </template>
+
+            <!-- Kasus B3: Turnamen Sedang Berlangsung & Peserta belum submit -->
+            <template x-if="tournament.detail?.my_status === 'accepted' && tournament.detail?.status === 'in_progress' && !tournament.detail?.my_participant?.is_submitted">
+              <div class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-4 rounded-xl shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3 animate-pulse">
+                <div class="flex items-center gap-3">
+                  <span class="text-3xl">🎯</span>
+                  <div>
+                    <p class="font-extrabold text-sm">Turnamen Sedang Berlangsung!</p>
+                    <p class="text-xs text-emerald-100">Kerjakan kuis sekarang. Skor dan durasimu akan langsung dihitung di papan klasemen peserta.</p>
+                  </div>
+                </div>
+                <button @click="navigate('/play/' + tournament.detail.quiz_id + '?mode=tournament&tid=' + tournament.detail.id)"
+                        class="bg-white text-emerald-700 hover:bg-emerald-50 font-extrabold text-xs py-2.5 px-6 rounded-xl shadow transition-transform hover:scale-105 w-full sm:w-auto text-center">
+                  ▶ Mulai Mengerjakan Kuis
+                </button>
+              </div>
+            </template>
+
+            <!-- Kasus B4: Peserta sudah selesai mengerjakan kuis -->
+            <template x-if="tournament.detail?.my_participant?.is_submitted">
+              <div class="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800 flex items-center justify-between gap-3 text-xs">
+                <div class="flex items-center gap-2.5">
+                  <span class="text-2xl">✅</span>
+                  <div>
+                    <p class="font-bold text-emerald-900 dark:text-emerald-200">Kamu telah menyelesaikan kuis turnamen!</p>
+                    <p class="text-emerald-700 dark:text-emerald-400 text-[11px]">
+                      Skor: <strong x-text="tournament.detail.my_participant.score_final + '%'"></strong> • Waktu: <strong x-text="formatDuration(tournament.detail.my_participant.time_taken || 0)"></strong>. Pantau posisi juaramu di bawah.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </template>
           </div>
         </template>
       </div>

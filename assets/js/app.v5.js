@@ -3305,8 +3305,8 @@ function QuizBApp() {
         modal.error = 'Silakan pilih kuis yang akan dilombakan.';
         return;
       }
-      if (!modal.selectedUsers || modal.selectedUsers.length === 0) {
-        modal.error = 'Silakan pilih minimal 1 pemain untuk diundang.';
+      if (!modal.selectedUsers || modal.selectedUsers.length < 2) {
+        modal.error = 'Minimal undang 2 pemain untuk bertanding dalam turnamen (pembuat bertindak sebagai juri/pengawas).';
         return;
       }
       modal.submitting = true;

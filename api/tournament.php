@@ -46,6 +46,9 @@ function ensureTournamentTables(): void {
             KEY idx_tp_user (user_id),
             KEY idx_tp_status (status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // Bersihkan data lama di mana pembuat turnamen sempat tercatat sebagai peserta
+        $pdo->exec("DELETE tp FROM tournament_participants tp INNER JOIN tournaments t ON t.id = tp.tournament_id WHERE tp.user_id = t.creator_id OR tp.is_creator = 1");
         $ready = true;
     } catch (\Throwable $e) {
         error_log('[Tournament schema] ' . $e->getMessage());
@@ -59,43 +62,43 @@ function tournament_list(): void {
     $user = requireAuth();
     ensureTournamentTables();
 
-    // 1. Undangan Masuk (Pending)
+    // 1. Undangan Masuk (Pending) — hanya untuk user sebagai peserta
     $incoming = DB::all(
         "SELECT t.id, t.title, t.description, t.quiz_id, t.creator_id, t.status, t.created_at,
                 q.title AS quiz_title, q.total_questions, u.name AS creator_name,
-                (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND status = 'accepted') AS accepted_count,
-                (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id) AS total_invited
+                (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND status = 'accepted' AND user_id != t.creator_id) AS accepted_count,
+                (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND user_id != t.creator_id) AS total_invited
          FROM tournament_participants tp
          JOIN tournaments t ON t.id = tp.tournament_id
          JOIN quizzes q ON q.id = t.quiz_id
          JOIN users u ON u.id = t.creator_id
-         WHERE tp.user_id = ? AND tp.status = 'pending' AND t.status != 'cancelled'
+         WHERE tp.user_id = ? AND tp.status = 'pending' AND t.status != 'cancelled' AND tp.user_id != t.creator_id
          ORDER BY t.created_at DESC LIMIT 20",
         [$user['id']]
     );
 
-    // 2. Turnamen Aktif yang diikut / dibuat user
+    // 2. Turnamen Aktif yang diikuti user sebagai peserta
     $active = DB::all(
         "SELECT t.id, t.title, t.description, t.quiz_id, t.creator_id, t.status, t.start_time, t.created_at,
                 q.title AS quiz_title, q.total_questions, u.name AS creator_name,
-                tp.status AS my_status, tp.is_creator, tp.score_final, tp.time_taken,
-                (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND status = 'accepted') AS accepted_count,
-                (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id) AS total_invited
+                tp.status AS my_status, 0 AS is_creator, tp.score_final, tp.time_taken,
+                (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND status = 'accepted' AND user_id != t.creator_id) AS accepted_count,
+                (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND user_id != t.creator_id) AS total_invited
          FROM tournament_participants tp
          JOIN tournaments t ON t.id = tp.tournament_id
          JOIN quizzes q ON q.id = t.quiz_id
          JOIN users u ON u.id = t.creator_id
-         WHERE tp.user_id = ? AND tp.status = 'accepted' AND t.status IN ('open', 'in_progress')
+         WHERE tp.user_id = ? AND tp.status = 'accepted' AND t.status IN ('open', 'in_progress') AND tp.user_id != t.creator_id
          ORDER BY t.created_at DESC LIMIT 20",
         [$user['id']]
     );
 
-    // 3. Turnamen yang dibuat oleh user sendiri (My Tournaments)
+    // 3. Turnamen yang diselenggarakan oleh user sebagai Juri / Pengawas (My Tournaments)
     $myTournaments = DB::all(
         "SELECT t.id, t.title, t.description, t.quiz_id, t.creator_id, t.status, t.start_time, t.created_at,
-                q.title AS quiz_title, q.total_questions,
-                (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND status = 'accepted') AS accepted_count,
-                (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id) AS total_invited
+                q.title AS quiz_title, q.total_questions, 1 AS is_creator,
+                (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND status = 'accepted' AND user_id != t.creator_id) AS accepted_count,
+                (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND user_id != t.creator_id) AS total_invited
          FROM tournaments t
          JOIN quizzes q ON q.id = t.quiz_id
          WHERE t.creator_id = ?
@@ -103,19 +106,20 @@ function tournament_list(): void {
         [$user['id']]
     );
 
-    // 4. Riwayat Turnamen Selesai
+    // 4. Riwayat Turnamen Selesai (baik sebagai peserta maupun sebagai juri/pembuat)
     $history = DB::all(
-        "SELECT t.id, t.title, t.quiz_id, t.creator_id, t.status, t.created_at, t.winner_id,
+        "SELECT DISTINCT t.id, t.title, t.quiz_id, t.creator_id, t.status, t.created_at, t.winner_id,
                 w.name AS winner_name, q.title AS quiz_title,
-                tp.score_final, tp.time_taken, tp.is_creator,
-                (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND status = 'accepted') AS accepted_count
-         FROM tournament_participants tp
-         JOIN tournaments t ON t.id = tp.tournament_id
+                tp.score_final, tp.time_taken,
+                (CASE WHEN t.creator_id = ? THEN 1 ELSE 0 END) AS is_creator,
+                (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND status = 'accepted' AND user_id != t.creator_id) AS accepted_count
+         FROM tournaments t
          JOIN quizzes q ON q.id = t.quiz_id
+         LEFT JOIN tournament_participants tp ON tp.tournament_id = t.id AND tp.user_id = ?
          LEFT JOIN users w ON w.id = t.winner_id
-         WHERE tp.user_id = ? AND tp.status = 'accepted' AND t.status = 'completed'
+         WHERE (tp.user_id = ? OR t.creator_id = ?) AND t.status = 'completed'
          ORDER BY t.created_at DESC LIMIT 20",
-        [$user['id']]
+        [$user['id'], $user['id'], $user['id'], $user['id']]
     );
 
     jsonSuccess([
@@ -155,12 +159,12 @@ function tournament_create(): void {
 
     if (empty($title)) jsonError('Judul turnamen harus diisi');
     if (!$quizId) jsonError('Quiz harus dipilih');
-    if (empty($invitedInput) || !is_array($invitedInput)) jsonError('Minimal undang 1 pemain ke turnamen');
+    if (empty($invitedInput) || !is_array($invitedInput)) jsonError('Minimal undang 2 pemain ke turnamen (pembuat bertindak sebagai juri/pengawas)');
 
     $quiz = DB::one('SELECT id, title, total_questions FROM quizzes WHERE id = ? AND is_published = 1', [$quizId]);
     if (!$quiz) jsonError('Kuis tidak ditemukan atau belum dipublikasikan', 404);
 
-    // Resolusi user target dari input (ID, email, atau nama)
+    // Resolusi user target dari input (ID, email, atau nama) — Pembuat turnamen tidak boleh diundang sendiri
     $targetUserIds = [];
     foreach ($invitedInput as $item) {
         if (is_numeric($item)) {
@@ -179,16 +183,20 @@ function tournament_create(): void {
     }
 
     $validUserIds = array_keys($targetUserIds);
-    if (empty($validUserIds)) jsonError('Pemain yang diundang tidak ditemukan atau tidak valid');
+    if (count($validUserIds) < 2) {
+        jsonError('Minimal undang 2 pemain untuk bertanding dalam turnamen (pembuat bertindak sebagai juri/pengawas)');
+    }
     if (count($validUserIds) > $maxParticipants) {
         jsonError("Maksimal peserta turnamen adalah {$maxParticipants} orang.");
     }
 
     $placeholders = str_repeat('?,', count($validUserIds) - 1) . '?';
     $validUsers = DB::all("SELECT id, name, email FROM users WHERE id IN ($placeholders) AND is_active = 1", $validUserIds);
-    if (empty($validUsers)) jsonError('Pemain yang diundang tidak valid', 404);
+    if (count($validUsers) < 2) {
+        jsonError('Minimal undang 2 pemain yang valid untuk bertanding dalam turnamen', 404);
+    }
 
-    // 1. Simpan room turnamen
+    // 1. Simpan room turnamen (pembuat bertindak sebagai Host/Juri)
     DB::execute(
         "INSERT INTO tournaments (title, description, quiz_id, creator_id, status, max_participants)
          VALUES (?, ?, ?, ?, 'open', ?)",
@@ -196,14 +204,8 @@ function tournament_create(): void {
     );
     $tournamentId = (int)DB::lastId();
 
-    // 2. Simpan Creator sebagai accepted host
-    DB::execute(
-        "INSERT INTO tournament_participants (tournament_id, user_id, is_creator, status, progress)
-         VALUES (?, ?, 1, 'accepted', '{\"s\":0,\"q\":0,\"last_ping\":0}')",
-        [$tournamentId, $user['id']]
-    );
-
-    // 3. Simpan Peserta Undangan (Pending) & Kirim Notifikasi
+    // 2. Simpan Peserta Undangan (Pending) & Kirim Notifikasi
+    // CATATAN: Pembuat turnamen TIDAK dimasukkan sebagai peserta (pembuat bertindak sebagai Juri/Host)
     foreach ($validUsers as $target) {
         DB::execute(
             "INSERT INTO tournament_participants (tournament_id, user_id, is_creator, status, progress)
@@ -216,7 +218,7 @@ function tournament_create(): void {
             $target['id'],
             'tournament',
             '🏆 Undangan Turnamen: ' . $title,
-            $user['name'] . ' mengundangmu berlaga di turnamen kuis "' . $quiz['title'] . '"',
+            $user['name'] . ' (Juri/Host) mengundangmu bertanding di turnamen kuis "' . $quiz['title'] . '"',
             '/tournament/' . $tournamentId,
             [
                 'tournament_id'    => (string)$tournamentId,
@@ -257,15 +259,15 @@ function tournament_detail(): void {
     );
     if (!$t) jsonError('Turnamen tidak ditemukan', 404);
 
-    // Ambil partisipan
+    // Ambil partisipan kompetisi (HANYA peserta yang diundang, BUKAN creator / juri)
     $participants = DB::all(
-        "SELECT tp.id, tp.tournament_id, tp.user_id, tp.is_creator, tp.status, tp.attempt_id,
+        "SELECT tp.id, tp.tournament_id, tp.user_id, 0 AS is_creator, tp.status, tp.attempt_id,
                 tp.score_final, tp.time_taken, tp.progress, u.name, u.email
          FROM tournament_participants tp
          JOIN users u ON u.id = tp.user_id
-         WHERE tp.tournament_id = ?
-         ORDER BY tp.is_creator DESC, tp.created_at ASC",
-        [$id]
+         WHERE tp.tournament_id = ? AND tp.user_id != ?
+         ORDER BY tp.created_at ASC",
+        [$id, $t['creator_id']]
     );
 
     $now = time();
@@ -299,9 +301,9 @@ function tournament_detail(): void {
     if ($t['status'] === 'in_progress' && $totalAccepted > 0 && $totalSubmitted >= $totalAccepted) {
         $winner = DB::one(
             "SELECT user_id FROM tournament_participants
-             WHERE tournament_id = ? AND attempt_id IS NOT NULL AND status = 'accepted'
+             WHERE tournament_id = ? AND attempt_id IS NOT NULL AND status = 'accepted' AND user_id != ?
              ORDER BY score_final DESC, time_taken ASC LIMIT 1",
-            [$id]
+            [$id, $t['creator_id']]
         );
         $winnerId = $winner['user_id'] ?? null;
         DB::execute("UPDATE tournaments SET status = 'completed', winner_id = ?, end_time = NOW() WHERE id = ?", [$winnerId, $id]);
@@ -314,16 +316,20 @@ function tournament_detail(): void {
     }
 
     $t['participants'] = $participants;
-    $t['is_creator'] = ((int)$t['creator_id'] === (int)$user['id']);
+    $isCreator = ((int)$t['creator_id'] === (int)$user['id']);
+    $t['is_creator'] = $isCreator;
     
-    // Status user aktif di turnamen ini
+    // Status user aktif di turnamen ini (jika juri/creator, bukan peserta kompetisi)
     $myPart = null;
-    foreach ($participants as $p) {
-        if ((int)$p['user_id'] === (int)$user['id']) {
-            $myPart = $p;
-            break;
+    if (!$isCreator) {
+        foreach ($participants as $p) {
+            if ((int)$p['user_id'] === (int)$user['id']) {
+                $myPart = $p;
+                break;
+            }
         }
     }
+    $t['is_participant'] = ($myPart !== null);
     $t['my_status'] = $myPart ? $myPart['status'] : null;
     $t['my_participant'] = $myPart;
 
@@ -341,23 +347,26 @@ function tournament_accept(): void {
     $id = (int)($body['tournament_id'] ?? 0);
     if (!$id) jsonError('Tournament ID diperlukan');
 
+    $t = DB::one('SELECT title, creator_id FROM tournaments WHERE id = ?', [$id]);
+    if (!$t) jsonError('Turnamen tidak ditemukan', 404);
+    if ((int)$t['creator_id'] === (int)$user['id']) {
+        jsonError('Pembuat turnamen bertindak sebagai juri/pengawas dan tidak perlu menerima undangan.', 400);
+    }
+
     $member = DB::one('SELECT * FROM tournament_participants WHERE tournament_id = ? AND user_id = ?', [$id, $user['id']]);
     if (!$member) jsonError('Kamu tidak diundang ke turnamen ini', 403);
 
     DB::execute("UPDATE tournament_participants SET status = 'accepted' WHERE tournament_id = ? AND user_id = ?", [$id, $user['id']]);
 
     // Beritahu creator turnamen bahwa pemain menerima
-    $t = DB::one('SELECT title, creator_id FROM tournaments WHERE id = ?', [$id]);
-    if ($t && (int)$t['creator_id'] !== (int)$user['id']) {
-        pushNotification(
-            $t['creator_id'],
-            'tournament_accepted',
-            '🏆 Pemain Bergabung ke Turnamen!',
-            $user['name'] . ' telah menerima undangan turnamen "' . $t['title'] . '"',
-            '/tournament/' . $id,
-            ['tournament_id' => (string)$id]
-        );
-    }
+    pushNotification(
+        $t['creator_id'],
+        'tournament_accepted',
+        '🏆 Peserta Bergabung ke Turnamen!',
+        $user['name'] . ' telah menerima undangan turnamen "' . $t['title'] . '"',
+        '/tournament/' . $id,
+        ['tournament_id' => (string)$id]
+    );
 
     jsonSuccess([], 'Undangan turnamen berhasil diterima! Selamat bertanding.');
 }
@@ -373,6 +382,12 @@ function tournament_decline(): void {
     $id = (int)($body['tournament_id'] ?? 0);
     if (!$id) jsonError('Tournament ID diperlukan');
 
+    $t = DB::one('SELECT creator_id FROM tournaments WHERE id = ?', [$id]);
+    if (!$t) jsonError('Turnamen tidak ditemukan', 404);
+    if ((int)$t['creator_id'] === (int)$user['id']) {
+        jsonError('Pembuat turnamen bertindak sebagai juri/pengawas.', 400);
+    }
+
     $member = DB::one('SELECT * FROM tournament_participants WHERE tournament_id = ? AND user_id = ?', [$id, $user['id']]);
     if (!$member) jsonError('Kamu tidak diundang ke turnamen ini', 403);
 
@@ -381,7 +396,7 @@ function tournament_decline(): void {
 }
 
 /**
- * POST — Creator memulai jalannya turnamen
+ * POST — Creator (Juri / Pengawas) memulai jalannya turnamen
  */
 function tournament_start(): void {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
@@ -393,18 +408,24 @@ function tournament_start(): void {
 
     $t = DB::one('SELECT * FROM tournaments WHERE id = ?', [$id]);
     if (!$t) jsonError('Turnamen tidak ditemukan', 404);
-    if ((int)$t['creator_id'] !== (int)$user['id']) jsonError('Hanya pembuat turnamen yang dapat memulainya', 403);
+    if ((int)$t['creator_id'] !== (int)$user['id']) jsonError('Hanya juri / pembuat turnamen yang dapat memulainya', 403);
+    if ($t['status'] === 'in_progress') jsonError('Turnamen sudah sedang berlangsung');
+    if ($t['status'] === 'completed') jsonError('Turnamen sudah selesai');
+
+    // Beritahu semua peserta yang sudah accepted (bukan creator)
+    $accepted = DB::all("SELECT user_id FROM tournament_participants WHERE tournament_id = ? AND status = 'accepted' AND user_id != ?", [$id, $user['id']]);
+    if (empty($accepted)) {
+        jsonError('Belum ada peserta yang menerima undangan turnamen. Tunggu minimal 1 peserta menerima sebelum memulai.');
+    }
 
     DB::execute("UPDATE tournaments SET status = 'in_progress', start_time = NOW() WHERE id = ?", [$id]);
 
-    // Beritahu semua peserta yang sudah accepted
-    $accepted = DB::all("SELECT user_id FROM tournament_participants WHERE tournament_id = ? AND status = 'accepted' AND user_id != ?", [$id, $user['id']]);
     foreach ($accepted as $part) {
         pushNotification(
             $part['user_id'],
             'tournament_started',
             '🚀 Turnamen Telah Dimulai!',
-            'Turnamen "' . $t['title'] . '" kini sedang berlangsung. Klik untuk mulai mengerjakan kuis!',
+            'Juri telah memulai turnamen "' . $t['title'] . '". Ayo kerjakan kuis sekarang!',
             '/play/' . $t['quiz_id'] . '?mode=tournament&tid=' . $id,
             [
                 'tournament_id' => (string)$id,
@@ -429,20 +450,27 @@ function tournament_sync(): void {
     $qIndex = (int)($body['q_index'] ?? 0);
     if (!$id) jsonError('Tournament ID diperlukan');
 
-    $member = DB::one("SELECT user_id FROM tournament_participants WHERE tournament_id = ? AND user_id = ? AND status = 'accepted'", [$id, $user['id']]);
-    if (!$member) jsonError('Akses ditolak', 403);
+    $t = DB::one('SELECT creator_id FROM tournaments WHERE id = ?', [$id]);
+    if (!$t) jsonError('Turnamen tidak ditemukan', 404);
+
+    $isCreator = ((int)$t['creator_id'] === (int)$user['id']);
+    if (!$isCreator) {
+        $member = DB::one("SELECT user_id FROM tournament_participants WHERE tournament_id = ? AND user_id = ? AND status = 'accepted'", [$id, $user['id']]);
+        if (!$member) jsonError('Akses ditolak', 403);
+
+        $now = time();
+        $prog = ['s' => $score, 'q' => $qIndex, 'last_ping' => $now];
+        DB::execute("UPDATE tournament_participants SET progress = ? WHERE tournament_id = ? AND user_id = ?", [json_encode($prog), $id, $user['id']]);
+    }
 
     $now = time();
-    $prog = ['s' => $score, 'q' => $qIndex, 'last_ping' => $now];
-    DB::execute("UPDATE tournament_participants SET progress = ? WHERE tournament_id = ? AND user_id = ?", [json_encode($prog), $id, $user['id']]);
-
-    // Ambil data terbaru seluruh peserta turnamen
+    // Ambil data terbaru seluruh peserta turnamen (HANYA peserta kompetisi)
     $participants = DB::all(
-        "SELECT tp.user_id, tp.is_creator, tp.attempt_id, tp.score_final, tp.time_taken, tp.progress, u.name
+        "SELECT tp.user_id, 0 AS is_creator, tp.attempt_id, tp.score_final, tp.time_taken, tp.progress, u.name
          FROM tournament_participants tp
          JOIN users u ON u.id = tp.user_id
-         WHERE tp.tournament_id = ? AND tp.status = 'accepted'",
-        [$id]
+         WHERE tp.tournament_id = ? AND tp.status = 'accepted' AND tp.user_id != ?",
+        [$id, $t['creator_id']]
     );
 
     foreach ($participants as &$p) {
@@ -474,13 +502,17 @@ function tournament_submit(): void {
     $attemptId    = (int)($body['attempt_id'] ?? 0);
     if (!$tournamentId || !$attemptId) jsonError('Parameter turnamen dan attempt diperlukan');
 
-    $room = DB::one(
-        "SELECT t.quiz_id, t.status, t.creator_id FROM tournaments t
-         JOIN tournament_participants tp ON tp.tournament_id = t.id
-         WHERE t.id = ? AND tp.user_id = ? AND tp.status = 'accepted'",
-        [$tournamentId, $user['id']]
-    );
-    if (!$room) jsonError('Akses ditolak', 403);
+    $room = DB::one("SELECT quiz_id, status, creator_id FROM tournaments WHERE id = ?", [$tournamentId]);
+    if (!$room) jsonError('Turnamen tidak ditemukan', 404);
+
+    if ((int)$room['creator_id'] === (int)$user['id']) {
+        jsonError('Pembuat turnamen bertindak sebagai juri/pengawas dan tidak mengikuti pengerjaan kuis.', 403);
+    }
+
+    $part = DB::one("SELECT id, status FROM tournament_participants WHERE tournament_id = ? AND user_id = ?", [$tournamentId, $user['id']]);
+    if (!$part || $part['status'] !== 'accepted') {
+        jsonError('Anda bukan peserta aktif turnamen ini', 403);
+    }
 
     $attempt = DB::one("SELECT score, time_taken FROM attempts WHERE id = ? AND user_id = ? AND quiz_id = ?", [$attemptId, $user['id'], $room['quiz_id']]);
     if (!$attempt) jsonError('Attempt kuis tidak valid', 404);
@@ -491,16 +523,16 @@ function tournament_submit(): void {
         [$attemptId, $attempt['score'], $attempt['time_taken'], $tournamentId, $user['id']]
     );
 
-    // Cek apakah seluruh peserta yang accepted sudah submit
-    $totalAccepted = (int)(DB::one("SELECT COUNT(*) as c FROM tournament_participants WHERE tournament_id = ? AND status = 'accepted'", [$tournamentId])['c'] ?? 0);
-    $totalSubmitted = (int)(DB::one("SELECT COUNT(*) as c FROM tournament_participants WHERE tournament_id = ? AND status = 'accepted' AND attempt_id IS NOT NULL", [$tournamentId])['c'] ?? 0);
+    // Cek apakah seluruh peserta yang accepted sudah submit (tanpa menghitung creator)
+    $totalAccepted = (int)(DB::one("SELECT COUNT(*) as c FROM tournament_participants WHERE tournament_id = ? AND status = 'accepted' AND user_id != ?", [$tournamentId, $room['creator_id']])['c'] ?? 0);
+    $totalSubmitted = (int)(DB::one("SELECT COUNT(*) as c FROM tournament_participants WHERE tournament_id = ? AND status = 'accepted' AND attempt_id IS NOT NULL AND user_id != ?", [$tournamentId, $room['creator_id']])['c'] ?? 0);
 
     if ($totalAccepted > 0 && $totalSubmitted >= $totalAccepted) {
         $winner = DB::one(
             "SELECT user_id FROM tournament_participants
-             WHERE tournament_id = ? AND attempt_id IS NOT NULL AND status = 'accepted'
+             WHERE tournament_id = ? AND attempt_id IS NOT NULL AND status = 'accepted' AND user_id != ?
              ORDER BY score_final DESC, time_taken ASC LIMIT 1",
-            [$tournamentId]
+            [$tournamentId, $room['creator_id']]
         );
         $winnerId = $winner['user_id'] ?? null;
         DB::execute("UPDATE tournaments SET status = 'completed', winner_id = ?, end_time = NOW() WHERE id = ?", [$winnerId, $tournamentId]);

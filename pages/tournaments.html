@@ -258,6 +258,17 @@
         <button @click="tournament.createModal.show = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg leading-none">✕</button>
       </div>
 
+      <!-- Info mode juri / pengawas -->
+      <div class="mb-4 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-xs text-blue-800 dark:text-blue-300 flex items-start gap-2.5">
+        <span class="text-base flex-shrink-0">👑</span>
+        <div>
+          <p class="font-bold">Mode Juri / Pengawas (Host):</p>
+          <p class="text-[11px] text-blue-700 dark:text-blue-300/90">
+            Sebagai pembuat turnamen, Anda bertindak sebagai <strong>Juri/Penyelenggara</strong> dan <strong>tidak bertanding sebagai peserta</strong>. Silakan undang <strong>minimal 2 pemain</strong> untuk bertanding.
+          </p>
+        </div>
+      </div>
+
       <!-- Error alert -->
       <div x-show="tournament.createModal.error"
            class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-xs text-red-600 dark:text-red-400"
