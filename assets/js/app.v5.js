@@ -3305,6 +3305,10 @@ function QuizBApp() {
         modal.error = 'Silakan pilih kuis yang akan dilombakan.';
         return;
       }
+      if (!modal.selectedUsers || modal.selectedUsers.length === 0) {
+        modal.error = 'Silakan pilih minimal 1 pemain untuk diundang.';
+        return;
+      }
       modal.submitting = true;
       modal.error = '';
       try {
@@ -3313,7 +3317,8 @@ function QuizBApp() {
           title: modal.title.trim(),
           description: modal.description.trim(),
           quiz_id: modal.quizId,
-          invitees: invitees
+          invitees: invitees,
+          invited_users: invitees
         });
         modal.show = false;
         this.showToast('Turnamen berhasil dibuat dan undangan telah dikirim! 🏆', 'success');

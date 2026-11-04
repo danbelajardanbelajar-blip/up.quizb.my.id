@@ -136,11 +136,22 @@ function tournament_create(): void {
     ensureTournamentTables();
     $body = getBody();
 
-    $title = trim($body['title'] ?? '');
-    $description = trim($body['description'] ?? '');
-    $quizId = (int)($body['quiz_id'] ?? 0);
-    $maxParticipants = max(2, min(64, (int)($body['max_participants'] ?? 16)));
-    $invitedInput = $body['invited_users'] ?? [];
+    $title = trim($body['title'] ?? $_POST['title'] ?? '');
+    $description = trim($body['description'] ?? $_POST['description'] ?? '');
+    $quizId = (int)($body['quiz_id'] ?? $_POST['quiz_id'] ?? 0);
+    $maxParticipants = max(2, min(64, (int)($body['max_participants'] ?? $_POST['max_participants'] ?? 16)));
+    $invitedInput = $body['invitees'] ?? $body['invited_users'] ?? $_POST['invitees'] ?? $_POST['invited_users'] ?? [];
+
+    if (is_string($invitedInput)) {
+        $decoded = json_decode($invitedInput, true);
+        if (is_array($decoded)) {
+            $invitedInput = $decoded;
+        } else if (strpos($invitedInput, ',') !== false) {
+            $invitedInput = array_map('trim', explode(',', $invitedInput));
+        } else if (strlen(trim($invitedInput)) > 0) {
+            $invitedInput = [trim($invitedInput)];
+        }
+    }
 
     if (empty($title)) jsonError('Judul turnamen harus diisi');
     if (!$quizId) jsonError('Quiz harus dipilih');
