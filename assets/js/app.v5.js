@@ -3372,12 +3372,53 @@ function QuizBApp() {
       }
     },
 
+    async stopTournament(tournamentId) {
+      if (!confirm('Apakah Anda yakin ingin menghentikan turnamen ini sekarang? Hasil dan peringkat peserta saat ini akan ditetapkan sebagai hasil akhir.')) return;
+      try {
+        await api.post('tournament.stop', { tournament_id: tournamentId });
+        this.showToast('Turnamen telah dihentikan. Hasil akhir telah ditetapkan.', 'info');
+        await this.loadTournaments();
+        if (this.currentRoute.startsWith('/tournament/')) {
+          await this.loadTournamentDetail(tournamentId, true);
+        }
+      } catch (e) {
+        this.showToast(e.message || 'Gagal menghentikan turnamen', 'error');
+      }
+    },
+
+    async deleteTournament(tournamentId) {
+      if (!confirm('Apakah Anda yakin ingin menghapus turnamen ini secara permanen? Data turnamen dan partisipasi akan dihapus.')) return;
+      try {
+        await api.post('tournament.delete', { tournament_id: tournamentId });
+        this.showToast('Turnamen berhasil dihapus.', 'success');
+        await this.loadTournaments();
+        if (this.currentRoute.startsWith('/tournament/')) {
+          this.navigate('/tournaments');
+        }
+      } catch (e) {
+        this.showToast(e.message || 'Gagal menghapus turnamen', 'error');
+      }
+    },
+
     async loadTournamentDetail(id, silent = false) {
       if (!id) return;
       if (!silent) this.tournament.detailLoading = true;
       try {
         const data = await api.get('tournament.detail', { id });
         this.tournament.detail = data.tournament || data;
+        const current = this.tournament.detail;
+
+        // Jika peserta membuka saat turnamen sudah in_progress, langsung bawa ke kuis
+        if (!current.is_creator &&
+            current.my_status === 'accepted' &&
+            current.status === 'in_progress' &&
+            !current.my_participant?.is_submitted) {
+          if (this.currentRoute.startsWith('/tournament/')) {
+            this.showToast('🚀 Turnamen sedang berlangsung! Membuka soal kuis...', 'info');
+            this.navigate('/play/' + current.quiz_id + '?mode=tournament&tid=' + current.id);
+            return;
+          }
+        }
       } catch (e) {
         console.error('loadTournamentDetail error:', e);
         this.showToast(e.message || 'Gagal memuat detail turnamen', 'error');
@@ -3403,6 +3444,18 @@ function QuizBApp() {
       try {
         const data = await api.get('tournament.detail', { id: this.tournament.detail.id });
         this.tournament.detail = data.tournament || data;
+        const current = this.tournament.detail;
+
+        // Auto-start kuis untuk peserta saat Juri klik Mulai (status jadi in_progress)
+        if (!current.is_creator &&
+            current.my_status === 'accepted' &&
+            current.status === 'in_progress' &&
+            !current.my_participant?.is_submitted) {
+          if (this.currentRoute.startsWith('/tournament/')) {
+            this.showToast('🚀 Turnamen telah dimulai oleh Juri! Membuka soal kuis...', 'info');
+            this.navigate('/play/' + current.quiz_id + '?mode=tournament&tid=' + current.id);
+          }
+        }
       } catch (_) {}
     },
 

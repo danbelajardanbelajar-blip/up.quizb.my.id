@@ -197,10 +197,25 @@
                 <span>👥 <strong class="text-gray-800 dark:text-gray-200" x-text="t.accepted_count"></strong> Siap / <span x-text="t.total_invited + ' Diundang'"></span></span>
               </div>
             </div>
-            <div class="pt-3 border-t border-gray-100 dark:border-gray-800">
+            <div class="pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2">
               <button @click="navigate('/tournament/' + t.id)"
-                      class="btn-primary w-full py-2 text-xs font-semibold rounded-xl text-center">
-                Kelola Turnamen / Lihat Lobby →
+                      class="btn-primary flex-1 py-2 text-xs font-semibold rounded-xl text-center">
+                Kelola / Lobby →
+              </button>
+
+              <button x-show="t.status === 'in_progress' || t.status === 'open'"
+                      @click="stopTournament(t.id)"
+                      title="Hentikan Turnamen"
+                      class="py-2 px-3 text-xs font-semibold rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 text-amber-800 dark:text-amber-300 transition-colors flex items-center gap-1">
+                <span>⏹</span>
+                <span>Stop</span>
+              </button>
+
+              <button @click="deleteTournament(t.id)"
+                      title="Hapus Turnamen"
+                      class="py-2 px-3 text-xs font-semibold rounded-xl border border-red-200 dark:border-red-800 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 transition-colors flex items-center gap-1">
+                <span>🗑</span>
+                <span>Hapus</span>
               </button>
             </div>
           </div>

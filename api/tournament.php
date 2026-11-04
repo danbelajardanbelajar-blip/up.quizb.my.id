@@ -545,6 +545,79 @@ function tournament_submit(): void {
 }
 
 /**
+ * POST — Host menghentikan turnamen (Stop)
+ */
+function tournament_stop(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $user = requireAuth();
+    ensureTournamentTables();
+    $body = getBody();
+    $id = (int)($body['tournament_id'] ?? 0);
+    if (!$id) jsonError('Tournament ID diperlukan');
+
+    $t = DB::one('SELECT * FROM tournaments WHERE id = ?', [$id]);
+    if (!$t) jsonError('Turnamen tidak ditemukan', 404);
+    if ((int)$t['creator_id'] !== (int)$user['id']) {
+        jsonError('Hanya juri / pembuat turnamen yang dapat menghentikannya', 403);
+    }
+    if ($t['status'] === 'completed') {
+        jsonError('Turnamen sudah berstatus selesai');
+    }
+
+    // Tentukan pemenang dari peserta yang nilainya tertinggi saat ini
+    $winner = DB::one(
+        "SELECT user_id FROM tournament_participants
+         WHERE tournament_id = ? AND status = 'accepted' AND user_id != ?
+         ORDER BY (CASE WHEN score_final IS NOT NULL THEN score_final ELSE 0 END) DESC,
+                  (CASE WHEN time_taken IS NOT NULL THEN time_taken ELSE 999999 END) ASC
+         LIMIT 1",
+        [$id, $t['creator_id']]
+    );
+    $winnerId = $winner['user_id'] ?? null;
+
+    DB::execute("UPDATE tournaments SET status = 'completed', winner_id = ?, end_time = NOW() WHERE id = ?", [$winnerId, $id]);
+
+    // Beritahu seluruh peserta
+    $participants = DB::all("SELECT user_id FROM tournament_participants WHERE tournament_id = ? AND user_id != ?", [$id, $user['id']]);
+    foreach ($participants as $part) {
+        pushNotification(
+            $part['user_id'],
+            'tournament_stopped',
+            '⏹ Turnamen Dihentikan',
+            'Juri telah menghentikan turnamen "' . $t['title'] . '". Hasil akhir telah ditetapkan.',
+            '/tournament/' . $id,
+            ['tournament_id' => (string)$id]
+        );
+    }
+
+    jsonSuccess(['winner_id' => $winnerId], 'Turnamen berhasil dihentikan. Hasil akhir telah ditetapkan.');
+}
+
+/**
+ * POST — Host menghapus turnamen (Delete)
+ */
+function tournament_delete(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $user = requireAuth();
+    ensureTournamentTables();
+    $body = getBody();
+    $id = (int)($body['tournament_id'] ?? 0);
+    if (!$id) jsonError('Tournament ID diperlukan');
+
+    $t = DB::one('SELECT * FROM tournaments WHERE id = ?', [$id]);
+    if (!$t) jsonError('Turnamen tidak ditemukan', 404);
+    if ((int)$t['creator_id'] !== (int)$user['id']) {
+        jsonError('Hanya juri / pembuat turnamen yang dapat menghapus turnamen ini', 403);
+    }
+
+    // Hapus peserta & room turnamen
+    DB::execute("DELETE FROM tournament_participants WHERE tournament_id = ?", [$id]);
+    DB::execute("DELETE FROM tournaments WHERE id = ?", [$id]);
+
+    jsonSuccess([], 'Turnamen berhasil dihapus secara permanen.');
+}
+
+/**
  * GET — Cari calon peserta turnamen berdasarkan nama atau email
  */
 function tournament_search_users(): void {
