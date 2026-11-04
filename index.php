@@ -59,6 +59,50 @@ if (!file_exists(__DIR__ . '/.messages_tables_applied')) {
     } catch (\Throwable $e) {}
     @file_put_contents(__DIR__ . '/.messages_tables_applied', date('Y-m-d H:i:s'));
 }
+
+// --- AUTO MIGRATE TOURNAMENT TABLES ---
+if (!file_exists(__DIR__ . '/.tournaments_tables_applied')) {
+    try {
+        $pdo = DB::getInstance();
+        $pdo->exec("CREATE TABLE IF NOT EXISTS tournaments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            description TEXT NULL,
+            quiz_id INT NOT NULL,
+            creator_id INT NOT NULL,
+            status ENUM('pending', 'open', 'in_progress', 'completed', 'cancelled') DEFAULT 'open',
+            max_participants INT DEFAULT 16,
+            winner_id INT NULL,
+            start_time DATETIME NULL,
+            end_time DATETIME NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            KEY idx_t_quiz (quiz_id),
+            KEY idx_t_creator (creator_id),
+            KEY idx_t_status (status),
+            KEY idx_t_created (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS tournament_participants (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            tournament_id INT NOT NULL,
+            user_id INT NOT NULL,
+            is_creator TINYINT(1) DEFAULT 0,
+            status ENUM('pending', 'accepted', 'declined') DEFAULT 'pending',
+            attempt_id INT NULL,
+            score_final INT NULL,
+            time_taken INT NULL,
+            progress TEXT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uk_tourn_user (tournament_id, user_id),
+            KEY idx_tp_tourn (tournament_id),
+            KEY idx_tp_user (user_id),
+            KEY idx_tp_status (status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (\Throwable $e) {}
+    @file_put_contents(__DIR__ . '/.tournaments_tables_applied', date('Y-m-d H:i:s'));
+}
 // -----------------------------------------
 require_once __DIR__ . '/includes/auth.php';
 startSecureSession();
@@ -172,6 +216,7 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
   <noscript><style>#page-loader{display:none!important;}</style></noscript>
 
   <?php include 'pages/challenge-invite.html'; ?>
+  <?php include 'pages/tournament-invite.html'; ?>
 
   <!-- Toast Notification -->
   <div x-show="toast.show" x-transition:enter="transition ease-out duration-300"
@@ -481,6 +526,15 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
 
     <div x-show="currentRoute === '/challenges'">
       <?php include 'pages/challenges.html'; ?>
+    </div>
+
+    <!-- TOURNAMENTS PAGES -->
+    <div x-show="currentRoute === '/tournaments'">
+      <?php include 'pages/tournaments.html'; ?>
+    </div>
+
+    <div x-show="currentRoute.startsWith('/tournament/')">
+      <?php include 'pages/tournament-detail.html'; ?>
     </div>
 
     <!-- ACTIVITY PAGE (public) -->

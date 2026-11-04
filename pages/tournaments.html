@@ -1,0 +1,351 @@
+<!-- TOURNAMENTS DASHBOARD PAGE -->
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in"
+     x-init="loadTournaments()">
+
+  <!-- Page Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <span class="text-3xl">🏆</span>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Turnamen Kuis</h1>
+      </div>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Gelar kompetisi kuis bersama teman atau rekan kelas, undang peserta, dan raih posisi juara tertinggi!
+      </p>
+    </div>
+    <button @click="openCreateTournamentModal()"
+            class="btn-primary inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold shadow-lg hover:shadow-primary-500/25 transition-all">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      <span>Buat Turnamen Baru</span>
+    </button>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <div class="flex border-b border-gray-200 dark:border-gray-800 mb-6 overflow-x-auto custom-scrollbar">
+    <button @click="tournament.activeTab = 'active'"
+            class="py-3 px-4 font-semibold text-sm border-b-2 transition-colors whitespace-nowrap flex items-center gap-2"
+            :class="tournament.activeTab === 'active'
+              ? 'border-primary-600 text-primary-600 dark:border-primary-400 dark:text-primary-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'">
+      <span>🔥 Turnamen Aktif</span>
+      <span x-show="tournament.active.length > 0"
+            class="px-2 py-0.5 text-xs rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 font-bold"
+            x-text="tournament.active.length"></span>
+    </button>
+
+    <button @click="tournament.activeTab = 'incoming'"
+            class="py-3 px-4 font-semibold text-sm border-b-2 transition-colors whitespace-nowrap flex items-center gap-2"
+            :class="tournament.activeTab === 'incoming'
+              ? 'border-primary-600 text-primary-600 dark:border-primary-400 dark:text-primary-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'">
+      <span>📬 Undangan Masuk</span>
+      <span x-show="tournament.incoming.length > 0"
+            class="px-2 py-0.5 text-xs rounded-full bg-red-500 text-white font-bold animate-pulse"
+            x-text="tournament.incoming.length"></span>
+    </button>
+
+    <button @click="tournament.activeTab = 'my'"
+            class="py-3 px-4 font-semibold text-sm border-b-2 transition-colors whitespace-nowrap flex items-center gap-2"
+            :class="tournament.activeTab === 'my'
+              ? 'border-primary-600 text-primary-600 dark:border-primary-400 dark:text-primary-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'">
+      <span>👑 Turnamen Saya</span>
+      <span x-show="tournament.myTournaments.length > 0"
+            class="px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-bold"
+            x-text="tournament.myTournaments.length"></span>
+    </button>
+
+    <button @click="tournament.activeTab = 'history'"
+            class="py-3 px-4 font-semibold text-sm border-b-2 transition-colors whitespace-nowrap flex items-center gap-2"
+            :class="tournament.activeTab === 'history'
+              ? 'border-primary-600 text-primary-600 dark:border-primary-400 dark:text-primary-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'">
+      <span>📜 Riwayat Selesai</span>
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  <div x-show="tournament.loading" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="skeleton h-36 rounded-2xl"></div>
+    <div class="skeleton h-36 rounded-2xl"></div>
+    <div class="skeleton h-36 rounded-2xl"></div>
+    <div class="skeleton h-36 rounded-2xl"></div>
+  </div>
+
+  <!-- Content Tabs -->
+  <div x-show="!tournament.loading">
+
+    <!-- TAB 1: TURNAMEN AKTIF -->
+    <div x-show="tournament.activeTab === 'active'">
+      <div x-show="tournament.active.length === 0" class="text-center py-16 text-gray-400">
+        <p class="text-5xl mb-3">🏆</p>
+        <p class="font-semibold text-gray-700 dark:text-gray-300 text-base mb-1">Belum ada turnamen aktif yang kamu ikuti</p>
+        <p class="text-sm max-w-md mx-auto mb-5">Ayo selenggarakan turnamen barumu sendiri atau tunggu undangan dari teman!</p>
+        <button @click="openCreateTournamentModal()" class="btn-primary text-sm px-5 py-2.5 rounded-xl">
+          ➕ Buat Turnamen Sekarang
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4" x-show="tournament.active.length > 0">
+        <template x-for="t in tournament.active" :key="t.id">
+          <div class="card p-5 border border-gray-100 dark:border-gray-800 hover:border-primary-300 dark:hover:border-primary-700 transition-all flex flex-col justify-between">
+            <div>
+              <div class="flex items-start justify-between gap-3 mb-2">
+                <span class="text-xs px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider"
+                      :class="t.status === 'in_progress' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 animate-pulse' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'">
+                  <span x-text="t.status === 'in_progress' ? '🔥 Sedang Tanding' : '🟢 Persiapan / Lobby'"></span>
+                </span>
+                <span x-show="t.is_creator" class="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 px-2 py-0.5 rounded-full font-bold">
+                  👑 Host
+                </span>
+              </div>
+              <h3 class="font-bold text-gray-900 dark:text-white text-base mb-1 hover:text-primary-600 cursor-pointer"
+                  @click="navigate('/tournament/' + t.id)" x-text="t.title"></h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
+                <span>🎯 Kuis:</span>
+                <span class="font-semibold text-gray-700 dark:text-gray-300 truncate" x-text="t.quiz_title"></span>
+              </p>
+              <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 mb-4">
+                <div>👥 <strong class="text-gray-700 dark:text-gray-200" x-text="t.accepted_count"></strong> Siap / <span x-text="t.total_invited + ' Diundang'"></span></div>
+                <div>👤 Host: <strong class="text-gray-700 dark:text-gray-200" x-text="t.creator_name"></strong></div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+              <button @click="navigate('/tournament/' + t.id)"
+                      class="btn-primary w-full py-2 text-xs font-semibold rounded-xl text-center flex items-center justify-center gap-1.5">
+                <span>Masuk Lobby & Leaderboard</span>
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- TAB 2: UNDANGAN MASUK -->
+    <div x-show="tournament.activeTab === 'incoming'">
+      <div x-show="tournament.incoming.length === 0" class="text-center py-16 text-gray-400">
+        <p class="text-5xl mb-3">📬</p>
+        <p class="font-semibold text-gray-700 dark:text-gray-300 text-base mb-1">Tidak ada undangan turnamen pending</p>
+        <p class="text-sm">Saat seseorang mengundangmu ke turnamen, undangan akan muncul di sini.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4" x-show="tournament.incoming.length > 0">
+        <template x-for="t in tournament.incoming" :key="t.id">
+          <div class="card p-5 border-2 border-amber-200/80 dark:border-amber-800/60 bg-gradient-to-br from-amber-50/40 via-white to-white dark:from-amber-950/20 dark:via-gray-900 dark:to-gray-900">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                <span>Undangan Baru</span>
+              </span>
+              <span class="text-xs text-gray-400" x-text="formatDate(t.created_at)"></span>
+            </div>
+            <h3 class="font-extrabold text-gray-900 dark:text-white text-base mb-1" x-text="t.title"></h3>
+            <p class="text-xs text-gray-600 dark:text-gray-400 mb-3" x-text="t.description || 'Ayo bertanding dan buktikan kemampuan kuis terbaikmu!'"></p>
+            <div class="bg-white/80 dark:bg-gray-800/80 p-3 rounded-xl border border-gray-100 dark:border-gray-700 space-y-1 mb-4 text-xs">
+              <p>👤 <strong>Penyelenggara:</strong> <span x-text="t.creator_name"></span></p>
+              <p>🎯 <strong>Arena Kuis:</strong> <span class="font-bold text-primary-600 dark:text-primary-400" x-text="t.quiz_title"></span></p>
+              <p>👥 <strong>Peserta:</strong> <span x-text="t.accepted_count + ' sudah bergabung'"></span></p>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <button @click="acceptTournament(t.id)"
+                      class="btn-primary py-2 text-xs font-bold rounded-xl text-center">
+                🏆 Terima & Ikuti
+              </button>
+              <button @click="declineTournament(t.id)"
+                      class="btn-secondary py-2 text-xs font-semibold rounded-xl text-center text-red-600 dark:text-red-400">
+                Tolak
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- TAB 3: TURNAMEN SAYA -->
+    <div x-show="tournament.activeTab === 'my'">
+      <div x-show="tournament.myTournaments.length === 0" class="text-center py-16 text-gray-400">
+        <p class="text-5xl mb-3">👑</p>
+        <p class="font-semibold text-gray-700 dark:text-gray-300 text-base mb-1">Kamu belum pernah membuat turnamen</p>
+        <p class="text-sm max-w-md mx-auto mb-5">Jadilah host turnamen, tentukan kuisnya, dan undang rekan-rekanmu sekarang!</p>
+        <button @click="openCreateTournamentModal()" class="btn-primary text-sm px-5 py-2.5 rounded-xl">
+          ➕ Buat Turnamen Pertama
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4" x-show="tournament.myTournaments.length > 0">
+        <template x-for="t in tournament.myTournaments" :key="t.id">
+          <div class="card p-5 border border-gray-100 dark:border-gray-800 hover:border-primary-300 dark:hover:border-primary-700 transition-all flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs px-2.5 py-0.5 rounded-full font-bold uppercase"
+                      :class="{
+                        'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400': t.status === 'open',
+                        'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 animate-pulse': t.status === 'in_progress',
+                        'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400': t.status === 'completed'
+                      }">
+                  <span x-text="t.status === 'open' ? '🟢 Pendaftaran' : (t.status === 'in_progress' ? '🔥 Sedang Tanding' : '✓ Selesai')"></span>
+                </span>
+                <span class="text-xs text-gray-400" x-text="formatDate(t.created_at)"></span>
+              </div>
+              <h3 class="font-bold text-gray-900 dark:text-white text-base mb-1 hover:text-primary-600 cursor-pointer"
+                  @click="navigate('/tournament/' + t.id)" x-text="t.title"></h3>
+              <p class="text-xs text-gray-500 mb-3 truncate" x-text="'🎯 ' + t.quiz_title"></p>
+              <div class="flex items-center gap-3 text-xs text-gray-500 mb-4">
+                <span>👥 <strong class="text-gray-800 dark:text-gray-200" x-text="t.accepted_count"></strong> Siap / <span x-text="t.total_invited + ' Diundang'"></span></span>
+              </div>
+            </div>
+            <div class="pt-3 border-t border-gray-100 dark:border-gray-800">
+              <button @click="navigate('/tournament/' + t.id)"
+                      class="btn-primary w-full py-2 text-xs font-semibold rounded-xl text-center">
+                Kelola Turnamen / Lihat Lobby →
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- TAB 4: RIWAYAT SELESAI -->
+    <div x-show="tournament.activeTab === 'history'">
+      <div x-show="tournament.history.length === 0" class="text-center py-16 text-gray-400">
+        <p class="text-5xl mb-3">📜</p>
+        <p class="font-semibold text-gray-700 dark:text-gray-300 text-base mb-1">Belum ada riwayat turnamen selesai</p>
+        <p class="text-sm">Turnamen yang telah rampung dan menghasilkan juara akan dicatat di sini.</p>
+      </div>
+
+      <div class="space-y-3" x-show="tournament.history.length > 0">
+        <template x-for="t in tournament.history" :key="t.id">
+          <div class="card p-4 flex items-center justify-between gap-4 border border-gray-100 dark:border-gray-800 hover:border-primary-300 dark:hover:border-primary-700 transition-all cursor-pointer"
+               @click="navigate('/tournament/' + t.id)">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 flex items-center justify-center font-bold text-xl flex-shrink-0">
+                🏆
+              </div>
+              <div class="min-w-0">
+                <h4 class="font-bold text-gray-900 dark:text-white text-sm truncate" x-text="t.title"></h4>
+                <p class="text-xs text-gray-500 truncate" x-text="t.quiz_title + ' • Juara: ' + (t.winner_name || 'Juara Bersama')"></p>
+              </div>
+            </div>
+            <div class="flex items-center gap-4 flex-shrink-0">
+              <div class="text-right">
+                <p class="text-xs text-gray-400">Skormu</p>
+                <p class="font-extrabold text-sm text-primary-600 dark:text-primary-400" x-text="(t.score_final ?? 0) + ' pts'"></p>
+              </div>
+              <span class="text-gray-400 text-sm">→</span>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL: BUAT TURNAMEN BARU -->
+  <div x-show="tournament.createModal.show"
+       x-cloak
+       class="modal-overlay"
+       @keydown.escape.window="tournament.createModal.show = false">
+    <div class="card p-6 w-full max-w-lg animate-scale-up"
+         @click.outside="tournament.createModal.show = false">
+      <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-800">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🏆</span>
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white">Buat Turnamen Kuis Baru</h2>
+        </div>
+        <button @click="tournament.createModal.show = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg leading-none">✕</button>
+      </div>
+
+      <!-- Error alert -->
+      <div x-show="tournament.createModal.error"
+           class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-xs text-red-600 dark:text-red-400"
+           x-text="tournament.createModal.error"></div>
+
+      <form @submit.prevent="submitCreateTournament()" class="space-y-4">
+        <!-- Judul Turnamen -->
+        <div>
+          <label class="form-label" for="tourn-title">Nama / Judul Turnamen *</label>
+          <input id="tourn-title" type="text" x-model="tournament.createModal.title"
+                 placeholder="Contoh: Piala Cerdas Cermat Fiqih 2026"
+                 class="form-input text-sm" required />
+        </div>
+
+        <!-- Deskripsi singkat -->
+        <div>
+          <label class="form-label" for="tourn-desc">Deskripsi / Aturan Singkat (Opsional)</label>
+          <textarea id="tourn-desc" x-model="tournament.createModal.description"
+                    placeholder="Contoh: Turnamen 10 soal, siapa tercepat dan skor tertinggi berhak meraih Juara 1!"
+                    class="form-input text-sm h-16 resize-none"></textarea>
+        </div>
+
+        <!-- Pilih Kuis -->
+        <div>
+          <label class="form-label" for="tourn-quiz">Pilih Kuis yang Dilombakan *</label>
+          <select id="tourn-quiz" x-model.number="tournament.createModal.quizId" class="form-input text-sm" required>
+            <option value="0">-- Pilih Kuis --</option>
+            <template x-for="q in (tournament.quizOptions || home.featured || [])" :key="q.id">
+              <option :value="q.id" x-text="q.title + ' (' + (q.total_questions || '?') + ' soal)'"></option>
+            </template>
+          </select>
+        </div>
+
+        <!-- Cari & Undang Pemain (Berdasarkan Email / Nama) -->
+        <div>
+          <label class="form-label">Undang Pemain (Berdasarkan Email / Nama)</label>
+          <div class="relative">
+            <input type="text" x-model="tournament.createModal.searchQ"
+                   @input.debounce.300ms="searchTournamentUsers(tournament.createModal.searchQ)"
+                   placeholder="Ketik email atau nama pemain..."
+                   class="form-input text-sm pr-9" />
+            <span x-show="tournament.createModal.searching" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin"></span>
+          </div>
+
+          <!-- Hasil pencarian dropdown -->
+          <div x-show="tournament.createModal.searchResults.length > 0"
+               class="mt-1 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-800 shadow-lg max-h-44 overflow-y-auto z-10 relative">
+            <template x-for="u in tournament.createModal.searchResults" :key="u.id">
+              <button type="button" @click="selectTournamentUser(u)"
+                      class="w-full flex items-center gap-3 px-3.5 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-left transition-colors border-b border-gray-100 dark:border-gray-700/50 last:border-0">
+                <span class="w-7 h-7 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 flex items-center justify-center text-xs font-bold flex-shrink-0"
+                      x-text="u.name.charAt(0).toUpperCase()"></span>
+                <div class="min-w-0 flex-1">
+                  <p class="text-xs font-bold text-gray-900 dark:text-white truncate" x-text="u.name"></p>
+                  <p class="text-[11px] text-gray-400 truncate" x-text="u.email"></p>
+                </div>
+                <span class="text-xs text-primary-600 font-semibold">+ Tambah</span>
+              </button>
+            </template>
+          </div>
+
+          <!-- Daftar Pemain yang Terpilih (Chips) -->
+          <div class="mt-3">
+            <p class="text-xs text-gray-500 mb-1.5 font-medium">Pemain Terpilih (<span x-text="tournament.createModal.selectedUsers.length"></span> orang):</p>
+            <div x-show="tournament.createModal.selectedUsers.length === 0" class="text-xs text-gray-400 italic">
+              Belum ada pemain yang ditambahkan. Ketik nama/email di atas untuk mengundang.
+            </div>
+            <div class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1 custom-scrollbar">
+              <template x-for="su in tournament.createModal.selectedUsers" :key="su.id">
+                <span class="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-800 text-xs font-medium text-primary-700 dark:text-primary-300">
+                  <span class="truncate max-w-[130px]" x-text="su.name"></span>
+                  <button type="button" @click="removeTournamentUser(su.id)" class="w-4 h-4 rounded-full hover:bg-primary-200 dark:hover:bg-primary-800 flex items-center justify-center text-xs leading-none">×</button>
+                </span>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tombol Submit -->
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+          <button type="button" @click="tournament.createModal.show = false" class="btn-secondary py-2 text-xs">Batal</button>
+          <button type="submit" class="btn-primary py-2 px-5 text-xs font-bold" :disabled="tournament.createModal.submitting">
+            <span x-show="tournament.createModal.submitting" class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5 inline-block"></span>
+            <span x-text="tournament.createModal.submitting ? 'Mengirim Undangan…' : '🚀 Terbitkan Turnamen & Undang'"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>

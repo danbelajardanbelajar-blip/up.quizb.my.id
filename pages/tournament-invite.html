@@ -1,0 +1,49 @@
+<!-- Native dialog keeps keyboard focus inside and makes the page behind it inert. -->
+<dialog class="tournament-invite" aria-labelledby="tournament-invite-title" aria-describedby="tournament-invite-description"
+        x-effect="if (user && tournament.invite) { if (!$el.open) $el.showModal(); } else if ($el.open) { $el.close(); }"
+        @cancel.prevent="dismissTournamentInvite()">
+  <template x-if="tournament.invite">
+    <div>
+      <div class="tournament-invite-hero">
+        <span class="tournament-invite-eyebrow">🏆 QUIZB TOURNAMENT</span>
+        <button type="button" class="tournament-invite-close" aria-label="Tutup undangan turnamen"
+                :disabled="tournament.inviteBusy" @click="dismissTournamentInvite()">✕</button>
+        <div class="tournament-invite-emblem" aria-hidden="true">🏆</div>
+        <p class="tournament-invite-kicker">KEJUARAAN KUIS RESMI</p>
+        <h2 id="tournament-invite-title">Undangan Turnamen!</h2>
+        <p id="tournament-invite-description" x-text="'Kamu diundang berlaga di turnamen &quot;' + (tournament.invite.title || tournament.invite.tournament_title) + '&quot;'"></p>
+      </div>
+      <div class="tournament-invite-content">
+        <div class="tournament-invite-host">
+          <span class="tournament-invite-avatar" aria-hidden="true"
+                x-text="(tournament.invite.creator_name || '?').charAt(0).toUpperCase()"></span>
+          <div class="min-w-0 flex-1">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Diselenggarakan oleh</p>
+            <p class="font-bold text-gray-900 dark:text-white break-words text-sm" x-text="tournament.invite.creator_name"></p>
+          </div>
+          <span class="text-xs px-2.5 py-1 rounded-full font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400">👑 Host</span>
+        </div>
+        <div class="tournament-invite-quiz">
+          <span class="text-2xl" aria-hidden="true">🎯</span>
+          <div class="min-w-0 flex-1">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Arena Kuis Turnamen</p>
+            <p class="font-bold text-gray-900 dark:text-white break-words text-sm" x-text="tournament.invite.quiz_title"></p>
+            <p class="text-xs text-gray-500 mt-0.5" x-text="tournament.invite.total_questions ? tournament.invite.total_questions + ' Soal Kuis' : 'Kuis Interaktif'"></p>
+          </div>
+        </div>
+        <p x-show="tournament.inviteError" x-text="tournament.inviteError" role="alert"
+           class="text-sm text-red-600 dark:text-red-400 mt-4 text-center"></p>
+        <button type="button" class="tournament-invite-accept" :disabled="tournament.inviteBusy"
+                @click="respondToTournamentInvite(true)">
+          <span x-text="tournament.inviteBusy ? 'Memproses…' : '🏆 Terima & Masuk Turnamen'"></span>
+          <span aria-hidden="true">→</span>
+        </button>
+        <div class="tournament-invite-secondary">
+          <button type="button" :disabled="tournament.inviteBusy" @click="respondToTournamentInvite(false)">Tolak Turnamen</button>
+          <button type="button" autofocus :disabled="tournament.inviteBusy" @click="dismissTournamentInvite()">Nanti Saja</button>
+        </div>
+        <p class="tournament-invite-note">Belum siap sekarang? Undangan tetap tersedia di menu Turnamen.</p>
+      </div>
+    </div>
+  </template>
+</dialog>

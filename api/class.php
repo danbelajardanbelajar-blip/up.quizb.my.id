@@ -294,7 +294,7 @@ function class_delete(): void {
 
 // ============================================
 // POST /api?action=class.join
-// Body: { join_code: "XXXXXX" }
+// Body: { join_code: "XXXXXX" } atau { code: "XXXXXX" }
 // Pelajar bergabung ke kelas
 // ============================================
 function class_join(): void {
@@ -302,7 +302,7 @@ function class_join(): void {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
 
     $body     = getJsonBody();
-    $joinCode = strtoupper(trim($body['join_code'] ?? ''));
+    $joinCode = strtoupper(trim($body['join_code'] ?? $body['code'] ?? ''));
 
     if (strlen($joinCode) < 4) jsonError('Kode kelas tidak valid');
 
@@ -311,6 +311,11 @@ function class_join(): void {
         [$joinCode]
     );
     if (!$class) jsonError('Kode kelas tidak ditemukan atau kelas tidak aktif', 404);
+
+    // Cek jika pengajar kelas mencoba bergabung ke kelasnya sendiri
+    if ((int)$class['teacher_id'] === (int)$user['id']) {
+        jsonError('Anda adalah pengajar di kelas ini');
+    }
 
     // Cek sudah join?
     $existing = DB::one(
@@ -323,7 +328,10 @@ function class_join(): void {
         "INSERT INTO class_members (class_id, user_id) VALUES (?, ?)"
     )->execute([$class['id'], $user['id']]);
 
-    jsonSuccess(['message' => 'Berhasil bergabung ke kelas ' . $class['name'], 'class' => $class]);
+    jsonSuccess(array_merge($class, [
+        'message' => 'Berhasil bergabung ke kelas ' . $class['name'],
+        'class'   => $class
+    ]));
 }
 
 // ============================================

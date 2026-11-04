@@ -79,6 +79,7 @@ if (in_array($method, ['POST', 'PUT', 'DELETE'])) {
         'auth.login', 'auth.register', 'auth.logout', 'auth.google', 'auth.google_native', 
         'auth.resend_verification', 'auth.update_fcm_token', 'auth.unregister_fcm_token',
         'challenge.create', 'challenge.accept', 'challenge.decline', 'challenge.sync', 'challenge.submit',
+        'tournament.create', 'tournament.accept', 'tournament.decline', 'tournament.start', 'tournament.sync', 'tournament.submit',
         'message.send', 'message.delete'
     ];
 
@@ -96,7 +97,6 @@ $action = $_GET['action'] ?? '';
 $routes = [
     'auth'        => __DIR__ . '/api/auth.php',
     'quiz'        => __DIR__ . '/api/quiz.php',
-    'quiz'        => __DIR__ . '/api/quiz.php',
     'category'       => __DIR__ . '/api/category.php',
     'category_group' => __DIR__ . '/api/category_group.php',
     'question'    => __DIR__ . '/api/question.php',
@@ -107,6 +107,7 @@ $routes = [
     'class'       => __DIR__ . '/api/class.php',
     'assignment'  => __DIR__ . '/api/assignment.php',
     'challenge'   => __DIR__ . '/api/challenge.php',
+    'tournament'  => __DIR__ . '/api/tournament.php',
     'notification' => __DIR__ . '/api/notification.php',
     'message'     => __DIR__ . '/api/message.php',
     'activity'    => __DIR__ . '/api/activity.php',

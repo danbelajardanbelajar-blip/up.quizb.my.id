@@ -43,6 +43,8 @@ function QuizBApp() {
         base.push({ href: '/classroom', label: '🎓  Kelas' });
         const badge = this.challenge.pendingCount > 0 ? ' (' + this.challenge.pendingCount + ')' : '';
         base.push({ href: '/challenges', label: '⚔️  Tantangan' + badge });
+        const tBadge = (this.tournament && this.tournament.pendingCount > 0) ? ' (' + this.tournament.pendingCount + ')' : '';
+        base.push({ href: '/tournaments', label: '🏆  Turnamen' + tBadge });
         base.push({ href: '/settings', label: '⚙️  Pengaturan' });
         if (['admin', 'pengajar'].includes(this.user.role)) {
           base.push({ 
@@ -203,6 +205,39 @@ function QuizBApp() {
       invite: null, inviteBusy: false, inviteError: '', inviteSeen: [], inviteUserId: null,
     },
 
+    // Tournament
+    tournament: {
+      activeTab: 'active',
+      active: [],
+      incoming: [],
+      myTournaments: [],
+      history: [],
+      loading: false,
+      pendingCount: 0,
+      pollInterval: null,
+      detail: null,
+      detailLoading: false,
+      detailInterval: null,
+      invite: null,
+      inviteBusy: false,
+      inviteError: '',
+      inviteSeen: [],
+      inviteUserId: null,
+      quizOptions: [],
+      createModal: {
+        show: false,
+        error: '',
+        title: '',
+        description: '',
+        quizId: 0,
+        searchQ: '',
+        searching: false,
+        searchResults: [],
+        selectedUsers: [],
+        submitting: false,
+      },
+    },
+
     // Notifications
     notif: {
       unreadCount: 0,
@@ -264,6 +299,7 @@ function QuizBApp() {
         // Start challenge + notification polling for logged-in users
         if (this.user) {
           this.startChallengePolling();
+          this.startTournamentPolling();
           this.pollCounts();
         }
 
@@ -302,7 +338,7 @@ function QuizBApp() {
 
     // Lightweight guard re-check (used after async loadUser).
     _guardRoute(route) {
-      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges', '/messages'];
+      const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges', '/messages', '/tournaments', '/tournament'];
       const admin_routes     = ['/admin'];
       const auth_only_routes = ['/login', '/register']; // halaman yang tidak boleh diakses user yg sudah login
 
@@ -354,6 +390,8 @@ function QuizBApp() {
         'admin':       rest[0] ? '/admin/' + rest[0] : '/admin',
         'classroom':   rest[0] ? '/classroom/' + rest[0] : '/classroom',
         'challenges':      '/challenges',
+        'tournaments':     '/tournaments',
+        'tournament':      '/tournament/' + (rest[0] || ''),
         'activity':        '/activity',
         'public-history':  '/public-history',
         'assignment':  rest[0] ? '/assignment/' + rest.join('/') : '/assignment',
@@ -416,7 +454,7 @@ function QuizBApp() {
       // Guard protected routes — hanya aktif setelah _userLoaded = true
       // Sebelum user selesai di-load, skip semua guard agar tidak ada redirect paksa
       if (this._userLoaded) {
-        const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges', '/messages'];
+        const protected_routes = ['/dashboard', '/history', '/classroom', '/profile', '/settings', '/challenges', '/messages', '/tournaments', '/tournament'];
         const admin_routes     = ['/admin'];
         const auth_only_routes = ['/login', '/register'];
 
@@ -477,6 +515,18 @@ function QuizBApp() {
               clearInterval(this.challenge.fastPollInterval);
               this.challenge.fastPollInterval = null;
           }
+      }
+      if (route === '/tournaments') {
+        this.loadTournaments();
+      }
+      if (route.startsWith('/tournament/') && params[0]) {
+        this.loadTournamentDetail(params[0]);
+      }
+      if (!route.startsWith('/tournament/')) {
+        if (this.tournament.detailInterval) {
+          clearInterval(this.tournament.detailInterval);
+          this.tournament.detailInterval = null;
+        }
       }
       if (route === '/activity')            this.loadActivity();
       if (route === '/public-history')     this.loadPublicHistory();
@@ -557,6 +607,7 @@ function QuizBApp() {
         this.user = { id: data.id, name: data.name, email: data.email, role: data.role, has_onboarded: data.has_onboarded };
         api._csrfToken = data.csrf_token || null;
         this.startChallengePolling();
+        this.startTournamentPolling();
         this.pollCounts();
         this.showToast(`Selamat datang, ${this.user.name}!`, 'success', '👋');
         this.navigate('/dashboard');
@@ -624,6 +675,13 @@ function QuizBApp() {
       this.challenge.invite = null;
       this.challenge.incoming = [];
       this.challenge.pendingCount = 0;
+      clearInterval(this.tournament.pollInterval);
+      if (this.tournament.detailInterval) clearInterval(this.tournament.detailInterval);
+      this.tournament.pollInterval = null;
+      this.tournament.detailInterval = null;
+      this.tournament.invite = null;
+      this.tournament.incoming = [];
+      this.tournament.pendingCount = 0;
       api._csrfToken = null;
       this.showToast('Sampai jumpa!', 'info', '👋');
       this.navigate('/');
@@ -3104,6 +3162,245 @@ function QuizBApp() {
       }
     },
 
+    // ---- Tournament System ----
+    startTournamentPolling() {
+      clearInterval(this.tournament.pollInterval);
+      this.loadTournaments(true);
+      this.tournament.pollInterval = setInterval(() => this.loadTournaments(true), 12000);
+    },
+
+    syncTournamentInvite() {
+      if (!this.user || this.tournament.inviteBusy) return;
+      const state = this.tournament;
+      const userId = String(this.user.id);
+      if (state.inviteUserId !== userId) {
+        state.inviteUserId = userId;
+        state.invite = null;
+        state.inviteSeen = [];
+        try {
+          const seen = JSON.parse(sessionStorage.getItem('quizb.tournamentInvites.' + userId) || '[]');
+          if (Array.isArray(seen)) state.inviteSeen = seen.map(String);
+        } catch (_) {}
+      }
+      if (state.invite && !state.incoming.some(t => String(t.id) === String(state.invite.id))) {
+        state.invite = null;
+      }
+      if (state.invite) return;
+      const next = state.incoming.find(t => !state.inviteSeen.includes(String(t.id)));
+      if (!next) return;
+      state.invite = next;
+      state.inviteError = '';
+      state.inviteSeen.push(String(next.id));
+      try {
+        sessionStorage.setItem('quizb.tournamentInvites.' + userId, JSON.stringify(state.inviteSeen));
+      } catch (_) {}
+    },
+
+    dismissTournamentInvite() {
+      if (this.tournament.inviteBusy) return;
+      this.tournament.invite = null;
+      this.tournament.inviteError = '';
+      this.syncTournamentInvite();
+    },
+
+    async respondToTournamentInvite(accept) {
+      const state = this.tournament;
+      if (!this.user || !state.invite || state.inviteBusy) return;
+      const invite = state.invite;
+      state.inviteBusy = true;
+      state.inviteError = '';
+      try {
+        await api.post(accept ? 'tournament.accept' : 'tournament.decline', { tournament_id: parseInt(invite.id, 10) });
+        state.incoming = state.incoming.filter(t => String(t.id) !== String(invite.id));
+        state.pendingCount = state.incoming.length;
+        state.invite = null;
+        if (accept) {
+          this.navigate('/tournament/' + invite.id);
+        }
+      } catch (e) {
+        state.inviteError = e.message || 'Undangan turnamen belum berhasil diproses.';
+      } finally {
+        state.inviteBusy = false;
+      }
+      if (!state.invite) await this.loadTournaments(true);
+    },
+
+    async loadTournaments(silent = false) {
+      if (!this.user) return;
+      const userId = this.user.id, generation = this._privateGeneration;
+      if (!silent) this.tournament.loading = true;
+      try {
+        const data = await api.get('tournament.list');
+        if (!this.privateSessionMatches(userId, generation)) return;
+        this.tournament.incoming = data.incoming || [];
+        this.tournament.active = data.active || [];
+        this.tournament.myTournaments = data.my_tournaments || [];
+        this.tournament.history = data.history || [];
+        this.tournament.pendingCount = Number(data.pending_count || this.tournament.incoming.length);
+        this.syncTournamentInvite();
+      } catch (e) {
+        console.error('loadTournaments error:', e);
+      } finally {
+        if (this.privateSessionMatches(userId, generation)) this.tournament.loading = false;
+      }
+    },
+
+    async openCreateTournamentModal() {
+      this.tournament.createModal.show = true;
+      this.tournament.createModal.error = '';
+      this.tournament.createModal.title = '';
+      this.tournament.createModal.description = '';
+      this.tournament.createModal.quizId = 0;
+      this.tournament.createModal.searchQ = '';
+      this.tournament.createModal.searchResults = [];
+      this.tournament.createModal.selectedUsers = [];
+      this.tournament.createModal.submitting = false;
+
+      // Load quiz options if empty
+      if (!this.tournament.quizOptions || this.tournament.quizOptions.length === 0) {
+        try {
+          const res = await api.get('quiz.list', { limit: 50 });
+          this.tournament.quizOptions = res.quizzes || (Array.isArray(res) ? res : []);
+        } catch (_) {}
+      }
+    },
+
+    async searchTournamentUsers(q) {
+      const qTrim = (q || '').trim();
+      if (qTrim.length < 2) {
+        this.tournament.createModal.searchResults = [];
+        return;
+      }
+      this.tournament.createModal.searching = true;
+      try {
+        const res = await api.get('tournament.search_users', { q: qTrim });
+        const list = res.users || (Array.isArray(res) ? res : []);
+        const selectedIds = this.tournament.createModal.selectedUsers.map(u => u.id);
+        if (this.user) selectedIds.push(this.user.id);
+        this.tournament.createModal.searchResults = list.filter(u => !selectedIds.includes(u.id));
+      } catch (_) {
+        this.tournament.createModal.searchResults = [];
+      } finally {
+        this.tournament.createModal.searching = false;
+      }
+    },
+
+    selectTournamentUser(u) {
+      if (!u || this.tournament.createModal.selectedUsers.some(su => su.id === u.id)) return;
+      this.tournament.createModal.selectedUsers.push(u);
+      this.tournament.createModal.searchResults = this.tournament.createModal.searchResults.filter(item => item.id !== u.id);
+    },
+
+    removeTournamentUser(userId) {
+      this.tournament.createModal.selectedUsers = this.tournament.createModal.selectedUsers.filter(u => u.id !== userId);
+    },
+
+    async submitCreateTournament() {
+      const modal = this.tournament.createModal;
+      if (!modal.title.trim()) {
+        modal.error = 'Nama / judul turnamen wajib diisi.';
+        return;
+      }
+      if (!modal.quizId || modal.quizId <= 0) {
+        modal.error = 'Silakan pilih kuis yang akan dilombakan.';
+        return;
+      }
+      modal.submitting = true;
+      modal.error = '';
+      try {
+        const invitees = modal.selectedUsers.map(u => u.id);
+        const res = await api.post('tournament.create', {
+          title: modal.title.trim(),
+          description: modal.description.trim(),
+          quiz_id: modal.quizId,
+          invitees: invitees
+        });
+        modal.show = false;
+        this.showToast('Turnamen berhasil dibuat dan undangan telah dikirim! 🏆', 'success');
+        await this.loadTournaments();
+        if (res.tournament_id) {
+          this.navigate('/tournament/' + res.tournament_id);
+        }
+      } catch (e) {
+        modal.error = e.message || 'Gagal membuat turnamen. Coba lagi nanti.';
+      } finally {
+        modal.submitting = false;
+      }
+    },
+
+    async acceptTournament(tournamentId) {
+      try {
+        await api.post('tournament.accept', { tournament_id: tournamentId });
+        this.showToast('Berhasil bergabung ke turnamen! 🏆', 'success');
+        if (this.currentRoute.startsWith('/tournament/')) {
+          await this.loadTournamentDetail(tournamentId, true);
+        } else {
+          this.navigate('/tournament/' + tournamentId);
+        }
+      } catch (e) {
+        this.showToast(e.message || 'Gagal menerima undangan turnamen', 'error');
+      }
+    },
+
+    async declineTournament(tournamentId) {
+      if (!confirm('Apakah kamu yakin ingin menolak undangan turnamen ini?')) return;
+      try {
+        await api.post('tournament.decline', { tournament_id: tournamentId });
+        this.showToast('Undangan turnamen telah ditolak.', 'info');
+        if (this.currentRoute.startsWith('/tournament/')) {
+          this.navigate('/tournaments');
+        } else {
+          await this.loadTournaments();
+        }
+      } catch (e) {
+        this.showToast(e.message || 'Gagal menolak turnamen', 'error');
+      }
+    },
+
+    async startTournament(tournamentId) {
+      try {
+        await api.post('tournament.start', { tournament_id: tournamentId });
+        this.showToast('Turnamen resmi dimulai! 🚀', 'success');
+        await this.loadTournamentDetail(tournamentId, true);
+      } catch (e) {
+        this.showToast(e.message || 'Gagal memulai turnamen', 'error');
+      }
+    },
+
+    async loadTournamentDetail(id, silent = false) {
+      if (!id) return;
+      if (!silent) this.tournament.detailLoading = true;
+      try {
+        const data = await api.get('tournament.detail', { id });
+        this.tournament.detail = data.tournament || data;
+      } catch (e) {
+        console.error('loadTournamentDetail error:', e);
+        this.showToast(e.message || 'Gagal memuat detail turnamen', 'error');
+      } finally {
+        if (!silent) this.tournament.detailLoading = false;
+      }
+
+      // Live sync every 3 seconds while on tournament detail page
+      if (!this.tournament.detailInterval) {
+        this.tournament.detailInterval = setInterval(() => {
+          if (this.currentRoute.startsWith('/tournament/') && this.tournament.detail?.status !== 'cancelled') {
+            this.refreshTournamentDetail();
+          } else {
+            clearInterval(this.tournament.detailInterval);
+            this.tournament.detailInterval = null;
+          }
+        }, 3000);
+      }
+    },
+
+    async refreshTournamentDetail() {
+      if (!this.tournament.detail?.id) return;
+      try {
+        const data = await api.get('tournament.detail', { id: this.tournament.detail.id });
+        this.tournament.detail = data.tournament || data;
+      } catch (_) {}
+    },
+
     // ---- Assignment Results & Monitor ----
     async loadAssignmentResults(id) {
       this.assignmentView.loading = true;
@@ -3622,6 +3919,16 @@ function QuizBApp() {
           const invite = this.challenge.incoming.find(c => String(c.id) === match?.[1]);
           if (invite) { this.challenge.invite = invite; this.challenge.inviteError = ''; }
           else this.showToast('Tantangan sudah direspons atau tidak tersedia. Periksa riwayat tantangan.', 'info', '⚔️');
+          return;
+        }
+        if (n.type === 'tournament') {
+          const match = (n.link || '').match(/tournament[s]?\/(\d+)/) || (n.link || '').match(/tid=(\d+)/);
+          const tid = match ? match[1] : (n.reference_id || null);
+          if (tid) {
+            this.navigate('/tournament/' + tid);
+          } else {
+            this.navigate('/tournaments');
+          }
           return;
         }
         if (n.link && /^https:\/\//i.test(n.link)) {

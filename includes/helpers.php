@@ -20,6 +20,16 @@ function pushNotification(int $userId, string $type, string $title, string $body
         $data = array_merge(['type'=>$type, 'link'=>$link, 'title'=>$title, 'body'=>$body], $extraData);
         enqueuePush($userId, $title, $body, $data, $notificationId);
         if ($ownsTransaction) $pdo->commit();
+
+        // Segera kirim antrean notifikasi di latar belakang agar diterima secara realtime
+        if (function_exists('fastcgi_finish_request')) {
+            register_shutdown_function(function() {
+                @fastcgi_finish_request();
+                try {
+                    processPushQueue(5, 3);
+                } catch (Throwable $_) {}
+            });
+        }
     } catch (Throwable $e) {
         if ($ownsTransaction && $pdo->inTransaction()) $pdo->rollBack();
         error_log('[Notification outbox] ' . get_class($e));

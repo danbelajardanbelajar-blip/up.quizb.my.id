@@ -12,7 +12,9 @@
          const mode = mm ? mm[1] : 'exam';
          const cm  = (queryPart || '').match(/(?:^|&)cid=(\d+)/);
          const challengeId = cm ? cm[1] : null;
-         if (quizId || assignId) { loadQuiz(quizId || 0, assignId, mode, challengeId); }
+         const tm  = (queryPart || '').match(/(?:^|&)tid=(\d+)/);
+         const tournamentId = tm ? tm[1] : null;
+         if (quizId || assignId) { loadQuiz(quizId || 0, assignId, mode, challengeId, tournamentId); }
          else { phase = 'error'; error = 'Quiz ID atau Assignment ID tidak ditemukan di URL'; }
        })()
      "
@@ -114,9 +116,15 @@
               <p>• Tidak bisa kembali ke soal sebelumnya</p>
               <p>• Menang: skor tertinggi → waktu tercepat → submit lebih awal</p></div>
           </template>
+          <template x-if="mode==='tournament'">
+            <div><p class="font-semibold text-amber-600 dark:text-amber-400 mb-1">🏆 Mode Turnamen</p>
+              <p>• Jawab tiap soal sebaik dan secepat mungkin</p>
+              <p>• Klasemen live diperbarui otomatis untuk semua peserta</p>
+              <p>• Juara 1 diraih peserta dengan skor tertinggi & waktu tercepat!</p></div>
+          </template>
         </div>
         <button @click="startQuiz()" class="btn-primary w-full py-3 text-base">Mulai Sekarang ▶</button>
-        <button @click="navigate('/quiz/'+quiz?.id + (assignmentId ? '?assign=' + assignmentId : ''))" class="mt-3 w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors">← Kembali</button>
+        <button @click="tournamentId ? navigate('/tournament/' + tournamentId) : navigate('/quiz/'+quiz?.id + (assignmentId ? '?assign=' + assignmentId : ''))" class="mt-3 w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors">← Kembali</button>
       </div>
     </div>
   </div>
@@ -125,7 +133,7 @@
   <div x-show="phase==='playing'" class="max-w-3xl mx-auto px-4 py-6">
     <!-- Top Bar -->
     <div class="flex items-center justify-between mb-4">
-      <div class="flex items-center gap-2" x-show="mode !== 'challenge'">
+      <div class="flex items-center gap-2" x-show="mode !== 'challenge' && mode !== 'tournament'">
         <span class="text-sm font-medium text-gray-600 dark:text-gray-400">
           Soal <span class="font-bold text-gray-900 dark:text-white" x-text="currentIndex+1"></span>/<span x-text="questions.length"></span>
         </span>
@@ -133,8 +141,8 @@
               :class="modeBadgeClass" x-text="modeLabel"></span>
       </div>
 
-      <!-- Challenge Mode Progress Bars -->
-      <div class="flex-1 w-full" x-show="mode === 'challenge'">
+      <!-- Challenge / Tournament Mode Progress Bars -->
+      <div class="flex-1 w-full" x-show="mode === 'challenge' || mode === 'tournament'">
         <div class="flex flex-col gap-2 mb-2 w-full max-w-xl mx-auto">
           <template x-for="p in [...participants].sort((a,b) => b.score - a.score)" :key="p.id">
             <div class="flex items-center gap-3">

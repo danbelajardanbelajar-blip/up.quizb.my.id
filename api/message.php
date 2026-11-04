@@ -118,8 +118,8 @@ function message_send(): void {
     $body = getBody();
 
     $threadId = (int)($body['thread_id'] ?? 0);
-    $otherId  = (int)($body['user_id']   ?? 0);
-    $text     = trim($body['body'] ?? '');
+    $otherId  = (int)($body['user_id']   ?? $body['receiver_id'] ?? 0);
+    $text     = trim($body['body'] ?? $body['message'] ?? '');
 
     if (!$text)            jsonError('Pesan tidak boleh kosong');
     if (mb_strlen($text) > 5000) jsonError('Pesan terlalu panjang (maks 5000 karakter)');
@@ -153,7 +153,21 @@ function message_send(): void {
 
     // Notifikasi ke penerima
     $preview = mb_strlen($text) > 80 ? mb_substr($text, 0, 80) . '…' : $text;
-    pushNotification($otherId, 'message', $user['name'] . ' mengirimmu pesan', $preview, '/messages?thread=' . $threadId);
+    pushNotification(
+        $otherId,
+        'message',
+        $user['name'] . ' mengirimmu pesan',
+        $preview,
+        '/messages?thread=' . $threadId,
+        [
+            'type'        => 'message',
+            'thread_id'   => (string)$threadId,
+            'sender_id'   => (string)$uid,
+            'sender_name' => (string)$user['name'],
+            'body'        => (string)$preview,
+            'message_id'  => (string)$msgId
+        ]
+    );
 
     jsonSuccess([
         'id'         => $msgId,

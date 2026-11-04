@@ -21,8 +21,9 @@ function QuizEngine() {
     error: null,
     assignment: null,     // data assignment jika dari tugas
     assignmentId: null,   // jika dimainkan dari tugas
-    mode: 'exam',         // exam | instant | end | challenge
+    mode: 'exam',         // exam | instant | end | challenge | tournament
     challengeId: null,    // untuk mode challenge
+    tournamentId: null,   // untuk mode tournament
     heartbeatInterval: null,
     playerName: '',        // nama tamu (dari localStorage, opsional)
     questionTimeLeft: 0,    // timer per soal (instant/end mode)
@@ -66,16 +67,17 @@ function QuizEngine() {
     },
 
     // Mode helpers
-    get isReviewMode() { return this.mode === 'instant' || this.mode === 'end' || this.mode === 'challenge'; },
+    get isReviewMode() { return this.mode === 'instant' || this.mode === 'end' || this.mode === 'challenge' || this.mode === 'tournament'; },
     get modeLabel() {
-      return { exam: '🎯 Mode Ujian', instant: '⚡ Instant Review', end: '📖 End Review', challenge: '⚔️ Tantangan' }[this.mode] || '';
+      return { exam: '🎯 Mode Ujian', instant: '⚡ Instant Review', end: '📖 End Review', challenge: '⚔️ Tantangan', tournament: '🏆 Turnamen' }[this.mode] || '';
     },
     get modeBadgeClass() {
       return {
-        exam:      'bg-blue-100   text-blue-700   dark:bg-blue-900/40   dark:text-blue-300',
-        instant:   'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
-        end:       'bg-green-100  text-green-700  dark:bg-green-900/40  dark:text-green-300',
-        challenge: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+        exam:       'bg-blue-100   text-blue-700   dark:bg-blue-900/40   dark:text-blue-300',
+        instant:    'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+        end:        'bg-green-100  text-green-700  dark:bg-green-900/40  dark:text-green-300',
+        challenge:  'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+        tournament: 'bg-amber-100  text-amber-800  dark:bg-amber-900/40  dark:text-amber-300',
       }[this.mode] || '';
     },
 
@@ -98,21 +100,23 @@ function QuizEngine() {
     },
 
     // ---- Load quiz ----
-    async loadQuiz(quizId, assignmentId = null, mode = 'exam', challengeId = null) {
+    async loadQuiz(quizId, assignmentId = null, mode = 'exam', challengeId = null, tournamentId = null) {
       this.phase = 'loading';
       this.error = null;
       this.assignmentId = assignmentId;
       this.mode         = mode || 'exam';
       this.challengeId  = challengeId ? parseInt(challengeId) : null;
+      this.tournamentId = tournamentId ? parseInt(tournamentId) : null;
       try {
         const params = { id: quizId, mode: this.mode };
         if (assignmentId) params.assignment_id = assignmentId;
         if (this.mode === 'challenge' && this.challengeId) params.challenge_id = this.challengeId;
+        if (this.mode === 'tournament' && this.tournamentId) params.tournament_id = this.tournamentId;
         const data = await api.get('quiz.questions', params);
         this.quiz      = data.quiz;
         this.questions = data.questions;
-        // Initialize participants array (will be populated by challenge.sync)
-        if (this.mode === 'challenge' && this.challengeId) {
+        // Initialize participants array (will be populated by challenge.sync or tournament.sync)
+        if ((this.mode === 'challenge' && this.challengeId) || (this.mode === 'tournament' && this.tournamentId)) {
           this.participants = [];
         }
 
@@ -244,12 +248,15 @@ function QuizEngine() {
         this.startTimer();
       }
       if (this.assignmentId) this._startHeartbeat();
+      if (this.mode === 'tournament' && this.tournamentId) this.startTournamentSync();
     },
 
     // ---- Navigasi Kembali ke Halaman Sebelumnya ----
     exitToPreviousPage() {
       let targetFallback = '';
-      if (this.assignment && this.assignment.class_id) {
+      if (this.tournamentId) {
+        targetFallback = '#/tournament/' + this.tournamentId;
+      } else if (this.assignment && this.assignment.class_id) {
         targetFallback = '#/classroom/' + this.assignment.class_id;
       } else if (this.assignmentId) {
         targetFallback = '#/classroom';
@@ -317,6 +324,30 @@ function QuizEngine() {
           }
         } catch(e) {}
       }, 2000);
+    },
+
+    // ---- Tournament Sync ----
+    startTournamentSync() {
+      if (this.syncInterval) clearInterval(this.syncInterval);
+      this.syncInterval = setInterval(async () => {
+        if (this.phase !== 'playing') return;
+        try {
+          const res = await api.post('tournament.sync', {
+            tournament_id: this.tournamentId,
+            live_score: this.myScore,
+            q_index: this.currentIndex
+          });
+          if (res && res.participants) {
+            this.participants = res.participants.map(p => ({
+              id: p.user_id,
+              name: p.name,
+              score: p.user_id == (this.user?.id || 0) ? this.myScore : (p.score_final !== null && p.score_final !== undefined ? Number(p.score_final) : (p.live_score ?? 0)),
+              q_index: p.q_index ?? 0,
+              submitted: p.is_submitted || false
+            }));
+          }
+        } catch(e) {}
+      }, 2500);
     },
     
     async takeAndUploadSnapshot() {
@@ -519,7 +550,7 @@ function QuizEngine() {
       this.myScore = Math.round((correct / (this.questions.length || 1)) * 100);
       
       // Update local participants array for instant UI feedback
-      if (this.mode === 'challenge' && this.participants) {
+      if ((this.mode === 'challenge' || this.mode === 'tournament') && this.participants) {
           const me = this.participants.find(p => p.id == (this.user?.id || 0));
           if (me) me.score = this.myScore;
       }
@@ -565,13 +596,13 @@ function QuizEngine() {
         return;
       }
 
-      // ---- EXAM / CHALLENGE ---- auto-advance jika bukan soal terakhir
+      // ---- EXAM / CHALLENGE / TOURNAMENT ---- auto-advance jika bukan soal terakhir
       if (this.currentIndex < this.questions.length - 1) {
         setTimeout(() => {
           if (this.answers[questionId] === optionId) this.next();
         }, 500);
-      } else if (this.mode === 'challenge') {
-        // Mode tantangan: soal terakhir langsung auto-submit karena adu cepat
+      } else if (this.mode === 'challenge' || this.mode === 'tournament') {
+        // Mode tantangan / turnamen: soal terakhir langsung auto-submit karena adu cepat
         setTimeout(() => this.submitAnswers(), 500);
       }
     },
@@ -696,6 +727,22 @@ function QuizEngine() {
               attempt_id:   result.attempt_id,
             });
           } catch (_) {}
+        }
+
+        // Jika dari tournament: submit hasil ke turnamen
+        if (this.tournamentId) {
+          try {
+            const finalScore = result.score !== undefined ? result.score : Math.round(((result.score_percentage || ((result.correct || 0) / (result.total || 1) * 100))));
+            await api.post('tournament.submit', {
+              tournament_id: this.tournamentId,
+              score_final:   finalScore,
+              time_taken:    result.time_taken || timeTaken || 0,
+            });
+          } catch (_) {}
+
+          // Arahkan langsung ke papan peringkat turnamen
+          window.location.hash = `#/tournament/${this.tournamentId}`;
+          return;
         }
 
         // Navigasi ke result, sertakan challenge ID dan assignment ID jika ada
