@@ -177,8 +177,8 @@ function attempt_submit(): void {
             );
 
             // Cek jika seluruh peserta kompetisi sudah submit
-            $tRoom = DB::one("SELECT creator_id FROM tournaments WHERE id = ?", [$tournamentId]);
-            if ($tRoom) {
+            $tRoom = DB::one("SELECT id, title, creator_id, status FROM tournaments WHERE id = ?", [$tournamentId]);
+            if ($tRoom && $tRoom['status'] === 'in_progress') {
                 $cId = (int)$tRoom['creator_id'];
                 $totalAcc = (int)(DB::one("SELECT COUNT(*) as c FROM tournament_participants WHERE tournament_id = ? AND status = 'accepted' AND user_id != ?", [$tournamentId, $cId])['c'] ?? 0);
                 $totalSub = (int)(DB::one("SELECT COUNT(*) as c FROM tournament_participants WHERE tournament_id = ? AND status = 'accepted' AND score_final IS NOT NULL AND user_id != ?", [$tournamentId, $cId])['c'] ?? 0);
@@ -191,6 +191,18 @@ function attempt_submit(): void {
                     );
                     $winId = $win['user_id'] ?? null;
                     DB::execute("UPDATE tournaments SET status = 'completed', winner_id = ?, end_time = NOW() WHERE id = ?", [$winId, $tournamentId]);
+                    if ($winId) {
+                        $winUser = DB::one("SELECT name FROM users WHERE id = ?", [$winId]);
+                        $winName = $winUser['name'] ?? 'Peserta';
+                        pushNotification(
+                            $cId,
+                            'tournament_completed',
+                            '🏆 Turnamen Telah Selesai!',
+                            'Semua peserta telah mengumpulkan jawaban di "' . $tRoom['title'] . '". Juara 1: ' . $winName,
+                            '/tournament/' . $tournamentId,
+                            ['tournament_id' => (string)$tournamentId]
+                        );
+                    }
                 }
             }
         } catch (\Throwable $te) {

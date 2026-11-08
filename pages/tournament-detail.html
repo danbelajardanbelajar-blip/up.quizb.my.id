@@ -271,7 +271,7 @@
           <p class="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-1">👑 Sang Juara Turnamen</p>
           <p class="text-2xl font-black text-gray-900 dark:text-white" x-text="sortedParticipants[0]?.name"></p>
           <p class="text-xs text-gray-500 mt-1">
-            Skor Akhir: <strong class="text-primary-600" x-text="sortedParticipants[0]?.score_final + '%'"></strong> • Waktu: <strong x-text="formatDuration(sortedParticipants[0]?.time_taken || 0)"></strong>
+            Skor Akhir: <strong class="text-primary-600" x-text="sortedParticipants[0]?.score_final + '%'"></strong> • Waktu: <strong x-text="(sortedParticipants[0]?.time_taken >= 999999 ? 'Waktu habis' : formatDuration(sortedParticipants[0]?.time_taken || 0))"></strong>
           </p>
         </div>
       </template>
@@ -304,7 +304,7 @@
                     <span x-show="p.is_creator" class="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 px-1.5 py-0.2 rounded font-bold" title="Host">👑 Host</span>
                     <span x-show="p.disconnected" class="text-red-500 text-[11px]" title="Terputus">⚠️ Terputus</span>
                   </p>
-                  <p class="text-[11px] text-gray-400" x-text="p.time_taken ? 'Durasi: ' + formatDuration(p.time_taken) : (p.is_submitted ? 'Selesai' : 'Sedang bertanding')"></p>
+                  <p class="text-[11px] text-gray-400" x-text="p.time_taken ? (p.time_taken >= 999999 ? 'Waktu habis (terputus)' : 'Durasi: ' + formatDuration(p.time_taken)) : (p.is_submitted ? 'Selesai' : 'Sedang bertanding')"></p>
                 </div>
               </div>
 

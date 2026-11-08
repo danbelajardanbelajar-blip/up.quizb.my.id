@@ -837,6 +837,16 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
                       x-text="challenge.pendingCount > 9 ? '9+' : challenge.pendingCount"></span>
               </a>
             </template>
+            <template x-if="user">
+              <a @click.prevent="navigate('/tournaments');isOpen=false" href="#/tournaments"
+                 class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                 :class="currentRoute==='/tournaments' ? 'text-primary-600 dark:text-primary-400 font-medium' : ''">
+                <span>🏆 Turnamen</span>
+                <span x-show="user && tournament && tournament.pendingCount > 0"
+                      class="ml-auto text-[10px] px-1.5 py-0.5 bg-red-500 text-white rounded-full font-bold"
+                      x-text="tournament.pendingCount > 9 ? '9+' : tournament.pendingCount"></span>
+              </a>
+            </template>
           </div>
 
           <!-- Pemisah -->

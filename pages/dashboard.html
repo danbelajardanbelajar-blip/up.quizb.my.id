@@ -30,6 +30,12 @@
                 class="ml-1.5 px-1.5 py-0.2 bg-red-500 text-white text-[10px] font-black rounded-full"
                 x-text="challenge?.pendingCount"></span>
         </button>
+        <button @click="navigate('/tournaments')" class="btn-secondary text-xs sm:text-sm px-4 py-2.5 relative">
+          <span>🏆 Turnamen</span>
+          <span x-show="tournament?.pendingCount > 0"
+                class="ml-1.5 px-1.5 py-0.2 bg-red-500 text-white text-[10px] font-black rounded-full"
+                x-text="tournament?.pendingCount"></span>
+        </button>
         <button @click="navigate('/classroom')" class="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-xs sm:text-sm font-semibold">
           🏫 Kelas Saya
         </button>

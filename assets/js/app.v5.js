@@ -3058,7 +3058,7 @@ function QuizBApp() {
     },
 
     syncChallengeInvite() {
-      if (!this.user || this.challenge.inviteBusy) return;
+      if (!this.user || this.challenge.inviteBusy || this.currentRoute.startsWith('/play/')) return;
       const state = this.challenge;
       const userId = String(this.user.id);
       if (state.inviteUserId !== userId) {
@@ -3173,7 +3173,7 @@ function QuizBApp() {
     },
 
     syncTournamentInvite() {
-      if (!this.user || this.tournament.inviteBusy) return;
+      if (!this.user || this.tournament.inviteBusy || this.currentRoute.startsWith('/play/')) return;
       const state = this.tournament;
       const userId = String(this.user.id);
       if (state.inviteUserId !== userId) {
@@ -3419,7 +3419,9 @@ function QuizBApp() {
       // Live sync every 1.5 seconds while on tournament detail page
       if (!this.tournament.detailInterval) {
         this.tournament.detailInterval = setInterval(() => {
-          if (this.currentRoute.startsWith('/tournament/') && this.tournament.detail?.status !== 'cancelled') {
+          if (this.currentRoute.startsWith('/tournament/') &&
+              this.tournament.detail?.status !== 'cancelled' &&
+              this.tournament.detail?.status !== 'completed') {
             this.refreshTournamentDetail();
           } else {
             clearInterval(this.tournament.detailInterval);
@@ -3436,6 +3438,12 @@ function QuizBApp() {
         const data = await api.get('tournament.detail', { id: this.tournament.detail.id });
         const current = data.tournament || data;
         this.tournament.detail = current;
+        if (current.status === 'completed' || current.status === 'cancelled') {
+          if (this.tournament.detailInterval) {
+            clearInterval(this.tournament.detailInterval);
+            this.tournament.detailInterval = null;
+          }
+        }
 
         // Auto-start kuis untuk peserta HANYA saat ada transisi host klik Mulai (open -> in_progress)
         const isSubmitted = current.my_participant?.is_submitted ||

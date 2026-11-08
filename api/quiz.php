@@ -256,8 +256,9 @@ function quiz_questions(): void {
         if ($shuffleOptions   === null) $shuffleOptions   = true;
     }
 
-    $mode        = $_GET['mode'] ?? 'exam';
+        $mode        = $_GET['mode'] ?? 'exam';
     $challengeId = (int)($_GET['challenge_id'] ?? 0);
+    $tournamentId = (int)($_GET['tournament_id'] ?? 0);
     
     // Jika Mode Tantangan, PAKSA limit = 10 agar adil dan seragam
     if ($mode === 'challenge' && $challengeId > 0) {
@@ -266,6 +267,13 @@ function quiz_questions(): void {
         $shuffleOptions   = true;
         // Gunakan ID tantangan sebagai seed agar kedua pemain mendapat urutan acak yang SAMA PERSIS
         mt_srand($challengeId); 
+    } elseif ($mode === 'tournament' && $tournamentId > 0) {
+        // Mode Turnamen: seluruh peserta harus mendapatkan paket soal dan urutan acak yang SAMA PERSIS
+        $limit = 0; // 0 = seluruh soal dari kuis yang dilombakan
+        $shuffleQuestions = true;
+        $shuffleOptions   = true;
+        // Gunakan ID turnamen sebagai seed agar semua peserta mendapat soal & urutan opsi yang identik
+        mt_srand($tournamentId);
     } else {
         // Nilai 0 dari assignment berarti "tampilkan SEMUA soal" — jangan override ke 10.
         // Hanya nilai negatif atau null sisa yang perlu di-default-kan.
