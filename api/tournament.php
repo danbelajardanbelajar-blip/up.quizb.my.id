@@ -419,6 +419,115 @@ function tournament_decline(): void {
     jsonSuccess([], 'Undangan turnamen telah ditolak.');
 }
 
+
+/**
+ * POST — Kirim ulang undangan turnamen ke peserta (Undang Ulang)
+ */
+function tournament_reinvite(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $user = requireAuth();
+    ensureTournamentTables();
+    $body = getBody();
+    $id = (int)($body['tournament_id'] ?? $_POST['tournament_id'] ?? 0);
+    $targetUserId = (int)($body['user_id'] ?? $_POST['user_id'] ?? 0);
+
+    if (!$id) jsonError('Tournament ID diperlukan');
+
+    $t = DB::one(
+        "SELECT t.*, q.title AS quiz_title, u.name AS creator_name
+         FROM tournaments t
+         JOIN quizzes q ON q.id = t.quiz_id
+         JOIN users u ON u.id = t.creator_id
+         WHERE t.id = ?",
+        [$id]
+    );
+
+    if (!$t) jsonError('Turnamen tidak ditemukan', 404);
+    if ((int)$t['creator_id'] !== (int)$user['id']) {
+        jsonError('Hanya juri / pembuat turnamen yang dapat mengirim ulang undangan', 403);
+    }
+    if ($t['status'] !== 'open') {
+        jsonError('Undangan hanya dapat dikirim ulang saat turnamen masih dalam status persiapan (open)');
+    }
+
+    $sql = "SELECT tp.id, tp.user_id, tp.status, u.name, u.email
+            FROM tournament_participants tp
+            JOIN users u ON u.id = tp.user_id
+            WHERE tp.tournament_id = ? AND tp.user_id != ?";
+    $params = [$id, $user['id']];
+
+    if ($targetUserId > 0) {
+        $sql .= " AND tp.user_id = ?";
+        $params[] = $targetUserId;
+    } else {
+        $sql .= " AND tp.status != 'accepted'";
+    }
+
+    $targets = DB::all($sql, $params);
+
+    // Jika targetUserId diberikan tetapi belum ada di partisipan, coba tambahkan jika user valid
+    if ($targetUserId > 0 && empty($targets)) {
+        $newUser = DB::one("SELECT id, name, email FROM users WHERE id = ? AND is_active = 1", [$targetUserId]);
+        if ($newUser && $newUser['id'] != $user['id']) {
+            DB::execute(
+                "INSERT INTO tournament_participants (tournament_id, user_id, is_creator, status, progress)
+                 VALUES (?, ?, 0, 'pending', '{\"s\":0,\"q\":0,\"last_ping\":0}')",
+                [$id, $newUser['id']]
+            );
+            pushNotification(
+                $newUser['id'],
+                'tournament',
+                '🏆 Undangan Turnamen: ' . $t['title'],
+                $user['name'] . ' (Juri/Host) mengundangmu bertanding di turnamen kuis "' . $t['quiz_title'] . '"',
+                '/tournament/' . $id,
+                [
+                    'tournament_id'    => (string)$id,
+                    'quiz_id'          => (string)$t['quiz_id'],
+                    'tournament_title' => (string)$t['title'],
+                    'quiz_title'       => (string)$t['quiz_title'],
+                    'creator_name'     => (string)$user['name']
+                ]
+            );
+            jsonSuccess([
+                'tournament_id'   => $id,
+                'reinvited_count' => 1
+            ], "Berhasil mengundang {$newUser['name']} ke turnamen!");
+            return;
+        }
+    }
+
+    if (empty($targets)) {
+        jsonError('Semua peserta sudah menerima undangan atau tidak ada peserta yang perlu diundang ulang');
+    }
+
+    $sentCount = 0;
+    foreach ($targets as $target) {
+        if ($target['status'] === 'declined') {
+            DB::execute("UPDATE tournament_participants SET status = 'pending' WHERE id = ?", [$target['id']]);
+        }
+        pushNotification(
+            $target['user_id'],
+            'tournament',
+            '🏆 Undangan Ulang Turnamen: ' . $t['title'],
+            $user['name'] . ' (Juri/Host) mengirim ulang undangan untuk bertanding di turnamen kuis "' . $t['quiz_title'] . '"',
+            '/tournament/' . $id,
+            [
+                'tournament_id'    => (string)$id,
+                'quiz_id'          => (string)$t['quiz_id'],
+                'tournament_title' => (string)$t['title'],
+                'quiz_title'       => (string)$t['quiz_title'],
+                'creator_name'     => (string)$user['name']
+            ]
+        );
+        $sentCount++;
+    }
+
+    jsonSuccess([
+        'tournament_id'   => $id,
+        'reinvited_count' => $sentCount
+    ], "Berhasil mengirim ulang undangan ke {$sentCount} peserta!");
+}
+
 /**
  * POST — Creator (Juri / Pengawas) memulai jalannya turnamen
  */
@@ -436,11 +545,16 @@ function tournament_start(): void {
     if ($t['status'] === 'in_progress') jsonError('Turnamen sudah sedang berlangsung');
     if ($t['status'] === 'completed') jsonError('Turnamen sudah selesai');
 
-    // Beritahu semua peserta yang sudah accepted (bukan creator)
-    $accepted = DB::all("SELECT user_id FROM tournament_participants WHERE tournament_id = ? AND status = 'accepted' AND user_id != ?", [$id, $user['id']]);
-    if (empty($accepted)) {
-        jsonError('Belum ada peserta yang menerima undangan turnamen. Tunggu minimal 1 peserta menerima sebelum memulai.');
+    // Cek apakah seluruh peserta turnamen sudah accepted
+    $allParticipants = DB::all("SELECT user_id, status FROM tournament_participants WHERE tournament_id = ? AND user_id != ?", [$id, $user['id']]);
+    if (empty($allParticipants)) {
+        jsonError('Turnamen tidak memiliki peserta. Silakan undang peserta terlebih dahulu.');
     }
+    $pending = array_filter($allParticipants, function($p) { return $p['status'] !== 'accepted'; });
+    if (!empty($pending)) {
+        jsonError('Semua anggota turnamen harus menerima undangan (accept) terlebih dahulu sebelum turnamen dapat dimulai.');
+    }
+    $accepted = $allParticipants;
 
     $questionCount = isset($body['question_count']) ? (int)$body['question_count'] : (isset($_POST['question_count']) ? (int)$_POST['question_count'] : null);
     if ($questionCount !== null) {

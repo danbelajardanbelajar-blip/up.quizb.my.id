@@ -79,7 +79,7 @@ if (in_array($method, ['POST', 'PUT', 'DELETE'])) {
         'auth.login', 'auth.register', 'auth.logout', 'auth.google', 'auth.google_native', 
         'auth.resend_verification', 'auth.update_fcm_token', 'auth.unregister_fcm_token',
         'challenge.create', 'challenge.accept', 'challenge.decline', 'challenge.sync', 'challenge.submit',
-        'tournament.create', 'tournament.accept', 'tournament.decline', 'tournament.start', 'tournament.stop', 'tournament.delete', 'tournament.sync', 'tournament.submit',
+        'tournament.create', 'tournament.accept', 'tournament.decline', 'tournament.start', 'tournament.stop', 'tournament.delete', 'tournament.reinvite', 'tournament.sync', 'tournament.submit',
         'message.send', 'message.delete'
     ];
 

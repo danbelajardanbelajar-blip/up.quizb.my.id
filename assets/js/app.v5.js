@@ -3367,6 +3367,18 @@ function QuizBApp() {
       }
     },
 
+    async reinviteTournament(tournamentId, userId = null) {
+      try {
+        const payload = { tournament_id: tournamentId };
+        if (userId) payload.user_id = userId;
+        const res = await api.post('tournament.reinvite', payload);
+        this.showToast(res.message || 'Undangan berhasil dikirim ulang! 🔔', 'success');
+        await this.loadTournamentDetail(tournamentId, true);
+      } catch (e) {
+        this.showToast(e.message || 'Gagal mengirim ulang undangan', 'error');
+      }
+    },
+
     async startTournament(tournamentId, questionCount = null) {
       try {
         const payload = { tournament_id: tournamentId };
