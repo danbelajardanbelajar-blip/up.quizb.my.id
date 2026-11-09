@@ -324,6 +324,21 @@
           </select>
         </div>
 
+        <!-- Jumlah Soal Turnamen -->
+        <div>
+          <label class="form-label" for="tourn-qcount">Jumlah Soal Turnamen</label>
+          <select id="tourn-qcount" x-model.number="tournament.createModal.questionCount" class="form-input text-sm">
+            <option value="10">10 Soal (Default Turnamen)</option>
+            <option value="5">5 Soal (Cepat)</option>
+            <option value="15">15 Soal</option>
+            <option value="20">20 Soal</option>
+            <option value="25">25 Soal</option>
+            <option value="50">50 Soal</option>
+            <option value="0">Semua Soal (Maksimal)</option>
+          </select>
+          <p class="text-[11px] text-gray-500 mt-1">Default turnamen adalah 10 soal. Anda juga dapat mengubahnya kembali sebelum memulai turnamen di Lobby.</p>
+        </div>
+
         <!-- Cari & Undang Pemain (Berdasarkan Email / Nama) -->
         <div>
           <label class="form-label">Undang Pemain (Berdasarkan Email / Nama)</label>

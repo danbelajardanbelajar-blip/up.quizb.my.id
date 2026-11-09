@@ -258,7 +258,7 @@ function quiz_questions(): void {
 
         $mode        = $_GET['mode'] ?? 'exam';
     $challengeId = (int)($_GET['challenge_id'] ?? 0);
-    $tournamentId = (int)($_GET['tournament_id'] ?? 0);
+    $tournamentId = (int)($_GET['tournament_id'] ?? $_GET['tid'] ?? 0);
     
     // Jika Mode Tantangan, PAKSA limit = 10 agar adil dan seragam
     if ($mode === 'challenge' && $challengeId > 0) {
@@ -268,8 +268,17 @@ function quiz_questions(): void {
         // Gunakan ID tantangan sebagai seed agar kedua pemain mendapat urutan acak yang SAMA PERSIS
         mt_srand($challengeId); 
     } elseif ($mode === 'tournament' && $tournamentId > 0) {
-        // Mode Turnamen: seluruh peserta harus mendapatkan paket soal dan urutan acak yang SAMA PERSIS
-        $limit = 0; // 0 = seluruh soal dari kuis yang dilombakan
+        // Mode Turnamen:
+        // Cek pengaturan question_count khusus dari pembuat turnamen
+        $tournRow = DB::one('SELECT question_count FROM tournaments WHERE id = ?', [$tournamentId]);
+        if ($tournRow && $tournRow['question_count'] !== null) {
+            $qCount = (int)$tournRow['question_count'];
+            // 0 = Semua Soal, > 0 = jumlah soal yang ditentukan pembuat turnamen
+            $limit = $qCount;
+        } else {
+            // Default turnamen adalah 10 soal (mengalahkan settingan pribadi user)
+            $limit = 10;
+        }
         $shuffleQuestions = true;
         $shuffleOptions   = true;
         // Gunakan ID turnamen sebagai seed agar semua peserta mendapat soal & urutan opsi yang identik

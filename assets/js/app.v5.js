@@ -3258,6 +3258,7 @@ function QuizBApp() {
       this.tournament.createModal.searchResults = [];
       this.tournament.createModal.selectedUsers = [];
       this.tournament.createModal.submitting = false;
+      this.tournament.createModal.questionCount = 10;
 
       // Load quiz options if empty
       if (!this.tournament.quizOptions || this.tournament.quizOptions.length === 0) {
@@ -3320,6 +3321,7 @@ function QuizBApp() {
           title: modal.title.trim(),
           description: modal.description.trim(),
           quiz_id: modal.quizId,
+          question_count: modal.questionCount !== undefined ? modal.questionCount : 10,
           invitees: invitees,
           invited_users: invitees
         });
@@ -3365,9 +3367,14 @@ function QuizBApp() {
       }
     },
 
-    async startTournament(tournamentId) {
+    async startTournament(tournamentId, questionCount = null) {
       try {
-        await api.post('tournament.start', { tournament_id: tournamentId });
+        const payload = { tournament_id: tournamentId };
+        const qCount = questionCount !== null ? questionCount : this.tournament.startQuestionCount;
+        if (qCount !== null && qCount !== undefined) {
+          payload.question_count = parseInt(qCount);
+        }
+        await api.post('tournament.start', payload);
         this.showToast('Turnamen resmi dimulai! 🚀', 'success');
         await this.loadTournamentDetail(tournamentId, true);
       } catch (e) {

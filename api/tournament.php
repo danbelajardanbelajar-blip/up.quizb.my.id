@@ -18,6 +18,7 @@ function ensureTournamentTables(): void {
             creator_id INT NOT NULL,
             status ENUM('pending', 'open', 'in_progress', 'completed', 'cancelled') DEFAULT 'open',
             max_participants INT DEFAULT 16,
+            question_count INT NULL DEFAULT 10,
             winner_id INT NULL,
             start_time DATETIME NULL,
             end_time DATETIME NULL,
@@ -47,6 +48,14 @@ function ensureTournamentTables(): void {
             KEY idx_tp_status (status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+        // Pastikan kolom question_count ada di tabel tournaments
+        try {
+            $colExists = DB::one("SHOW COLUMNS FROM tournaments LIKE 'question_count'");
+            if (!$colExists) {
+                $pdo->exec("ALTER TABLE tournaments ADD COLUMN question_count INT NULL DEFAULT 10 AFTER max_participants");
+            }
+        } catch (\Throwable $e) {}
+
         // Bersihkan data lama di mana pembuat turnamen sempat tercatat sebagai peserta
         $pdo->exec("DELETE tp FROM tournament_participants tp INNER JOIN tournaments t ON t.id = tp.tournament_id WHERE tp.user_id = t.creator_id OR tp.is_creator = 1");
         $ready = true;
@@ -64,7 +73,7 @@ function tournament_list(): void {
 
     // 1. Undangan Masuk (Pending) — hanya untuk user sebagai peserta
     $incoming = DB::all(
-        "SELECT t.id, t.title, t.description, t.quiz_id, t.creator_id, t.status, t.created_at,
+        "SELECT t.id, t.title, t.description, t.quiz_id, t.creator_id, t.status, t.created_at, t.question_count,
                 q.title AS quiz_title, q.total_questions, u.name AS creator_name,
                 (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND status = 'accepted' AND user_id != t.creator_id) AS accepted_count,
                 (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND user_id != t.creator_id) AS total_invited
@@ -79,7 +88,7 @@ function tournament_list(): void {
 
     // 2. Turnamen Aktif yang diikuti user sebagai peserta
     $active = DB::all(
-        "SELECT t.id, t.title, t.description, t.quiz_id, t.creator_id, t.status, t.start_time, t.created_at,
+        "SELECT t.id, t.title, t.description, t.quiz_id, t.creator_id, t.status, t.start_time, t.created_at, t.question_count,
                 q.title AS quiz_title, q.total_questions, u.name AS creator_name,
                 tp.status AS my_status, 0 AS is_creator, tp.score_final, tp.time_taken,
                 (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND status = 'accepted' AND user_id != t.creator_id) AS accepted_count,
@@ -95,7 +104,7 @@ function tournament_list(): void {
 
     // 3. Turnamen yang diselenggarakan oleh user sebagai Juri / Pengawas (My Tournaments)
     $myTournaments = DB::all(
-        "SELECT t.id, t.title, t.description, t.quiz_id, t.creator_id, t.status, t.start_time, t.created_at,
+        "SELECT t.id, t.title, t.description, t.quiz_id, t.creator_id, t.status, t.start_time, t.created_at, t.question_count,
                 q.title AS quiz_title, q.total_questions, 1 AS is_creator,
                 (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND status = 'accepted' AND user_id != t.creator_id) AS accepted_count,
                 (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND user_id != t.creator_id) AS total_invited
@@ -108,7 +117,7 @@ function tournament_list(): void {
 
     // 4. Riwayat Turnamen Selesai (baik sebagai peserta maupun sebagai juri/pembuat)
     $history = DB::all(
-        "SELECT DISTINCT t.id, t.title, t.quiz_id, t.creator_id, t.status, t.created_at, t.winner_id,
+        "SELECT DISTINCT t.id, t.title, t.quiz_id, t.creator_id, t.status, t.created_at, t.winner_id, t.question_count,
                 w.name AS winner_name, q.title AS quiz_title,
                 tp.score_final, tp.time_taken,
                 (CASE WHEN t.creator_id = ? THEN 1 ELSE 0 END) AS is_creator,
@@ -144,6 +153,7 @@ function tournament_create(): void {
     $description = trim($body['description'] ?? $_POST['description'] ?? '');
     $quizId = (int)($body['quiz_id'] ?? $_POST['quiz_id'] ?? 0);
     $maxParticipants = max(2, min(64, (int)($body['max_participants'] ?? $_POST['max_participants'] ?? 16)));
+    $questionCount = isset($body['question_count']) ? (int)$body['question_count'] : (isset($_POST['question_count']) ? (int)$_POST['question_count'] : 10);
     $invitedInput = $body['invitees'] ?? $body['invited_users'] ?? $_POST['invitees'] ?? $_POST['invited_users'] ?? [];
 
     if (is_string($invitedInput)) {
@@ -198,9 +208,9 @@ function tournament_create(): void {
 
     // 1. Simpan room turnamen (pembuat bertindak sebagai Host/Juri)
     DB::execute(
-        "INSERT INTO tournaments (title, description, quiz_id, creator_id, status, max_participants)
-         VALUES (?, ?, ?, ?, 'open', ?)",
-        [$title, $description ?: null, $quizId, $user['id'], $maxParticipants]
+        "INSERT INTO tournaments (title, description, quiz_id, creator_id, status, max_participants, question_count)
+         VALUES (?, ?, ?, ?, 'open', ?, ?)",
+        [$title, $description ?: null, $quizId, $user['id'], $maxParticipants, $questionCount]
     );
     $tournamentId = (int)DB::lastId();
 
@@ -432,7 +442,12 @@ function tournament_start(): void {
         jsonError('Belum ada peserta yang menerima undangan turnamen. Tunggu minimal 1 peserta menerima sebelum memulai.');
     }
 
-    DB::execute("UPDATE tournaments SET status = 'in_progress', start_time = NOW() WHERE id = ?", [$id]);
+    $questionCount = isset($body['question_count']) ? (int)$body['question_count'] : (isset($_POST['question_count']) ? (int)$_POST['question_count'] : null);
+    if ($questionCount !== null) {
+        DB::execute("UPDATE tournaments SET status = 'in_progress', start_time = NOW(), question_count = ? WHERE id = ?", [$questionCount, $id]);
+    } else {
+        DB::execute("UPDATE tournaments SET status = 'in_progress', start_time = NOW() WHERE id = ?", [$id]);
+    }
 
     foreach ($accepted as $part) {
         pushNotification(
