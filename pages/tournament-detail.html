@@ -211,14 +211,22 @@
                 <span class="text-2xl">🏆</span>
                 <div>
                   <p class="font-bold text-xs text-emerald-900 dark:text-emerald-200">Turnamen Telah Selesai!</p>
-                  <p class="text-[11px] text-emerald-700 dark:text-emerald-400">Seluruh peserta yang bertanding telah menyelesaikan kuis. Peringkat juara telah ditetapkan pada papan klasemen.</p>
+                  <p class="text-[11px] text-emerald-700 dark:text-emerald-400">Seluruh peserta yang bertanding telah menyelesaikan kuis. Peringkat juara telah ditetapkan pada papan klasemen. Tekan <strong>Undang Ulang</strong> untuk mengajak peserta yang sama battle lagi tanpa membuat turnamen baru.</p>
                 </div>
               </div>
-              <button @click="deleteTournament(tournament.detail.id)"
-                      class="btn-secondary text-xs py-2 px-3 rounded-xl text-red-600 dark:text-red-400 font-semibold self-end sm:self-center"
-                      title="Hapus Turnamen">
-                🗑 Hapus
-              </button>
+              <div class="flex flex-wrap items-center gap-2 self-end sm:self-center">
+                <button @click="reinviteTournament(tournament.detail.id)"
+                        class="btn-secondary text-xs py-2 px-4 font-bold rounded-xl border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 flex items-center gap-1.5 whitespace-nowrap shadow-sm"
+                        title="Buka ronde baru dan kirim ulang undangan ke semua peserta">
+                  <span>🔔</span>
+                  <span>Undang Ulang (Battle Lagi)</span>
+                </button>
+                <button @click="deleteTournament(tournament.detail.id)"
+                        class="btn-secondary text-xs py-2 px-3 rounded-xl text-red-600 dark:text-red-400 font-semibold"
+                        title="Hapus Turnamen">
+                  🗑 Hapus
+                </button>
+              </div>
             </div>
           </div>
         </template>

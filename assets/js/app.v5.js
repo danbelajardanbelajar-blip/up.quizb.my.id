@@ -3189,11 +3189,13 @@ function QuizBApp() {
         state.invite = null;
       }
       if (state.invite) return;
-      const next = state.incoming.find(t => !state.inviteSeen.includes(String(t.id)));
+      // Kunci = id + waktu undangan, agar undangan ulang memunculkan popup lagi
+      const inviteKey = t => String(t.id) + (t.invited_at ? ':' + t.invited_at : '');
+      const next = state.incoming.find(t => !state.inviteSeen.includes(inviteKey(t)));
       if (!next) return;
       state.invite = next;
       state.inviteError = '';
-      state.inviteSeen.push(String(next.id));
+      state.inviteSeen.push(inviteKey(next));
       try {
         sessionStorage.setItem('quizb.tournamentInvites.' + userId, JSON.stringify(state.inviteSeen));
       } catch (_) {}
@@ -3368,6 +3370,10 @@ function QuizBApp() {
     },
 
     async reinviteTournament(tournamentId, userId = null) {
+      const status = this.tournament.detail?.status;
+      if (status === 'completed' || status === 'cancelled') {
+        if (!confirm('Buka ronde battle baru? Skor & klasemen ronde sebelumnya akan direset, dan semua peserta diundang ulang.')) return;
+      }
       try {
         const payload = { tournament_id: tournamentId };
         if (userId) payload.user_id = userId;
@@ -3422,12 +3428,19 @@ function QuizBApp() {
       }
     },
 
+    // Ronde baru (undang ulang sesudah battle): hapus penanda "sudah submit" ronde lama di browser
+    clearStaleTournamentSubmit(t) {
+      if (!t || t.is_creator || t.status !== 'open') return;
+      try { sessionStorage.removeItem('tournament_submitted_' + t.id); } catch (_) {}
+    },
+
     async loadTournamentDetail(id, silent = false) {
       if (!id) return;
       if (!silent) this.tournament.detailLoading = true;
       try {
         const data = await api.get('tournament.detail', { id });
         this.tournament.detail = data.tournament || data;
+        this.clearStaleTournamentSubmit(this.tournament.detail);
       } catch (e) {
         console.error('loadTournamentDetail error:', e);
         this.showToast(e.message || 'Gagal memuat detail turnamen', 'error');
@@ -3457,6 +3470,7 @@ function QuizBApp() {
         const data = await api.get('tournament.detail', { id: this.tournament.detail.id });
         const current = data.tournament || data;
         this.tournament.detail = current;
+        this.clearStaleTournamentSubmit(current);
         if (current.status === 'completed' || current.status === 'cancelled') {
           if (this.tournament.detailInterval) {
             clearInterval(this.tournament.detailInterval);

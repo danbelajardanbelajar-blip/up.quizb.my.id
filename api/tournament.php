@@ -74,6 +74,7 @@ function tournament_list(): void {
     // 1. Undangan Masuk (Pending) — hanya untuk user sebagai peserta
     $incoming = DB::all(
         "SELECT t.id, t.title, t.description, t.quiz_id, t.creator_id, t.status, t.created_at, t.question_count,
+                tp.updated_at AS invited_at,
                 q.title AS quiz_title, q.total_questions, u.name AS creator_name,
                 (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND status = 'accepted' AND user_id != t.creator_id) AS accepted_count,
                 (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id AND user_id != t.creator_id) AS total_invited
@@ -446,8 +447,55 @@ function tournament_reinvite(): void {
     if ((int)$t['creator_id'] !== (int)$user['id']) {
         jsonError('Hanya juri / pembuat turnamen yang dapat mengirim ulang undangan', 403);
     }
+    if ($t['status'] === 'in_progress') {
+        jsonError('Undangan tidak dapat dikirim ulang saat battle sedang berlangsung. Tunggu hingga selesai atau hentikan turnamen terlebih dahulu.');
+    }
+
+    // Sesudah battle (completed / cancelled): mulai ronde baru di turnamen yang sama
     if ($t['status'] !== 'open') {
-        jsonError('Undangan hanya dapat dikirim ulang saat turnamen masih dalam status persiapan (open)');
+        DB::execute(
+            "UPDATE tournaments SET status = 'open', winner_id = NULL, start_time = NULL, end_time = NULL WHERE id = ?",
+            [$id]
+        );
+        DB::execute(
+            "UPDATE tournament_participants
+             SET status = 'pending', attempt_id = NULL, score_final = NULL, time_taken = NULL,
+                 progress = '{\"s\":0,\"q\":0,\"last_ping\":0}', updated_at = NOW()
+             WHERE tournament_id = ? AND user_id != ?",
+            [$id, $user['id']]
+        );
+        $targets = DB::all(
+            "SELECT tp.id, tp.user_id, tp.status, u.name, u.email
+             FROM tournament_participants tp
+             JOIN users u ON u.id = tp.user_id
+             WHERE tp.tournament_id = ? AND tp.user_id != ?",
+            [$id, $user['id']]
+        );
+        if (empty($targets)) jsonError('Turnamen tidak memiliki peserta untuk diundang ulang');
+
+        foreach ($targets as $target) {
+            pushNotification(
+                $target['user_id'],
+                'tournament',
+                '🏆 Undangan Battle Ulang: ' . $t['title'],
+                $user['name'] . ' (Juri/Host) mengajakmu bertanding lagi di turnamen kuis "' . $t['quiz_title'] . '"',
+                '/tournament/' . $id,
+                [
+                    'tournament_id'    => (string)$id,
+                    'quiz_id'          => (string)$t['quiz_id'],
+                    'tournament_title' => (string)$t['title'],
+                    'quiz_title'       => (string)$t['quiz_title'],
+                    'creator_name'     => (string)$user['name']
+                ]
+            );
+        }
+
+        jsonSuccess([
+            'tournament_id'   => $id,
+            'reinvited_count' => count($targets),
+            'new_round'       => true
+        ], 'Ronde baru dibuka! Undangan battle ulang dikirim ke ' . count($targets) . ' peserta.');
+        return;
     }
 
     $sql = "SELECT tp.id, tp.user_id, tp.status, u.name, u.email
@@ -502,9 +550,9 @@ function tournament_reinvite(): void {
 
     $sentCount = 0;
     foreach ($targets as $target) {
-        if ($target['status'] === 'declined') {
-            DB::execute("UPDATE tournament_participants SET status = 'pending' WHERE id = ?", [$target['id']]);
-        }
+        // updated_at disentuh agar popup undangan muncul lagi di browser peserta
+        if ($target['status'] === 'accepted') continue;
+        DB::execute("UPDATE tournament_participants SET status = 'pending', updated_at = NOW() WHERE id = ?", [$target['id']]);
         pushNotification(
             $target['user_id'],
             'tournament',
