@@ -432,6 +432,32 @@ function auth_google_native(): void {
         jsonError('Token Google tidak valid: ' . $errorMsg, 401);
     }
 
+    // Keamanan: Validasi Issuer (iss) resmi dari Google
+    $iss = $tokenInfo['iss'] ?? '';
+    if (!in_array($iss, ['accounts.google.com', 'https://accounts.google.com'], true)) {
+        jsonError('Issuer token Google tidak valid', 401);
+    }
+
+    // Keamanan: Validasi bahwa alamat email sudah terverifikasi di Google
+    if (isset($tokenInfo['email_verified']) && $tokenInfo['email_verified'] !== 'true' && $tokenInfo['email_verified'] !== true) {
+        jsonError('Alamat email Google belum diverifikasi', 401);
+    }
+
+    // Keamanan: Validasi Audience (aud) — Token ID WAJIB diterbitkan untuk aplikasi QuizB resmi,
+    // bukan dari aplikasi pihak ketiga / attacker untuk mencegah Confused Deputy Attack (Account Takeover).
+    $allowedAudiences = array_values(array_filter([
+        defined('GOOGLE_CLIENT_ID') ? GOOGLE_CLIENT_ID : null,
+        defined('GOOGLE_ANDROID_CLIENT_ID') ? GOOGLE_ANDROID_CLIENT_ID : null,
+        getenv('GOOGLE_CLIENT_ID') ?: null,
+        getenv('GOOGLE_ANDROID_CLIENT_ID') ?: null,
+    ], fn($id) => !empty($id) && !str_starts_with($id, 'YOUR_')));
+
+    $tokenAud = $tokenInfo['aud'] ?? '';
+    if (!empty($allowedAudiences) && !in_array($tokenAud, $allowedAudiences, true)) {
+        error_log("[Auth] Google token audience mismatch. Expected: " . implode(',', $allowedAudiences) . " Got: $tokenAud");
+        jsonError('Token Google tidak ditujukan untuk aplikasi ini (Audience mismatch)', 401);
+    }
+
     $googleId = $tokenInfo['sub'];
     $email    = $tokenInfo['email'];
     $name     = $tokenInfo['name'] ?? explode('@', $email)[0];

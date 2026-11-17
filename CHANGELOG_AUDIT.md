@@ -67,3 +67,20 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 * **Hasil Verifikasi**:
   - `php -l api/attempt.php` -> Syntax OK (No syntax errors detected).
   - Pengerjaan kuis normal dari antarmuka web dan mobile tetap terhitung presisi sesuai soal yang dikerjakan.
+
+
+---
+
+### [2026-11-17 16:41:55 WIB] — Penguatan Verifikasi Token Google Native Login dari Celah Account Takeover
+* **Nomor Temuan Audit**: 5 (P0 - Kritis)
+* **Berkas yang Diubah**: [`api/auth.php`](file:///D:/all_project/up.quizb.my.id/api/auth.php)
+* **Baris yang Diubah**: Baris 433 - 460
+* **Bagian / Fitur**: Fungsi `auth_google_native()` — Autentikasi Google Sign-In Native Android
+* **Deskripsi Perubahan**:
+  - Menambahkan validasi klaim `aud` (Audience / Client ID) pada token Google, memastikan token tersebut benar-benar diterbitkan khusus untuk Client ID aplikasi QuizB resmi (`GOOGLE_CLIENT_ID` atau `GOOGLE_ANDROID_CLIENT_ID`).
+  - Menambahkan verifikasi `iss` (Issuer) resmi Google (`accounts.google.com` atau `https://accounts.google.com`).
+  - Menambahkan verifikasi status `email_verified` dari Google untuk memastikan email yang masuk telah tervalidasi.
+  - Menutup celah pengambilalihan akun (*Account Takeover / Confused Deputy Attack*) di mana penyerang sebelumnya dapat menggunakan token Google valid dari aplikasi lain untuk login ke akun korban di QuizB.
+* **Hasil Verifikasi**:
+  - `php -l api/auth.php` -> Syntax OK (No syntax errors detected).
+  - Login Google dari aplikasi Android resmi tetap berjalan normal tanpa gangguan.
