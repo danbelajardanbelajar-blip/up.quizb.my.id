@@ -363,12 +363,18 @@ function quiz_questions(): void {
         unset($opt);
         $q['options'] = $opts;
 
-        // correct_option_id tetap statis (tidak berubah oleh shuffle)
-        $correctOpt = DB::one(
-            'SELECT id FROM options WHERE question_id = ? AND is_correct = 1 LIMIT 1',
-            [$q['id']]
-        );
-        $q['correct_option_id'] = $correctOpt ? $correctOpt['id'] : null;
+        // Keamanan: Jangan sertakan correct_option_id pada mode ujian (exam) atau tugas kelas (assignment).
+        // Kunci jawaban tidak boleh bocor ke klien dan hanya dievaluasi di sisi server saat submit jawaban (attempt.submit).
+        // correct_option_id HANYA dimuat jika siswa secara eksplisit memilih mode latihan interaktif mandiri (instant / end)
+        // atau mode duel real-time (challenge / tournament) di luar konteks tugas kelas resmi (assignment).
+        $isSecureExam = ($assignmentId > 0) || ($mode === 'exam');
+        if (!$isSecureExam && in_array($mode, ['instant', 'end', 'challenge', 'tournament'], true)) {
+            $correctOpt = DB::one(
+                'SELECT id FROM options WHERE question_id = ? AND is_correct = 1 LIMIT 1',
+                [$q['id']]
+            );
+            $q['correct_option_id'] = $correctOpt ? (int)$correctOpt['id'] : null;
+        }
     }
     unset($q);
 
