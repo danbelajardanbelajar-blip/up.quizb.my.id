@@ -6,11 +6,39 @@
 // Buffer semua output agar PHP warning/notice tidak merusak JSON response
 ob_start();
 
-// CORS & Headers
-header('Access-Control-Allow-Origin: ' . ($_SERVER['HTTP_ORIGIN'] ?? '*'));
+// ============================================
+// CORS & Security Headers
+// ============================================
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+// Whitelist domain resmi yang diizinkan mengakses API dengan kredensial sesi
+$isAllowedOrigin = false;
+if (!empty($origin)) {
+    // 1. Cek domain resmi quizb.my.id dan seluruh subdomainnya (*.quizb.my.id)
+    if (preg_match('#^https?://([a-z0-9-]+\.)*quizb\.my\.id(:[0-9]+)?$#i', $origin)) {
+        $isAllowedOrigin = true;
+    }
+    // 2. Cek mobile app webview / hybrid schemes
+    elseif (in_array($origin, ['capacitor://localhost', 'ionic://localhost', 'http://localhost'], true)) {
+        $isAllowedOrigin = true;
+    }
+    // 3. Cek local development (localhost & 127.0.0.1 dengan port sembarang)
+    elseif (preg_match('#^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$#i', $origin)) {
+        $isAllowedOrigin = true;
+    }
+}
+
+if ($isAllowedOrigin) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Access-Control-Allow-Credentials: true');
+    header('Vary: Origin');
+} elseif (empty($origin)) {
+    // Request tanpa Origin (native mobile apps, same-origin, curl)
+    header('Access-Control-Allow-Origin: *');
+}
+
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token, X-Requested-With, X-App-Platform');
-header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Expose-Headers: X-CSRF-Token');
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-cache, no-store, must-revalidate');
@@ -18,6 +46,10 @@ header('Pragma: no-cache');
 header('Expires: 0');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    if (!empty($origin) && !$isAllowedOrigin) {
+        http_response_code(403);
+        exit;
+    }
     http_response_code(204);
     exit;
 }

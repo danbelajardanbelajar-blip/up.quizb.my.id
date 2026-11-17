@@ -84,3 +84,25 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 * **Hasil Verifikasi**:
   - `php -l api/auth.php` -> Syntax OK (No syntax errors detected).
   - Login Google dari aplikasi Android resmi tetap berjalan normal tanpa gangguan.
+
+
+---
+
+### [2026-11-17 20:00:33 WIB] — Pengamanan Kebijakan CORS dengan Whitelist Domain Resmi
+* **Nomor Temuan Audit**: 6 (P1 - Tinggi)
+* **Berkas yang Diubah**: [`api.php`](file:///D:/all_project/up.quizb.my.id/api.php)
+* **Baris yang Diubah**: Baris 9 - 54
+* **Bagian / Fitur**: Router Utama `api.php` — Penanganan CORS & Security Headers
+* **Deskripsi Perubahan**:
+  - Mengganti konfigurasi CORS terbuka yang sebelumnya merefleksikan sembarang `HTTP_ORIGIN` dengan `Access-Control-Allow-Credentials: true` tanpa validasi.
+  - Menerapkan whitelist ketat untuk:
+    1. Domain resmi `quizb.my.id` dan seluruh subdomainnya (`*.quizb.my.id`).
+    2. Skema WebView aplikasi Android/Hybrid (`capacitor://localhost`, `ionic://localhost`).
+    3. Host development lokal (`localhost`, `127.0.0.1`).
+  - Menambahkan header `Vary: Origin` untuk mencegah caching silang pada CDN / proxy.
+  - Membatasi pemberian `Access-Control-Allow-Credentials: true` hanya kepada origin yang lolos whitelist.
+  - Menolak preflight `OPTIONS` dari origin luar yang tidak diizinkan dengan response `403 Forbidden`.
+  - Menutup celah pencurian data profil dan sesi akun login oleh situs jahat pihak ketiga (CWE-942).
+* **Hasil Verifikasi**:
+  - `php -l api.php` -> Syntax OK (No syntax errors detected).
+  - Akses web resmi dan aplikasi mobile tetap beroperasi lancar.
