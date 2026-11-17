@@ -53,33 +53,58 @@ function attempt_submit(): void {
         }
     }
 
-    // Ambil hanya soal yang ditampilkan ke user.
-    // Jika question_ids dikirim → filter ke soal tersebut (WAJIB untuk penilaian akurat).
-    // PENTING: tidak lagi memfilter by quiz_id agar mendukung multiple quiz packages.
-    // Soal yang tidak dikerjakan tidak boleh dihitung salah.
-    if (!empty($displayedQIds)) {
-        $placeholders = implode(',', array_fill(0, count($displayedQIds), '?'));
-        $questions = DB::all(
-            "SELECT q.id, q.points FROM questions q
-             WHERE q.id IN ($placeholders)",
-            $displayedQIds
+    // Keamanan: Validasi bahwa soal benar-benar berasal dari kuis ini (atau paket kuis tugas yang sah)
+    $validQuizIds = [$quizId];
+    $assignmentId = (int)($body['assignment_id'] ?? 0);
+    if ($assignmentId > 0) {
+        $pkgQuizIds = DB::all("SELECT quiz_id FROM assignment_quiz_packages WHERE assignment_id = ?", [$assignmentId]);
+        foreach ($pkgQuizIds as $pkg) {
+            $validQuizIds[] = (int)$pkg['quiz_id'];
+        }
+    } else {
+        $pkgQuizIds = DB::all(
+            "SELECT aqp2.quiz_id FROM assignment_quiz_packages aqp1
+             JOIN assignment_quiz_packages aqp2 ON aqp1.assignment_id = aqp2.assignment_id
+             WHERE aqp1.quiz_id = ?",
+            [$quizId]
         );
-    } elseif (!empty($answerMap)) {
-        // Fallback: hanya soal yang memang dijawab oleh pelajar
-        $answeredIds  = array_keys($answerMap);
-        $placeholders = implode(',', array_fill(0, count($answeredIds), '?'));
+        foreach ($pkgQuizIds as $pkg) {
+            $validQuizIds[] = (int)$pkg['quiz_id'];
+        }
+    }
+    $validQuizIds = array_values(array_unique($validQuizIds));
+    $quizPlaceholders = implode(',', array_fill(0, count($validQuizIds), '?'));
+
+    // Ambil hanya soal yang valid untuk kuis/paket ini
+    if (!empty($displayedQIds)) {
+        $qPlaceholders = implode(',', array_fill(0, count($displayedQIds), '?'));
         $questions = DB::all(
             "SELECT q.id, q.points FROM questions q
-             WHERE q.id IN ($placeholders)",
-            $answeredIds
+             WHERE q.quiz_id IN ($quizPlaceholders) AND q.id IN ($qPlaceholders)",
+            [...$validQuizIds, ...$displayedQIds]
         );
     } else {
-        // Tidak ada jawaban sama sekali
-        $questions = [];
+        // Fallback aman: jika displayedQIds tidak dikirim, ambil seluruh soal kuis yang sah dari DB
+        // untuk mencegah eksploitasi pembagian total poin hanya dari 1 soal yang dijawab
+        $questions = DB::all(
+            "SELECT q.id, q.points FROM questions q
+             WHERE q.quiz_id IN ($quizPlaceholders) ORDER BY q.order_num",
+            $validQuizIds
+        );
     }
 
     if (empty($questions)) {
         jsonError('Quiz tidak memiliki soal yang valid untuk disubmit', 400);
+    }
+
+    // Validasi ambang batas minimal soal untuk mencegah bypass kecurangan submit 1 soal
+    $totalQuestionsInQuiz = (int)(DB::one(
+        "SELECT COUNT(*) AS cnt FROM questions WHERE quiz_id IN ($quizPlaceholders)",
+        $validQuizIds
+    )['cnt'] ?? 0);
+    $minAllowedQuestions = min($totalQuestionsInQuiz, 5);
+    if (count($questions) < $minAllowedQuestions) {
+        jsonError('Jumlah soal yang disubmit tidak valid untuk kuis ini', 400);
     }
 
     // Ambil kunci jawaban HANYA untuk soal yang ditampilkan (bukan seluruh quiz)

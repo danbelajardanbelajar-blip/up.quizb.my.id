@@ -50,3 +50,20 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 * **Hasil Verifikasi**:
   - `php -l api/tournament.php` -> Syntax OK (No syntax errors detected).
   - Alur submit turnamen dari frontend [`quiz-engine.v6.js`](file:///D:/all_project/up.quizb.my.id/assets/js/quiz-engine.v6.js#L801-L806) tetap kompatibel penuh karena telah mengirimkan `attempt_id`.
+
+
+---
+
+### [2026-11-17 16:22:24 WIB] — Mengamankan Kalkulasi Skor Kuis dari Exploit Nilai 100% 1 Soal
+* **Nomor Temuan Audit**: 4 (P0 - Kritis)
+* **Berkas yang Diubah**: [`api/attempt.php`](file:///D:/all_project/up.quizb.my.id/api/attempt.php)
+* **Baris yang Diubah**: Baris 55 - 108
+* **Bagian / Fitur**: Fungsi `attempt_submit()` — Validasi Soal & Kalkulasi Skor Kuis
+* **Deskripsi Perubahan**:
+  - Memverifikasi kepemilikan soal: memastikan setiap `question_id` yang disubmit benar-benar terdaftar di database untuk `quiz_id` kuis yang bersangkutan (atau paket kuis tugas yang sah).
+  - Menghapus fallback rentan yang membatasi pembagi total poin hanya pada butir soal yang dijawab (`$answeredIds`), yang sebelumnya dapat dieksploitasi siswa untuk memperoleh skor 100% instan hanya dengan menjawab 1 soal benar dari puluhan soal yang ada.
+  - Mengimplementasikan fallback aman: apabila klien tidak mengirimkan daftar `question_ids`, server secara default memuat seluruh daftar soal sah dari database sehingga butir soal yang dilewati tetap bernilai 0.
+  - Menambahkan verifikasi ambang batas jumlah soal (`min($totalQuestionsInQuiz, 5)`) agar request manipulatif dengan 1 soal ditolak langsung (HTTP 400).
+* **Hasil Verifikasi**:
+  - `php -l api/attempt.php` -> Syntax OK (No syntax errors detected).
+  - Pengerjaan kuis normal dari antarmuka web dan mobile tetap terhitung presisi sesuai soal yang dikerjakan.
