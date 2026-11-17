@@ -705,24 +705,28 @@ function tournament_submit(): void {
         jsonError('Anda bukan peserta aktif turnamen ini', 403);
     }
 
-    $scoreFinal = isset($body['score_final']) ? (int)$body['score_final'] : null;
-    $timeTaken  = isset($body['time_taken']) ? (int)$body['time_taken'] : null;
-
-    if ($attemptId > 0) {
-        $attempt = DB::one("SELECT score, time_taken FROM attempts WHERE id = ? AND user_id = ? AND quiz_id = ?", [$attemptId, $user['id'], $room['quiz_id']]);
-        if ($attempt) {
-            if ($scoreFinal === null) $scoreFinal = (int)$attempt['score'];
-            if ($timeTaken === null)  $timeTaken  = (int)$attempt['time_taken'];
-        }
+    if ($attemptId <= 0) {
+        jsonError('Parameter attempt_id diperlukan', 400);
     }
 
-    if ($scoreFinal === null) $scoreFinal = 0;
-    if ($timeTaken === null)  $timeTaken  = 0;
+    // Keamanan: Validasi bahwa attempt ini benar-benar milik user yang bersangkutan dan untuk kuis turnamen ini.
+    // Nilai akhir (score_final) dan waktu (time_taken) WAJIB diambil dari record resmi di tabel attempts,
+    // BUKAN dari payload klien, guna mencegah manipulasi skor dan kecurangan instan.
+    $attempt = DB::one(
+        "SELECT score, time_taken FROM attempts WHERE id = ? AND user_id = ? AND quiz_id = ?",
+        [$attemptId, $user['id'], $room['quiz_id']]
+    );
+    if (!$attempt) {
+        jsonError('Attempt pengerjaan tidak valid untuk kuis turnamen ini', 404);
+    }
+
+    $scoreFinal = (int)$attempt['score'];
+    $timeTaken  = (int)$attempt['time_taken'];
 
     DB::execute(
         "UPDATE tournament_participants SET attempt_id = ?, score_final = ?, time_taken = ?, status = 'accepted'
          WHERE tournament_id = ? AND user_id = ?",
-        [$attemptId > 0 ? $attemptId : null, $scoreFinal, $timeTaken, $tournamentId, $user['id']]
+        [$attemptId, $scoreFinal, $timeTaken, $tournamentId, $user['id']]
     );
 
     // Cek apakah seluruh peserta yang accepted sudah submit (tanpa menghitung creator)

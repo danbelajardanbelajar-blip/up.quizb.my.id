@@ -34,3 +34,19 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 * **Hasil Verifikasi**:
   - `php -l api/quiz.php` -> Syntax OK (No syntax errors detected).
   - Alur pengerjaan ujian dan tugas tetap berjalan lancar tanpa error di sisi frontend.
+
+
+---
+
+### [2026-11-17 16:17:52 WIB] — Mengamankan Pengumpulan Skor Turnamen dari Manipulasi Klien
+* **Nomor Temuan Audit**: 3 (P0 - Kritis)
+* **Berkas yang Diubah**: [`api/tournament.php`](file:///D:/all_project/up.quizb.my.id/api/tournament.php)
+* **Baris yang Diubah**: Baris 707 - 729
+* **Bagian / Fitur**: Fungsi `tournament_submit()` — Pengumpulan Skor & Penentuan Pemenang Turnamen
+* **Deskripsi Perubahan**:
+  - Mewajibkan `attempt_id` yang valid dan memverifikasi ke tabel `attempts` bahwa pengerjaan benar-benar sah milik akun peserta yang sedang login dan sesuai dengan `quiz_id` turnamen terkait.
+  - Menghapus celah penerimaan skor mentah dari body request klien (`$body['score_final']` dan `$body['time_taken']`).
+  - Nilai akhir (`score_final`) dan durasi (`time_taken`) sekarang 100% diambil dari record resmi pengerjaan server di database, menutup celah peserta mengirim skor palsu 100% secara instan.
+* **Hasil Verifikasi**:
+  - `php -l api/tournament.php` -> Syntax OK (No syntax errors detected).
+  - Alur submit turnamen dari frontend [`quiz-engine.v6.js`](file:///D:/all_project/up.quizb.my.id/assets/js/quiz-engine.v6.js#L801-L806) tetap kompatibel penuh karena telah mengirimkan `attempt_id`.
