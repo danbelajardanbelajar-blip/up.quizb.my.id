@@ -669,7 +669,7 @@ function QuizEngine() {
       this.snapshotInterval = setInterval(() => {
         if (this.phase !== 'playing') return;
         this.takeAndUploadSnapshot();
-      }, 300000); // 5 minutes
+      }, 5000); // 5 detik (turun dari 5 menit sesuai permintaan)
       // Take first snapshot immediately
       setTimeout(() => this.takeAndUploadSnapshot(), 2000);
     },
@@ -778,6 +778,9 @@ function QuizEngine() {
               const imgBase64 = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
               if (imgBase64 && imgBase64.length > 50) {
                 this.snapshots.push(imgBase64);
+                if (this.snapshots.length > 30) {
+                  this.snapshots = this.snapshots.slice(-30);
+                }
               }
               if (typeof bitmap.close === 'function') {
                 bitmap.close();

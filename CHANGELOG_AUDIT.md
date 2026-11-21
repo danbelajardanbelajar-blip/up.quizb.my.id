@@ -133,3 +133,17 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
   - `node -c` -> Semua file JavaScript (`quiz-engine.v6.js`, `quiz-face-verifier.js`, `app.v5.js`) lolos verifikasi sintaks tanpa kesalahan.
   - `node tests/test-proctoring-suite.cjs` -> 13/13 pengujian otomatis lolos (100% PASS) mencakup deteksi wajah, auto-capture zero-click, audio keramaian, jeda timer, penukaran soal, fullscreen, dan proteksi privasi acuan.
   - Endpoint API `proctoring.check_reference`, `save_reference`, `reset_reference`, `log_event`, dan `swap_question` siap melayani request client.
+
+
+---
+
+### [2026-11-22 05:07:00 WIB] — Penyesuaian Interval Pengecekan Snapshot Berkala dari 5 Menit Menjadi 5 Detik
+* **Nomor Temuan / Fitur**: Optimalisasi Frekuensi Pengawasan Wajah (Proctoring Snapshot Frequency)
+* **Berkas yang Diubah**:
+  - [`assets/js/quiz-engine.v6.js`](file:///D:/all_project/up.quizb.my.id/assets/js/quiz-engine.v6.js): Penyesuaian interval `snapshotInterval` dari 300.000 ms (5 menit) menjadi 5.000 ms (5 detik) pada fungsi `startSnapshotLoop()`.
+* **Deskripsi Perubahan**:
+  - Menurunkan jeda penangkapan snapshot foto berkala selama mahasiswa aktif mengerjakan soal ujian menjadi setiap 5 detik sekali, sehingga pengawasan visual terhadap aktivitas mahasiswa jauh lebih intensif dan *real-time*.
+  - Menambahkan pengamanan batas antrean memori snapshot (`this.snapshots.slice(-30)`) untuk memastikan payload pengiriman jawaban akhir (`submitAnswers`) tidak membengkak melebihi batas `post_max_size` pada PHP server.
+* **Hasil Verifikasi**:
+  - `node -c assets/js/quiz-engine.v6.js` -> Lolos verifikasi sintaks JavaScript tanpa error.
+  - `node tests/test-proctoring-suite.cjs` -> 13/13 pengujian otomatis lolos (100% PASS).
