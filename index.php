@@ -658,6 +658,7 @@ unset($_SESSION['flash_type'], $_SESSION['flash_msg'], $_SESSION['is_new_user'])
 
   <!-- App Scripts -->
   <script src="assets/js/utils.v5.js?v=<?= @filemtime(__DIR__ . '/assets/js/utils.v5.js') ?: 2 ?>"></script>
+  <script src="assets/js/quiz-face-verifier.js?v=<?= @filemtime(__DIR__ . '/assets/js/quiz-face-verifier.js') ?: 1 ?>"></script>
   <script src="assets/js/quiz-engine.v6.js?v=<?= @filemtime(__DIR__ . '/assets/js/quiz-engine.v6.js') ?: 4 ?>"></script>
   <script src="assets/js/app.v5.js?v=<?= @filemtime(__DIR__ . '/assets/js/app.v5.js') ?: 5 ?>"></script>
 

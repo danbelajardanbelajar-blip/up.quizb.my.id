@@ -71,6 +71,75 @@
     </div>
   </div>
 
+  <!-- Face Scan Screen (Hands-Free Zero-Click AI Verification) -->
+  <div x-show="phase==='face_scan'" class="flex items-center justify-center min-h-screen px-4 py-8">
+    <div class="max-w-lg w-full bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 p-6 text-center animate-fade-in relative overflow-hidden">
+      
+      <!-- Privacy Statement Banner -->
+      <div class="mb-5 p-3.5 bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/60 rounded-2xl text-left text-xs leading-relaxed text-blue-900 dark:text-blue-200">
+        <div class="flex items-center gap-2 font-bold mb-1 text-blue-700 dark:text-blue-300">
+          <span class="text-base">🔒</span>
+          <span>Pernyataan Privasi & Keamanan Data Wajah</span>
+        </div>
+        <p class="text-gray-600 dark:text-gray-300">
+          Foto pemindaian ini <strong>HANYA</strong> digunakan oleh sistem AI untuk verifikasi identitas ujian Anda. Foto ini dienkripsi di server, <strong>TIDAK AKAN</strong> disalahgunakan, dan <strong>TIDAK DAPAT</strong> diunduh atau disimpan oleh siapapun termasuk Pengajar maupun Admin. Admin hanya berhak mereset acuan jika verifikasi bermasalah.
+        </p>
+      </div>
+
+      <!-- Live Camera Container with Oval Guide -->
+      <div class="relative w-72 h-96 mx-auto mb-5 rounded-3xl overflow-hidden bg-black shadow-inner flex items-center justify-center">
+        <!-- Live Video (Mirrored for natural webcam feel) -->
+        <video id="faceScanVideo"
+               x-ref="faceScanVideo"
+               playsinline
+               autoplay
+               muted
+               class="w-full h-full object-cover transform scale-x-[-1]"></video>
+
+        <!-- Oval Guide Overlay -->
+        <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+          <div class="w-56 h-72 rounded-[50%] border-4 transition-all duration-300 flex items-center justify-center relative"
+               :class="{
+                 'border-emerald-500 shadow-[0_0_25px_rgba(16,185,129,0.7)]': scanGuideColor === 'green',
+                 'border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.6)]': scanGuideColor === 'amber',
+                 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.6)]': scanGuideColor === 'red',
+                 'border-white/50': !scanGuideColor
+               }">
+            
+            <!-- Animated Countdown Ring (when ready) -->
+            <template x-if="scanCountdown > 0 && scanGuideColor === 'green'">
+              <div class="absolute inset-0 flex items-center justify-center">
+                <span class="text-6xl font-black text-white drop-shadow-lg animate-ping" x-text="scanCountdown"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Flash Effect on Capture -->
+        <div x-show="scanCaptured"
+             x-transition:enter="transition-opacity duration-150"
+             x-transition:enter-start="opacity-100"
+             x-transition:enter-end="opacity-0"
+             class="absolute inset-0 bg-white pointer-events-none z-20"></div>
+      </div>
+
+      <!-- Dynamic Guidance Status Badge (No clicks required!) -->
+      <div class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold mb-3 max-w-full transition-all duration-300"
+           :class="{
+             'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 ring-2 ring-emerald-500/30': scanGuideColor === 'green',
+             'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 ring-2 ring-amber-500/30': scanGuideColor === 'amber',
+             'bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300 ring-2 ring-red-500/30': scanGuideColor === 'red',
+             'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300': !scanGuideColor
+           }">
+        <span x-text="scanStatusMessage || 'Mengarahkan kamera ke wajah Anda...'"></span>
+      </div>
+
+      <p class="text-xs text-gray-500 dark:text-gray-400">
+        ✨ <em>Sistem otomatis memindai wajah Anda saat posisi tepat & stabil. Tidak perlu menekan tombol apapun.</em>
+      </p>
+    </div>
+  </div>
+
   <!-- Ready Screen -->
   <div x-show="phase==='ready'" class="flex items-center justify-center min-h-screen px-4">
     <div class="max-w-md w-full text-center animate-slide-up">
@@ -298,4 +367,52 @@
       </div>
     </div>
   </template>
+
+  <!-- Screen Freeze Overlay on Crowd Noise Violation -->
+  <div x-show="isNoiseFrozen"
+       x-cloak
+       class="fixed inset-0 z-50 bg-gray-950/95 backdrop-blur-md flex items-center justify-center p-4 select-none">
+    <div class="max-w-md w-full bg-gray-900 border border-red-500/40 rounded-3xl p-7 text-center shadow-2xl text-white animate-bounce-subtle">
+      <div class="w-20 h-20 rounded-full bg-red-900/40 border-2 border-red-500/60 flex items-center justify-center mx-auto mb-4 text-4xl animate-pulse">
+        📢
+      </div>
+      <h2 class="text-xl font-extrabold text-red-400 mb-2">
+        Suara Keramaian Terdeteksi!
+      </h2>
+      <p class="text-sm text-gray-300 leading-relaxed mb-5">
+        Sistem pengawasan mendeteksi adanya suara keramaian atau percakapan di sekitar Anda.
+        Layar dibekukan sementara, timer pengerjaan dijeda, dan <strong>soal Anda saat ini telah dialihkan</strong>.
+      </p>
+
+      <div class="p-4 bg-gray-800/80 border border-gray-700 rounded-2xl mb-5">
+        <p class="text-xs text-gray-400 mb-1">Layar akan terbuka otomatis dalam:</p>
+        <div class="text-4xl font-black text-amber-400" x-text="noiseFreezeCountdown + 's'"></div>
+      </div>
+
+      <p class="text-xs text-gray-400">
+        💡 Harap jaga suasana ruangan tetap tenang dan hening agar ujian dapat dilanjutkan.
+      </p>
+    </div>
+  </div>
+
+  <!-- Fullscreen Exit Warning Modal -->
+  <div x-show="isFullscreenExited && phase === 'playing'"
+       x-cloak
+       class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-700 rounded-3xl p-6 text-center shadow-2xl animate-fade-in">
+      <div class="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-500 flex items-center justify-center mx-auto mb-3 text-3xl">
+        ⚠️
+      </div>
+      <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-2">
+        Peringatan Layar Penuh (Full Screen)
+      </h2>
+      <p class="text-sm text-gray-600 dark:text-gray-300 mb-5 leading-relaxed">
+        Anda terdeteksi keluar dari mode layar penuh atau berpindah jendela browser. Untuk menjaga integritas ujian, Anda wajib tetap berada di mode Full Screen.
+      </p>
+      <button @click="reEnterFullscreen()"
+              class="btn-primary w-full py-3 text-sm font-semibold justify-center flex items-center gap-2">
+        <span>🖥️ Kembali ke Layar Penuh</span>
+      </button>
+    </div>
+  </div>
 </div>

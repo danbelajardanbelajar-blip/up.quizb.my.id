@@ -112,7 +112,8 @@ if (in_array($method, ['POST', 'PUT', 'DELETE'])) {
         'auth.resend_verification', 'auth.update_fcm_token', 'auth.unregister_fcm_token',
         'challenge.create', 'challenge.accept', 'challenge.decline', 'challenge.sync', 'challenge.submit',
         'tournament.create', 'tournament.accept', 'tournament.decline', 'tournament.start', 'tournament.stop', 'tournament.delete', 'tournament.reinvite', 'tournament.sync', 'tournament.submit',
-        'message.send', 'message.delete'
+        'message.send', 'message.delete',
+        'proctoring.log_event', 'proctoring.swap_question'
     ];
 
     if (!$isMobileApp && !in_array($action, $csrfExemptActions, true)) {
@@ -143,6 +144,7 @@ $routes = [
     'notification' => __DIR__ . '/api/notification.php',
     'message'     => __DIR__ . '/api/message.php',
     'activity'    => __DIR__ . '/api/activity.php',
+    'proctoring'  => __DIR__ . '/api/proctoring.php',
 ];
 
 if (!isset($routes[$ns])) {

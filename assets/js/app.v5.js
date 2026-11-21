@@ -1119,6 +1119,16 @@ function QuizBApp() {
       }
     },
 
+    async resetStudentExamPhoto(targetUser) {
+      if (!confirm(`Reset foto acuan wajah untuk "${targetUser.name}"? Mahasiswa ini akan diminta memindai wajah kembali saat ujian berikutnya.`)) return;
+      try {
+        const res = await api.post('proctoring.reset_reference', { user_id: targetUser.id });
+        this.showToast(res.message || 'Foto acuan ujian berhasil direset.', 'success', '✅');
+      } catch (e) {
+        this.showToast(e.message || 'Gagal mereset foto acuan.', 'error', '❌');
+      }
+    },
+
     openJoinClassModal() {
       this.classroom.joinCode  = '';
       this.classroom.joinError = '';

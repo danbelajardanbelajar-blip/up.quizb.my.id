@@ -106,3 +106,29 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 * **Hasil Verifikasi**:
   - `php -l api.php` -> Syntax OK (No syntax errors detected).
   - Akses web resmi dan aplikasi mobile tetap beroperasi lancar.
+
+
+---
+
+### [2026-11-21 23:00:00 WIB] — Implementasi Sistem Pengawasan AI (Proctoring) Berbasis Biometrik Wajah Zero-Click, Deteksi Suara Keramaian & Layar Penuh Otomatis
+* **Nomor Temuan / Fitur**: Peningkatan Sistem Pengawasan AI (AI Proctoring Upgrade)
+* **Berkas yang Ditambahkan & Diubah**:
+  - [`includes/proctoring.php`](file:///D:/all_project/up.quizb.my.id/includes/proctoring.php) *(Baru)*: Helper database DDL lazy-migration `assignment_proctoring_logs`, kolom `exam_reference_photo` & `exam_reference_updated_at` pada `users`, penyimpanan acuan terenkripsi/terproteksi di `uploads/references/`, dan fungsi reset acuan.
+  - [`api/proctoring.php`](file:///D:/all_project/up.quizb.my.id/api/proctoring.php) *(Baru)*: Endpoint `proctoring.check_reference`, `proctoring.save_reference`, `proctoring.reset_reference`, `proctoring.log_event`, `proctoring.swap_question`, dan `proctoring.get_logs`.
+  - [`assets/js/facefinder.bin`](file:///D:/all_project/up.quizb.my.id/assets/js/facefinder.bin) *(Baru)*: Binary model classifier Pico Decision Tree untuk deteksi wajah instan di browser.
+  - [`assets/js/quiz-face-verifier.js`](file:///D:/all_project/up.quizb.my.id/assets/js/quiz-face-verifier.js) *(Baru)*: Engine pemindai wajah real-time dengan evaluasi posisi wajah (arah geser kanan/kiri/atas/bawah), jarak kamera, pencahayaan, deteksi masker penutup wajah, dan keterbukaan mata.
+  - [`pages/quiz-engine.html`](file:///D:/all_project/up.quizb.my.id/pages/quiz-engine.html): Penambahan layar `phase === 'face_scan'` (Zero-Click Hands-Free Face Scan dengan Pernyataan Privasi), overlay pembekuan layar saat pelanggaran suara keramaian (`isNoiseFrozen`), dan modal peringatan keluar fullscreen.
+  - [`assets/js/quiz-engine.v6.js`](file:///D:/all_project/up.quizb.my.id/assets/js/quiz-engine.v6.js): Integrasi `requestFullscreenMode()`, pemantauan Web Audio API (spektrum vokal ~250–3400 Hz), pembekuan layar & jeda timer saat keramaian, penukaran soal otomatis (`proctoring.swap_question`), dan alur scan acuan satu kali.
+  - [`api.php`](file:///D:/all_project/up.quizb.my.id/api.php): Registrasi route `proctoring` dan pengecualian CSRF untuk logging latar belakang `proctoring.log_event` & `proctoring.swap_question`.
+  - [`index.php`](file:///D:/all_project/up.quizb.my.id/index.php): Pemuatan skrip `quiz-face-verifier.js`.
+  - [`pages/admin-users.html`](file:///D:/all_project/up.quizb.my.id/pages/admin-users.html) & [`assets/js/app.v5.js`](file:///D:/all_project/up.quizb.my.id/assets/js/app.v5.js): Tombol dan handler aksi Admin/Pengajar untuk melakukan reset foto acuan mahasiswa jika diperlukan.
+* **Deskripsi Perubahan**:
+  1. **Foto Acuan Sekali Rekam**: Foto acuan biometrik mahasiswa hanya direkam sekali pada tugas/kuis pertama yang mewajibkan kamera. Pada tugas berikutnya foto tersebut otomatis menjadi acuan verifikasi tanpa perlu foto ulang.
+  2. **Pernyataan Privasi & Keamanan Mutlak**: Menampilkan pernyataan privasi resmi di layar pemindaian bahwa foto hanya digunakan untuk verifikasi integritas ujian, dienkripsi di server, dan tidak dapat diunduh/disimpan oleh siapapun termasuk Admin (folder `uploads/references` dilindungi oleh `.htaccess Require all denied`). Admin hanya memiliki hak administratif untuk mereset acuan jika verifikasi bermasalah.
+  3. **Zero-Click Hands-Free UX**: Mahasiswa tidak perlu mengklik tombol ambil foto. Panduan dinamis memberikan umpan balik langsung (geser kanan/kiri/atas/bawah, kurang terang, silau, jangan dua orang, jangan bermasker, buka mata). Saat posisi wajah tepat dan stabil, cincin hitung mundur 2 detik menyala hijau dan otomatis menangkap foto serta melanjutkan ke ujian.
+  4. **Deteksi Suara Keramaian & Penukaran Soal**: Menggunakan Web Audio API untuk memantau frekuensi percakapan. Jika terdeteksi keramaian/obrolan > 1.6 detik, layar dibekukan selama 15 detik, timer dijeda, jawaban soal saat ini di-reset, dan soal otomatis ditukar dengan soal lain.
+  5. **Layar Penuh Otomatis**: Layar otomatis masuk Fullscreen saat klik "Mulai Sekarang ▶". Perpindahan tab atau keluar dari Fullscreen otomatis memunculkan modal peringatan dan mencatat bukti snapshot pelanggaran ke `assignment_proctoring_logs`.
+* **Hasil Verifikasi**:
+  - `python validate_php.py` -> Semua file PHP lolos uji sintaks tanpa kesalahan.
+  - `node -c` -> Semua file JavaScript (`quiz-engine.v6.js`, `quiz-face-verifier.js`, `app.v5.js`) lolos verifikasi sintaks tanpa kesalahan.
+  - Endpoint API `proctoring.check_reference`, `save_reference`, `reset_reference`, `log_event`, dan `swap_question` siap melayani request client.
