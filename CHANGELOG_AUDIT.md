@@ -164,3 +164,20 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 * **Hasil Verifikasi**:
   - `node -c assets/js/quiz-engine.v6.js` -> Lolos verifikasi sintaks JavaScript tanpa error.
   - `node tests/test-proctoring-suite.cjs` -> 14/14 pengujian otomatis lolos (100% PASS).
+
+
+---
+
+### [2026-11-22 05:30:00 WIB] — Layar Penuh Terkunci (Screen Freeze Overlay), Jeda Timer, & Blokir Interaksi Saat Wajah Tidak Menghadap Kamera
+* **Nomor Temuan / Fitur**: Penguncian Layar Penuh & Pembekuan Interaksi Soal saat Wajah Tidak Terdeteksi (Fullscreen Absence Freeze Overlay & Interaction Lock)
+* **Berkas yang Diubah**:
+  - [`pages/quiz-engine.html`](file:///D:/all_project/up.quizb.my.id/pages/quiz-engine.html): Mengubah banner mengambang menjadi **Fullscreen Freeze Overlay** (`fixed inset-0 z-50 bg-gray-950/95 backdrop-blur-md`) yang menutup seluruh layar pengerjaan kuis. Menyematkan live feed kamera dengan target oval merah (`#proctorFreezeVideo`), instruksi dinamis AI, dan status pembekuan.
+  - [`assets/js/quiz-engine.v6.js`](file:///D:/all_project/up.quizb.my.id/assets/js/quiz-engine.v6.js):
+    1. Memblokir interaksi input jawaban `selectOption(questionId, optionId)` saat `showFaceWarning` aktif sehingga mahasiswa tidak dapat memilih opsi jawaban.
+    2. Memblokir tombol navigasi (`next`, `prev`, `goTo`, `toggleFlag`) selama layar terkunci.
+    3. Menjeda (*pause*) timer ujian `startTimer()` dan timer per-soal `startQuestionTimer()` saat wajah tidak terdeteksi.
+    4. Mengimplementasikan `startFastFaceCheck()` (interval 600ms) saat layar terkunci: begitu mahasiswa kembali menatap kamera, AI mendeteksi dalam < 1 detik dan membuka layar secara otomatis (zero-click).
+  - [`tests/test-proctoring-suite.cjs`](file:///D:/all_project/up.quizb.my.id/tests/test-proctoring-suite.cjs): Menambahkan asersi pemblokiran `selectOption` dan navigasi saat `showFaceWarning = true` serta pemulihan otomatis saat wajah terdeteksi kembali.
+* **Hasil Verifikasi**:
+  - `node -c assets/js/quiz-engine.v6.js` -> Lolos verifikasi sintaks JavaScript tanpa error.
+  - `node tests/test-proctoring-suite.cjs` -> 14/14 pengujian otomatis lolos (100% PASS).

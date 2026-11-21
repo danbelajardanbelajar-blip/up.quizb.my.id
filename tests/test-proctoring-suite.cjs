@@ -464,12 +464,25 @@ function createMockDocument() {
     assert.equal(loggedEvents[0].event_type, 'periodic_face');
     assert.equal(loggedEvents[0].status, 'NO_FACE');
 
+    // Verify interaction is blocked while screen is frozen
+    qe.questions = [{ id: 101, question_text: 'Soal', options: [{ id: 1, option_text: 'A' }] }];
+    qe.answers = {};
+    qe.currentIndex = 0;
+    qe.selectOption(101, 1);
+    assert.equal(qe.answers[101], undefined, 'selectOption must be blocked while screen is frozen');
+    qe.next();
+    assert.equal(qe.currentIndex, 0, 'Navigation next must be blocked while screen is frozen');
+
     // 2. Run snapshot while face returns to normal
     faceEvalResult = { ready: true, label: 'Posisi wajah terverifikasi!' };
     await qe.takeAndUploadSnapshot();
 
     assert.equal(qe.showFaceWarning, false, 'showFaceWarning must reset to false when face returns');
     assert.equal(qe.faceAbsenceCounter, 0, 'faceAbsenceCounter must reset to 0');
+
+    // Unfrozen: answering works again
+    qe.selectOption(101, 1);
+    assert.equal(qe.answers[101], 1, 'selectOption must work again when screen is unlocked');
   });
 
   // ─────────────────────────────────────────────────────────────────

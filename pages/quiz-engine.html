@@ -368,22 +368,49 @@
     </div>
   </template>
 
-  <!-- Floating Face Warning Banner during Playing -->
+  <!-- Fullscreen Face Absence Freeze Overlay -->
   <div x-show="showFaceWarning && phase === 'playing'"
        x-cloak
        x-transition:enter="transition ease-out duration-300"
-       x-transition:enter-start="opacity-0 -translate-y-4"
-       x-transition:enter-end="opacity-100 translate-y-0"
+       x-transition:enter-start="opacity-0 scale-95"
+       x-transition:enter-end="opacity-100 scale-100"
        x-transition:leave="transition ease-in duration-200"
-       x-transition:leave-start="opacity-100 translate-y-0"
-       x-transition:leave-end="opacity-0 -translate-y-4"
-       class="fixed top-5 left-1/2 transform -translate-x-1/2 z-50 max-w-md w-full px-4 select-none">
-    <div class="bg-red-600/95 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border-2 border-white/20 animate-pulse">
-      <span class="text-3xl flex-shrink-0">⚠️</span>
-      <div class="text-xs leading-snug">
-        <p class="font-bold text-sm tracking-wide">Wajah Tidak Menghadap Kamera!</p>
-        <p x-text="faceWarningText || 'Harap hadapkan wajah Anda ke depan kamera agar ujian tetap berlangsung.'"></p>
+       x-transition:leave-start="opacity-100 scale-100"
+       x-transition:leave-end="opacity-0 scale-95"
+       class="fixed inset-0 z-50 bg-gray-950/95 backdrop-blur-md flex items-center justify-center p-4 select-none">
+    <div class="max-w-md w-full bg-gray-900 border-2 border-red-500/80 rounded-3xl p-6 text-center shadow-2xl text-white">
+      <div class="w-16 h-16 rounded-full bg-red-900/40 border-2 border-red-500/70 flex items-center justify-center mx-auto mb-3 text-3xl animate-pulse">
+        ⚠️
       </div>
+      <h2 class="text-xl font-black text-red-400 mb-1 tracking-wide">
+        Layar Terkunci: Wajah Tidak Terdeteksi!
+      </h2>
+      <p class="text-xs text-gray-300 leading-relaxed mb-4">
+        Sistem pengawasan AI mendeteksi wajah Anda tidak menghadap ke layar kamera. Layar dibekukan dan pengerjaan soal dihentikan sementara sampai wajah Anda kembali menghadap ke kamera.
+      </p>
+
+      <!-- Live Camera Guide inside Freeze Overlay -->
+      <div class="relative w-44 h-52 mx-auto rounded-2xl overflow-hidden bg-black border-2 border-red-500/70 shadow-xl mb-3 flex items-center justify-center">
+        <video id="proctorFreezeVideo"
+               x-ref="proctorFreezeVideo"
+               playsinline
+               autoplay
+               muted
+               class="w-full h-full object-cover transform scale-x-[-1]"></video>
+        <!-- Face Oval Guide Target -->
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div class="w-28 h-36 border-2 border-dashed border-red-400/80 rounded-full animate-pulse"></div>
+        </div>
+      </div>
+
+      <!-- Dynamic Guidance Box -->
+      <div class="py-2.5 px-3 bg-red-950/80 border border-red-500/50 rounded-xl mb-3">
+        <p class="text-xs font-bold text-red-200" x-text="faceWarningText || 'Harap hadapkan wajah Anda tepat di depan kamera'"></p>
+      </div>
+
+      <p class="text-[11px] text-gray-400">
+        🔒 <em>Layar akan terbuka otomatis tanpa perlu klik begitu wajah Anda kembali menghadap kamera.</em>
+      </p>
     </div>
   </div>
 

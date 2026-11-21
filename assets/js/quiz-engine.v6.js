@@ -60,10 +60,11 @@ function QuizEngine() {
     _fullscreenListener: null,
     _visibilityListener: null,
 
-    // Real-Time Periodic Face Warning
+    // Real-Time Periodic Face Warning & Fullscreen Screen Freeze
     showFaceWarning: false,
     faceWarningText: '',
     faceAbsenceCounter: 0,
+    _fastFaceCheckInterval: null,
 
     // ── Audio ──────────────────────────────────
     _ac: null,           // AudioContext
@@ -812,6 +813,18 @@ function QuizEngine() {
             this.faceWarningText = evalRes.label;
             this.faceAbsenceCounter++;
 
+            // Hubungkan kamera ke preview di dalam freeze overlay
+            ((this.$nextTick || (cb => setTimeout(cb, 20))).bind(this))(() => {
+              const freezeVideo = (this.$refs && this.$refs.proctorFreezeVideo) || (typeof document !== 'undefined' && typeof document.getElementById === 'function' ? document.getElementById('proctorFreezeVideo') : null);
+              if (freezeVideo && this.cameraStream && freezeVideo.srcObject !== this.cameraStream) {
+                freezeVideo.srcObject = this.cameraStream;
+                freezeVideo.play().catch(() => {});
+              }
+            });
+
+            // Mulai pengecekan cepat (setiap 600ms) agar layar langsung terbuka kembali saat wajah kembali
+            this.startFastFaceCheck();
+
             if (imgBase64 && imgBase64.length > 50) {
               this.snapshots.push(imgBase64);
               if (this.snapshots.length > 30) this.snapshots = this.snapshots.slice(-30);
@@ -832,6 +845,7 @@ function QuizEngine() {
             // Wajah terdeteksi normal menghadap kamera
             this.showFaceWarning = false;
             this.faceAbsenceCounter = 0;
+            this.stopFastFaceCheck();
           }
         }
 
@@ -846,12 +860,45 @@ function QuizEngine() {
         console.error('Proctoring snapshot error:', err);
       }
     },
+
+    startFastFaceCheck() {
+      if (this._fastFaceCheckInterval) return;
+      this._fastFaceCheckInterval = setInterval(() => {
+        if (!this.showFaceWarning || this.phase !== 'playing') {
+          this.stopFastFaceCheck();
+          return;
+        }
+        const video = (this.$refs && this.$refs.proctorPipVideo) || (this.$refs && this.$refs.proctorFreezeVideo) || (typeof document !== 'undefined' && typeof document.getElementById === 'function' ? document.getElementById('proctorPipVideo') || document.getElementById('proctorFreezeVideo') : null) || this._proctorVideo;
+        if (!video || !window.QuizFaceVerifier) return;
+        const evalRes = window.QuizFaceVerifier.evaluateFrame(video);
+        if (evalRes && evalRes.ready) {
+          // Wajah terdeteksi kembali! Buka kunci layar otomatis
+          this.showFaceWarning = false;
+          this.faceAbsenceCounter = 0;
+          this.stopFastFaceCheck();
+        } else if (evalRes) {
+          this.faceWarningText = evalRes.label;
+        }
+      }, 600);
+    },
+
+    stopFastFaceCheck() {
+      if (this._fastFaceCheckInterval) {
+        clearInterval(this._fastFaceCheckInterval);
+        this._fastFaceCheckInterval = null;
+      }
+    },
     
     stopCamera() {
       if (this.snapshotInterval) clearInterval(this.snapshotInterval);
+      this.stopFastFaceCheck();
       const pipVideo = (this.$refs && this.$refs.proctorPipVideo) || (typeof document !== 'undefined' && typeof document.getElementById === 'function' ? document.getElementById('proctorPipVideo') : null);
       if (pipVideo) {
         try { pipVideo.pause(); pipVideo.srcObject = null; } catch (_) {}
+      }
+      const freezeVideo = (this.$refs && this.$refs.proctorFreezeVideo) || (typeof document !== 'undefined' && typeof document.getElementById === 'function' ? document.getElementById('proctorFreezeVideo') : null);
+      if (freezeVideo) {
+        try { freezeVideo.pause(); freezeVideo.srcObject = null; } catch (_) {}
       }
       if (this._scanInterval) clearInterval(this._scanInterval);
       if (this._audioInterval) clearInterval(this._audioInterval);
@@ -878,7 +925,7 @@ function QuizEngine() {
     startTimer() {
       clearInterval(this.timerInterval);
       this.timerInterval = setInterval(() => {
-        if (this.isNoiseFrozen) return; // Waktu dijeda saat layar ditutup karena keramaian
+        if (this.isNoiseFrozen || this.showFaceWarning) return; // Waktu dijeda saat layar dibekukan (keramaian / wajah tidak terdeteksi)
         if (this.timeLeft > 0) {
           this.timeLeft--;
         } else {
@@ -897,7 +944,7 @@ function QuizEngine() {
       clearInterval(this.questionTimerInterval);
       this.questionTimeLeft = this.questionTimerDefault;
       this.questionTimerInterval = setInterval(() => {
-        if (this.isNoiseFrozen) return; // Waktu dijeda saat layar ditutup karena keramaian
+        if (this.isNoiseFrozen || this.showFaceWarning) return; // Waktu dijeda saat layar dibekukan (keramaian / wajah tidak terdeteksi)
         if (this.questionTimeLeft > 0) {
           this.questionTimeLeft--;
         } else {
@@ -968,6 +1015,7 @@ function QuizEngine() {
     // ---- Select answer ----
     selectOption(questionId, optionId) {
       if (this.phase !== 'playing') return;
+      if (this.isNoiseFrozen || this.showFaceWarning) return; // Kunci interaksi saat layar dibekukan (wajah tidak terdeteksi / keramaian)
       this.answers[questionId] = optionId;
       
       // Hitung skor sementara (khusus challenge)
@@ -1071,20 +1119,24 @@ function QuizEngine() {
 
     // ---- Navigation (hanya exam/challenge) ----
     next() {
+      if (this.isNoiseFrozen || this.showFaceWarning) return;
       if (this.currentIndex < this.questions.length - 1) this.currentIndex++;
     },
     prev() {
       if (this.isReviewMode) return; // tidak boleh kembali di review mode
+      if (this.isNoiseFrozen || this.showFaceWarning) return;
       if (this.currentIndex > 0) this.currentIndex--;
     },
     goTo(index) {
       if (this.isReviewMode) return;
+      if (this.isNoiseFrozen || this.showFaceWarning) return;
       this.currentIndex = index;
       this.showNav = false;
     },
 
     toggleFlag(qId) {
       if (this.isReviewMode) return;
+      if (this.isNoiseFrozen || this.showFaceWarning) return;
       if (this.flagged.has(qId)) this.flagged.delete(qId);
       else this.flagged.add(qId);
       this.flagged = new Set(this.flagged);
