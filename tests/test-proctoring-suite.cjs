@@ -33,6 +33,7 @@ function createMockDocument() {
     documentElement: { requestFullscreen: async () => {} },
     addEventListener: () => {},
     removeEventListener: () => {},
+    getElementById: (id) => null,
     createElement: (tag) => ({
       play: async () => {},
       pause: () => {},
@@ -411,6 +412,64 @@ function createMockDocument() {
     await app.resetStudentExamPhoto({ id: 42, name: 'Budi Santoso' });
     assert.equal(resetCalledWith, 42, 'Must call proctoring.reset_reference with user_id 42');
     assert(toastMsg.includes('berhasil direset'), 'Toast must indicate success');
+  });
+
+  await runTest('3.5 Periodic 5s face verification activates warning banner when face is missing and clears when face returns', async () => {
+    const engineCode = fs.readFileSync(path.join(__dirname, '../assets/js/quiz-engine.v6.js'), 'utf8');
+    let loggedEvents = [];
+    let faceEvalResult = { ready: false, label: 'Wajah tidak terdeteksi. Harap menghadap ke kamera.' };
+
+    const sandbox = {
+      window: {
+        QuizFaceVerifier: {
+          evaluateFrame: () => faceEvalResult
+        }
+      },
+      document: createMockDocument(),
+      ImageCapture: undefined,
+      api: {
+        post: async (act, payload) => {
+          if (act === 'proctoring.log_event') {
+            loggedEvents.push(payload);
+          }
+          return { success: true };
+        }
+      },
+      formatTime: () => '10:00',
+      setInterval: () => 123,
+      clearInterval: () => {},
+      setTimeout: (fn) => fn(),
+      console
+    };
+
+    vm.createContext(sandbox);
+    vm.runInContext(engineCode, sandbox);
+
+    const qe = sandbox.QuizEngine();
+    qe.cameraStream = {
+      getVideoTracks: () => [{ readyState: 'live' }]
+    };
+    qe.phase = 'playing';
+    qe.assignmentId = 12;
+    qe.attemptId = 34;
+
+    // 1. Run snapshot while face is NOT facing camera
+    faceEvalResult = { ready: false, label: 'Wajah tidak terdeteksi. Harap menghadap ke kamera.' };
+    await qe.takeAndUploadSnapshot();
+
+    assert.equal(qe.showFaceWarning, true, 'showFaceWarning must be true when face not facing');
+    assert.equal(qe.faceWarningText, 'Wajah tidak terdeteksi. Harap menghadap ke kamera.');
+    assert.equal(qe.faceAbsenceCounter, 1, 'faceAbsenceCounter must increment');
+    assert.equal(loggedEvents.length, 1, 'Must log proctoring violation event');
+    assert.equal(loggedEvents[0].event_type, 'periodic_face');
+    assert.equal(loggedEvents[0].status, 'NO_FACE');
+
+    // 2. Run snapshot while face returns to normal
+    faceEvalResult = { ready: true, label: 'Posisi wajah terverifikasi!' };
+    await qe.takeAndUploadSnapshot();
+
+    assert.equal(qe.showFaceWarning, false, 'showFaceWarning must reset to false when face returns');
+    assert.equal(qe.faceAbsenceCounter, 0, 'faceAbsenceCounter must reset to 0');
   });
 
   // ─────────────────────────────────────────────────────────────────

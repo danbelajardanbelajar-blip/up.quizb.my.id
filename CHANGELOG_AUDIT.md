@@ -147,3 +147,20 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 * **Hasil Verifikasi**:
   - `node -c assets/js/quiz-engine.v6.js` -> Lolos verifikasi sintaks JavaScript tanpa error.
   - `node tests/test-proctoring-suite.cjs` -> 13/13 pengujian otomatis lolos (100% PASS).
+
+
+---
+
+### [2026-11-22 05:25:00 WIB] — Banner Peringatan Wajah Real-Time 5 Detik & Floating PIP Kamera Pemantau Saat Ujian
+* **Nomor Temuan / Fitur**: Peringatan Wajah Tidak Menghadap Kamera Real-Time (5-Second Face Absence Real-time Warning)
+* **Berkas yang Diubah**:
+  - [`pages/quiz-engine.html`](file:///D:/all_project/up.quizb.my.id/pages/quiz-engine.html): Penambahan banner peringatan melayang merah di bagian atas layar (`showFaceWarning`) dengan animasi denyut & teks dinamis jika wajah tidak menghadap kamera, serta floating mini webcam PIP di pojok kanan bawah dengan badge status `AI AKTIF` vs `HILANG`.
+  - [`assets/js/quiz-engine.v6.js`](file:///D:/all_project/up.quizb.my.id/assets/js/quiz-engine.v6.js):
+    1. Menghubungkan stream kamera langsung ke elemen DOM `<video id="proctorPipVideo">` saat ujian dimulai (`startActualQuiz`).
+    2. Menjalankan evaluasi aktif `QuizFaceVerifier.evaluateFrame(video)` setiap interval 5 detik di dalam `takeAndUploadSnapshot()`.
+    3. Jika wajah berpaling / tidak menghadap kamera / hilang: mengaktifkan `showFaceWarning = true`, menampilkan label petunjuk arah/posisi, menambah `faceAbsenceCounter`, mengambil snapshot bukti, dan mencatat log pelanggaran `periodic_face` status `NO_FACE` ke server.
+    4. Jika wajah kembali terdeteksi normal menghadap kamera: mematikan `showFaceWarning = false` dan mereset counter.
+  - [`tests/test-proctoring-suite.cjs`](file:///D:/all_project/up.quizb.my.id/tests/test-proctoring-suite.cjs): Menambahkan mock `getElementById` dan test kasus 3.5 untuk memverifikasi banner peringatan wajah 5 detik & pemulihannya.
+* **Hasil Verifikasi**:
+  - `node -c assets/js/quiz-engine.v6.js` -> Lolos verifikasi sintaks JavaScript tanpa error.
+  - `node tests/test-proctoring-suite.cjs` -> 14/14 pengujian otomatis lolos (100% PASS).

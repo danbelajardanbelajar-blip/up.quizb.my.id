@@ -60,6 +60,11 @@ function QuizEngine() {
     _fullscreenListener: null,
     _visibilityListener: null,
 
+    // Real-Time Periodic Face Warning
+    showFaceWarning: false,
+    faceWarningText: '',
+    faceAbsenceCounter: 0,
+
     // ── Audio ──────────────────────────────────
     _ac: null,           // AudioContext
     _bgGain: null,       // master gain node untuk bg music
@@ -322,6 +327,13 @@ function QuizEngine() {
 
       // Aktifkan pemantauan berkala jika require_camera
       if (this.quiz?.require_camera == 1) {
+        ((this.$nextTick || (cb => setTimeout(cb, 20))).bind(this))(() => {
+          const pipVideo = (this.$refs && this.$refs.proctorPipVideo) || (typeof document !== 'undefined' && typeof document.getElementById === 'function' ? document.getElementById('proctorPipVideo') : null);
+          if (pipVideo && this.cameraStream) {
+            pipVideo.srcObject = this.cameraStream;
+            pipVideo.play().catch(() => {});
+          }
+        });
         this.startSnapshotLoop();
         this.startProctoringAudio();
         this.initFullscreenListeners();
@@ -336,8 +348,8 @@ function QuizEngine() {
       this.scanCountdown = 0;
       this.scanCaptured = false;
 
-      this.$nextTick(async () => {
-        const videoEl = this.$refs.faceScanVideo || document.getElementById('faceScanVideo');
+      ((this.$nextTick || (cb => setTimeout(cb, 20))).bind(this))(async () => {
+        const videoEl = (this.$refs && this.$refs.faceScanVideo) || (typeof document !== 'undefined' && typeof document.getElementById === 'function' ? document.getElementById('faceScanVideo') : null);
         if (videoEl && this.cameraStream) {
           videoEl.srcObject = this.cameraStream;
           await videoEl.play().catch(() => {});
@@ -756,44 +768,7 @@ function QuizEngine() {
       if (!this.snapshots) this.snapshots = [];
 
       try {
-        const track = this.cameraStream.getVideoTracks()[0];
-        if (!track || track.readyState !== 'live') return;
-
-        const MAX_WIDTH = 640;
-        const JPEG_QUALITY = 0.65;
-
-        // Metoda 1: ImageCapture grabFrame (Sangat cepat, menangkap frame aktif tanpa freeze/shutter & ukuran terstandarisasi)
-        if (typeof ImageCapture !== 'undefined' && typeof ImageCapture.prototype.grabFrame === 'function') {
-          try {
-            const capturer = new ImageCapture(track);
-            const bitmap = await capturer.grabFrame();
-            if (bitmap && bitmap.width > 0 && bitmap.height > 0) {
-              const canvas = document.createElement('canvas');
-              const targetWidth = Math.min(bitmap.width, MAX_WIDTH);
-              const targetHeight = Math.round((targetWidth / bitmap.width) * bitmap.height);
-              canvas.width = targetWidth;
-              canvas.height = targetHeight;
-              const ctx = canvas.getContext('2d');
-              ctx.drawImage(bitmap, 0, 0, targetWidth, targetHeight);
-              const imgBase64 = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
-              if (imgBase64 && imgBase64.length > 50) {
-                this.snapshots.push(imgBase64);
-                if (this.snapshots.length > 30) {
-                  this.snapshots = this.snapshots.slice(-30);
-                }
-              }
-              if (typeof bitmap.close === 'function') {
-                bitmap.close();
-              }
-              return;
-            }
-          } catch (e) {
-            // Fallback ke Canvas Video jika grabFrame gagal
-          }
-        }
-
-        // Metoda 2: Gunakan video element yang stabil & canvas (kompatibel penuh dengan Safari, Firefox, iOS, dll)
-        let video = this._proctorVideo;
+        let video = (this.$refs && this.$refs.proctorPipVideo) || (typeof document !== 'undefined' && typeof document.getElementById === 'function' ? document.getElementById('proctorPipVideo') : null) || this._proctorVideo;
         if (!video) {
           video = document.createElement('video');
           video.muted = true;
@@ -804,31 +779,67 @@ function QuizEngine() {
           this._proctorVideo = video;
         }
 
-        // Pastikan video sudah memiliki frame aktual (bukan 0 width atau blank)
+        // Pastikan video sudah memiliki frame aktual
         if (video.videoWidth === 0 || video.readyState < 2) {
           await new Promise(r => {
-            const onReady = () => {
-              video.removeEventListener('loadeddata', onReady);
-              r();
-            };
+            const onReady = () => { video.removeEventListener('loadeddata', onReady); r(); };
             video.addEventListener('loadeddata', onReady);
-            setTimeout(r, 600);
+            setTimeout(r, 400);
           });
         }
 
         const width = video.videoWidth || 640;
         const height = video.videoHeight || 480;
-        if (width > 0 && height > 0) {
-          const canvas = document.createElement('canvas');
-          const targetWidth = Math.min(width, MAX_WIDTH);
-          const targetHeight = Math.round((targetWidth / width) * height);
-          canvas.width = targetWidth;
-          canvas.height = targetHeight;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
-          const imgBase64 = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
-          if (imgBase64 && imgBase64.length > 50) {
-            this.snapshots.push(imgBase64);
+        if (width <= 0 || height <= 0) return;
+
+        // Ambil frame snapshot
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 640;
+        const targetWidth = Math.min(width, MAX_WIDTH);
+        const targetHeight = Math.round((targetWidth / width) * height);
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+        const imgBase64 = canvas.toDataURL('image/jpeg', 0.65);
+
+        // 1. Evaluasi Wajah Setiap 5 Detik dengan QuizFaceVerifier
+        if (window.QuizFaceVerifier) {
+          const evalRes = window.QuizFaceVerifier.evaluateFrame(video);
+          if (!evalRes.ready) {
+            // Wajah TIDAK menghadap kamera / tidak terdeteksi!
+            this.showFaceWarning = true;
+            this.faceWarningText = evalRes.label;
+            this.faceAbsenceCounter++;
+
+            if (imgBase64 && imgBase64.length > 50) {
+              this.snapshots.push(imgBase64);
+              if (this.snapshots.length > 30) this.snapshots = this.snapshots.slice(-30);
+            }
+
+            // Catat log pelanggaran ke server
+            api.post('proctoring.log_event', {
+              assignment_id: this.assignmentId || 0,
+              attempt_id: this.attemptId || null,
+              event_type: 'periodic_face',
+              status: 'NO_FACE',
+              snapshot: imgBase64,
+              notes: evalRes.label
+            }).catch(() => {});
+
+            return;
+          } else {
+            // Wajah terdeteksi normal menghadap kamera
+            this.showFaceWarning = false;
+            this.faceAbsenceCounter = 0;
+          }
+        }
+
+        // 2. Simpan snapshot normal ke riwayat
+        if (imgBase64 && imgBase64.length > 50) {
+          this.snapshots.push(imgBase64);
+          if (this.snapshots.length > 30) {
+            this.snapshots = this.snapshots.slice(-30);
           }
         }
       } catch (err) {
@@ -838,6 +849,10 @@ function QuizEngine() {
     
     stopCamera() {
       if (this.snapshotInterval) clearInterval(this.snapshotInterval);
+      const pipVideo = (this.$refs && this.$refs.proctorPipVideo) || (typeof document !== 'undefined' && typeof document.getElementById === 'function' ? document.getElementById('proctorPipVideo') : null);
+      if (pipVideo) {
+        try { pipVideo.pause(); pipVideo.srcObject = null; } catch (_) {}
+      }
       if (this._scanInterval) clearInterval(this._scanInterval);
       if (this._audioInterval) clearInterval(this._audioInterval);
       if (this._noiseFreezeTimer) clearInterval(this._noiseFreezeTimer);
