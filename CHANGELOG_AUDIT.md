@@ -131,4 +131,5 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 * **Hasil Verifikasi**:
   - `python validate_php.py` -> Semua file PHP lolos uji sintaks tanpa kesalahan.
   - `node -c` -> Semua file JavaScript (`quiz-engine.v6.js`, `quiz-face-verifier.js`, `app.v5.js`) lolos verifikasi sintaks tanpa kesalahan.
+  - `node tests/test-proctoring-suite.cjs` -> 13/13 pengujian otomatis lolos (100% PASS) mencakup deteksi wajah, auto-capture zero-click, audio keramaian, jeda timer, penukaran soal, fullscreen, dan proteksi privasi acuan.
   - Endpoint API `proctoring.check_reference`, `save_reference`, `reset_reference`, `log_event`, dan `swap_question` siap melayani request client.
