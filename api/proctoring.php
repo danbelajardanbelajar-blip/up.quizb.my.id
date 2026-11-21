@@ -14,11 +14,20 @@ function proctoring_check_reference(): void {
     $user = requireAuth();
     $status = getUserExamReference((int)$user['id']);
 
+    $refPhotoBase64 = null;
+    if ($status['has_reference'] && !empty($status['photo_path'])) {
+        $fullPath = __DIR__ . '/../' . ltrim(str_replace('\\', '/', $status['photo_path']), '/');
+        if (is_file($fullPath)) {
+            $refPhotoBase64 = 'data:image/jpeg;base64,' . base64_encode((string)file_get_contents($fullPath));
+        }
+    }
+
     jsonResponse([
-        'success'       => true,
-        'user_id'       => (int)$user['id'],
-        'has_reference' => $status['has_reference'],
-        'updated_at'    => $status['updated_at']
+        'success'         => true,
+        'user_id'         => (int)$user['id'],
+        'has_reference'   => $status['has_reference'] && ($refPhotoBase64 !== null),
+        'reference_photo' => $refPhotoBase64,
+        'updated_at'      => $status['updated_at']
     ]);
 }
 

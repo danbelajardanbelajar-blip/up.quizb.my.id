@@ -485,6 +485,107 @@ function createMockDocument() {
     assert.equal(qe.answers[101], 1, 'selectOption must work again when screen is unlocked');
   });
 
+  await runTest('3.6 Face Biometric Matching detects mismatch (different person/wife/substitute) and locks screen', async () => {
+    const verifierCode = fs.readFileSync(path.join(__dirname, '../assets/js/quiz-face-verifier.js'), 'utf8');
+    const engineCode = fs.readFileSync(path.join(__dirname, '../assets/js/quiz-engine.v6.js'), 'utf8');
+
+    // 1. Verify QuizFaceVerifier comparison logic
+    const vSandbox = { window: {} };
+    vm.createContext(vSandbox);
+    vm.runInContext(verifierCode, vSandbox);
+    const QFV = vSandbox.window.QuizFaceVerifier;
+
+    const descHusband = {
+      lbpHist: new Array(1024).fill(0.01),
+      bandGradients: [10, 15, 12, 8],
+      skinTone: { cb: 125, cr: 145 }
+    };
+
+    const descSameHusband = {
+      lbpHist: new Array(1024).fill(0.01),
+      bandGradients: [10.2, 14.8, 12.1, 7.9],
+      skinTone: { cb: 126, cr: 144 }
+    };
+
+    const descWifeOrDifferentPerson = {
+      lbpHist: new Array(1024).fill(0.0).map((_, i) => (i % 2 === 0 ? 0.05 : 0.001)),
+      bandGradients: [2, 4, 3, 2],
+      skinTone: { cb: 155, cr: 110 }
+    };
+
+    const matchHusband = QFV.compareDescriptors(descHusband, descSameHusband);
+    assert.equal(matchHusband.match, true, 'Same person should match with high similarity');
+    assert(matchHusband.similarity >= 75, `Expected >= 75, got ${matchHusband.similarity}`);
+
+    const mismatchWife = QFV.compareDescriptors(descHusband, descWifeOrDifferentPerson);
+    assert.equal(mismatchWife.match, false, 'Different person (e.g. wife/substitute) must be detected as mismatch');
+    assert(mismatchWife.similarity < 55, `Expected < 55, got ${mismatchWife.similarity}`);
+
+    // 2. Verify QuizEngine handles MISMATCH during exam
+    let loggedEvents = [];
+    let liveCompareResult = { match: false, similarity: 38 };
+
+    const eSandbox = {
+      window: {
+        QuizFaceVerifier: {
+          evaluateFrame: () => ({ ready: true, label: 'Posisi wajah terverifikasi!' }),
+          extractFaceDescriptor: () => ({}),
+          compareWithReference: () => liveCompareResult
+        }
+      },
+      document: createMockDocument(),
+      ImageCapture: undefined,
+      api: {
+        post: async (act, payload) => {
+          if (act === 'proctoring.log_event') {
+            loggedEvents.push(payload);
+          }
+          return { success: true };
+        }
+      },
+      formatTime: () => '10:00',
+      setInterval: () => 123,
+      clearInterval: () => {},
+      setTimeout: (fn) => fn(),
+      console
+    };
+
+    vm.createContext(eSandbox);
+    vm.runInContext(engineCode, eSandbox);
+
+    const qe = eSandbox.QuizEngine();
+    qe.cameraStream = { getVideoTracks: () => [{ readyState: 'live' }] };
+    qe.phase = 'playing';
+    qe.assignmentId = 12;
+    qe.attemptId = 34;
+    qe.questions = [{ id: 101, question_text: 'Soal', options: [{ id: 1, option_text: 'A' }] }];
+    qe.answers = {};
+
+    // Wife sits in front of the camera:
+    await qe.takeAndUploadSnapshot();
+
+    assert.equal(qe.showFaceWarning, true, 'Screen must be frozen on biometric mismatch');
+    assert.equal(qe.faceWarningType, 'mismatch', 'faceWarningType must be mismatch');
+    assert(qe.faceWarningText.includes('Wajah Tidak Cocok'), 'Warning text must inform face mismatch');
+    assert.equal(loggedEvents.length, 1, 'Event log must be sent');
+    assert.equal(loggedEvents[0].status, 'MISMATCH', 'Status must be logged as MISMATCH');
+    assert.equal(loggedEvents[0].similarity_score, 38, 'Logged similarity score must match');
+
+    // Interacting is blocked:
+    qe.selectOption(101, 1);
+    assert.equal(qe.answers[101], undefined, 'Answers must be blocked while mismatch screen is frozen');
+
+    // Husband returns to camera:
+    liveCompareResult = { match: true, similarity: 89 };
+    await qe.takeAndUploadSnapshot();
+
+    assert.equal(qe.showFaceWarning, false, 'Screen must unfreeze when original student returns');
+    assert.equal(qe.faceWarningType, '', 'faceWarningType must reset');
+
+    qe.selectOption(101, 1);
+    assert.equal(qe.answers[101], 1, 'Student can answer again once verified');
+  });
+
   // ─────────────────────────────────────────────────────────────────
   // TEST GROUP 4: BACKEND PHP CONTROLLER VERIFICATION
   // ─────────────────────────────────────────────────────────────────

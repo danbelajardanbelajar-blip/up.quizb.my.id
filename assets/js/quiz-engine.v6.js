@@ -62,6 +62,7 @@ function QuizEngine() {
 
     // Real-Time Periodic Face Warning & Fullscreen Screen Freeze
     showFaceWarning: false,
+    faceWarningType: '', // 'absence' | 'mismatch'
     faceWarningText: '',
     faceAbsenceCounter: 0,
     _fastFaceCheckInterval: null,
@@ -302,7 +303,10 @@ function QuizEngine() {
             this.startHandsFreeFaceScan();
             return;
           } else {
-            // Mahasiswa sudah punya foto acuan -> Check-in otomatis & langsung mulai
+            // Mahasiswa sudah punya foto acuan -> Muat template biometrik acuan
+            if (refCheck.reference_photo && window.QuizFaceVerifier && typeof window.QuizFaceVerifier.loadReferenceFromDataUrl === 'function') {
+              await window.QuizFaceVerifier.loadReferenceFromDataUrl(refCheck.reference_photo);
+            }
             this.takeInitialCheckinSnapshot();
           }
         } catch (errRef) {
@@ -390,6 +394,10 @@ function QuizEngine() {
               this.scanStatusMessage = '✅ Foto berhasil ditangkap! Memverifikasi...';
 
               const dataUrl = window.QuizFaceVerifier.captureSnapshot(videoEl);
+
+              if (window.QuizFaceVerifier && typeof window.QuizFaceVerifier.loadReferenceFromDataUrl === 'function') {
+                await window.QuizFaceVerifier.loadReferenceFromDataUrl(dataUrl);
+              }
 
               try {
                 const saveRes = await api.post('proctoring.save_reference', { photo: dataUrl });
@@ -810,6 +818,7 @@ function QuizEngine() {
           if (!evalRes.ready) {
             // Wajah TIDAK menghadap kamera / tidak terdeteksi!
             this.showFaceWarning = true;
+            this.faceWarningType = 'absence';
             this.faceWarningText = evalRes.label;
             this.faceAbsenceCounter++;
 
@@ -842,8 +851,57 @@ function QuizEngine() {
 
             return;
           } else {
-            // Wajah terdeteksi normal menghadap kamera
+            // Wajah terdeteksi! Lakukan evaluasi identitas biometrik terhadap foto acuan peserta
+            let isMatch = true;
+            let simScore = 100;
+            if (typeof window.QuizFaceVerifier.extractFaceDescriptor === 'function') {
+              const liveDesc = window.QuizFaceVerifier.extractFaceDescriptor(video, evalRes.box);
+              const comp = window.QuizFaceVerifier.compareWithReference(liveDesc);
+              if (comp) {
+                isMatch = comp.match;
+                simScore = comp.similarity;
+              }
+            }
+
+            if (!isMatch) {
+              // Terdeteksi wajah orang lain (MISMATCH) - misal istri, teman, atau joki!
+              this.showFaceWarning = true;
+              this.faceWarningType = 'mismatch';
+              this.faceWarningText = '⚠️ Wajah Tidak Cocok dengan Foto Acuan Peserta! (Kemiripan ' + simScore + '% - Terdeteksi orang lain)';
+              this.faceAbsenceCounter++;
+
+              ((this.$nextTick || (cb => setTimeout(cb, 20))).bind(this))(() => {
+                const freezeVideo = (this.$refs && this.$refs.proctorFreezeVideo) || (typeof document !== 'undefined' && typeof document.getElementById === 'function' ? document.getElementById('proctorFreezeVideo') : null);
+                if (freezeVideo && this.cameraStream && freezeVideo.srcObject !== this.cameraStream) {
+                  freezeVideo.srcObject = this.cameraStream;
+                  freezeVideo.play().catch(() => {});
+                }
+              });
+
+              this.startFastFaceCheck();
+
+              if (imgBase64 && imgBase64.length > 50) {
+                this.snapshots.push(imgBase64);
+                if (this.snapshots.length > 30) this.snapshots = this.snapshots.slice(-30);
+              }
+
+              // Catat log pelanggaran MISMATCH ke server
+              api.post('proctoring.log_event', {
+                assignment_id: this.assignmentId || 0,
+                attempt_id: this.attemptId || null,
+                event_type: 'periodic_face',
+                similarity_score: simScore,
+                status: 'MISMATCH',
+                snapshot: imgBase64,
+                notes: 'Wajah berbeda dari foto acuan peserta (' + simScore + '% kemiripan)'
+              }).catch(() => {});
+
+              return;
+            }
+
+            // Wajah cocok dan sesuai foto acuan peserta!
             this.showFaceWarning = false;
+            this.faceWarningType = '';
             this.faceAbsenceCounter = 0;
             this.stopFastFaceCheck();
           }
@@ -872,11 +930,29 @@ function QuizEngine() {
         if (!video || !window.QuizFaceVerifier) return;
         const evalRes = window.QuizFaceVerifier.evaluateFrame(video);
         if (evalRes && evalRes.ready) {
-          // Wajah terdeteksi kembali! Buka kunci layar otomatis
-          this.showFaceWarning = false;
-          this.faceAbsenceCounter = 0;
-          this.stopFastFaceCheck();
+          let isMatch = true;
+          let simScore = 100;
+          if (typeof window.QuizFaceVerifier.extractFaceDescriptor === 'function') {
+            const liveDesc = window.QuizFaceVerifier.extractFaceDescriptor(video, evalRes.box);
+            const comp = window.QuizFaceVerifier.compareWithReference(liveDesc);
+            if (comp) {
+              isMatch = comp.match;
+              simScore = comp.similarity;
+            }
+          }
+
+          if (isMatch) {
+            // Wajah peserta asli kembali di depan kamera! Buka kunci layar otomatis
+            this.showFaceWarning = false;
+            this.faceWarningType = '';
+            this.faceAbsenceCounter = 0;
+            this.stopFastFaceCheck();
+          } else {
+            this.faceWarningType = 'mismatch';
+            this.faceWarningText = '⚠️ Wajah Tidak Cocok dengan Foto Acuan Peserta! (Kemiripan ' + simScore + '%). Hadapkan wajah peserta asli.';
+          }
         } else if (evalRes) {
+          this.faceWarningType = 'absence';
           this.faceWarningText = evalRes.label;
         }
       }, 600);

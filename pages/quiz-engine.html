@@ -382,10 +382,12 @@
       <div class="w-16 h-16 rounded-full bg-red-900/40 border-2 border-red-500/70 flex items-center justify-center mx-auto mb-3 text-3xl animate-pulse">
         ⚠️
       </div>
-      <h2 class="text-xl font-black text-red-400 mb-1 tracking-wide">
+      <h2 class="text-xl font-black text-red-400 mb-1 tracking-wide"
+          x-text="faceWarningType === 'mismatch' ? 'Layar Terkunci: Wajah Tidak Sesuai Foto Peserta!' : 'Layar Terkunci: Wajah Tidak Terdeteksi!'">
         Layar Terkunci: Wajah Tidak Terdeteksi!
       </h2>
-      <p class="text-xs text-gray-300 leading-relaxed mb-4">
+      <p class="text-xs text-gray-300 leading-relaxed mb-4"
+         x-text="faceWarningType === 'mismatch' ? 'Sistem AI pengawasan mendeteksi orang yang berada di depan kamera berbeda dari foto acuan peserta saat verifikasi awal. Ujian dibekukan demi menjaga integritas!' : 'Sistem pengawasan AI mendeteksi wajah Anda tidak menghadap ke layar kamera. Layar dibekukan dan pengerjaan soal dihentikan sementara sampai wajah Anda kembali menghadap ke kamera.'">
         Sistem pengawasan AI mendeteksi wajah Anda tidak menghadap ke layar kamera. Layar dibekukan dan pengerjaan soal dihentikan sementara sampai wajah Anda kembali menghadap ke kamera.
       </p>
 
@@ -428,7 +430,7 @@
              class="w-full h-full object-cover transform scale-x-[-1]"></video>
       <div class="absolute top-1 left-1 flex items-center gap-1 bg-black/70 px-1.5 py-0.5 rounded-full text-[9px] font-bold text-white pointer-events-none">
         <span class="w-1.5 h-1.5 rounded-full" :class="showFaceWarning ? 'bg-red-500 animate-ping' : 'bg-emerald-400'"></span>
-        <span x-text="showFaceWarning ? 'HILANG' : 'AI AKTIF'"></span>
+        <span x-text="showFaceWarning ? (faceWarningType === 'mismatch' ? 'BEDA ORANG' : 'HILANG') : 'AI AKTIF'"></span>
       </div>
     </div>
   </div>

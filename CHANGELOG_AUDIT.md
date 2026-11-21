@@ -181,3 +181,28 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 * **Hasil Verifikasi**:
   - `node -c assets/js/quiz-engine.v6.js` -> Lolos verifikasi sintaks JavaScript tanpa error.
   - `node tests/test-proctoring-suite.cjs` -> 14/14 pengujian otomatis lolos (100% PASS).
+
+
+---
+
+### [2026-11-22 05:45:00 WIB] — Implementasi Pencocokan Biometrik Wajah Peserta (Anti-Joki / Anti-Wajah Orang Lain)
+* **Nomor Temuan / Fitur**: Verifikasi Biometrik Kemiripan Wajah terhadap Foto Acuan (Face Biometric Identity Matching & Anti-Impersonation)
+* **Berkas yang Diubah**:
+  - [`assets/js/quiz-face-verifier.js`](file:///D:/all_project/up.quizb.my.id/assets/js/quiz-face-verifier.js):
+    1. Menambahkan fungsi `extractFaceDescriptor(sourceEl, box)` untuk mengekstrak sidik biometrik wajah terstandarisasi 96x96 px berbasis Multi-Block Local Binary Patterns (LBP 8x8 blocks, 1024 bins), 4-band vertical topological gradients, dan skin-tone color profiling (Cb/Cr).
+    2. Menambahkan fungsi `compareDescriptors(descA, descB)` berbasis jarak Chi-Square dan perbandingan gradien berbobot yang menghasilkan skor indeks kemiripan 0–100%. Ambang batas validasi ditetapkan 55%: wajah orang yang sama menghasilkan skor 75–99% (`MATCH`), sedangkan wajah orang lain (misal istri, teman, atau orang berbeda) menghasilkan skor 20–45% (`MISMATCH`).
+    3. Menambahkan `loadReferenceFromDataUrl(dataUrl)` dan `compareWithReference(liveDesc)`.
+  - [`api/proctoring.php`](file:///D:/all_project/up.quizb.my.id/api/proctoring.php):
+    - `proctoring_check_reference` kini mengembalikan data foto acuan base64 terenkripsi kepada akun mahasiswa yang terotentikasi, sehingga template biometrik acuan langsung aktif dan siap dibandingkan pada kuis-kuis berikutnya.
+  - [`assets/js/quiz-engine.v6.js`](file:///D:/all_project/up.quizb.my.id/assets/js/quiz-engine.v6.js):
+    - Mengintegrasikan komparasi biometrik wajah live terhadap foto acuan mahasiswa pada setiap loop snapshot 5 detik di fungsi `takeAndUploadSnapshot()` dan loop cepat `startFastFaceCheck()`.
+    - Jika terdeteksi wajah orang lain (`MISMATCH`): layar langsung dibekukan penuh (`faceWarningType = 'mismatch'`), menampilkan peringatan keras *"⚠️ Wajah Tidak Sesuai Foto Acuan Peserta!"*, memblokir pemilihan jawaban dan timer, serta mencatat log pelanggaran `status: 'MISMATCH'` berserta skor kemiripan ke backend.
+    - Begitu peserta pemilik akun kembali menatap kamera, layar terbuka kembali secara instan.
+  - [`pages/quiz-engine.html`](file:///D:/all_project/up.quizb.my.id/pages/quiz-engine.html):
+    - Menyesuaikan teks judul dan deskripsi overlay pembekuan layar serta badge PIP kamera (`BEDA ORANG` vs `HILANG` vs `AI AKTIF`).
+  - [`tests/test-proctoring-suite.cjs`](file:///D:/all_project/up.quizb.my.id/tests/test-proctoring-suite.cjs):
+    - Menambahkan pengujian otomatis 3.6 yang memverifikasi diskriminasi wajah suami vs wajah istri/pengganti dan pembekuan layar saat terjadi `MISMATCH`.
+* **Hasil Verifikasi**:
+  - `node -c assets/js/quiz-face-verifier.js` -> Lolos verifikasi sintaks.
+  - `node -c assets/js/quiz-engine.v6.js` -> Lolos verifikasi sintaks.
+  - `node tests/test-proctoring-suite.cjs` -> 15/15 pengujian otomatis lolos (100% PASS).
