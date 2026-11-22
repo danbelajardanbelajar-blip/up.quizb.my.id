@@ -1,0 +1,21 @@
+{
+  "recorded_at_wib": "2026-11-22T08:17:35+07:00",
+  "baseline": "058885b30ec297f3b7f53a839bffc93308ba7851",
+  "timestamp_note": "last_write_wib is the final filesystem write time, not a reconstruction of every prior edit",
+  "files": [
+    {
+      "file": "docs/proctoring-v2.md",
+      "last_write_wib": "2026-11-22T08:17:34+07:00",
+      "sha256": "adf0cf9ab27b931af22cc70f011a0f4f0d83c72fa79f670a3b9c58fc96be3f4f",
+      "hunks": [
+        {
+          "old_start": 15,
+          "old_count": 1,
+          "new_start": 15,
+          "new_count": 1,
+          "section": "Gerakan dasar **bukan PAD/liveness bersertifikasi**, belum menjamin penolakan fo"
+        }
+      ]
+    }
+  ]
+}

@@ -237,3 +237,8 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 ### [2026-11-22 08:15:16 WIB] — Verifikasi kamera server v2
 - Paket: Ikuti LPPAI: bridge VPS HTTPS/cURL, nonce dan pose-burst-v2 sembilan foto, konfigurasi privat, probe tanpa data peserta. Validasi 17 Node, 41 state PHP, 12 pemeriksaan bridge, lint PHP/JS dan template Alpine/Edge lulus. Koreksi UTF-8 dan normalisasi newline pesan UI. Audit paket 760d9dd dan snapshot koreksi dibanding 7aeaac5. Penerapan serta token/DB/kamera online menunggu terminal pengguna.
 - Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-081516.json](docs/change-audit/proctoring-20261122-081516.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.
+
+
+### [2026-11-22 08:17:35 WIB] — Verifikasi kamera server v2
+- Paket: Verifikasi VPS lewat SSH berizin: layanan LPPAI aktif/running; probe HTTPS terautentikasi dengan JPEG hitam buatan menghasilkan NO_FACE dan match=false. Tidak mengubah layanan VPS atau menggunakan foto peserta. Dokumentasi status diperbarui; deployment hosting QuizB masih menunggu terminal pengguna.
+- Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-081735.json](docs/change-audit/proctoring-20261122-081735.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.

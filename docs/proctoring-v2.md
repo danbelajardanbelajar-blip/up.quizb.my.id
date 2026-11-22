@@ -12,7 +12,7 @@ Gerakan dasar **bukan PAD/liveness bersertifikasi**, belum menjamin penolakan fo
 
 ## Penerapan manual di hosting
 
-Branch rilis `codex/camera-server-verification`; produksi masih memakai commit lama sampai preflight berhasil. Pengguna memilih mengetik perintah terminal sendiri. Akses SSH otomatis ke VPS ditolak; tidak ada klaim telah mengganti layanan VPS atau deployment aplikasi online.
+Branch rilis `codex/camera-server-verification`; produksi masih memakai commit lama sampai preflight berhasil. Pengguna memilih mengetik perintah terminal sendiri. Akses SSH awal ditolak; setelah pengguna memberikan kredensial VPS yang berlaku, login berhasil. Layanan LPPAI diperiksa aktif/running. Probe HTTPS terautentikasi dengan JPEG hitam buatan menghasilkan engine=opencv-sface-v1, status=NO_FACE, match=false. Layanan VPS tidak diubah. Deployment aplikasi QuizB di hosting masih menunggu perintah manual pengguna.
 
 1. Fetch branch tanpa mengganti checkout produksi. Ekstrak `includes/proctoring-remote.php`, `includes/proctoring-verification.php`, `bin/configure-proctoring-vps.php` dan `bin/check-proctoring.php` ke folder privat staging dengan struktur yang sama dan subfolder config.
 2. Jalankan script configure staging dengan path konfigurasi privat LPPAI. Lokasi mengikuti deployment LPPAI: `~/public_html/lppai.quizb.my.id/web/config/pretes-face.local.php`. Script menolak path tidak ada, token pendek, URL lain, atau menimpa konfigurasi yang sudah ada. Jangan mengirim isi file/token ke chat.
