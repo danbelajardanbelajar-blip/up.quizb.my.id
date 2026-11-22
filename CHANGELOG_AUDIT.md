@@ -276,3 +276,8 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 ### [2026-11-22 11:26:57 WIB] — Verifikasi kamera server v2
 - Paket: Pulihkan alur verifikasi VPS 1972cd3 setelah regresi 4d23db9. Tambah worker QuizB terpisah: turn ratio .08 vs .12, return tolerance .14 vs .10, identity threshold tetap .45. Balik panah sesuai mirror preview; pertahankan instruksi singkat. Validasi 18 Node, 41 state PHP, 12 bridge, 9 geometri, 4 smoke model aktual, template Edge/Alpine, lint PHP/JS/bash dan diff check lulus. Deployment worker serta hosting dicatat terpisah setelah hasil nyata.
 - Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-112657.json](docs/change-audit/proctoring-20261122-112657.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.
+
+
+### [2026-11-22 11:28:55 WIB] — Verifikasi kamera server v2
+- Paket: Sesuaikan sandbox unit QuizB dengan pola VPS existing: ProtectHome tmpfs dan bind read-only direktori runtime/model existing, agar interpreter dapat dieksekusi tanpa membuka izin home ubuntu. Pemasangan pertama terhenti pada preflight 203/EXEC; LPPAI tetap aktif dan proxy belum diubah. Bash syntax dan diff check lulus; ulang penerapan QuizB setelah push.
+- Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-112855.json](docs/change-audit/proctoring-20261122-112855.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.

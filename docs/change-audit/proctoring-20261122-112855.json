@@ -1,0 +1,21 @@
+{
+  "recorded_at_wib": "2026-11-22T11:28:55+07:00",
+  "baseline": "3281681a4b3ae15455c178f3853cd068d11b203d",
+  "timestamp_note": "last_write_wib is the final filesystem write time, not a reconstruction of every prior edit",
+  "files": [
+    {
+      "file": "bin/install-quizb-face-vps.sh",
+      "last_write_wib": "2026-11-22T11:28:54+07:00",
+      "sha256": "616a47f63bf2252a4a40536adfde2d3cff23024eca3ae24feb511ef64c16b98e",
+      "hunks": [
+        {
+          "old_start": 38,
+          "old_count": 1,
+          "new_start": 38,
+          "new_count": 2,
+          "section": "ProtectSystem=strict"
+        }
+      ]
+    }
+  ]
+}
