@@ -13,17 +13,22 @@ function harness({reference=true,refError=false,modelError=false}={}){
  const ctx={console,AbortSignal,window:{QuizFaceVerifier:Q,location:{hash:''}},navigator:{mediaDevices:{getUserMedia:async()=>stream}},document:{documentElement:{requestFullscreen:async()=>{}},getElementById:()=>null,addEventListener:()=>{},removeEventListener:()=>{},createElement:()=>video},formatTime:()=>'',alert:()=>{},confirm:()=>true,
  setInterval:(fn,ms)=>{timers.set(++id,{fn,ms});return id;},clearInterval:key=>timers.delete(key),setTimeout:(fn,ms)=>{delayed.set(++id,{fn,ms});return id;},clearTimeout:key=>delayed.delete(key)};
  let sequence=[];
- const api={get:async(action,params)=>{events.push({action,params});if(action==='proctoring.check_reference'){if(refError)throw Error('Reference API failed');return{protocol:2,has_reference:reference};}if(action==='quiz.questions')return{quiz:{id:19,require_camera:1},questions:[{id:1,options:[]}]};return{};},post:async(action,body)=>{events.push({action,body});if(action==='proctoring.begin')return{session:'a'.repeat(64),nonce:'b'.repeat(64)};if(action==='proctoring.verify')return sequence.shift()||{status:'VERIFIED',verified:true,next_nonce:('c'+frames.toString(16).padStart(63,'0')).slice(0,64),message:'Verified by server'};if(action==='proctoring.save_reference')return{success:true};if(action==='attempt.submit')return{attempt_id:123,score:80};return{success:true};}};
+ const api={get:async(action,params)=>{events.push({action,params});if(action==='proctoring.check_reference'){if(refError)throw Error('Reference API failed');return{protocol:2,has_reference:reference};}if(action==='quiz.questions')return{quiz:{id:19,require_camera:1},questions:[{id:1,options:[]}]};return{};},post:async(action,body)=>{events.push({action,body});if(action==='proctoring.begin')return{session:'a'.repeat(64),nonce:'b'.repeat(64),capture_protocol:body.entry_mode==='background'?'vps-single-v1':undefined};if(action==='proctoring.verify')return sequence.shift()||{status:'VERIFIED',verified:true,next_nonce:('c'+frames.toString(16).padStart(63,'0')).slice(0,64),message:'Verified by server'};if(action==='proctoring.save_reference')return{success:true};if(action==='attempt.submit')return{attempt_id:123,score:80};return{success:true};}};
  ctx.api=api;vm.createContext(ctx);vm.runInContext(engineCode,ctx);const q=ctx.QuizEngine();q.quiz={id:19,require_camera:1};q.assignmentId=42;q.phase='ready';q.questions=[{id:1,options:[{id:2}]}];q.answers={};q.timeLeft=100;q.$refs={faceScanVideo:video,proctorPipVideo:video,proctorFreezeVideo:video};q.$nextTick=fn=>fn();q.startBgMusic=()=>{};q.stopBgMusic=()=>{};q.startProctoringAudio=()=>{};q.initFullscreenListeners=()=>{};q.removeFullscreenListeners=()=>{};
  return{q,ctx,api,Q,stream,track,listeners,video,timers,delayed,events,setSequence:values=>{sequence=values;}};
 }
 const verdict=(status,verified=false,n='d')=>({status,verified,next_nonce:n.repeat(64),message:status});
 
-test('returning participant loads detector and must verify before seeing questions or playing',async()=>{
- const h=harness();h.q.questions=[];h.q._cameraQuestionsPending=true;h.q._questionLoadParams={id:19,assignment_id:42};h.setSequence([verdict('TILT_HEAD'),verdict('CENTER_HEAD'),verdict('VERIFIED',true)]);
- await h.q.startQuiz();await settle();assert.equal(h.Q.inits,1);assert.equal(h.q.phase,'face_scan');assert(!h.events.some(e=>e.action==='proctoring.log_event'));
- for(let i=0;i<2;i++){await h.timers.get(h.q._scanInterval).fn();assert.equal(h.q.phase,'face_scan');assert.equal(h.q.questions.length,0);}
- await h.timers.get(h.q._scanInterval).fn();assert.equal(h.q.phase,'playing');assert.equal(h.q.questions.length,1);assert.equal(h.events.filter(e=>e.action==='quiz.questions').length,1);assert(!h.events.some(e=>e.body?.status==='MATCH'));
+test('returning participant sees questions immediately while identity verification runs on the server',async()=>{
+ const h=harness();h.q.questions=[];h.q._cameraQuestionsPending=true;h.q._questionLoadParams={id:19,assignment_id:42};let finish;const post=h.api.post;
+ h.api.post=async(action,body)=>action==='proctoring.verify'?new Promise(resolve=>finish=resolve):post(action,body);
+ await h.q.startQuiz();await settle();assert.equal(h.Q.inits,1);assert.equal(h.q.phase,'playing');assert.equal(h.q.questions.length,1);assert.equal(h.q._lastServerVerified,0);assert.equal(h.q._vpsMotionRequired,false);assert.equal(h.q._scanInterval,null);
+ assert.equal(h.events.find(e=>e.action==='proctoring.begin').body.entry_mode,'background');assert(!h.events.some(e=>e.action==='proctoring.log_event'));
+ finish(verdict('VERIFIED',true));await settle();assert(h.q._lastServerVerified>0);assert.equal(h.q.showFaceWarning,false);
+});
+test('returning participant background mismatch blocks answering until server verification succeeds',async()=>{
+ const h=harness();h.setSequence([verdict('RECHECK'),verdict('VERIFIED',true)]);await h.q.startQuiz();await settle();assert.equal(h.q.phase,'playing');assert.equal(h.q.showFaceWarning,true);h.q.selectOption(1,2);assert.equal(h.q.answers[1],undefined);
+ await h.timers.get(h.q._fastFaceCheckInterval).fn();assert.equal(h.q.showFaceWarning,false);h.q.selectOption(1,2);assert.equal(h.q.answers[1],2);
 });
 
 test('reference or detector failure cannot start an exam',async()=>{
@@ -59,7 +64,7 @@ test('late camera permission result is stopped after navigation or cancellation'
 });
 
 test('late server response cannot revive an invalidated camera generation',async()=>{
- const h=harness();h.q.cameraStream=h.stream;h.q._proctorSession='a'.repeat(64);h.q._proctorNonce='b'.repeat(64);let release;h.api.post=()=>new Promise(r=>release=r);const request=h.q._verifyCamera(h.video);h.q.stopCamera();release(verdict('VERIFIED',true));const response=await request;assert.equal(response.status,'CANCELLED');assert.equal(h.q._lastServerVerified,0);
+ const h=harness();h.q.cameraStream=h.stream;h.q._proctorSession='a'.repeat(64);h.q._proctorNonce='b'.repeat(64);let release;h.api.post=()=>new Promise(r=>release=r);const request=h.q._verifyCamera(h.video);await settle();h.q.stopCamera();release(verdict('VERIFIED',true));const response=await request;assert.equal(response.status,'CANCELLED');assert.equal(h.q._lastServerVerified,0);
 });
 
 test('only one verification request can be in flight',async()=>{
@@ -122,4 +127,12 @@ test('snapshot and network failure reshuffle options locally and cannot leave qu
 test('late noise replacement cannot change another camera session or duplicate an active question id',async()=>{
  const h=noiseHarness();h.api.post=async()=>({swapped:true,new_question:{id:9,options:[{id:11}]}});h.volume(90);for(let i=0;i<11;i++)h.q.checkAmbientNoise();await settle();assert.equal(h.q.questions[0].id,1);assert.equal(new Set(h.q.questions.map(q=>q.id)).size,2);
  const other=noiseHarness();let release;other.api.post=()=>new Promise(resolve=>release=resolve);other.volume(90);for(let i=0;i<11;i++)other.q.checkAmbientNoise();await settle();other.q.stopCamera();release({swapped:true,new_question:{id:77,options:[]}});await settle();assert.equal(other.q.questions[0].id,1);assert.equal(other.q.isNoiseFrozen,false);
+});
+
+test('first-time enrollment still uses the server motion challenge before starting questions',async()=>{
+ const h=harness({reference:false});let clock=1000;h.ctx.Date={now:()=>clock};const post=h.api.post;let mode;
+ h.api.post=async(action,body)=>{if(action==='proctoring.begin'){mode=body.entry_mode;return{session:'a'.repeat(64),nonce:'b'.repeat(64),capture_protocol:'pose-burst-v2',direction:'left'};}return post(action,body);};
+ await h.q.startQuiz();await settle();assert.equal(h.q.phase,'face_scan');const tick=h.timers.get(h.q._scanInterval).fn;await tick();clock+=2100;const scan=tick();await settle();assert.equal(mode,'motion');assert.equal(h.q.phase,'face_scan');
+ for(let i=0;i<9;i++){const entry=[...h.delayed].find(([,t])=>t.ms===1000);assert(entry);h.delayed.delete(entry[0]);entry[1].fn();await settle();}
+ await scan;assert.equal(h.q.phase,'playing');assert.equal(h.events.filter(e=>e.action==='proctoring.save_reference').length,1);
 });

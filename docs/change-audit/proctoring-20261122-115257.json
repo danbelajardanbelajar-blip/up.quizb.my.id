@@ -1,0 +1,182 @@
+{
+  "recorded_at_wib": "2026-11-22T11:52:57+07:00",
+  "baseline": "d3d54523b13ec8bc6de0f2ff2f90bda2b1e851fb",
+  "timestamp_note": "last_write_wib is the final filesystem write time, not a reconstruction of every prior edit",
+  "files": [
+    {
+      "file": "api/proctoring.php",
+      "last_write_wib": "2026-11-22T11:50:35+07:00",
+      "sha256": "5dd9212877de0bd724ce75c613b62b0e579ce65d6017018da93a0fb3ace3f5c4",
+      "hunks": [
+        {
+          "old_start": 339,
+          "old_count": 2,
+          "new_start": 339,
+          "new_count": 4,
+          "section": "function proctoring_begin(): void {"
+        }
+      ]
+    },
+    {
+      "file": "assets/js/quiz-engine.v6.js",
+      "last_write_wib": "2026-11-22T11:51:28+07:00",
+      "sha256": "dab350fcf2fcf7e398a4666f9d6ebffa6aed9369762f1a30f664a94f6d9dd8e1",
+      "hunks": [
+        {
+          "old_start": 288,
+          "old_count": 1,
+          "new_start": 288,
+          "new_count": 15,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 334,
+          "old_count": 0,
+          "new_start": 349,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 374,
+          "old_count": 0,
+          "new_start": 390,
+          "new_count": 13,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 380,
+          "old_count": 9,
+          "new_start": 408,
+          "new_count": 2,
+          "section": "function QuizEngine() {"
+        }
+      ]
+    },
+    {
+      "file": "docs/proctoring-v2.md",
+      "last_write_wib": "2026-11-22T11:52:14+07:00",
+      "sha256": "ddf62a7a20324b59f22bfeb9e73b70cc782d9448718c8c9c348cc1f3bab6bbf5",
+      "hunks": [
+        {
+          "old_start": 46,
+          "old_count": 0,
+          "new_start": 47,
+          "new_count": 8,
+          "section": "Aktivasi hosting manual: pull main, jalankan `php bin/use-quizb-face-endpoint.ph"
+        }
+      ]
+    },
+    {
+      "file": "includes/proctoring-verification.php",
+      "last_write_wib": "2026-11-22T11:50:35+07:00",
+      "sha256": "0f5a9b4709f0ba974260004d83766a3fb1084b0f663da57544e6830e609cf3ec",
+      "hunks": [
+        {
+          "old_start": 96,
+          "old_count": 1,
+          "new_start": 96,
+          "new_count": 1,
+          "section": "function proctoringSessionKey(string $token, array $user): string {"
+        },
+        {
+          "old_start": 110,
+          "old_count": 2,
+          "new_start": 110,
+          "new_count": 2,
+          "section": "function proctoringCreateSession(array $user, array $scope, string $referenceVer"
+        },
+        {
+          "old_start": 114,
+          "old_count": 1,
+          "new_start": 114,
+          "new_count": 1,
+          "section": "function proctoringCreateSession(array $user, array $scope, string $referenceVer"
+        },
+        {
+          "old_start": 128,
+          "old_count": 1,
+          "new_start": 128,
+          "new_count": 1,
+          "section": "function proctoringAdvance(array &$session, array $result, string $frameHash, in"
+        },
+        {
+          "old_start": 136,
+          "old_count": 1,
+          "new_start": 136,
+          "new_count": 2,
+          "section": "function proctoringAdvance(array &$session, array $result, string $frameHash, in"
+        },
+        {
+          "old_start": 176,
+          "old_count": 1,
+          "new_start": 177,
+          "new_count": 1,
+          "section": "function proctoringBindReceipt(string $key, int $attemptId): void {"
+        },
+        {
+          "old_start": 180,
+          "old_count": 1,
+          "new_start": 181,
+          "new_count": 1,
+          "section": "function proctoringBindReceipt(string $key, int $attemptId): void {"
+        },
+        {
+          "old_start": 186,
+          "old_count": 1,
+          "new_start": 187,
+          "new_count": 5,
+          "section": "function proctoringReleaseQuestions(array $user, int $quizId, int $assignmentId,"
+        }
+      ]
+    },
+    {
+      "file": "tests/proctoring-state.php",
+      "last_write_wib": "2026-11-22T11:51:28+07:00",
+      "sha256": "4d989e0706f69fd1572ee0bc68501dcd55a001ac18f6bb33b29be1df5efd718a",
+      "hunks": [
+        {
+          "old_start": 86,
+          "old_count": 0,
+          "new_start": 87,
+          "new_count": 18,
+          "section": "try {"
+        }
+      ]
+    },
+    {
+      "file": "tests/test-proctoring-suite.cjs",
+      "last_write_wib": "2026-11-22T11:52:14+07:00",
+      "sha256": "4d6ab490b517e3fc388c38d77a1319aec0ad58e2e130f54daa89c61d2ed06fd8",
+      "hunks": [
+        {
+          "old_start": 16,
+          "old_count": 1,
+          "new_start": 16,
+          "new_count": 1,
+          "section": "function harness({reference=true,refError=false,modelError=false}={}){"
+        },
+        {
+          "old_start": 22,
+          "old_count": 5,
+          "new_start": 22,
+          "new_count": 10,
+          "section": "const verdict=(status,verified=false,n='d')=>({status,verified,next_nonce:n.repe"
+        },
+        {
+          "old_start": 62,
+          "old_count": 1,
+          "new_start": 67,
+          "new_count": 1,
+          "section": "test('late server response cannot revive an invalidated camera generation',async"
+        },
+        {
+          "old_start": 125,
+          "old_count": 0,
+          "new_start": 131,
+          "new_count": 8,
+          "section": "test('late noise replacement cannot change another camera session or duplicate a"
+        }
+      ]
+    }
+  ]
+}

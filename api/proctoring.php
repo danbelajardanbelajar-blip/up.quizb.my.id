@@ -336,8 +336,10 @@ function proctoring_begin(): void {
     if (!$scope['required']) jsonError('Kuis ini tidak memerlukan sesi kamera.',400);
     $reference=proctoringReference((int)$user['id']);
     if (!$reference['binary']) jsonError('Foto acuan belum tersedia. Lakukan pemindaian terlebih dahulu.',409);
-    if ((proctoringRuntime([],true)['status']??'')!=='READY') jsonError('Layanan verifikasi kamera belum siap. Hubungi pengajar.',503);
-    jsonSuccess(array_merge(['success'=>true,'protocol'=>2],proctoringCreateSession($user,$scope,$reference['version'])));
+    $background=($body['entry_mode']??'')==='background';
+    if ($background && !proctoringUsesVps()) jsonError('Pemeriksaan latar belakang memerlukan layanan VPS.',503);
+    if (!$background && (proctoringRuntime([],true)['status']??'')!=='READY') jsonError('Layanan verifikasi kamera belum siap. Hubungi pengajar.',503);
+    jsonSuccess(array_merge(['success'=>true,'protocol'=>2],proctoringCreateSession($user,$scope,$reference['version'],$background)));
 }
 
 /** The only endpoint permitted to issue a server-verified camera lease. */

@@ -93,7 +93,7 @@ function proctoringSessionKey(string $token, array $user): string {
     return $key;
 }
 
-function proctoringCreateSession(array $user, array $scope, string $referenceVersion): array {
+function proctoringCreateSession(array $user, array $scope, string $referenceVersion, bool $background = false): array {
     $carry=[];
     foreach (($_SESSION['proctoring_v2']??[]) as $key=>$session) {
         if ((int)$session['user_id']===(int)$user['id'] && (int)$session['quiz_id']===$scope['quiz_id'] && (int)$session['assignment_id']===$scope['assignment_id'] && empty($session['attempt_id'])) {
@@ -107,11 +107,11 @@ function proctoringCreateSession(array $user, array $scope, string $referenceVer
     $key=hash('sha256',$token);
     $_SESSION['proctoring_v2'][$key]=array_merge($scope,[
         'user_id'=>(int)$user['id'],'reference_version'=>$referenceVersion,'started_at'=>time(),
-        'engine_protocol'=>proctoringUsesVps()?'pose-burst-v2':'local-roll-v1','direction'=>random_int(0,1)?'left':'right',
-        'stage'=>'tilt','nonce'=>$nonce,'verified_at'=>0,'final_verified_at'=>0,'sample_count'=>0,'frames'=>[],
+        'entry_mode'=>$background?'background':'motion','engine_protocol'=>$background?'vps-single-v1':(proctoringUsesVps()?'pose-burst-v2':'local-roll-v1'),'direction'=>random_int(0,1)?'left':'right',
+        'stage'=>$background?'pending':'tilt','nonce'=>$nonce,'verified_at'=>0,'final_verified_at'=>0,'sample_count'=>0,'frames'=>[],
     ],$carry);
     $_SESSION['proctoring_current'][$user['id'].':'.$scope['quiz_id'].':'.$scope['assignment_id']]=$key;
-    return ['session'=>$token,'nonce'=>$nonce,'capture_protocol'=>$_SESSION['proctoring_v2'][$key]['engine_protocol'],'direction'=>$_SESSION['proctoring_v2'][$key]['direction'],'status'=>'TILT_HEAD','message'=>'Miringkan kepala sedikit ke samping, lalu ikuti petunjuk kamera.'];
+    return ['session'=>$token,'nonce'=>$nonce,'capture_protocol'=>$_SESSION['proctoring_v2'][$key]['engine_protocol'],'direction'=>$_SESSION['proctoring_v2'][$key]['direction'],'status'=>$background?'PENDING':'TILT_HEAD','message'=>$background?'Pemeriksaan wajah berjalan di latar belakang.':'Miringkan kepala sedikit ke samping, lalu ikuti petunjuk kamera.'];
 }
 
 function proctoringAdvance(array &$session, array $result, string $frameHash, int $now, bool $final): string {
@@ -125,7 +125,7 @@ function proctoringAdvance(array &$session, array $result, string $frameHash, in
     $session['verified_at']=0;
     if (in_array($frameHash,$session['frames'],true)) return 'FRAME_REPLAY';
     $session['frames'][]=$frameHash;$session['frames']=array_slice($session['frames'],-12);
-    $vps=($session['engine_protocol']??'')==='pose-burst-v2';
+    $vps=in_array($session['engine_protocol']??'',['pose-burst-v2','vps-single-v1'],true);
     if (($result['status']??'')!=='MATCH') {
         if (!$vps && !in_array($result['status']??'',['UNAVAILABLE','SERVER_BUSY'],true)) $session['stage']='tilt';
         return $result['status']??'UNAVAILABLE';
@@ -133,7 +133,8 @@ function proctoringAdvance(array &$session, array $result, string $frameHash, in
     if ($vps && ($result['engine']??'')!=='opencv-sface-v1') return 'INVALID_FEATURE';
     $roll=$result['roll']??null;$score=$result['cosine']??null;
     if (!is_numeric($roll) || !is_finite((float)$roll) || !is_numeric($score) || !is_finite((float)$score) || $score<($vps?0.45:0.50) || $score>1.001) return 'INVALID_FEATURE';
-    if ($vps && $session['stage']!=='ready') {
+    if (($session['engine_protocol']??'')==='vps-single-v1' && $session['stage']==='pending') $session['stage']='ready';
+    if (($session['engine_protocol']??'')==='pose-burst-v2' && $session['stage']!=='ready') {
         if (($result['engine']??'')!=='opencv-sface-v1' || ($result['motion_passed']??false)!==true || $now-$session['started_at']<3) return 'MOTION_REQUIRED';
         $session['stage']='ready';
     }
@@ -173,17 +174,21 @@ function proctoringReceiptTable(): void {
 
 function proctoringBindReceipt(string $key, int $attemptId): void {
     $s=$_SESSION['proctoring_v2'][$key];
-    DB::execute('INSERT INTO proctoring_receipts (attempt_id,user_id,quiz_id,assignment_id,verified_at,model_version,review_required,monitoring_gaps) VALUES (?,?,?,?,FROM_UNIXTIME(?),?,?,?)',[$attemptId,$s['user_id'],$s['quiz_id'],$s['assignment_id'],$s['final_verified_at'],($s['engine_protocol']??'')==='pose-burst-v2'?'opencv-sface-v1':'yunet-2023mar-sface-2021dec-v1',(int)($s['review_required']??false),(int)($s['monitoring_gaps']??0)]);
+    DB::execute('INSERT INTO proctoring_receipts (attempt_id,user_id,quiz_id,assignment_id,verified_at,model_version,review_required,monitoring_gaps) VALUES (?,?,?,?,FROM_UNIXTIME(?),?,?,?)',[$attemptId,$s['user_id'],$s['quiz_id'],$s['assignment_id'],$s['final_verified_at'],in_array($s['engine_protocol']??'',['pose-burst-v2','vps-single-v1'],true)?'opencv-sface-v1':'yunet-2023mar-sface-2021dec-v1',(int)($s['review_required']??false),(int)($s['monitoring_gaps']??0)]);
     $_SESSION['proctoring_v2'][$key]['attempt_id']=$attemptId;
 }
 
-/** Never deliver protected questions until this browser/session has passed server verification. */
+/** Existing-reference background entry may show questions while the first identity check runs. */
 function proctoringReleaseQuestions(array $user, int $quizId, int $assignmentId, bool $preview): bool {
     proctoringScope($user,$quizId,$assignmentId);
     if ($preview) return false;
     $key=$_SESSION['proctoring_current'][$user['id'].':'.$quizId.':'.$assignmentId]??'';
     $session=$_SESSION['proctoring_v2'][$key]??null;
-    if (!$session || (int)$session['user_id']!==(int)$user['id'] || !empty($session['attempt_id']) || $session['stage']!=='ready' || empty($session['verified_at']) || time()-$session['verified_at']>20 || time()-$session['started_at']>21600) return false;
+    if (!$session || (int)$session['user_id']!==(int)$user['id'] || (int)$session['quiz_id']!==$quizId || (int)$session['assignment_id']!==$assignmentId || !empty($session['attempt_id']) || time()-$session['started_at']>21600) return false;
+    $pending=($session['entry_mode']??'')==='background' && $session['stage']==='pending'
+        && empty($session['last_request']) && time()-$session['started_at']<=20;
+    $verified=$session['stage']==='ready' && !empty($session['verified_at']) && time()-$session['verified_at']<=20;
+    if (!$pending && !$verified) return false;
     $reference=proctoringReference((int)$user['id']);
     if ($reference['version']!==$session['reference_version']) return false;
     if (empty($_SESSION['proctoring_v2'][$key]['questions_released_at'])) $_SESSION['proctoring_v2'][$key]['questions_released_at']=time();

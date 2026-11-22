@@ -285,7 +285,21 @@ function QuizEngine() {
           const reference = await api.get('proctoring.check_reference',{}, {signal:AbortSignal.timeout(15000)});
           if (generation!==this._cameraGeneration) return;
           if (reference?.protocol !== 2 || typeof reference.has_reference !== 'boolean') throw Error('Layanan kamera perlu diperbarui. Muat ulang atau hubungi pengajar.');
-          this.startHandsFreeFaceScan(!reference.has_reference);
+          this._cameraBackgroundEntry=reference.has_reference;
+          if (reference.has_reference) {
+            await this._beginCameraSession(true);
+            if (generation!==this._cameraGeneration) return;
+            if (this._cameraQuestionsPending) {
+              const data=await api.get('quiz.questions',this._questionLoadParams || {id:this.quiz.id,assignment_id:this.assignmentId || 0,mode:this.mode});
+              if (generation!==this._cameraGeneration) return;
+              if (data.camera_verification_required || !Array.isArray(data.questions) || !data.questions.length) throw Error('Soal belum dapat dibuka. Coba sambungkan kamera kembali.');
+              this.questions=data.questions;this._cameraQuestionsPending=false;
+            }
+            this.showFaceWarning=false;this.faceWarningType='';
+            this.startActualQuiz();
+            // Display the questions now; the server checks identity immediately in the background.
+            void this.takeAndUploadSnapshot();
+          } else this.startHandsFreeFaceScan(true);
         } catch (error) {
           if (generation!==this._cameraGeneration) return;
           this.stopCamera(); this.stopTimer(); this.stopQuestionTimer();
@@ -332,6 +346,7 @@ function QuizEngine() {
     _proctorSession: '',
     _proctorNonce: '',
     _vpsMotionRequired: false,
+    _cameraBackgroundEntry: false,
     _vpsDirection: '',
     _lastServerVerified: 0,
     _proctorBusy: false,
@@ -372,20 +387,26 @@ function QuizEngine() {
       return video;
     },
 
+    async _beginCameraSession(background=this._cameraBackgroundEntry) {
+      if (this._proctorSession) return;
+      const generation=this._cameraGeneration;
+      const begin = await api.post('proctoring.begin',{quiz_id:this.quiz.id,assignment_id:Number(this.assignmentId)||0,entry_mode:background?'background':'motion'},{signal:AbortSignal.timeout(18000)});
+      if (generation !== this._cameraGeneration) return {verified:false,status:'CANCELLED'};
+      if (!/^[a-f0-9]{64}$/.test(begin.session || '') || !/^[a-f0-9]{64}$/.test(begin.nonce || '')) throw Error('Sesi kamera tidak valid. Muat ulang layanan.');
+      if (background && begin.capture_protocol!=='vps-single-v1') throw Error('Layanan pemeriksaan latar belakang perlu diperbarui. Muat ulang halaman.');
+      this._proctorSession = begin.session; this._proctorNonce = begin.nonce;
+      this._vpsMotionRequired=begin.capture_protocol==='pose-burst-v2';
+      this._vpsDirection=begin.direction;
+      if (this._vpsMotionRequired && !['left','right'].includes(begin.direction)) throw Error('Arah tantangan server tidak valid.');
+    },
+
     async _verifyCamera(video, final = false) {
       if (this._proctorBusy) return {verified:false,status:'BUSY',message:'Menunggu pemeriksaan kamera sebelumnya…'};
       this._proctorBusy = true;
       const generation = this._cameraGeneration;
       try {
-        if (!this._proctorSession) {
-          const begin = await api.post('proctoring.begin',{quiz_id:this.quiz.id,assignment_id:Number(this.assignmentId)||0},{signal:AbortSignal.timeout(18000)});
-          if (generation !== this._cameraGeneration) return {verified:false,status:'CANCELLED'};
-          if (!/^[a-f0-9]{64}$/.test(begin.session || '') || !/^[a-f0-9]{64}$/.test(begin.nonce || '')) throw Error('Sesi kamera tidak valid. Muat ulang layanan.');
-          this._proctorSession = begin.session; this._proctorNonce = begin.nonce;
-          this._vpsMotionRequired=begin.capture_protocol==='pose-burst-v2';
-          this._vpsDirection=begin.direction;
-          if (this._vpsMotionRequired && !['left','right'].includes(begin.direction)) throw Error('Arah tantangan server tidak valid.');
-        }
+        await this._beginCameraSession();
+        if (generation!==this._cameraGeneration) return {verified:false,status:'CANCELLED'};
         const frames=this._vpsMotionRequired ? await this._captureVpsMotion(video,generation) : undefined;
         const snapshot = frames ? frames[frames.length-1] : window.QuizFaceVerifier.captureSnapshot(video);
         const result = await api.post('proctoring.verify',{session:this._proctorSession,nonce:this._proctorNonce,snapshot,frames,purpose:final?'final':'periodic'},{signal:AbortSignal.timeout(18000)});

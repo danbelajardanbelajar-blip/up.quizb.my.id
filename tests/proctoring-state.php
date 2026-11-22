@@ -84,5 +84,23 @@ try {
     check(proctoringAdvance($s,$vps,'vps-periodic',$now+2,true)==='VERIFIED','VPS periodic image can renew a previously verified session');
     $vps['engine']='untrusted';
     check(proctoringAdvance($s,$vps,'vps-bad-engine',$now+4,true)==='INVALID_FEATURE','VPS engine attestation checked on periodic verification');
+    $_SESSION=[];
+    $background=proctoringCreateSession($user,$scope,hash_file('sha256',$refPath),true);$bgKey=hash('sha256',$background['session']);
+    check($background['capture_protocol']==='vps-single-v1' && $_SESSION['proctoring_v2'][$bgKey]['verified_at']===0,'background entry never fabricates identity verification');
+    check(proctoringReleaseQuestions($user,19,42,false),'existing canonical reference can open questions before background response');
+    denied(fn()=>proctoringRequireReceipt($user,['id'=>19],42,['proctoring_session'=>$background['session']]),'background entry alone cannot submit answers');
+    check(!proctoringReleaseQuestions($user,19,42,true),'metadata preview still cannot open questions');
+    $_SESSION['proctoring_v2'][$bgKey]['started_at']=$now-21;
+    check(!proctoringReleaseQuestions($user,19,42,false),'background opening permission expires without verification');
+    $_SESSION['proctoring_v2'][$bgKey]['started_at']=$now;
+    $_SESSION['proctoring_v2'][$bgKey]['last_request']=microtime(true);
+    $bg=&$_SESSION['proctoring_v2'][$bgKey];
+    check(proctoringAdvance($bg,['status'=>'RECHECK'],'bg-mismatch',$now,false)==='RECHECK','background mismatch never issues a lease');
+    check(!proctoringReleaseQuestions($user,19,42,false),'failed background identity cannot reopen questions');
+    $pass=['status'=>'MATCH','cosine'=>.8,'roll'=>0,'engine'=>'opencv-sface-v1','motion_passed'=>false];
+    check(proctoringAdvance($bg,$pass,'bg-initial',$now,false)==='VERIFIED','background entry uses real single-frame server identity without head motion');
+    denied(fn()=>proctoringRequireReceipt($user,['id'=>19],42,['proctoring_session'=>$background['session']]),'initial background pass cannot replace final verification');
+    check(proctoringAdvance($bg,$pass,'bg-final',$now+1,true)==='VERIFIED','fresh final single-frame verification renews background session');
+    check(proctoringRequireReceipt($user,['id'=>19],42,['proctoring_session'=>$background['session']])===$bgKey,'initial and final real identity checks allow background-mode submission');
     echo 'TOTAL '.$count.' PASS'.PHP_EOL;
 } finally { unlink($refPath); }
