@@ -1,0 +1,77 @@
+{
+  "recorded_at_wib": "2026-11-22T15:27:42+07:00",
+  "baseline": "1b1d704ecfaf9e14697cef0ed37b84f377f268f2",
+  "timestamp_note": "last_write_wib is the final filesystem write time, not a reconstruction of every prior edit",
+  "files": [
+    {
+      "file": "api/activity.php",
+      "last_write_wib": "2026-11-22T15:23:46+07:00",
+      "sha256": "6f3c0eb46a790b13614bae09c845031f2e7caa448e74f64f89285ae945f03c93",
+      "hunks": [
+        {
+          "old_start": 5,
+          "old_count": 0,
+          "new_start": 6,
+          "new_count": 38,
+          "section": ""
+        },
+        {
+          "old_start": 9,
+          "old_count": 0,
+          "new_start": 48,
+          "new_count": 1,
+          "section": "function _activityEnrich(array &$rows): void {"
+        }
+      ]
+    },
+    {
+      "file": "pages/activity.html",
+      "last_write_wib": "2026-11-22T15:22:31+07:00",
+      "sha256": "f12dfa21f83dfa43a22ab40a756576b6b3db144daa5756865233509add68df06",
+      "hunks": [
+        {
+          "old_start": 7,
+          "old_count": 0,
+          "new_start": 8,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 73,
+          "old_count": 0,
+          "new_start": 75,
+          "new_count": 11,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/activity-sources-browser.cjs",
+      "last_write_wib": "2026-11-22T15:26:59+07:00",
+      "sha256": "e868a915a898764689f67ffddaf5b8ba935ed8f382788f9e508531653fb39665",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 34,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/activity-sources.php",
+      "last_write_wib": "2026-11-22T15:23:46+07:00",
+      "sha256": "40cb11b3a04440ee38e005eb0d15cb177e27b98483f229c1dd1a8d6f1588fdaf",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 61,
+          "section": ""
+        }
+      ]
+    }
+  ]
+}

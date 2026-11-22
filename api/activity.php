@@ -3,10 +3,49 @@
 // api/activity.php — Public Activity Feed
 // ============================================
 
+/** Classify actual attempt links in bounded batches, without exposing private class/task details. */
+function _activityAttachSources(array &$rows): void {
+    $ids=array_values(array_unique(array_filter(array_map('intval',array_column($rows,'id')),fn($id)=>$id>0)));
+    if (!$ids) return;
+    $placeholders=implode(',',array_fill(0,count($ids),'?'));
+    $links=[];$complete=true;
+    $tables=['assignment_attempts'=>'assignment','assignment_submissions'=>'assignment',
+             'challenge_participants'=>'challenge','tournament_participants'=>'tournament'];
+    foreach ($tables as $table=>$type) {
+        try {
+            foreach (DB::all("SELECT attempt_id FROM $table WHERE attempt_id IN ($placeholders)",$ids) as $link) {
+                $links[(int)$link['attempt_id']][$type]=true;
+            }
+        } catch (Throwable $error) {
+            // Some older installations have not created optional tables yet.
+            $missing=$error instanceof PDOException && (($error->errorInfo[1]??0)===1146 || $error->getCode()==='42S02');
+            if (!$missing) {
+                $complete=false;
+                error_log('[activity] Source metadata unavailable: '.$table);
+            }
+        }
+    }
+    $labels=['assignment'=>'Tugas Kelas','independent'=>'Kuis Umum','challenge'=>'Tantangan',
+             'tournament'=>'Turnamen','unknown'=>'Asal belum diketahui'];
+    $details=['assignment'=>'Pengerjaan terhubung ke tugas kelas.',
+        'independent'=>'Tidak terhubung ke tugas kelas pada data yang tersedia. Bisa berasal dari pencarian, katalog, atau tautan; jalur pembukaan tidak dicatat khusus.',
+        'challenge'=>'Pengerjaan dalam tantangan.','tournament'=>'Pengerjaan dalam turnamen.',
+        'unknown'=>'Informasi asal pengerjaan belum tersedia.'];
+    foreach ($rows as &$row) {
+        $linked=$links[(int)$row['id']]??[];
+        $type=isset($linked['assignment'])?'assignment':(isset($linked['tournament'])?'tournament':
+              ((isset($linked['challenge']) || ($row['mode']??'')==='challenge')?'challenge':($complete?'independent':'unknown')));
+        $row['source_type']=$type;$row['source_label']=$labels[$type];$row['source_detail']=$details[$type];
+        $row['is_assignment']=$type==='assignment';
+    }
+    unset($row);
+}
+
 // -------------------------------------------------------
 // Helper: hitung persen & badge, cast tipe
 // -------------------------------------------------------
 function _activityEnrich(array &$rows): void {
+    _activityAttachSources($rows);
     foreach ($rows as &$row) {
         $row['score']           = (int)$row['score'];
         $row['total_questions'] = (int)$row['total_questions'];

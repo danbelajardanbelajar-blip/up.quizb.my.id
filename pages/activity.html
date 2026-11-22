@@ -5,6 +5,7 @@
   <div class="text-center mb-10">
     <h1 class="text-3xl font-bold text-gray-900 dark:text-white">🌐 Aktivitas Publik</h1>
     <p class="text-gray-500 dark:text-gray-400 mt-2">Hasil quiz terbaru dari seluruh pengguna</p>
+    <p class="text-xs text-gray-400 mt-2">Label Tugas Kelas dan Kuis Umum membedakan tugas dengan kuis dari pencarian, katalog, atau tautan.</p>
   </div>
 
   <!-- Loading Skeleton -->
@@ -71,6 +72,17 @@
 
           <!-- Category + time + mode -->
           <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+            <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold"
+                  :class="{
+                    'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800': item.source_type === 'assignment',
+                    'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800': item.source_type === 'independent',
+                    'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800': item.source_type === 'challenge',
+                    'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800': item.source_type === 'tournament',
+                    'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700': !item.source_type || item.source_type === 'unknown'
+                  }"
+                  :title="item.source_detail || 'Informasi asal pengerjaan belum tersedia.'"
+                  :aria-label="'Asal pengerjaan: ' + (item.source_label || 'Asal belum diketahui')"
+                  x-text="item.source_label || 'Asal belum diketahui'"></span>
             <span x-show="item.category_name"
                   class="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
               <span x-text="item.category_icon || '📂'"></span>
