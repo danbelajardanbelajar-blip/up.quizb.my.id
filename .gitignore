@@ -74,3 +74,5 @@ config/proctoring.php
 # Python runtime artifacts
 __pycache__/
 *.pyc
+
+config/proctoring-tmp-*

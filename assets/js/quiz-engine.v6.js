@@ -406,7 +406,7 @@ function QuizEngine() {
       // The preview is mirrored; the server evaluates original camera pixels.
       const displayDirection=this._vpsDirection==='left'?'right':'left';
       const side=displayDirection==='left'?'kiri':'kanan';
-      const instructions=['Hadapkan wajah lurus ke kamera.',`Tolehkan kepala perlahan ke ${side} layar, lalu tahan.`, 'Kembali hadapkan wajah lurus seperti posisi awal.'];
+      const instructions=['Hadapkan wajah lurus ke kamera.',`Tolehkan kepala sedikit ke ${side} layar, lalu tahan.`, 'Kembali hadapkan wajah lurus seperti posisi awal.'];
       try {
       for (let stage=0;stage<3;stage++) {
         this.scanDirection=stage===1 ? displayDirection : '';

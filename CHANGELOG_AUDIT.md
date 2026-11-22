@@ -281,3 +281,8 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 ### [2026-11-22 11:28:55 WIB] — Verifikasi kamera server v2
 - Paket: Sesuaikan sandbox unit QuizB dengan pola VPS existing: ProtectHome tmpfs dan bind read-only direktori runtime/model existing, agar interpreter dapat dieksekusi tanpa membuka izin home ubuntu. Pemasangan pertama terhenti pada preflight 203/EXEC; LPPAI tetap aktif dan proxy belum diubah. Bash syntax dan diff check lulus; ulang penerapan QuizB setelah push.
 - Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-112855.json](docs/change-audit/proctoring-20261122-112855.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.
+
+
+### [2026-11-22 11:31:50 WIB] — Verifikasi kamera server v2
+- Paket: Worker QuizB VPS aktif dengan profil quizb-easy-v1 (.08 turn/.14 return); probe HTTPS terautentikasi /verify dan /quizb/verify NO_FACE, match=false. LPPAI PID903 tetap berjalan sejak 17 November tanpa restart. Tambah aktivasi endpoint hosting dengan preflight, backup privat dan rename atomik; instruksi menoleh sedikit; retry health proxy setelah reload. Validasi 18 Node, 9 geometri, template Edge/Alpine, PHP/JS/bash syntax dan diff check lulus. Aktivasi serta kamera nyata hosting menunggu terminal pengguna.
+- Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-113150.json](docs/change-audit/proctoring-20261122-113150.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.

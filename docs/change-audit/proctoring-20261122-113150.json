@@ -1,0 +1,77 @@
+{
+  "recorded_at_wib": "2026-11-22T11:31:50+07:00",
+  "baseline": "881a32992c14d92dc778876836c40e5362d16623",
+  "timestamp_note": "last_write_wib is the final filesystem write time, not a reconstruction of every prior edit",
+  "files": [
+    {
+      "file": ".gitignore",
+      "last_write_wib": "2026-11-22T11:31:21+07:00",
+      "sha256": "cf651e6c96f76b1483d8e29f6958d938cb77eac3ce4feca05f52040990c44479",
+      "hunks": [
+        {
+          "old_start": 76,
+          "old_count": 0,
+          "new_start": 77,
+          "new_count": 2,
+          "section": "__pycache__/"
+        }
+      ]
+    },
+    {
+      "file": "assets/js/quiz-engine.v6.js",
+      "last_write_wib": "2026-11-22T11:31:21+07:00",
+      "sha256": "0bdb298ef7f3155057853f5416ffd9e991a76b214ba4bcda18963fdf1e203c30",
+      "hunks": [
+        {
+          "old_start": 409,
+          "old_count": 1,
+          "new_start": 409,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        }
+      ]
+    },
+    {
+      "file": "bin/install-quizb-face-vps.sh",
+      "last_write_wib": "2026-11-22T11:31:21+07:00",
+      "sha256": "8d3e099ce637f0b70f13828be42ce78f1caa3be639092976bb8f86211af0c501",
+      "hunks": [
+        {
+          "old_start": 90,
+          "old_count": 1,
+          "new_start": 90,
+          "new_count": 1,
+          "section": "printf '\\n'"
+        }
+      ]
+    },
+    {
+      "file": "bin/use-quizb-face-endpoint.php",
+      "last_write_wib": "2026-11-22T11:31:21+07:00",
+      "sha256": "6560a1c4f9e146f8b538df8b59a60774c6e91c0f7c7f0ba8e5163e5634ed6971",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 34,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "docs/proctoring-v2.md",
+      "last_write_wib": "2026-11-22T11:31:21+07:00",
+      "sha256": "6442f0a3e7b1ad0b595efd995ed01f3b6f1d151f92f0f28549f4fcb3fb46e752",
+      "hunks": [
+        {
+          "old_start": 42,
+          "old_count": 0,
+          "new_start": 43,
+          "new_count": 4,
+          "section": "Endpoint khusus QuizB dirancang di https://face.lppai.quizb.my.id/quizb, worker"
+        }
+      ]
+    }
+  ]
+}

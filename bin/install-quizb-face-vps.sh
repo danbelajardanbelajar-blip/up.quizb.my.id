@@ -87,6 +87,6 @@ if ! nginx -t; then cp -p "$backup" "$site"; exit 1; fi
 systemctl reload nginx
 curl --fail --silent --show-error https://face.lppai.quizb.my.id/health
 printf '\n'
-curl --fail --silent --show-error https://face.lppai.quizb.my.id/quizb/health
+curl --retry 5 --retry-delay 1 --retry-all-errors --fail --silent --show-error https://face.lppai.quizb.my.id/quizb/health
 printf '\n'
 systemctl is-active lppai-face-engine-48b63bb9.service quizb-face-engine.service
