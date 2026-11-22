@@ -1,0 +1,21 @@
+{
+  "recorded_at_wib": "2026-11-22T08:26:12+07:00",
+  "baseline": "7c63d4492bf6e962190c1f0186ced48169c609f7",
+  "timestamp_note": "last_write_wib is the final filesystem write time, not a reconstruction of every prior edit",
+  "files": [
+    {
+      "file": "docs/proctoring-v2.md",
+      "last_write_wib": "2026-11-22T08:26:12+07:00",
+      "sha256": "4b68411803c4a489d913b6437a5a66bdb451514cb0519f3338bf1d4187b7c830",
+      "hunks": [
+        {
+          "old_start": 32,
+          "old_count": 0,
+          "new_start": 33,
+          "new_count": 4,
+          "section": "Tidak ada kredensial, model biner, venv atau foto peserta yang dimasukkan Git. I"
+        }
+      ]
+    }
+  ]
+}

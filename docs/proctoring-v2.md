@@ -30,3 +30,7 @@ Branch rilis `codex/camera-server-verification`; produksi masih memakai commit l
 - Driver lokal opsional lama: 7 inferensi model nyata dan 4 pemeriksaan PHP–Python lulus. Runtime privat yang sempat dipasang pada shared hosting tidak digunakan driver remote. Thread dibatasi sebelum import untuk mencegah OpenBLAS mencoba 80 thread. Tidak perlu mengaktifkan fungsi proses PHP.
 
 Tidak ada kredensial, model biner, venv atau foto peserta yang dimasukkan Git. Integrasi MySQL dan kamera nyata online belum diverifikasi.
+
+## Hasil preflight hosting dari terminal pengguna
+
+Pada 22 November 2026 pengguna menjalankan staging privat di akun Rumahweb quic1934. Konfigurasi berhasil disalin dari LPPAI tanpa menampilkan token. Output: Engine health READY; Authenticated blank-frame probe NO_FACE; PASS model ready, credentials accepted, blank image rejected. Ini membuktikan PHP CLI hosting dapat memanggil VPS melalui cURL dengan konfigurasi yang benar. Proses berikutnya: salin konfigurasi privat ke QuizB, pull kode aplikasi dan uji kamera melalui PHP web. Tidak ada perubahan kode/database/konfigurasi asli LPPAI.

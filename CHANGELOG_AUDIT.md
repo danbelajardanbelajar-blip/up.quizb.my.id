@@ -242,3 +242,8 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 ### [2026-11-22 08:17:35 WIB] — Verifikasi kamera server v2
 - Paket: Verifikasi VPS lewat SSH berizin: layanan LPPAI aktif/running; probe HTTPS terautentikasi dengan JPEG hitam buatan menghasilkan NO_FACE dan match=false. Tidak mengubah layanan VPS atau menggunakan foto peserta. Dokumentasi status diperbarui; deployment hosting QuizB masih menunggu terminal pengguna.
 - Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-081735.json](docs/change-audit/proctoring-20261122-081735.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.
+
+
+### [2026-11-22 08:26:12 WIB] — Verifikasi kamera server v2
+- Paket: Preflight hosting oleh pengguna lulus: konfigurasi privat QuizB tersimpan, health READY, probe JPEG hitam terautentikasi NO_FACE. Catat bukti kesiapan PHP CLI hosting ke VPS; alur PHP web dan kamera online belum diuji. Menyiapkan fast-forward main untuk deployment manual QuizB.
+- Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-082612.json](docs/change-audit/proctoring-20261122-082612.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.
