@@ -227,3 +227,13 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 - Validasi: 16 skenario Node; 37 assertion PHP; 7 inferensi model nyata; 4 integrasi PHP–Python; template Alpine di Edge; API lintas akun. Lint PHP/JS dan diff check lulus.
 - Keterbatasan: tes poller notifikasi lama gagal pada app.v5.js yang tidak diubah. MySQL/kamera nyata online belum diuji; proc_open dinonaktifkan hosting. Jangan pull gate sebelum runtime siap.
 - Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-075926.json](docs/change-audit/proctoring-20261122-075926.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.
+
+
+### [2026-11-22 08:14:51 WIB] — Verifikasi kamera server v2
+- Paket: Integrasi LPPAI VPS: HTTPS/cURL dan pose-burst-v2 sembilan foto, driver remote tanpa proc_open, konfigurasi privat dan probe gambar hitam. 17 Node, 41 assertion state, 12 pemeriksaan bridge, lint PHP/JS, template Edge/Alpine lulus. Koreksi UTF-8 pada pesan baru; audit mencakup paket 760d9dd serta snapshot ini terhadap parent 7aeaac5. Health endpoint VPS ready; token/hosting/MySQL/kamera nyata belum diuji online.
+- Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-081451.json](docs/change-audit/proctoring-20261122-081451.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.
+
+
+### [2026-11-22 08:15:16 WIB] — Verifikasi kamera server v2
+- Paket: Ikuti LPPAI: bridge VPS HTTPS/cURL, nonce dan pose-burst-v2 sembilan foto, konfigurasi privat, probe tanpa data peserta. Validasi 17 Node, 41 state PHP, 12 pemeriksaan bridge, lint PHP/JS dan template Alpine/Edge lulus. Koreksi UTF-8 dan normalisasi newline pesan UI. Audit paket 760d9dd dan snapshot koreksi dibanding 7aeaac5. Penerapan serta token/DB/kamera online menunggu terminal pengguna.
+- Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-081516.json](docs/change-audit/proctoring-20261122-081516.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.

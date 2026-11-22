@@ -1,0 +1,371 @@
+{
+  "recorded_at_wib": "2026-11-22T08:14:51+07:00",
+  "baseline": "7aeaac572ae40798fd8f2aeccf307970bfe8ba6d",
+  "timestamp_note": "last_write_wib is the final filesystem write time, not a reconstruction of every prior edit",
+  "files": [
+    {
+      "file": "api/proctoring.php",
+      "last_write_wib": "2026-11-22T08:08:56+07:00",
+      "sha256": "53c08f34fa0d46e0d7c89c44c94b358ddaa02441a821a8461eb46ce9f4bda0c1",
+      "hunks": [
+        {
+          "old_start": 358,
+          "old_count": 2,
+          "new_start": 358,
+          "new_count": 14,
+          "section": "function proctoring_verify(): void {"
+        },
+        {
+          "old_start": 360,
+          "old_count": 0,
+          "new_start": 373,
+          "new_count": 1,
+          "section": "function proctoring_verify(): void {"
+        }
+      ]
+    },
+    {
+      "file": "assets/js/quiz-engine.v6.js",
+      "last_write_wib": "2026-11-22T08:14:50+07:00",
+      "sha256": "5dfa210cd151f93a5e447dec0e4e2c5703e470cc476fed9f5d77221234bf6d19",
+      "hunks": [
+        {
+          "old_start": 1,
+          "old_count": 1467,
+          "new_start": 1,
+          "new_count": 1494,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "bin/check-proctoring.php",
+      "last_write_wib": "2026-11-22T08:11:41+07:00",
+      "sha256": "14e91bb406a586739d814aaa3ae1bcd6c4f03a9791631ef5443a52d7f8a70971",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 12,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "bin/configure-proctoring-vps.php",
+      "last_write_wib": "2026-11-22T08:12:42+07:00",
+      "sha256": "701cc5129722cae1899e8504912f2d53c219eb4f9f29f6434e52a29d25d024fe",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 14,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "bin/record-change-audit.py",
+      "last_write_wib": "2026-11-22T08:14:50+07:00",
+      "sha256": "5e590d1a965e6973559cc8e6bf9b3c4a8e64a50680aab5b0c3cb74174472d9db",
+      "hunks": [
+        {
+          "old_start": 3,
+          "old_count": 1,
+          "new_start": 3,
+          "new_count": 1,
+          "section": "from datetime import datetime, timezone, timedelta"
+        },
+        {
+          "old_start": 9,
+          "old_count": 1,
+          "new_start": 9,
+          "new_count": 3,
+          "section": "now=datetime.now(WIB); records=[]"
+        },
+        {
+          "old_start": 11,
+          "old_count": 1,
+          "new_start": 13,
+          "new_count": 1,
+          "section": "for name in git('diff','--cached','--name-only','--diff-filter=ACM').splitlines("
+        },
+        {
+          "old_start": 20,
+          "old_count": 1,
+          "new_start": 22,
+          "new_count": 1,
+          "section": "destination=root/'docs/change-audit'/('proctoring-'+now.strftime('%Y%m%d-%H%M%S'"
+        },
+        {
+          "old_start": 24,
+          "old_count": 1,
+          "new_start": 26,
+          "new_count": 2,
+          "section": "with log.open('a',encoding='utf-8') as out:"
+        }
+      ]
+    },
+    {
+      "file": "config/proctoring.example.php",
+      "last_write_wib": "2026-11-22T08:08:56+07:00",
+      "sha256": "c9ee49d86fc845a2c2bde1bd21bfa1fa8a21c7525da128379881b663feb6bd07",
+      "hunks": [
+        {
+          "old_start": 2,
+          "old_count": 1,
+          "new_start": 2,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 4,
+          "old_count": 2,
+          "new_start": 4,
+          "new_count": 3,
+          "section": "return ["
+        }
+      ]
+    },
+    {
+      "file": "docs/proctoring-v2.md",
+      "last_write_wib": "2026-11-22T08:12:42+07:00",
+      "sha256": "b15aeb1a90b12de326bbaa57a13aac52ca4a75b14bfa3bd0d53d84de8e6714cc",
+      "hunks": [
+        {
+          "old_start": 1,
+          "old_count": 1,
+          "new_start": 1,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 3,
+          "old_count": 1,
+          "new_start": 3,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 5,
+          "old_count": 1,
+          "new_start": 5,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 7,
+          "old_count": 1,
+          "new_start": 7,
+          "new_count": 1,
+          "section": "Browser hanya memberi petunjuk keberadaan/posisi wajah. Server membandingkan fot"
+        },
+        {
+          "old_start": 9,
+          "old_count": 1,
+          "new_start": 9,
+          "new_count": 1,
+          "section": "Peserta harus memiringkan lalu meluruskan kepala pada frame terpisah. Nonce seka"
+        },
+        {
+          "old_start": 11,
+          "old_count": 1,
+          "new_start": 11,
+          "new_count": 1,
+          "section": "Gerakan kepala dan pencegahan replay sederhana **bukan jaminan anti foto/video p"
+        },
+        {
+          "old_start": 13,
+          "old_count": 1,
+          "new_start": 13,
+          "new_count": 1,
+          "section": "Gerakan kepala dan pencegahan replay sederhana **bukan jaminan anti foto/video p"
+        },
+        {
+          "old_start": 15,
+          "old_count": 6,
+          "new_start": 15,
+          "new_count": 1,
+          "section": "Jangan pull kode gate v2 pada produksi sebelum pemeriksa server siap. Tidak ada"
+        },
+        {
+          "old_start": 22,
+          "old_count": 1,
+          "new_start": 17,
+          "new_count": 5,
+          "section": "Jangan pull kode gate v2 pada produksi sebelum pemeriksa server siap. Tidak ada"
+        },
+        {
+          "old_start": 24,
+          "old_count": 1,
+          "new_start": 23,
+          "new_count": 1,
+          "section": "Pemeriksaan hosting 22 November 2026: PHP CLI 8.4.28, Python 3.11.18 tersedia, t"
+        },
+        {
+          "old_start": 26,
+          "old_count": 5,
+          "new_start": 25,
+          "new_count": 6,
+          "section": "Pemeriksaan hosting 22 November 2026: PHP CLI 8.4.28, Python 3.11.18 tersedia, t"
+        },
+        {
+          "old_start": 32,
+          "old_count": 6,
+          "new_start": 32,
+          "new_count": 1,
+          "section": "Pemeriksaan hosting 22 November 2026: PHP CLI 8.4.28, Python 3.11.18 tersedia, t"
+        }
+      ]
+    },
+    {
+      "file": "includes/proctoring-remote.php",
+      "last_write_wib": "2026-11-22T08:11:41+07:00",
+      "sha256": "5bdae64df43162bb8dcd394df4397a1d7d43b4b7e5ad006bbea53271f6397899",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 61,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "includes/proctoring-verification.php",
+      "last_write_wib": "2026-11-22T08:11:41+07:00",
+      "sha256": "c3dc7531657e8bad39d872e7b5ccc3f99ae5ade433df940220890bfeede1e7fb",
+      "hunks": [
+        {
+          "old_start": 1,
+          "old_count": 0,
+          "new_start": 2,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 3,
+          "old_count": 0,
+          "new_start": 5,
+          "new_count": 1,
+          "section": "function proctoringRuntime(array $input = [], bool $health = false): array {"
+        },
+        {
+          "old_start": 107,
+          "old_count": 0,
+          "new_start": 110,
+          "new_count": 1,
+          "section": "function proctoringCreateSession(array $user, array $scope, string $referenceVer"
+        },
+        {
+          "old_start": 111,
+          "old_count": 1,
+          "new_start": 114,
+          "new_count": 1,
+          "section": "function proctoringCreateSession(array $user, array $scope, string $referenceVer"
+        },
+        {
+          "old_start": 124,
+          "old_count": 0,
+          "new_start": 128,
+          "new_count": 1,
+          "section": "function proctoringAdvance(array &$session, array $result, string $frameHash, in"
+        },
+        {
+          "old_start": 126,
+          "old_count": 1,
+          "new_start": 130,
+          "new_count": 1,
+          "section": "function proctoringAdvance(array &$session, array $result, string $frameHash, in"
+        },
+        {
+          "old_start": 128,
+          "old_count": 0,
+          "new_start": 133,
+          "new_count": 1,
+          "section": "function proctoringAdvance(array &$session, array $result, string $frameHash, in"
+        },
+        {
+          "old_start": 130,
+          "old_count": 1,
+          "new_start": 135,
+          "new_count": 5,
+          "section": "function proctoringAdvance(array &$session, array $result, string $frameHash, in"
+        },
+        {
+          "old_start": 167,
+          "old_count": 1,
+          "new_start": 176,
+          "new_count": 1,
+          "section": "function proctoringBindReceipt(string $key, int $attemptId): void {"
+        }
+      ]
+    },
+    {
+      "file": "pages/quiz-engine.html",
+      "last_write_wib": "2026-11-22T08:13:42+07:00",
+      "sha256": "4134f0cfa64693cdc9677c312a1e89c619ba599d876b40992515e578a5c7ca16",
+      "hunks": [
+        {
+          "old_start": 103,
+          "old_count": 1,
+          "new_start": 103,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 433,
+          "old_count": 1,
+          "new_start": 433,
+          "new_count": 1,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/proctoring-remote.php",
+      "last_write_wib": "2026-11-22T08:10:13+07:00",
+      "sha256": "2abe603f4dd1356bd465dd08376f34cce343fd643d5c5042d36c827d2d9912b0",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 10,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/proctoring-state.php",
+      "last_write_wib": "2026-11-22T08:11:41+07:00",
+      "sha256": "14d21aacb4681694347aca4e703fda51e38de0f8ac0a6f61fa73a82c6e3c3744",
+      "hunks": [
+        {
+          "old_start": 77,
+          "old_count": 0,
+          "new_start": 78,
+          "new_count": 9,
+          "section": "try {"
+        }
+      ]
+    },
+    {
+      "file": "tests/test-proctoring-suite.cjs",
+      "last_write_wib": "2026-11-22T08:11:41+07:00",
+      "sha256": "9b0ac7d60ef0d60bc95363e9f39eb5846b5af398ba0dd9316ccc45dac9dc74c6",
+      "hunks": [
+        {
+          "old_start": 93,
+          "old_count": 0,
+          "new_start": 94,
+          "new_count": 9,
+          "section": "test('real HTTP utility unwraps camera responses, sends CSRF and rejects stale a"
+        }
+      ]
+    }
+  ]
+}

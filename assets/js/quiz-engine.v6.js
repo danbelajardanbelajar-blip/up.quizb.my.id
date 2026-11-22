@@ -417,7 +417,7 @@ function QuizEngine() {
           frames.push(window.QuizFaceVerifier.captureSnapshot(video));
         }
       }
-      this.scanCountdown=0;this.scanStatusMessage='Memeriksa sembilan foto tantangan di server…';
+      this.scanCountdown=0;this.scanStatusMessage='Memeriksa sembilan foto tantangan di serverâ€¦';
       return frames;
     },
 
