@@ -1,624 +1,93 @@
-/**
- * Comprehensive AI Proctoring Test Suite
- * Tests face verifier heuristics, hands-free auto-capture, audio crowd noise detection,
- * question swapping, fullscreen enforcement, and privacy controls.
- */
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
-const assert = require('node:assert/strict');
-
-console.log('====================================================');
-console.log('   STARTING AI PROCTORING RE-TEST SUITE');
-console.log('====================================================\n');
-
-let passedTests = 0;
-let totalTests = 0;
-
-async function runTest(description, fn) {
-  totalTests++;
-  try {
-    await fn();
-    passedTests++;
-    console.log(`[PASS] ${description}`);
-  } catch (err) {
-    console.error(`[FAIL] ${description}`);
-    console.error(err);
-    process.exitCode = 1;
-  }
+// Proctoring v2 regression suite: mocked UI/HTTP states; real model tests live in proctoring-model.py.
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const root=path.join(__dirname,'..');
+const engineCode=fs.readFileSync(path.join(root,'assets/js/quiz-engine.v6.js'),'utf8');
+const verifierCode=fs.readFileSync(path.join(root,'assets/js/quiz-face-verifier.js'),'utf8');
+const settle=()=>new Promise(resolve=>setImmediate(resolve));
+function harness({reference=true,refError=false,modelError=false}={}){
+ const timers=new Map(),delayed=new Map(),events=[],listeners=new Map();let id=0,frames=0;
+ const track={readyState:'live',enabled:true,muted:false,stops:0,addEventListener:(name,fn)=>listeners.set(name,fn),removeEventListener:(name)=>listeners.delete(name),stop(){this.stops++;this.readyState='ended';}};
+ const stream={getVideoTracks:()=>[track],getTracks:()=>[track],getAudioTracks:()=>[]};
+ const video={videoWidth:640,videoHeight:480,readyState:4,srcObject:stream,play:async()=>{},pause:()=>{},addEventListener:()=>{},removeEventListener:()=>{}};
+ const Q={inits:0,frame:{ready:true,label:'Ready'},initCascade:async()=>{Q.inits++;if(modelError)throw Error('Model unavailable');},evaluateFrame:()=>Q.frame,captureSnapshot:()=>`data:image/jpeg;base64,frame-${++frames}`};
+ const ctx={console,AbortSignal,window:{QuizFaceVerifier:Q,location:{hash:''}},navigator:{mediaDevices:{getUserMedia:async()=>stream}},document:{documentElement:{requestFullscreen:async()=>{}},getElementById:()=>null,addEventListener:()=>{},removeEventListener:()=>{},createElement:()=>video},formatTime:()=>'',alert:()=>{},confirm:()=>true,
+ setInterval:(fn,ms)=>{timers.set(++id,{fn,ms});return id;},clearInterval:key=>timers.delete(key),setTimeout:(fn,ms)=>{delayed.set(++id,{fn,ms});return id;},clearTimeout:key=>delayed.delete(key)};
+ let sequence=[];
+ const api={get:async(action,params)=>{events.push({action,params});if(action==='proctoring.check_reference'){if(refError)throw Error('Reference API failed');return{protocol:2,has_reference:reference};}if(action==='quiz.questions')return{quiz:{id:19,require_camera:1},questions:[{id:1,options:[]}]};return{};},post:async(action,body)=>{events.push({action,body});if(action==='proctoring.begin')return{session:'a'.repeat(64),nonce:'b'.repeat(64)};if(action==='proctoring.verify')return sequence.shift()||{status:'VERIFIED',verified:true,next_nonce:('c'+frames.toString(16).padStart(63,'0')).slice(0,64),message:'Verified by server'};if(action==='proctoring.save_reference')return{success:true};if(action==='attempt.submit')return{attempt_id:123,score:80};return{success:true};}};
+ ctx.api=api;vm.createContext(ctx);vm.runInContext(engineCode,ctx);const q=ctx.QuizEngine();q.quiz={id:19,require_camera:1};q.assignmentId=42;q.phase='ready';q.questions=[{id:1,options:[{id:2}]}];q.answers={};q.timeLeft=100;q.$refs={faceScanVideo:video,proctorPipVideo:video,proctorFreezeVideo:video};q.$nextTick=fn=>fn();q.startBgMusic=()=>{};q.stopBgMusic=()=>{};q.startProctoringAudio=()=>{};q.initFullscreenListeners=()=>{};q.removeFullscreenListeners=()=>{};
+ return{q,ctx,api,Q,stream,track,listeners,video,timers,delayed,events,setSequence:values=>{sequence=values;}};
 }
-
-function createMockDocument() {
-  return {
-    documentElement: { requestFullscreen: async () => {} },
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    getElementById: (id) => null,
-    createElement: (tag) => ({
-      play: async () => {},
-      pause: () => {},
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      videoWidth: 640,
-      videoHeight: 480,
-      readyState: 4,
-      width: 640,
-      height: 480,
-      getContext: () => ({ drawImage: () => {} }),
-      toDataURL: () => 'data:image/jpeg;base64,mockdata'
-    })
-  };
-}
-
-(async () => {
-  // ─────────────────────────────────────────────────────────────────
-  // TEST GROUP 1: FILE EXISTENCE & INTEGRITY CHECKS
-  // ─────────────────────────────────────────────────────────────────
-  await runTest('1.1 Binary cascade model (facefinder.bin) exists and has valid size', () => {
-    const cascadePath = path.join(__dirname, '../assets/js/facefinder.bin');
-    assert(fs.existsSync(cascadePath), 'facefinder.bin must exist');
-    const stats = fs.statSync(cascadePath);
-    assert(stats.size > 200000, `facefinder.bin size must be > 200KB, got ${stats.size}`);
-  });
-
-  await runTest('1.2 Protected .htaccess exists in uploads/references and uploads/snapshots', () => {
-    const refHt = path.join(__dirname, '../uploads/references/.htaccess');
-    const snapHt = path.join(__dirname, '../uploads/snapshots/.htaccess');
-
-    fs.mkdirSync(path.join(__dirname, '../uploads/references'), { recursive: true });
-    fs.mkdirSync(path.join(__dirname, '../uploads/snapshots'), { recursive: true });
-
-    if (!fs.existsSync(refHt)) {
-      fs.writeFileSync(refHt, "Require all denied\nOptions -Indexes -ExecCGI\n");
-    }
-    if (!fs.existsSync(snapHt)) {
-      fs.writeFileSync(snapHt, "Require all denied\nOptions -Indexes -ExecCGI\n");
-    }
-
-    const contentRef = fs.readFileSync(refHt, 'utf8');
-    assert(contentRef.includes('Require all denied') || contentRef.includes('Deny from all'), 'references must be denied to public');
-
-    const contentSnap = fs.readFileSync(snapHt, 'utf8');
-    assert(contentSnap.includes('Require all denied') || contentSnap.includes('Deny from all'), 'snapshots must be denied to public');
-  });
-
-  await runTest('1.3 api.php registers proctoring route and exempts proctoring background actions from CSRF', () => {
-    const apiCode = fs.readFileSync(path.join(__dirname, '../api.php'), 'utf8');
-    assert(apiCode.includes("'proctoring'  => __DIR__ . '/api/proctoring.php'"), 'proctoring route must be registered');
-    assert(apiCode.includes("'proctoring.log_event'"), 'proctoring.log_event must be in csrfExemptActions');
-    assert(apiCode.includes("'proctoring.swap_question'"), 'proctoring.swap_question must be in csrfExemptActions');
-  });
-
-  await runTest('1.4 pages/quiz-engine.html contains Face Scan, Privacy Banner, and Noise Freeze UI', () => {
-    const html = fs.readFileSync(path.join(__dirname, '../pages/quiz-engine.html'), 'utf8');
-    assert(html.includes("phase==='face_scan'"), 'Must include face_scan phase');
-    assert(html.includes('Pernyataan Privasi & Keamanan Data Wajah'), 'Must include Privacy Statement Banner');
-    assert(html.includes('isNoiseFrozen'), 'Must include isNoiseFrozen overlay');
-    assert(html.includes('isFullscreenExited'), 'Must include isFullscreenExited modal');
-  });
-
-  // ─────────────────────────────────────────────────────────────────
-  // TEST GROUP 2: QUIZ FACE VERIFIER MODULE LOGIC
-  // ─────────────────────────────────────────────────────────────────
-  await runTest('2.1 QuizFaceVerifier initializes correctly in sandbox environment', () => {
-    const verifierCode = fs.readFileSync(path.join(__dirname, '../assets/js/quiz-face-verifier.js'), 'utf8');
-    const sandbox = { window: {} };
-    vm.createContext(sandbox);
-    vm.runInContext(verifierCode, sandbox);
-
-    assert(sandbox.window.QuizFaceVerifier, 'QuizFaceVerifier must be exported to window');
-    assert.equal(typeof sandbox.window.QuizFaceVerifier.evaluateFrame, 'function');
-    assert.equal(typeof sandbox.window.QuizFaceVerifier.captureSnapshot, 'function');
-  });
-
-  await runTest('2.2 QuizFaceVerifier evaluates luminance (dark & overexposed handling)', () => {
-    const verifierCode = fs.readFileSync(path.join(__dirname, '../assets/js/quiz-face-verifier.js'), 'utf8');
-    const sandbox = { window: {} };
-    vm.createContext(sandbox);
-    vm.runInContext(verifierCode, sandbox);
-    const QFV = sandbox.window.QuizFaceVerifier;
-
-    function makeMockVideo(luminanceVal) {
-      const w = 240, h = 180;
-      const pixels = new Uint8ClampedArray(w * h * 4);
-      for (let i = 0; i < pixels.length; i += 4) {
-        pixels[i] = luminanceVal;
-        pixels[i + 1] = luminanceVal;
-        pixels[i + 2] = luminanceVal;
-        pixels[i + 3] = 255;
-      }
-
-      const mockCtx = {
-        drawImage: () => {},
-        getImageData: () => ({ data: pixels })
-      };
-
-      QFV.samplingCanvas = { width: w, height: h };
-      QFV.samplingCtx = mockCtx;
-
-      return { videoWidth: 640, videoHeight: 480, readyState: 4 };
-    }
-
-    const darkVideo = makeMockVideo(20);
-    const darkRes = QFV.evaluateFrame(darkVideo);
-    assert.equal(darkRes.ready, false);
-    assert.equal(darkRes.color, 'amber');
-    assert(darkRes.label.includes('Kurang Terang'), 'Should warn Kurang Terang');
-
-    const brightVideo = makeMockVideo(250);
-    const brightRes = QFV.evaluateFrame(brightVideo);
-    assert.equal(brightRes.ready, false);
-    assert.equal(brightRes.color, 'amber');
-    assert(brightRes.label.includes('Terlalu Silau'), 'Should warn Terlalu Silau');
-  });
-
-  await runTest('2.3 QuizFaceVerifier position guidance (direction & distance checks)', () => {
-    const verifierCode = fs.readFileSync(path.join(__dirname, '../assets/js/quiz-face-verifier.js'), 'utf8');
-    const sandbox = { window: {} };
-    vm.createContext(sandbox);
-    vm.runInContext(verifierCode, sandbox);
-    const QFV = sandbox.window.QuizFaceVerifier;
-
-    const w = 240, h = 180;
-    const pixels = new Uint8ClampedArray(w * h * 4);
-    pixels.fill(120);
-
-    QFV.samplingCanvas = { width: w, height: h };
-    QFV.samplingCtx = {
-      drawImage: () => {},
-      getImageData: () => ({ data: pixels })
-    };
-
-    const video = { videoWidth: 640, videoHeight: 480, readyState: 4 };
-
-    // Case 1: No face
-    QFV.cascadeClassifier = () => -1;
-    const noFaceRes = QFV.evaluateFrame(video);
-    assert.equal(noFaceRes.ready, false);
-    assert(noFaceRes.label.includes('Wajah Tidak Terdeteksi'));
-
-    // Check position mapping logic
-    const testPos = (bc, br, bs) => {
-      const normX = bc / w;
-      if (normX < 0.36) return 'kanan';
-      if (normX > 0.64) return 'kiri';
-      return 'center';
-    };
-    assert.equal(testPos(50, 90, 80), 'kanan', 'Shifted left should ask to shift right');
-    assert.equal(testPos(180, 90, 80), 'kiri', 'Shifted right should ask to shift left');
-    assert.equal(testPos(120, 90, 80), 'center', 'Centered should be center');
-  });
-
-  // ─────────────────────────────────────────────────────────────────
-  // TEST GROUP 3: QUIZ ENGINE INTEGRATION & STATE MACHINE
-  // ─────────────────────────────────────────────────────────────────
-  await runTest('3.1 QuizEngine loads with phase ready and starts proctoring on click', async () => {
-    const engineCode = fs.readFileSync(path.join(__dirname, '../assets/js/quiz-engine.v6.js'), 'utf8');
-    const sandbox = {
-      window: {},
-      document: createMockDocument(),
-      navigator: {
-        mediaDevices: {
-          getUserMedia: async () => ({
-            getTracks: () => [{ stop: () => {} }],
-            getVideoTracks: () => [{ readyState: 'live' }],
-            getAudioTracks: () => [{ readyState: 'live' }]
-          })
-        }
-      },
-      AudioContext: class {
-        createMediaStreamSource() { return { connect: () => {} }; }
-        createAnalyser() {
-          return {
-            fftSize: 512,
-            smoothingTimeConstant: 0.4,
-            frequencyBinCount: 256,
-            getByteFrequencyData: (arr) => arr.fill(10)
-          };
-        }
-        close() {}
-      },
-      api: {
-        get: async (act) => {
-          if (act === 'proctoring.check_reference') {
-            return { success: true, has_reference: false }; // first time
-          }
-          return {};
-        },
-        post: async () => ({ success: true })
-      },
-      formatTime: () => '10:00',
-      setInterval: () => 123,
-      clearInterval: () => {},
-      setTimeout: (fn) => fn(),
-      console
-    };
-
-    vm.createContext(sandbox);
-    vm.runInContext(engineCode, sandbox);
-    assert(sandbox.QuizEngine, 'QuizEngine component must be defined');
-
-    const qe = sandbox.QuizEngine();
-    qe.quiz = { id: 1, title: 'Kuis Ujian', require_camera: 1, duration: 600 };
-    qe.questions = [
-      { id: 101, question_text: 'Soal 1', options: [{ id: 1, option_text: 'A' }] },
-      { id: 102, question_text: 'Soal 2', options: [{ id: 2, option_text: 'B' }] }
-    ];
-
-    qe.phase = 'ready';
-    assert.equal(qe.phase, 'ready', 'Phase should be ready before student clicks start');
-
-    let handsFreeCalled = false;
-    qe.startHandsFreeFaceScan = () => { handsFreeCalled = true; qe.phase = 'face_scan'; };
-
-    await qe.startQuiz();
-    assert(handsFreeCalled, 'First time user must transition to Hands-Free Face Scan');
-    assert.equal(qe.phase, 'face_scan', 'Phase must be face_scan');
-  });
-
-  await runTest('3.2 Subsequent assignment reuses reference photo without retaking', async () => {
-    const engineCode = fs.readFileSync(path.join(__dirname, '../assets/js/quiz-engine.v6.js'), 'utf8');
-    const sandbox = {
-      window: {},
-      document: createMockDocument(),
-      navigator: {
-        mediaDevices: {
-          getUserMedia: async () => ({
-            getTracks: () => [{ stop: () => {} }],
-            getVideoTracks: () => [{ readyState: 'live' }],
-            getAudioTracks: () => [{ readyState: 'live' }]
-          })
-        }
-      },
-      AudioContext: class {
-        createMediaStreamSource() { return { connect: () => {} }; }
-        createAnalyser() {
-          return {
-            fftSize: 512,
-            smoothingTimeConstant: 0.4,
-            frequencyBinCount: 256,
-            getByteFrequencyData: () => {}
-          };
-        }
-        close() {}
-      },
-      api: {
-        get: async (act) => {
-          if (act === 'proctoring.check_reference') {
-            return { success: true, has_reference: true }; // ALREADY has reference photo
-          }
-          return {};
-        },
-        post: async () => ({ success: true })
-      },
-      formatTime: () => '10:00',
-      setInterval: () => 123,
-      clearInterval: () => {},
-      setTimeout: (fn) => fn(),
-      console
-    };
-
-    vm.createContext(sandbox);
-    vm.runInContext(engineCode, sandbox);
-
-    const qe = sandbox.QuizEngine();
-    qe.quiz = { id: 2, title: 'Tugas Berikutnya', require_camera: 1 };
-    qe.questions = [{ id: 201, question_text: 'Soal', options: [] }];
-
-    let handsFreeCalled = false;
-    qe.startHandsFreeFaceScan = () => { handsFreeCalled = true; };
-
-    let initialCheckinCalled = false;
-    qe.takeInitialCheckinSnapshot = () => { initialCheckinCalled = true; };
-
-    await qe.startQuiz();
-    assert(!handsFreeCalled, 'Should NOT retake reference photo on subsequent assignment');
-    assert(initialCheckinCalled, 'Must perform initial check-in seamlessly');
-    assert.equal(qe.phase, 'playing', 'Phase must immediately be playing');
-  });
-
-  await runTest('3.3 Web Audio Noise Detection triggers Screen Freeze, Timer Pause, & Question Swap', async () => {
-    const engineCode = fs.readFileSync(path.join(__dirname, '../assets/js/quiz-engine.v6.js'), 'utf8');
-    let swappedCall = false;
-
-    const sandbox = {
-      window: {},
-      document: createMockDocument(),
-      api: {
-        post: async (act, payload) => {
-          if (act === 'proctoring.swap_question') {
-            swappedCall = true;
-            return {
-              success: true,
-              swapped: true,
-              new_question: {
-                id: 999,
-                question_text: 'Soal Pengganti Baru',
-                options: [{ id: 91, option_text: 'Opsi Baru' }]
-              }
-            };
-          }
-          return { success: true };
-        }
-      },
-      formatTime: () => '10:00',
-      setInterval: () => 123,
-      clearInterval: () => {},
-      setTimeout: (fn) => fn(),
-      console
-    };
-
-    vm.createContext(sandbox);
-    vm.runInContext(engineCode, sandbox);
-
-    const qe = sandbox.QuizEngine();
-    qe.phase = 'playing';
-    qe.timeLeft = 300;
-    qe.questions = [
-      { id: 101, question_text: 'Soal Asli', options: [{ id: 1, option_text: 'A' }] }
-    ];
-    qe.currentIndex = 0;
-    qe.answers = { 101: 1 };
-
-    // Trigger noise penalty
-    await qe.triggerNoisePenalty();
-
-    assert.equal(qe.isNoiseFrozen, true, 'isNoiseFrozen must be true');
-    assert.equal(qe.noiseFreezeCountdown, 15, 'Freeze countdown must start at 15');
-    assert.equal(qe.answers[101], undefined, 'Answer for violated question must be reset');
-    assert(swappedCall, 'API proctoring.swap_question must be called');
-    assert.equal(qe.questions[0].id, 999, 'Current question must be replaced with swapped question');
-    assert.equal(qe.questions[0].question_text, 'Soal Pengganti Baru');
-
-    // Verify timer pause behavior
-    const prevTime = qe.timeLeft;
-    if (qe.isNoiseFrozen) {
-      // Timer does not decrement!
-    } else {
-      qe.timeLeft--;
-    }
-    assert.equal(qe.timeLeft, prevTime, 'Timer must be frozen while screen is frozen');
-  });
-
-  await runTest('3.4 Admin Reset Reference Photo in app.v5.js works as expected', async () => {
-    const appCode = fs.readFileSync(path.join(__dirname, '../assets/js/app.v5.js'), 'utf8');
-    let resetCalledWith = null;
-
-    const sandbox = {
-      window: { location: { origin: 'https://quizb.my.id', reload: () => {} }, open: () => {} },
-      document: {},
-      confirm: () => true,
-      api: {
-        post: async (act, payload) => {
-          if (act === 'proctoring.reset_reference') {
-            resetCalledWith = payload.user_id;
-            return { success: true, message: 'Foto acuan ujian berhasil direset.' };
-          }
-          return { success: true };
-        }
-      },
-      store: { get: (k, def) => def },
-      debounce: (f) => f,
-      console
-    };
-
-    vm.createContext(sandbox);
-    vm.runInContext(appCode, sandbox);
-
-    const app = sandbox.QuizBApp();
-    let toastMsg = '';
-    app.showToast = (msg) => { toastMsg = msg; };
-
-    await app.resetStudentExamPhoto({ id: 42, name: 'Budi Santoso' });
-    assert.equal(resetCalledWith, 42, 'Must call proctoring.reset_reference with user_id 42');
-    assert(toastMsg.includes('berhasil direset'), 'Toast must indicate success');
-  });
-
-  await runTest('3.5 Periodic 5s face verification activates warning banner when face is missing and clears when face returns', async () => {
-    const engineCode = fs.readFileSync(path.join(__dirname, '../assets/js/quiz-engine.v6.js'), 'utf8');
-    let loggedEvents = [];
-    let faceEvalResult = { ready: false, label: 'Wajah tidak terdeteksi. Harap menghadap ke kamera.' };
-
-    const sandbox = {
-      window: {
-        QuizFaceVerifier: {
-          evaluateFrame: () => faceEvalResult
-        }
-      },
-      document: createMockDocument(),
-      ImageCapture: undefined,
-      api: {
-        post: async (act, payload) => {
-          if (act === 'proctoring.log_event') {
-            loggedEvents.push(payload);
-          }
-          return { success: true };
-        }
-      },
-      formatTime: () => '10:00',
-      setInterval: () => 123,
-      clearInterval: () => {},
-      setTimeout: (fn) => fn(),
-      console
-    };
-
-    vm.createContext(sandbox);
-    vm.runInContext(engineCode, sandbox);
-
-    const qe = sandbox.QuizEngine();
-    qe.cameraStream = {
-      getVideoTracks: () => [{ readyState: 'live' }]
-    };
-    qe.phase = 'playing';
-    qe.assignmentId = 12;
-    qe.attemptId = 34;
-
-    // 1. Run snapshot while face is NOT facing camera
-    faceEvalResult = { ready: false, label: 'Wajah tidak terdeteksi. Harap menghadap ke kamera.' };
-    await qe.takeAndUploadSnapshot();
-
-    assert.equal(qe.showFaceWarning, true, 'showFaceWarning must be true when face not facing');
-    assert.equal(qe.faceWarningText, 'Wajah tidak terdeteksi. Harap menghadap ke kamera.');
-    assert.equal(qe.faceAbsenceCounter, 1, 'faceAbsenceCounter must increment');
-    assert.equal(loggedEvents.length, 1, 'Must log proctoring violation event');
-    assert.equal(loggedEvents[0].event_type, 'periodic_face');
-    assert.equal(loggedEvents[0].status, 'NO_FACE');
-
-    // Verify interaction is blocked while screen is frozen
-    qe.questions = [{ id: 101, question_text: 'Soal', options: [{ id: 1, option_text: 'A' }] }];
-    qe.answers = {};
-    qe.currentIndex = 0;
-    qe.selectOption(101, 1);
-    assert.equal(qe.answers[101], undefined, 'selectOption must be blocked while screen is frozen');
-    qe.next();
-    assert.equal(qe.currentIndex, 0, 'Navigation next must be blocked while screen is frozen');
-
-    // 2. Run snapshot while face returns to normal
-    faceEvalResult = { ready: true, label: 'Posisi wajah terverifikasi!' };
-    await qe.takeAndUploadSnapshot();
-
-    assert.equal(qe.showFaceWarning, false, 'showFaceWarning must reset to false when face returns');
-    assert.equal(qe.faceAbsenceCounter, 0, 'faceAbsenceCounter must reset to 0');
-
-    // Unfrozen: answering works again
-    qe.selectOption(101, 1);
-    assert.equal(qe.answers[101], 1, 'selectOption must work again when screen is unlocked');
-  });
-
-  await runTest('3.6 Face Biometric Matching detects mismatch (different person/wife/substitute) and locks screen', async () => {
-    const verifierCode = fs.readFileSync(path.join(__dirname, '../assets/js/quiz-face-verifier.js'), 'utf8');
-    const engineCode = fs.readFileSync(path.join(__dirname, '../assets/js/quiz-engine.v6.js'), 'utf8');
-
-    // 1. Verify QuizFaceVerifier comparison logic
-    const vSandbox = { window: {} };
-    vm.createContext(vSandbox);
-    vm.runInContext(verifierCode, vSandbox);
-    const QFV = vSandbox.window.QuizFaceVerifier;
-
-    const descHusband = {
-      lbpHist: new Array(1024).fill(0.01),
-      bandGradients: [10, 15, 12, 8],
-      skinTone: { cb: 125, cr: 145 }
-    };
-
-    const descSameHusband = {
-      lbpHist: new Array(1024).fill(0.01),
-      bandGradients: [10.2, 14.8, 12.1, 7.9],
-      skinTone: { cb: 126, cr: 144 }
-    };
-
-    const descWifeOrDifferentPerson = {
-      lbpHist: new Array(1024).fill(0.0).map((_, i) => (i % 2 === 0 ? 0.05 : 0.001)),
-      bandGradients: [2, 4, 3, 2],
-      skinTone: { cb: 155, cr: 110 }
-    };
-
-    const matchHusband = QFV.compareDescriptors(descHusband, descSameHusband);
-    assert.equal(matchHusband.match, true, 'Same person should match with high similarity');
-    assert(matchHusband.similarity >= 75, `Expected >= 75, got ${matchHusband.similarity}`);
-
-    const mismatchWife = QFV.compareDescriptors(descHusband, descWifeOrDifferentPerson);
-    assert.equal(mismatchWife.match, false, 'Different person (e.g. wife/substitute) must be detected as mismatch');
-    assert(mismatchWife.similarity < 55, `Expected < 55, got ${mismatchWife.similarity}`);
-
-    // 2. Verify QuizEngine handles MISMATCH during exam
-    let loggedEvents = [];
-    let liveCompareResult = { match: false, similarity: 38 };
-
-    const eSandbox = {
-      window: {
-        QuizFaceVerifier: {
-          evaluateFrame: () => ({ ready: true, label: 'Posisi wajah terverifikasi!' }),
-          extractFaceDescriptor: () => ({}),
-          compareWithReference: () => liveCompareResult
-        }
-      },
-      document: createMockDocument(),
-      ImageCapture: undefined,
-      api: {
-        post: async (act, payload) => {
-          if (act === 'proctoring.log_event') {
-            loggedEvents.push(payload);
-          }
-          return { success: true };
-        }
-      },
-      formatTime: () => '10:00',
-      setInterval: () => 123,
-      clearInterval: () => {},
-      setTimeout: (fn) => fn(),
-      console
-    };
-
-    vm.createContext(eSandbox);
-    vm.runInContext(engineCode, eSandbox);
-
-    const qe = eSandbox.QuizEngine();
-    qe.cameraStream = { getVideoTracks: () => [{ readyState: 'live' }] };
-    qe.phase = 'playing';
-    qe.assignmentId = 12;
-    qe.attemptId = 34;
-    qe.questions = [{ id: 101, question_text: 'Soal', options: [{ id: 1, option_text: 'A' }] }];
-    qe.answers = {};
-
-    // Wife sits in front of the camera:
-    await qe.takeAndUploadSnapshot();
-
-    assert.equal(qe.showFaceWarning, true, 'Screen must be frozen on biometric mismatch');
-    assert.equal(qe.faceWarningType, 'mismatch', 'faceWarningType must be mismatch');
-    assert(qe.faceWarningText.includes('Wajah Tidak Cocok'), 'Warning text must inform face mismatch');
-    assert.equal(loggedEvents.length, 1, 'Event log must be sent');
-    assert.equal(loggedEvents[0].status, 'MISMATCH', 'Status must be logged as MISMATCH');
-    assert.equal(loggedEvents[0].similarity_score, 38, 'Logged similarity score must match');
-
-    // Interacting is blocked:
-    qe.selectOption(101, 1);
-    assert.equal(qe.answers[101], undefined, 'Answers must be blocked while mismatch screen is frozen');
-
-    // Husband returns to camera:
-    liveCompareResult = { match: true, similarity: 89 };
-    await qe.takeAndUploadSnapshot();
-
-    assert.equal(qe.showFaceWarning, false, 'Screen must unfreeze when original student returns');
-    assert.equal(qe.faceWarningType, '', 'faceWarningType must reset');
-
-    qe.selectOption(101, 1);
-    assert.equal(qe.answers[101], 1, 'Student can answer again once verified');
-  });
-
-  // ─────────────────────────────────────────────────────────────────
-  // TEST GROUP 4: BACKEND PHP CONTROLLER VERIFICATION
-  // ─────────────────────────────────────────────────────────────────
-  await runTest('4.1 api/proctoring.php and includes/proctoring.php declare required handlers', () => {
-    const incCode = fs.readFileSync(path.join(__dirname, '../includes/proctoring.php'), 'utf8');
-    assert(incCode.includes('function ensureProctoringTables()'), 'Must declare ensureProctoringTables');
-    assert(incCode.includes('function saveExamReferencePhoto('), 'Must declare saveExamReferencePhoto');
-    assert(incCode.includes('function resetExamReferencePhoto('), 'Must declare resetExamReferencePhoto');
-    assert(incCode.includes('function getUserExamReference('), 'Must declare getUserExamReference');
-
-    const apiCode = fs.readFileSync(path.join(__dirname, '../api/proctoring.php'), 'utf8');
-    assert(apiCode.includes('function proctoring_check_reference()'), 'Must declare check_reference');
-    assert(apiCode.includes('function proctoring_save_reference()'), 'Must declare save_reference');
-    assert(apiCode.includes('function proctoring_reset_reference()'), 'Must declare reset_reference');
-    assert(apiCode.includes('function proctoring_log_event()'), 'Must declare log_event');
-    assert(apiCode.includes('function proctoring_swap_question()'), 'Must declare swap_question');
-    assert(apiCode.includes('function proctoring_get_logs()'), 'Must declare get_logs');
-  });
-
-  await runTest('4.2 proctoring_swap_question strictly avoids leaking correct_option_id (P0 compliance)', () => {
-    const apiCode = fs.readFileSync(path.join(__dirname, '../api/proctoring.php'), 'utf8');
-    const optionQueryRegex = /SELECT\s+id,\s*question_id,\s*option_text,\s*order_num\s+FROM\s+question_options/i;
-    assert(optionQueryRegex.test(apiCode), 'Must select only non-leaking columns from question_options');
-    assert(!apiCode.includes('is_correct'), 'Must NEVER include is_correct in proctoring_swap_question');
-  });
-
-  console.log('\n====================================================');
-  console.log(`   RE-TEST SUITE FINISHED: ${passedTests} / ${totalTests} TESTS PASSED`);
-  console.log('====================================================\n');
-
-  if (passedTests === totalTests) {
-    process.exit(0);
-  } else {
-    process.exit(1);
-  }
-})();
+const verdict=(status,verified=false,n='d')=>({status,verified,next_nonce:n.repeat(64),message:status});
+
+test('returning participant loads detector and must verify before seeing questions or playing',async()=>{
+ const h=harness();h.q.questions=[];h.q._cameraQuestionsPending=true;h.q._questionLoadParams={id:19,assignment_id:42};h.setSequence([verdict('TILT_HEAD'),verdict('CENTER_HEAD'),verdict('VERIFIED',true)]);
+ await h.q.startQuiz();await settle();assert.equal(h.Q.inits,1);assert.equal(h.q.phase,'face_scan');assert(!h.events.some(e=>e.action==='proctoring.log_event'));
+ for(let i=0;i<2;i++){await h.timers.get(h.q._scanInterval).fn();assert.equal(h.q.phase,'face_scan');assert.equal(h.q.questions.length,0);}
+ await h.timers.get(h.q._scanInterval).fn();assert.equal(h.q.phase,'playing');assert.equal(h.q.questions.length,1);assert.equal(h.events.filter(e=>e.action==='quiz.questions').length,1);assert(!h.events.some(e=>e.body?.status==='MATCH'));
+});
+
+test('reference or detector failure cannot start an exam',async()=>{
+ for(const options of [{refError:true},{modelError:true}]){const h=harness(options);await h.q.startQuiz();assert.equal(h.q.phase,'camera_error');assert.equal(h.q.startTimeMs,undefined);assert(!h.events.some(e=>e.action==='attempt.submit'));}
+});
+
+test('new reference requires two seconds of actual stable time rather than callback count',async()=>{
+ const h=harness({reference:false});let clock=1000;h.ctx.Date={now:()=>clock};await h.q.startQuiz();await settle();const tick=h.timers.get(h.q._scanInterval).fn;
+ for(let i=0;i<30;i++)await tick();assert.equal(h.events.filter(e=>e.action==='proctoring.save_reference').length,0);
+ clock+=2100;await tick();assert.equal(h.events.filter(e=>e.action==='proctoring.save_reference').length,1);
+});
+
+test('face absence freezes selection and timer; local presence alone cannot unlock it',async()=>{
+ const h=harness();h.q.cameraStream=h.stream;h.q.phase='playing';h.q.startTimer();h.Q.frame={ready:false,label:'NO_FACE'};
+ await h.q.takeAndUploadSnapshot();assert.equal(h.q.showFaceWarning,true);h.q.selectOption(1,2);assert.equal(h.q.answers[1],undefined);h.timers.get(h.q.timerInterval).fn();assert.equal(h.q.timeLeft,100);
+ h.Q.frame={ready:true};h.setSequence([verdict('RECHECK'),verdict('VERIFIED',true)]);await h.timers.get(h.q._fastFaceCheckInterval).fn();assert.equal(h.q.showFaceWarning,true);await h.timers.get(h.q._fastFaceCheckInterval).fn();assert.equal(h.q.showFaceWarning,false);h.timers.get(h.q.timerInterval).fn();assert.equal(h.q.timeLeft,99);
+});
+
+test('invalid or truthy string verdict never unlocks the exam',async()=>{
+ const h=harness();h.q.cameraStream=h.stream;h.q.phase='playing';h.setSequence([verdict('VERIFIED','true')]);await h.q.takeAndUploadSnapshot();assert.equal(h.q.showFaceWarning,true);assert.equal(h.q._lastServerVerified,0);
+});
+
+test('camera ended event stops the stream and preserves answers/time for recovery',async()=>{
+ const h=harness();await h.q.startQuiz();h.q.phase='playing';h.q.answers={1:2};h.q.timeLeft=77;h.listeners.get('ended')();assert.equal(h.q.phase,'camera_error');assert.equal(h.q.answers[1],2);assert.equal(h.q.timeLeft,77);assert.equal(h.q.cameraStream,null);assert.equal(h.listeners.size,0);assert(h.track.stops>0);
+});
+
+test('unready or stopped camera never yields fabricated image data',async()=>{
+ const h=harness();h.q.cameraStream=h.stream;h.track.readyState='ended';await assert.rejects(h.q.captureCurrentSnapshot(),/Kamera/);assert(!h.events.some(e=>e.action==='proctoring.verify'));
+});
+
+test('late camera permission result is stopped after navigation or cancellation',async()=>{
+ const h=harness();let release;h.ctx.navigator.mediaDevices.getUserMedia=()=>new Promise(r=>release=r);const pending=h.q.startQuiz();await settle();h.q.stopCamera();release(h.stream);await pending;assert.equal(h.q.cameraStream,null);assert(h.track.stops>0);assert(!h.events.some(e=>e.action==='proctoring.check_reference'));
+});
+
+test('late server response cannot revive an invalidated camera generation',async()=>{
+ const h=harness();h.q.cameraStream=h.stream;h.q._proctorSession='a'.repeat(64);h.q._proctorNonce='b'.repeat(64);let release;h.api.post=()=>new Promise(r=>release=r);const request=h.q._verifyCamera(h.video);h.q.stopCamera();release(verdict('VERIFIED',true));const response=await request;assert.equal(response.status,'CANCELLED');assert.equal(h.q._lastServerVerified,0);
+});
+
+test('only one verification request can be in flight',async()=>{
+ const h=harness();h.q.cameraStream=h.stream;h.q._proctorSession='a'.repeat(64);h.q._proctorNonce='b'.repeat(64);let release,calls=0;h.api.post=()=>{calls++;return new Promise(r=>release=r);};const first=h.q._verifyCamera(h.video);const other=await h.q._verifyCamera(h.video);assert.equal(other.status,'BUSY');assert.equal(calls,1);release(verdict('VERIFIED',true));await first;
+});
+
+test('failed final verification cannot submit answers; failed transport keeps camera and answers',async()=>{
+ const h=harness();h.q.cameraStream=h.stream;h.q.phase='playing';h.q.answers={1:2};h.setSequence([verdict('RECHECK')]);await h.q.submitAnswers();assert(!h.events.some(e=>e.action==='attempt.submit'));assert.equal(h.q.answers[1],2);
+ h.q.showFaceWarning=false;h.api.post=async(action,body)=>{h.events.push({action,body});if(action==='proctoring.verify')return verdict('VERIFIED',true);if(action==='attempt.submit')throw Error('network');return{};};await h.q.submitAnswers();assert.equal(h.q.cameraStream,h.stream);assert.equal(h.q.answers[1],2);assert.equal(h.q.loading,false);
+});
+
+test('successful submit binds assignment/session and retries assignment linkage without another attempt',async()=>{
+ const h=harness();h.q.cameraStream=h.stream;h.q.phase='playing';h.q.answers={1:2};const original=h.api.post;let linkFails=true;h.api.post=async(action,body)=>{if(action==='assignment.submit'&&linkFails)throw Error('network');return original(action,body);};await h.q.submitAnswers();assert.equal(h.q.phase,'submission_error');const payload=h.events.find(e=>e.action==='attempt.submit').body;assert.equal(payload.assignment_id,42);assert.equal(payload.proctoring_session,'a'.repeat(64));linkFails=false;await h.q.retryAssignmentSubmission();assert.equal(h.events.filter(e=>e.action==='attempt.submit').length,1);assert.equal(h.q.phase,'submitted');
+});
+
+test('cascade loading is shared across concurrent callers, failures reject and can be retried',async()=>{
+ const cascade=fs.readFileSync(path.join(root,'assets/js/facefinder.bin'));let calls=0,fail=false;
+ const context={window:{},AbortSignal,console,fetch:async()=>{calls++;return{ok:!fail,arrayBuffer:async()=>cascade.buffer.slice(cascade.byteOffset,cascade.byteOffset+cascade.byteLength)};}};vm.createContext(context);vm.runInContext(verifierCode,context);const Q=context.window.QuizFaceVerifier;
+ const [a,b]=await Promise.all([Q.initCascade(),Q.initCascade()]);assert.equal(a,b);assert.equal(calls,1);Q.cascadeClassifier=null;fail=true;await assert.rejects(Q.initCascade());fail=false;await Q.initCascade();assert.equal(calls,3);
+ assert.equal(Q.compareWithReference({}).match,false);assert.equal(Q.compareDescriptors({lbpHist:[]},{lbpHist:[]}).match,false);
+});
+
+test('real HTTP utility unwraps camera responses, sends CSRF and rejects stale account responses',async()=>{
+ const calls=[];const c={console,URLSearchParams,fetch:async(url,options)=>{calls.push({url,options});return new Response(JSON.stringify({success:true,data:{protocol:2,has_reference:true}}),{headers:{'X-CSRF-Token':'test-csrf'}});}};vm.createContext(c);vm.runInContext(fs.readFileSync(path.join(root,'assets/js/utils.v5.js'),'utf8')+'\nglobalThis.testApi=api;',c);c.testApi.setToken('test-csrf');const ref=await c.testApi.get('proctoring.check_reference');assert.equal(ref.protocol,2);assert.equal(ref.has_reference,true);await c.testApi.post('proctoring.verify',{session:'test'});assert.equal(calls[1].options.headers['X-CSRF-Token'],'test-csrf');let release;c.fetch=()=>new Promise(resolve=>release=resolve);const stale=c.testApi.get('proctoring.check_reference');c.testApi.invalidateSession();release(new Response(JSON.stringify({success:true,data:{protocol:2,has_reference:true}})));await assert.rejects(stale,/Sesi akun berubah/);
+ const source=fs.readFileSync(path.join(root,'api/proctoring.php'),'utf8');assert(!source.includes('jsonResponse('),'camera endpoints must use the API data envelope');assert(!source.includes("'reference_photo' =>"),'reference image must not be returned to the browser');
+ const router=fs.readFileSync(path.join(root,'api.php'),'utf8');const exemptions=router.slice(router.indexOf('$csrfExemptActions'),router.indexOf('if (!$isMobileApp'));
+ assert(!exemptions.includes('proctoring.log_event'));assert(!exemptions.includes('proctoring.swap_question'));
+});
+
+ test('component destruction stops camera and invalidates pending work',async()=>{const h=harness();await h.q.startQuiz();h.q.destroy();assert.equal(h.q.cameraStream,null);assert(h.track.stops>0);assert.equal(h.listeners.size,0);});
+ test('expired submission retries after successful server verification',async()=>{const h=harness();h.q.cameraStream=h.stream;h.q.phase='playing';h.setSequence([verdict('RECHECK'),verdict('VERIFIED',true),verdict('VERIFIED',true)]);await h.q.autoSubmit();assert.equal(h.q._pendingCameraSubmit,true);assert(!h.events.some(e=>e.action==='attempt.submit'));await h.timers.get(h.q._fastFaceCheckInterval).fn();assert.equal(h.events.filter(e=>e.action==='attempt.submit').length,1);assert.equal(h.q.phase,'submitted');});

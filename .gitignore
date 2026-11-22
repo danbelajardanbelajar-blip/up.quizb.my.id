@@ -69,3 +69,8 @@ dist/
 build/
 *.min.js.map
 *.min.css.map
+config/proctoring.php
+
+# Python runtime artifacts
+__pycache__/
+*.pyc

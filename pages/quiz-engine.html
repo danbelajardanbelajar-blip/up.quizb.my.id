@@ -51,6 +51,24 @@
     </div>
   </div>
 
+  <!-- Recoverable camera/service error: retain answers and remaining exam time. -->
+  <section x-show="phase==='camera_error'" class="min-h-screen flex items-center justify-center p-5" aria-label="Kamera perlu diperiksa">
+    <div class="card p-6 max-w-lg w-full text-center">
+      <h2 class="font-bold text-xl mb-3">Kamera perlu diperiksa</h2>
+      <p class="text-sm mb-4" x-text="error"></p>
+      <p class="text-xs text-gray-500 mb-5">Jawaban di halaman ini tetap tersimpan. Jika masalah berulang, hubungi pengajar untuk pemeriksaan. Gangguan kamera bukan keputusan bahwa peserta melakukan kecurangan.</p>
+      <button type="button" @click="startQuiz()" :disabled="_cameraStarting" class="btn-primary">Sambungkan dan verifikasi ulang</button>
+      <button type="button" @click="exitToPreviousPage()" class="btn-secondary ml-2">Kembali</button>
+    </div>
+  </section>
+
+  <section x-show="phase==='submission_error'" class="min-h-screen flex items-center justify-center p-5" aria-label="Pengumpulan tugas perlu diulang">
+    <div class="card p-6 max-w-lg text-center"><h2 class="font-bold text-xl mb-3">Hasil sudah tersimpan</h2>
+      <p class="text-sm mb-4" x-text="error"></p>
+      <button type="button" @click="retryAssignmentSubmission()" :disabled="loading" class="btn-primary">Ulangi pengumpulan tugas</button>
+    </div>
+  </section>
+
   <!-- Error -->
   <div x-show="phase==='error'" class="flex items-center justify-center min-h-screen px-4">
     <div class="text-center">
@@ -82,7 +100,7 @@
           <span>Pernyataan Privasi & Keamanan Data Wajah</span>
         </div>
         <p class="text-gray-600 dark:text-gray-300">
-          Foto pemindaian ini <strong>HANYA</strong> digunakan oleh sistem AI untuk verifikasi identitas ujian Anda. Foto ini dienkripsi di server, <strong>TIDAK AKAN</strong> disalahgunakan, dan <strong>TIDAK DAPAT</strong> diunduh atau disimpan oleh siapapun termasuk Pengajar maupun Admin. Admin hanya berhak mereset acuan jika verifikasi bermasalah.
+          Foto pemindaian ini <strong>HANYA</strong> digunakan oleh sistem AI untuk verifikasi identitas ujian Anda. Foto acuan disimpan di direktori server yang dibatasi aksesnya dan tidak dikirim kembali ke browser. Pemeriksaan dilakukan pada server aplikasi, tanpa mengirim foto ke penyedia AI pihak ketiga. Snapshot ujian dapat ditinjau pengajar yang berwenang. Pengajar dapat membantu memeriksa atau mereset acuan bila verifikasi bermasalah.
         </p>
       </div>
 
@@ -134,6 +152,7 @@
         <span x-text="scanStatusMessage || 'Mengarahkan kamera ke wajah Anda...'"></span>
       </div>
 
+      <button type="button" @click="startQuiz()" :disabled="_cameraStarting || _scanBusy" class="btn-secondary mb-3">Ulangi pemeriksaan kamera</button>
       <p class="text-xs text-gray-500 dark:text-gray-400">
         ✨ <em>Sistem otomatis memindai wajah Anda saat posisi tepat & stabil. Tidak perlu menekan tombol apapun.</em>
       </p>
@@ -383,12 +402,12 @@
         ⚠️
       </div>
       <h2 class="text-xl font-black text-red-400 mb-1 tracking-wide"
-          x-text="faceWarningType === 'mismatch' ? 'Layar Terkunci: Wajah Tidak Sesuai Foto Peserta!' : 'Layar Terkunci: Wajah Tidak Terdeteksi!'">
-        Layar Terkunci: Wajah Tidak Terdeteksi!
+          x-text="faceWarningType === 'mismatch' ? 'Verifikasi kamera perlu diulang' : 'Kamera perlu diperiksa'">
+        Kamera perlu diperiksa
       </h2>
       <p class="text-xs text-gray-300 leading-relaxed mb-4"
-         x-text="faceWarningType === 'mismatch' ? 'Sistem AI pengawasan mendeteksi orang yang berada di depan kamera berbeda dari foto acuan peserta saat verifikasi awal. Ujian dibekukan demi menjaga integritas!' : 'Sistem pengawasan AI mendeteksi wajah Anda tidak menghadap ke layar kamera. Layar dibekukan dan pengerjaan soal dihentikan sementara sampai wajah Anda kembali menghadap ke kamera.'">
-        Sistem pengawasan AI mendeteksi wajah Anda tidak menghadap ke layar kamera. Layar dibekukan dan pengerjaan soal dihentikan sementara sampai wajah Anda kembali menghadap ke kamera.
+         x-text="faceWarningType === 'mismatch' ? 'Kemiripan dengan foto acuan belum cukup. Coba posisi dan pencahayaan yang sama, atau hubungi pengajar. Ini bukan keputusan bahwa peserta melakukan kecurangan.' : 'Pemeriksaan kamera belum berhasil. Jawaban tetap tersimpan dan waktu dijeda. Ikuti petunjuk kamera untuk melanjutkan, atau hubungi pengajar jika masalah berulang.'">
+        Pemeriksaan kamera belum berhasil. Jawaban tetap tersimpan dan waktu dijeda. Ikuti petunjuk kamera untuk melanjutkan, atau hubungi pengajar jika masalah berulang.
       </p>
 
       <!-- Live Camera Guide inside Freeze Overlay -->
@@ -430,7 +449,7 @@
              class="w-full h-full object-cover transform scale-x-[-1]"></video>
       <div class="absolute top-1 left-1 flex items-center gap-1 bg-black/70 px-1.5 py-0.5 rounded-full text-[9px] font-bold text-white pointer-events-none">
         <span class="w-1.5 h-1.5 rounded-full" :class="showFaceWarning ? 'bg-red-500 animate-ping' : 'bg-emerald-400'"></span>
-        <span x-text="showFaceWarning ? (faceWarningType === 'mismatch' ? 'BEDA ORANG' : 'HILANG') : 'AI AKTIF'"></span>
+        <span x-text="showFaceWarning ? 'PERIKSA' : (_lastServerVerified ? 'TERVERIFIKASI' : 'MEMERIKSA')"></span>
       </div>
     </div>
   </div>

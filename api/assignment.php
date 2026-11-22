@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/proctoring.php';
 // ============================================
 // api/assignment.php — Assignment (Tugas) Endpoints
 // ============================================
@@ -421,6 +422,12 @@ function assignment_submit(): void {
         [$attemptId, $user['id'], $assignment['quiz_id'], $assignmentId]
     );
     if (!$attempt) jsonError('Attempt tidak valid — quiz tidak terkait dengan tugas ini', 404);
+    $cameraQuiz=DB::one('SELECT require_camera FROM quizzes WHERE id = ?',[$attempt['quiz_id']]);
+    if (!empty($assignment['require_camera']) || !empty($cameraQuiz['require_camera'])) {
+        proctoringReceiptTable();
+        $proof=DB::one('SELECT attempt_id FROM proctoring_receipts WHERE attempt_id = ? AND user_id = ? AND assignment_id = ? AND quiz_id = ?',[$attemptId,$user['id'],$assignmentId,$attempt['quiz_id']]);
+        if (!$proof) jsonError('Pengerjaan ini belum memiliki bukti verifikasi kamera untuk tugas ini. Verifikasi dan kerjakan ulang, atau hubungi pengajar.',409);
+    }
 
     // Cek deadline
     if ($assignment['deadline'] && strtotime($assignment['deadline']) < time()) {
@@ -523,6 +530,8 @@ function assignment_results(): void {
         jsonError('Bukan tugas milik Anda', 403);
     }
 
+    proctoringReceiptTable();
+
     // Total anggota kelas
     $totalMembers = (int)DB::one(
         "SELECT COUNT(*) AS c FROM class_members WHERE class_id = ?",
@@ -534,7 +543,8 @@ function assignment_results(): void {
         "SELECT u.id AS user_id, u.name AS student_name, u.email,
                 s.submitted_at,
                 att.id AS attempt_id, att.score, att.correct_count, att.time_taken, att.total_points,
-                (SELECT 1 FROM attempt_snapshots WHERE attempt_id = att.id LIMIT 1) AS has_snapshots
+                (SELECT 1 FROM attempt_snapshots WHERE attempt_id = att.id LIMIT 1) AS has_snapshots,
+                (SELECT review_required FROM proctoring_receipts WHERE attempt_id = att.id) AS camera_review_required
          FROM users u
          LEFT JOIN class_members cm ON cm.user_id = u.id AND cm.class_id = ?
          LEFT JOIN assignment_submissions s ON s.assignment_id = ? AND s.user_id = u.id

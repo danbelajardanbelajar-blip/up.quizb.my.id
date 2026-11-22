@@ -54,10 +54,10 @@ const api = {
     }
   },
 
-  async get(action, params = {}) {
+  async get(action, params = {}, options = {}) {
     const session = this._sessionVersion;
     const qs = new URLSearchParams({ action, ...params, _t: Date.now() });
-    const r = await fetch(`${API_BASE}?${qs}`, { credentials: 'same-origin' });
+    const r = await fetch(`${API_BASE}?${qs}`, { credentials: 'same-origin', signal: options.signal });
     this._assertSession(session);
     const ct = r.headers.get('X-CSRF-Token');
     if (ct) this._csrfToken = ct;
@@ -81,7 +81,7 @@ const api = {
     return data; // { success, data: [...], meta: {...} }
   },
 
-  async post(action, body = {}) {
+  async post(action, body = {}, options = {}) {
     const session = this._sessionVersion;
     const token = await this._getToken();
     this._assertSession(session);
@@ -90,6 +90,7 @@ const api = {
       headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token || '' },
       body: JSON.stringify(body),
       credentials: 'same-origin',
+      signal: options.signal,
     });
     const data = await this._parseJson(r, 'Gagal menghubungi server');
     this._assertSession(session);

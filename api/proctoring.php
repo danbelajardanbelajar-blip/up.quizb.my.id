@@ -14,19 +14,11 @@ function proctoring_check_reference(): void {
     $user = requireAuth();
     $status = getUserExamReference((int)$user['id']);
 
-    $refPhotoBase64 = null;
-    if ($status['has_reference'] && !empty($status['photo_path'])) {
-        $fullPath = __DIR__ . '/../' . ltrim(str_replace('\\', '/', $status['photo_path']), '/');
-        if (is_file($fullPath)) {
-            $refPhotoBase64 = 'data:image/jpeg;base64,' . base64_encode((string)file_get_contents($fullPath));
-        }
-    }
-
-    jsonResponse([
+    jsonSuccess([
         'success'         => true,
         'user_id'         => (int)$user['id'],
-        'has_reference'   => $status['has_reference'] && ($refPhotoBase64 !== null),
-        'reference_photo' => $refPhotoBase64,
+        'has_reference'   => $status['has_reference'],
+        'protocol'       => 2,
         'updated_at'      => $status['updated_at']
     ]);
 }
@@ -44,12 +36,18 @@ function proctoring_save_reference(): void {
         jsonError('Data foto acuan kamera tidak ditemukan', 400);
     }
 
+    try { $binary=proctoringImage((string)$photo); }
+    catch (RuntimeException $e) { jsonError($e->getMessage(),400); }
+    $quality=proctoringRuntime(['frame'=>base64_encode($binary)]);
+    if (($quality['status']??'')==='UNAVAILABLE') jsonError('Layanan verifikasi kamera belum siap. Hubungi pengajar; foto belum disimpan.',503);
+    if (($quality['status']??'')!=='FACE_PRESENT' || abs($quality['roll']??1)>0.12) jsonError('Pastikan satu wajah terlihat jelas dan kepala tegak untuk foto acuan.',422);
+
     $res = saveExamReferencePhoto((int)$user['id'], $photo);
     if (!$res['success']) {
         jsonError($res['message'] ?? 'Gagal menyimpan foto acuan', 400);
     }
 
-    jsonResponse([
+    jsonSuccess([
         'success' => true,
         'message' => $res['message'] ?? 'Foto acuan berhasil disimpan',
         'has_reference' => true
@@ -91,7 +89,7 @@ function proctoring_reset_reference(): void {
         jsonError('Pengguna tidak ditemukan atau gagal mereset foto acuan', 404);
     }
 
-    jsonResponse([
+    jsonSuccess([
         'success' => true,
         'message' => 'Foto acuan ujian mahasiswa berhasil direset. Mahasiswa dapat memindai ulang wajahnya.'
     ]);
@@ -114,6 +112,12 @@ function proctoring_log_event(): void {
     $simScore     = isset($body['similarity_score']) ? (float)$body['similarity_score'] : null;
     $notes        = sanitizeString($body['notes'] ?? '');
     $snapshotB64  = $body['snapshot'] ?? '';
+
+    // Browser reports are not server identity verdicts and never create a receipt.
+    $scope=proctoringScope($user,(int)($body['quiz_id']??0),$assignmentId);
+    if ($attemptId && !DB::one('SELECT id FROM attempts WHERE id = ? AND user_id = ?',[$attemptId,$user['id']])) jsonError('Attempt tidak valid.',403);
+    $status='CLIENT_REPORTED'; $simScore=null;
+    if (!in_array($eventType,['initial_checkin','periodic_face','fullscreen_violation','tab_switch_violation','camera_error'],true)) jsonError('Jenis laporan tidak valid.',400);
 
     $snapshotRelPath = null;
     if (!empty($snapshotB64)) {
@@ -143,7 +147,7 @@ function proctoring_log_event(): void {
 
     $logId = (int)DB::lastId();
 
-    jsonResponse([
+    jsonSuccess([
         'success' => true,
         'log_id'  => $logId
     ]);
@@ -169,6 +173,8 @@ function proctoring_swap_question(): void {
     }
 
     ensureProctoringTables();
+
+    proctoringScope($user,$quizId,$assignmentId);
 
     // Catat log pelanggaran audio secara otomatis
     $snapshotRelPath = null;
@@ -253,13 +259,13 @@ function proctoring_swap_question(): void {
 
     // Ambil opsi jawaban (A, B, C, D) dengan TIDAK membocorkan correct_option_id (P0 Security Standard)
     $options = DB::all(
-        "SELECT id, question_id, option_text, order_num FROM question_options WHERE question_id = ? ORDER BY RAND()",
+        "SELECT id, question_id, option_text, order_num FROM options WHERE question_id = ? ORDER BY RAND()",
         [$selectedQId]
     );
 
     $questionRow['options'] = $options;
 
-    jsonResponse([
+    jsonSuccess([
         'success'      => true,
         'swapped'      => true,
         'old_id'       => $currentQId,
@@ -289,6 +295,10 @@ function proctoring_get_logs(): void {
 
     $where = [];
     $params = [];
+    if (($user['role']??'')==='teacher') {
+        $where[]='EXISTS (SELECT 1 FROM assignments a WHERE a.id = l.assignment_id AND a.teacher_id = ?)';
+        $params[]=$user['id'];
+    }
 
     if ($assignmentId > 0) {
         $where[] = "l.assignment_id = ?";
@@ -310,9 +320,61 @@ function proctoring_get_logs(): void {
         $params
     );
 
-    jsonResponse([
+    jsonSuccess([
         'success' => true,
         'total'   => count($logs),
         'logs'    => $logs
     ]);
+}
+
+/** Open an authenticated, assignment-scoped server verification challenge. */
+function proctoring_begin(): void {
+    $user=requireAuth();
+    if ($_SERVER['REQUEST_METHOD']!=='POST') jsonError('Method not allowed',405);
+    $body=getJsonBody();
+    $scope=proctoringScope($user,(int)($body['quiz_id']??0),(int)($body['assignment_id']??0));
+    if (!$scope['required']) jsonError('Kuis ini tidak memerlukan sesi kamera.',400);
+    $reference=proctoringReference((int)$user['id']);
+    if (!$reference['binary']) jsonError('Foto acuan belum tersedia. Lakukan pemindaian terlebih dahulu.',409);
+    if ((proctoringRuntime([],true)['status']??'')!=='READY') jsonError('Layanan verifikasi kamera belum siap. Hubungi pengajar.',503);
+    jsonSuccess(array_merge(['success'=>true,'protocol'=>2],proctoringCreateSession($user,$scope,$reference['version'])));
+}
+
+/** The only endpoint permitted to issue a server-verified camera lease. */
+function proctoring_verify(): void {
+    $user=requireAuth();
+    if ($_SERVER['REQUEST_METHOD']!=='POST') jsonError('Method not allowed',405);
+    $body=getJsonBody();
+    $key=proctoringSessionKey((string)($body['session']??''),$user);
+    $session=&$_SESSION['proctoring_v2'][$key];
+    if (!is_string($body['nonce']??null) || !hash_equals($session['nonce'],$body['nonce'])) jsonError('Tantangan kamera sudah berubah. Verifikasi ulang.',409);
+    if (microtime(true)-($session['last_request']??0)<0.7) jsonError('Tunggu sebentar sebelum verifikasi kamera berikutnya.',429);
+    $session['last_request']=microtime(true);
+    proctoringScope($user,(int)$session['quiz_id'],(int)$session['assignment_id']);
+    $reference=proctoringReference((int)$user['id']);
+    if (!$reference['binary'] || $reference['version']!==$session['reference_version']) jsonError('Foto acuan berubah atau tidak tersedia. Mulai verifikasi ulang.',409);
+    try { $binary=proctoringImage((string)($body['snapshot']??'')); }
+    catch (RuntimeException $e) { $session['verified_at']=0;$session['final_verified_at']=0;jsonError($e->getMessage(),400); }
+    $result=proctoringRuntime(['frame'=>base64_encode($binary),'reference'=>base64_encode($reference['binary'])]);
+    $status=proctoringAdvance($session,$result,hash('sha256',$binary),time(),($body['purpose']??'')==='final');
+    $messages=[
+        'TILT_HEAD'=>'Miringkan kepala sedikit ke samping untuk pemeriksaan gerakan.',
+        'CENTER_HEAD'=>'Sekarang tegakkan kembali kepala dan lihat ke kamera.',
+        'VERIFIED'=>'Kamera berhasil diverifikasi terhadap foto acuan.',
+        'NO_FACE'=>'Wajah belum terdeteksi. Hadapkan wajah ke kamera.',
+        'MULTIPLE_FACES'=>'Pastikan hanya satu wajah berada dalam kamera.',
+        'LOW_QUALITY'=>'Perbaiki pencahayaan, jarak, atau ketajaman kamera.',
+        'RECHECK'=>'Kemiripan belum cukup. Coba posisi dan pencahayaan yang sama dengan foto acuan; hubungi pengajar jika berulang.',
+        'REFERENCE_INVALID'=>'Foto acuan tidak dapat dipakai. Hubungi pengajar untuk pemeriksaan atau reset acuan.',
+        'FRAME_REPLAY'=>'Frame kamera tidak berubah. Pastikan kamera aktif, lalu gerakkan kepala sedikit.',
+        'UNAVAILABLE'=>'Layanan pemeriksa kamera sedang tidak tersedia. Coba kembali atau hubungi pengajar.',
+        'SERVER_BUSY'=>'Pemeriksa kamera sedang penuh. Tunggu sebentar; pemeriksaan akan dicoba kembali.',
+    ];
+    // Log only transitions (or once each 30s); identity status is computed here, never supplied by the browser.
+    if (($session['last_log_status']??null)!==$status || time()-($session['last_log_at']??0)>30) {
+        ensureProctoringTables();
+        DB::execute('INSERT INTO assignment_proctoring_logs (assignment_id,user_id,event_type,similarity_score,status,notes,created_at) VALUES (?,?,?,?,?,?,NOW())',[$session['assignment_id'],$user['id'],'server_face',isset($result['cosine'])?(float)$result['cosine']:null,$status,'YuNet/SFace cosine; similarity is not an identity probability.']);
+        $session['last_log_status']=$status;$session['last_log_at']=time();
+    }
+    jsonSuccess(['success'=>true,'status'=>$status,'verified'=>$status==='VERIFIED','next_nonce'=>$session['nonce'],'message'=>$messages[$status]??'Verifikasi kamera belum berhasil. Coba kembali atau hubungi pengajar.']);
 }

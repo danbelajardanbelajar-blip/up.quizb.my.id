@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/proctoring.php';
 // ============================================
 // api/attempt.php — Attempt & History Endpoints
 // ============================================
@@ -37,9 +38,14 @@ function attempt_submit(): void {
         if (!$quizId) jsonError('Quiz ID diperlukan');
         if (!is_array($answers)) jsonError('Format jawaban tidak valid');
 
-        $quiz = DB::one('SELECT id, title, total_questions, passing_score FROM quizzes WHERE id = ?', [$quizId]);
-    
+        $quiz = DB::one('SELECT id, title, total_questions, passing_score, require_camera FROM quizzes WHERE id = ?', [$quizId]);
+
     if (!$quiz) jsonError('Quiz tidak ditemukan', 404);
+    $retryToken=(string)($body['proctoring_session']??'');
+    $retryState=$_SESSION['proctoring_v2'][hash('sha256',$retryToken)]??null;
+    if ($retryState && (int)$retryState['user_id']===(int)$user['id'] && (int)$retryState['quiz_id']===$quizId && (int)$retryState['assignment_id']===(int)($body['assignment_id']??0) && !empty($retryState['response'])) jsonSuccess($retryState['response'],'Quiz sudah tersimpan');
+    $proctoringKey=proctoringRequireReceipt($user,$quiz,(int)($body['assignment_id']??0),$body);
+    if ($proctoringKey!==null) proctoringReceiptTable();
 
     // Normalisasi format answers: [{question_id, option_id}] atau {qid: oid}
     $answerMap = [];
@@ -156,6 +162,7 @@ function attempt_submit(): void {
     $passed       = $score >= $passingScore ? 1 : 0;
 
     // Insert attempt dengan snapshot player_name
+    if ($proctoringKey!==null) { $pdo=DB::conn(); $pdo->beginTransaction(); }
     try {
         DB::execute(
             'INSERT INTO attempts (user_id, player_name, quiz_id, mode, score, total_points, correct_count, time_taken, completed_at) VALUES (?,?,?,?,?,?,?,?,NOW())',
@@ -169,70 +176,8 @@ function attempt_submit(): void {
         );
     }
     $attemptId = (int)DB::lastId();
-
-    // [REALTIME NOTIFIKASI] Tembak sinyal ke Tahajjud API secara asinkron
-    $quizTitle = $quiz['title'] ?? 'Quiz';
-    $playerNameNotif = $resolvedPlayerName ?: ($user['name'] ?? 'User');
-    $msgText = "Pengerjaan '{$quizTitle}' oleh {$playerNameNotif} selesai dengan skor {$score}";
-    
-    $notifyUrl = 'https://tahajjud.quizb.my.id/api_notify.php';
-    $postData = http_build_query([
-        'secret' => 'QUIZB_NOTIFY_SECRET_99',
-        'message' => $msgText
-    ]);
-    
-    $ch = curl_init($notifyUrl);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, 150);
-    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 250);
-    curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    @curl_exec($ch);
-    @curl_close($ch);
-
-    // [TOURNAMENT] Jika dari turnamen, langsung rekam skor ke tabel peserta tanpa delay
-    $tournamentId = (int)($body['tournament_id'] ?? 0);
-    if ($tournamentId > 0 && !empty($user['id'])) {
-        try {
-            DB::execute(
-                "UPDATE tournament_participants SET attempt_id = ?, score_final = ?, time_taken = ?, status = 'accepted'
-                 WHERE tournament_id = ? AND user_id = ?",
-                [$attemptId, $score, $timeTaken, $tournamentId, $user['id']]
-            );
-
-            // Cek jika seluruh peserta kompetisi sudah submit
-            $tRoom = DB::one("SELECT id, title, creator_id, status FROM tournaments WHERE id = ?", [$tournamentId]);
-            if ($tRoom && $tRoom['status'] === 'in_progress') {
-                $cId = (int)$tRoom['creator_id'];
-                $totalAcc = (int)(DB::one("SELECT COUNT(*) as c FROM tournament_participants WHERE tournament_id = ? AND status = 'accepted' AND user_id != ?", [$tournamentId, $cId])['c'] ?? 0);
-                $totalSub = (int)(DB::one("SELECT COUNT(*) as c FROM tournament_participants WHERE tournament_id = ? AND status = 'accepted' AND score_final IS NOT NULL AND user_id != ?", [$tournamentId, $cId])['c'] ?? 0);
-                if ($totalAcc > 0 && $totalSub >= $totalAcc) {
-                    $win = DB::one(
-                        "SELECT user_id FROM tournament_participants
-                         WHERE tournament_id = ? AND score_final IS NOT NULL AND status = 'accepted' AND user_id != ?
-                         ORDER BY score_final DESC, time_taken ASC LIMIT 1",
-                        [$tournamentId, $cId]
-                    );
-                    $winId = $win['user_id'] ?? null;
-                    DB::execute("UPDATE tournaments SET status = 'completed', winner_id = ?, end_time = NOW() WHERE id = ?", [$winId, $tournamentId]);
-                    if ($winId) {
-                        $winUser = DB::one("SELECT name FROM users WHERE id = ?", [$winId]);
-                        $winName = $winUser['name'] ?? 'Peserta';
-                        pushNotification(
-                            $cId,
-                            'tournament_completed',
-                            '🏆 Turnamen Telah Selesai!',
-                            'Semua peserta telah mengumpulkan jawaban di "' . $tRoom['title'] . '". Juara 1: ' . $winName,
-                            '/tournament/' . $tournamentId,
-                            ['tournament_id' => (string)$tournamentId]
-                        );
-                    }
-                }
-            }
-        } catch (\Throwable $te) {
-            error_log("[attempt_submit tournament sync] " . $te->getMessage());
-        }
+    if ($proctoringKey!==null) {
+        proctoringBindReceipt($proctoringKey,$attemptId);
     }
 
     // Simpan attempt_id di session untuk akses result tanpa login
@@ -299,7 +244,74 @@ function attempt_submit(): void {
     // Update difficulty otomatis berdasarkan performa quiz
     updateQuizDifficultyFromStats($quizId);
 
-    jsonSuccess([
+    if ($proctoringKey!==null) $pdo->commit();
+
+    // [REALTIME NOTIFIKASI] Tembak sinyal ke Tahajjud API secara asinkron
+    $quizTitle = $quiz['title'] ?? 'Quiz';
+    $playerNameNotif = $resolvedPlayerName ?: ($user['name'] ?? 'User');
+    $msgText = "Pengerjaan '{$quizTitle}' oleh {$playerNameNotif} selesai dengan skor {$score}";
+
+    $notifyUrl = 'https://tahajjud.quizb.my.id/api_notify.php';
+    $postData = http_build_query([
+        'secret' => 'QUIZB_NOTIFY_SECRET_99',
+        'message' => $msgText
+    ]);
+
+    $ch = curl_init($notifyUrl);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, 150);
+    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 250);
+    curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    @curl_exec($ch);
+    @curl_close($ch);
+
+    // [TOURNAMENT] Jika dari turnamen, langsung rekam skor ke tabel peserta tanpa delay
+    $tournamentId = (int)($body['tournament_id'] ?? 0);
+    if ($tournamentId > 0 && !empty($user['id'])) {
+        try {
+            DB::execute(
+                "UPDATE tournament_participants SET attempt_id = ?, score_final = ?, time_taken = ?, status = 'accepted'
+                 WHERE tournament_id = ? AND user_id = ?",
+                [$attemptId, $score, $timeTaken, $tournamentId, $user['id']]
+            );
+
+            // Cek jika seluruh peserta kompetisi sudah submit
+            $tRoom = DB::one("SELECT id, title, creator_id, status FROM tournaments WHERE id = ?", [$tournamentId]);
+            if ($tRoom && $tRoom['status'] === 'in_progress') {
+                $cId = (int)$tRoom['creator_id'];
+                $totalAcc = (int)(DB::one("SELECT COUNT(*) as c FROM tournament_participants WHERE tournament_id = ? AND status = 'accepted' AND user_id != ?", [$tournamentId, $cId])['c'] ?? 0);
+                $totalSub = (int)(DB::one("SELECT COUNT(*) as c FROM tournament_participants WHERE tournament_id = ? AND status = 'accepted' AND score_final IS NOT NULL AND user_id != ?", [$tournamentId, $cId])['c'] ?? 0);
+                if ($totalAcc > 0 && $totalSub >= $totalAcc) {
+                    $win = DB::one(
+                        "SELECT user_id FROM tournament_participants
+                         WHERE tournament_id = ? AND score_final IS NOT NULL AND status = 'accepted' AND user_id != ?
+                         ORDER BY score_final DESC, time_taken ASC LIMIT 1",
+                        [$tournamentId, $cId]
+                    );
+                    $winId = $win['user_id'] ?? null;
+                    DB::execute("UPDATE tournaments SET status = 'completed', winner_id = ?, end_time = NOW() WHERE id = ?", [$winId, $tournamentId]);
+                    if ($winId) {
+                        $winUser = DB::one("SELECT name FROM users WHERE id = ?", [$winId]);
+                        $winName = $winUser['name'] ?? 'Peserta';
+                        pushNotification(
+                            $cId,
+                            'tournament_completed',
+                            '🏆 Turnamen Telah Selesai!',
+                            'Semua peserta telah mengumpulkan jawaban di "' . $tRoom['title'] . '". Juara 1: ' . $winName,
+                            '/tournament/' . $tournamentId,
+                            ['tournament_id' => (string)$tournamentId]
+                        );
+                    }
+                }
+            }
+        } catch (\Throwable $te) {
+            error_log("[attempt_submit tournament sync] " . $te->getMessage());
+        }
+    }
+
+    $attemptResponse=[
         'attempt_id'      => $attemptId,
         'score'           => $score,
         'correct_count'   => $correctCount,
@@ -311,9 +323,14 @@ function attempt_submit(): void {
         'passed'          => (bool)$passed,
         'user_name'       => $resolvedPlayerName ?: $user['name'],
         'is_anon'         => $user['is_anon'] ?? false,
-    ], 'Quiz berhasil diselesaikan');
+    ];
+    if ($proctoringKey!==null) {
+        $attemptResponse['camera_review_required']=!empty($_SESSION['proctoring_v2'][$proctoringKey]['review_required']);
+        $_SESSION['proctoring_v2'][$proctoringKey]['response']=$attemptResponse;
+    }
+    jsonSuccess($attemptResponse, 'Quiz berhasil diselesaikan');
     } catch (Throwable $e) {
-        if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+        if (isset($pdo) && $pdo->inTransaction()) { $pdo->rollBack(); if (isset($proctoringKey)) unset($_SESSION['proctoring_v2'][$proctoringKey]['attempt_id']); }
         error_log("[attempt.submit] " . $e->__toString());
         jsonError('Terjadi kesalahan server', 500);
     }

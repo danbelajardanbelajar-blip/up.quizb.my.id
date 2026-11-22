@@ -143,6 +143,9 @@ function QuizEngine() {
 
     // ---- Load quiz ----
     async loadQuiz(quizId, assignmentId = null, mode = 'exam', challengeId = null, tournamentId = null) {
+      if (this.cameraStream) this.stopCamera();
+      this.startTimeMs=0; this.result=null;
+      this._proctorSession=''; this._proctorNonce='';
       this.phase = 'loading';
       this.error = null;
       this.assignmentId = assignmentId;
@@ -150,13 +153,15 @@ function QuizEngine() {
       this.challengeId  = challengeId ? parseInt(challengeId) : null;
       this.tournamentId = tournamentId ? parseInt(tournamentId) : null;
       try {
-        const params = { id: quizId, mode: this.mode };
+        const params = { id: quizId, mode: this.mode, camera_preview: 1 };
         if (assignmentId) params.assignment_id = assignmentId;
         if (this.mode === 'challenge' && this.challengeId) params.challenge_id = this.challengeId;
         if (this.mode === 'tournament' && this.tournamentId) params.tournament_id = this.tournamentId;
         const data = await api.get('quiz.questions', params);
+        this._questionLoadParams={...params}; delete this._questionLoadParams.camera_preview;
+        this._cameraQuestionsPending=data.camera_verification_required===true;
         this.quiz      = data.quiz;
-        this.questions = data.questions;
+        this.questions = data.questions || [];
         // Initialize participants array (will be populated by challenge.sync or tournament.sync)
         if ((this.mode === 'challenge' && this.challengeId) || (this.mode === 'tournament' && this.tournamentId)) {
           this.participants = [];
@@ -166,7 +171,7 @@ function QuizEngine() {
         // Untuk mode lain (challenge, dll): gunakan exam_duration/time_limit sebagai fallback
         if (this.mode === 'exam') {
           const SECS_PER_QUESTION = 20;
-          this.timeLeft = SECS_PER_QUESTION * (this.questions.length || 10);
+          this.timeLeft = SECS_PER_QUESTION * (data.question_count || this.questions.length || 10);
         } else {
           this.timeLeft = this.quiz.exam_duration || this.quiz.time_limit || this.quiz.duration || 600;
         }
@@ -260,58 +265,33 @@ function QuizEngine() {
       // 1. Fullscreen Enforcement (dipanggil langsung dalam user click gesture)
       this.requestFullscreenMode();
 
-      // 2. Akses Kamera & Mikrofon (Proctoring)
       if (this.quiz?.require_camera == 1) {
+        if (this._cameraStarting) return;
+        this._cameraStarting = true;
+        if (this.cameraStream) this.stopCamera();
+        const generation=++this._cameraGeneration;
         try {
-          this.cameraStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-            audio: true
-          });
-        } catch (e1) {
-          try {
-            this.cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-          } catch (e2) {
-            try {
-              // Jika mic tidak didukung atau ditolak, coba video saja
-              this.cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-            } catch (e3) {
-              console.warn('Akses kamera ditolak atau tidak tersedia:', e3);
-              this.phase = 'camera_denied';
-              this.error = 'Kuis ini mewajibkan akses kamera (Proctoring). Anda harus mengaktifkan kamera untuk dapat mengerjakan kuis ini.';
-
-              try {
-                sessionStorage.setItem('quizb_pending_toast', JSON.stringify({
-                  msg: 'Wajib mengaktifkan izin kamera untuk mengerjakan kuis ini!',
-                  type: 'warning',
-                  icon: '📷'
-                }));
-              } catch (_) {}
-
-              alert('⚠️ Akses Kamera Diperlukan!\n\nAgar bisa mengerjakan kuis ini, Anda wajib mengaktifkan kamera di browser.\n\nAnda akan dikembalikan ke halaman sebelumnya. Silakan izinkan akses kamera di setelan browser Anda lalu coba kembali.');
-
-              this.exitToPreviousPage();
-              return;
-            }
-          }
-        }
-
-        // 3. Cek Foto Acuan Mahasiswa (One-Time Baseline Reference)
-        try {
-          const refCheck = await api.get('proctoring.check_reference');
-          if (!refCheck || !refCheck.has_reference) {
-            // Mahasiswa belum punya foto acuan -> Masuk ke layar Hands-Free Face Scan
-            this.startHandsFreeFaceScan();
-            return;
-          } else {
-            // Mahasiswa sudah punya foto acuan -> Muat template biometrik acuan
-            if (refCheck.reference_photo && window.QuizFaceVerifier && typeof window.QuizFaceVerifier.loadReferenceFromDataUrl === 'function') {
-              await window.QuizFaceVerifier.loadReferenceFromDataUrl(refCheck.reference_photo);
-            }
-            this.takeInitialCheckinSnapshot();
-          }
-        } catch (errRef) {
-          console.warn('[Proctoring Check Reference Warning]', errRef);
-        }
+          if (!window.QuizFaceVerifier) throw Error('Modul kamera belum tersedia. Muat ulang halaman.');
+          await window.QuizFaceVerifier.initCascade();
+          if (generation!==this._cameraGeneration) return;
+          let stream;
+          try { stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:true}); }
+          catch (_) { if (generation!==this._cameraGeneration) return; stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false}); }
+          if (generation!==this._cameraGeneration) { stream.getTracks().forEach(track=>track.stop()); return; }
+          this.cameraStream=stream;
+          this._proctorSession = ''; this._proctorNonce = ''; this._lastServerVerified = 0;
+          this._attachCameraTracks();
+          const reference = await api.get('proctoring.check_reference',{}, {signal:AbortSignal.timeout(15000)});
+          if (generation!==this._cameraGeneration) return;
+          if (reference?.protocol !== 2 || typeof reference.has_reference !== 'boolean') throw Error('Layanan kamera perlu diperbarui. Muat ulang atau hubungi pengajar.');
+          this.startHandsFreeFaceScan(!reference.has_reference);
+        } catch (error) {
+          if (generation!==this._cameraGeneration) return;
+          this.stopCamera(); this.stopTimer(); this.stopQuestionTimer();
+          this.error = error.message || 'Kamera atau layanan verifikasi belum tersedia. Jawaban Anda tetap tersimpan di halaman ini.';
+          this.phase = 'camera_error';
+        } finally { this._cameraStarting = false; }
+        return;
       }
 
       this.startActualQuiz();
@@ -320,10 +300,11 @@ function QuizEngine() {
     // ---- Mulai pengerjaan soal aktual ----
     startActualQuiz() {
       this.phase = 'playing';
-      this.startTimeMs = Date.now();
+      const resuming = !!this.startTimeMs;
+      if (!resuming) this.startTimeMs = Date.now();
       this.startBgMusic();           // 🔊 musik latar mulai
       if (this.isReviewMode) {
-        this.startQuestionTimer();
+        this.startQuestionTimer(resuming);
       } else {
         this.startTimer();
       }
@@ -345,143 +326,136 @@ function QuizEngine() {
       }
     },
 
-    // ---- Hands-Free Zero-Click Face Scan ----
-    startHandsFreeFaceScan() {
-      this.phase = 'face_scan';
-      this.scanStatusMessage = 'Menyiapkan modul AI...';
-      this.scanGuideColor = '';
-      this.scanCountdown = 0;
-      this.scanCaptured = false;
+    // ---- Camera verification: presence in browser; identity/challenge on server ----
+    _cameraGeneration: 0,
+    _proctorSession: '',
+    _proctorNonce: '',
+    _lastServerVerified: 0,
+    _proctorBusy: false,
+    _cameraStarting: false,
+    _scanBusy: false,
+    _cameraTrackListeners: [],
 
-      ((this.$nextTick || (cb => setTimeout(cb, 20))).bind(this))(async () => {
-        const videoEl = (this.$refs && this.$refs.faceScanVideo) || (typeof document !== 'undefined' && typeof document.getElementById === 'function' ? document.getElementById('faceScanVideo') : null);
-        if (videoEl && this.cameraStream) {
-          videoEl.srcObject = this.cameraStream;
-          await videoEl.play().catch(() => {});
+    _attachCameraTracks() {
+      for (const track of this.cameraStream?.getVideoTracks?.() || []) {
+        const stop = () => {
+          if (this._stoppingCamera || !['playing','face_scan'].includes(this.phase)) return;
+          this._lastServerVerified = 0;
+          this.showFaceWarning = true; this.faceWarningType = 'camera';
+          this.faceWarningText = 'Kamera terputus atau berhenti mengirim gambar. Sambungkan kembali kamera.';
+          this.stopTimer(); this.stopQuestionTimer(); this.stopCamera();
+          this.error = this.faceWarningText; this.phase = 'camera_error';
+        };
+        track.addEventListener('ended', stop); track.addEventListener('mute', stop);
+        this._cameraTrackListeners.push({track, stop});
+      }
+    },
+
+    async _cameraVideo(preferred) {
+      const tracks = this.cameraStream?.getVideoTracks?.() || [];
+      if (!tracks.length || tracks.some(track => track.readyState !== 'live' || !track.enabled || track.muted)) throw Error('Kamera belum aktif. Sambungkan kembali kamera.');
+      let video = preferred || this.$refs?.proctorPipVideo || this._proctorVideo;
+      if (!video) { video = document.createElement('video'); video.muted = true; video.playsInline = true; }
+      if (video.srcObject !== this.cameraStream) { video.srcObject = this.cameraStream; await video.play(); }
+      if (!video.videoWidth || video.readyState < 2) {
+        await new Promise((resolve,reject) => {
+          const timeout = setTimeout(() => { video.removeEventListener('loadeddata',ready); reject(Error('Kamera belum menghasilkan gambar. Coba sambungkan ulang.')); },5000);
+          const ready = () => { clearTimeout(timeout); video.removeEventListener('loadeddata',ready); resolve(); };
+          video.addEventListener('loadeddata',ready,{once:true});
+        });
+      }
+      if (!video.videoWidth || !video.videoHeight || video.readyState < 2) throw Error('Gambar kamera belum siap.');
+      this._proctorVideo = video;
+      return video;
+    },
+
+    async _verifyCamera(video, final = false) {
+      if (this._proctorBusy) return {verified:false,status:'BUSY',message:'Menunggu pemeriksaan kamera sebelumnya…'};
+      this._proctorBusy = true;
+      const generation = this._cameraGeneration;
+      try {
+        if (!this._proctorSession) {
+          const begin = await api.post('proctoring.begin',{quiz_id:this.quiz.id,assignment_id:Number(this.assignmentId)||0},{signal:AbortSignal.timeout(18000)});
+          if (generation !== this._cameraGeneration) return {verified:false,status:'CANCELLED'};
+          if (!/^[a-f0-9]{64}$/.test(begin.session || '') || !/^[a-f0-9]{64}$/.test(begin.nonce || '')) throw Error('Sesi kamera tidak valid. Muat ulang layanan.');
+          this._proctorSession = begin.session; this._proctorNonce = begin.nonce;
         }
+        const snapshot = window.QuizFaceVerifier.captureSnapshot(video);
+        const result = await api.post('proctoring.verify',{session:this._proctorSession,nonce:this._proctorNonce,snapshot,purpose:final?'final':'periodic'},{signal:AbortSignal.timeout(18000)});
+        if (generation !== this._cameraGeneration) return {verified:false,status:'CANCELLED'};
+        if (!/^[a-f0-9]{64}$/.test(result.next_nonce || '')) throw Error('Respons verifikasi kamera tidak valid. Coba kembali.');
+        this._proctorNonce = result.next_nonce;
+        if (result.verified === true && result.status === 'VERIFIED') this._lastServerVerified = Date.now();
+        else this._lastServerVerified = 0;
+        return result;
+      } catch (error) {
+        if (generation === this._cameraGeneration) { this._proctorSession = ''; this._proctorNonce = ''; this._lastServerVerified = 0; }
+        throw error;
+      } finally { this._proctorBusy = false; }
+    },
 
-        if (window.QuizFaceVerifier) {
-          await window.QuizFaceVerifier.initCascade();
-        }
-
-        let stableMs = 0;
-        const EVAL_INTERVAL = 100;
-
-        if (this._scanInterval) clearInterval(this._scanInterval);
-        this._scanInterval = setInterval(async () => {
-          if (this.phase !== 'face_scan') {
-            clearInterval(this._scanInterval);
-            this._scanInterval = null;
-            return;
-          }
-
-          if (!videoEl || !window.QuizFaceVerifier) return;
-          const evalRes = window.QuizFaceVerifier.evaluateFrame(videoEl);
-
-          this.scanStatusMessage = evalRes.label;
-          this.scanGuideColor = evalRes.color || '';
-
-          if (evalRes.ready) {
-            stableMs += EVAL_INTERVAL;
-            this.scanCountdown = Math.max(1, Math.ceil((2000 - stableMs) / 1000));
-
-            if (stableMs >= 2000) {
-              // Posisi stabil 2 detik -> AUTO-CAPTURE! Zero clicks required!
-              clearInterval(this._scanInterval);
-              this._scanInterval = null;
-              this.scanCaptured = true;
-              this.scanCountdown = 0;
-              this.scanStatusMessage = '✅ Foto berhasil ditangkap! Memverifikasi...';
-
-              const dataUrl = window.QuizFaceVerifier.captureSnapshot(videoEl);
-
-              if (window.QuizFaceVerifier && typeof window.QuizFaceVerifier.loadReferenceFromDataUrl === 'function') {
-                await window.QuizFaceVerifier.loadReferenceFromDataUrl(dataUrl);
-              }
-
-              try {
-                const saveRes = await api.post('proctoring.save_reference', { photo: dataUrl });
-                this.scanStatusMessage = '✅ Foto acuan tersimpan! Memulai ujian...';
-                setTimeout(() => {
-                  this.startActualQuiz();
-                }, 800);
-              } catch (saveErr) {
-                console.error('Save reference error:', saveErr);
-                this.scanStatusMessage = '⚠️ ' + (saveErr.message || 'Gagal menyimpan foto acuan. Ulangi posisi.');
-                this.scanGuideColor = 'red';
-                setTimeout(() => {
-                  this.startHandsFreeFaceScan();
-                }, 2200);
-              }
-            }
-          } else {
-            stableMs = 0;
-            this.scanCountdown = 0;
-          }
-        }, EVAL_INTERVAL);
+    _blockCamera(message, type = 'verification') {
+      this.showFaceWarning = true; this.faceWarningType = type;
+      this.faceWarningText = message || 'Verifikasi kamera belum berhasil. Coba kembali atau hubungi pengajar.';
+      this._lastServerVerified = 0;
+      this.startFastFaceCheck();
+      this.$nextTick?.(() => {
+        const video = this.$refs?.proctorFreezeVideo;
+        if (video && this.cameraStream) { video.srcObject = this.cameraStream; video.play().catch(() => {}); }
       });
     },
 
-    // ---- Check-in snapshot awal untuk mahasiswa yang sudah punya foto acuan ----
-    async takeInitialCheckinSnapshot() {
-      if (this._initialCheckedIn || !this.cameraStream) return;
-      this._initialCheckedIn = true;
-      try {
-        const snap = await this.captureCurrentSnapshot();
-        if (snap) {
-          api.post('proctoring.log_event', {
-            assignment_id: this.assignmentId || 0,
-            attempt_id: this.attemptId || null,
-            event_type: 'initial_checkin',
-            status: 'MATCH',
-            snapshot: snap,
-            notes: 'Check-in awal otomatis berhasil (foto acuan tersedia)'
-          }).catch(() => {});
-        }
-      } catch (e) {
-        console.warn('Initial checkin snapshot error:', e);
-      }
+    startHandsFreeFaceScan(enrolling = false) {
+      this.phase = 'face_scan'; this.scanCaptured = false; this.scanCountdown = 0;
+      this.scanStatusMessage = enrolling ? 'Hadapkan satu wajah ke kamera untuk foto acuan.' : 'Memulai verifikasi kamera terhadap foto acuan…';
+      this.scanGuideColor = ''; this._scanBusy = false;
+      const generation = this._cameraGeneration;
+      (this.$nextTick || (callback => setTimeout(callback,20)))(async () => {
+        let video;
+        try { video = await this._cameraVideo(this.$refs?.faceScanVideo || document.getElementById('faceScanVideo')); }
+        catch (error) { if (generation !== this._cameraGeneration) return; this.error = error.message; this.phase = 'camera_error'; this.stopCamera(); return; }
+        let stableSince = 0;
+        if (this._scanInterval) clearInterval(this._scanInterval);
+        this._scanInterval = setInterval(async () => {
+          if (generation !== this._cameraGeneration || this.phase !== 'face_scan' || this._scanBusy) return;
+          this._scanBusy = true;
+          try {
+            const frame = window.QuizFaceVerifier.evaluateFrame(video);
+            if (!frame.ready) { stableSince=0; this.scanCountdown=0; this.scanGuideColor=frame.color||'amber'; this.scanStatusMessage=frame.label; return; }
+            this.scanGuideColor='green';
+            if (enrolling) {
+              if (!stableSince) stableSince=Date.now();
+              this.scanCountdown=Math.max(1,Math.ceil((2000-(Date.now()-stableSince))/1000));
+              if (Date.now()-stableSince<2000) { this.scanStatusMessage='Tahan posisi untuk foto acuan…'; return; }
+              const saved=await api.post('proctoring.save_reference',{photo:window.QuizFaceVerifier.captureSnapshot(video)});
+              if (saved.success !== true) throw Error(saved.message || 'Foto acuan belum tersimpan.');
+              if (generation !== this._cameraGeneration || this.phase !== 'face_scan') return;
+              enrolling=false; this.scanCaptured=true; this.scanCountdown=0;
+            }
+            const result=await this._verifyCamera(video);
+            if (generation !== this._cameraGeneration || this.phase !== 'face_scan') return;
+            this.scanStatusMessage=result.message; this.scanGuideColor=result.verified?'green':'amber';
+            if (result.verified === true && result.status === 'VERIFIED') {
+              clearInterval(this._scanInterval); this._scanInterval=null;
+              if (this._cameraQuestionsPending) {
+                const data=await api.get('quiz.questions',this._questionLoadParams || {id:this.quiz.id,assignment_id:this.assignmentId || 0,mode:this.mode});
+                if (generation !== this._cameraGeneration || this.phase !== 'face_scan') return;
+                if (data.camera_verification_required || !Array.isArray(data.questions) || !data.questions.length) throw Error('Soal belum dapat dibuka. Verifikasi kamera ulang.');
+                this.questions=data.questions; this._cameraQuestionsPending=false;
+              }
+              this.showFaceWarning=false; this.faceWarningType=''; this.startActualQuiz();
+            }
+          } catch (error) {
+            if (generation !== this._cameraGeneration) return;
+            this.scanStatusMessage=error.message; this.scanGuideColor='red'; stableSince=0;
+          } finally { this._scanBusy=false; }
+        },1000);
+      });
     },
 
-    // ---- Helper capture snapshot instan ----
     async captureCurrentSnapshot() {
-      if (!this.cameraStream) return null;
-      try {
-        let video = this._proctorVideo;
-        if (!video) {
-          video = document.createElement('video');
-          video.muted = true;
-          video.playsInline = true;
-          video.autoplay = true;
-          video.srcObject = this.cameraStream;
-          await video.play().catch(() => {});
-          this._proctorVideo = video;
-        }
-
-        if (video.videoWidth === 0 || video.readyState < 2) {
-          await new Promise(r => {
-            const onReady = () => { video.removeEventListener('loadeddata', onReady); r(); };
-            video.addEventListener('loadeddata', onReady);
-            setTimeout(r, 500);
-          });
-        }
-
-        const width = video.videoWidth || 640;
-        const height = video.videoHeight || 480;
-        if (width > 0 && height > 0) {
-          const canvas = document.createElement('canvas');
-          const targetWidth = Math.min(width, 640);
-          const targetHeight = Math.round((targetWidth / width) * height);
-          canvas.width = targetWidth;
-          canvas.height = targetHeight;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
-          return canvas.toDataURL('image/jpeg', 0.65);
-        }
-      } catch (e) {
-        console.warn('Capture snapshot error:', e);
-      }
-      return null;
+      const video=await this._cameraVideo();
+      return window.QuizFaceVerifier.captureSnapshot(video);
     },
 
     // ---- Fullscreen Enforcement & Listeners ----
@@ -511,6 +485,7 @@ function QuizEngine() {
           this.isFullscreenExited = true;
           this.captureCurrentSnapshot().then(snap => {
             api.post('proctoring.log_event', {
+              quiz_id: this.quiz.id,
               assignment_id: this.assignmentId || 0,
               attempt_id: this.attemptId || null,
               event_type: 'fullscreen_violation',
@@ -529,6 +504,7 @@ function QuizEngine() {
         if (document.hidden) {
           this.captureCurrentSnapshot().then(snap => {
             api.post('proctoring.log_event', {
+              quiz_id: this.quiz.id,
               assignment_id: this.assignmentId || 0,
               attempt_id: this.attemptId || null,
               event_type: 'tab_switch_violation',
@@ -773,189 +749,44 @@ function QuizEngine() {
     },
     
     async takeAndUploadSnapshot() {
-      if (!this.cameraStream) return;
-      if (!this.snapshots) this.snapshots = [];
-
+      if (this.phase !== 'playing' || this._finalizingSubmit) return;
+      if (this._proctorBusy && (!this._lastServerVerified || Date.now()-this._lastServerVerified>=20000)) this._blockCamera('Menunggu pemeriksaan server. Waktu dijeda sementara.');
       try {
-        let video = (this.$refs && this.$refs.proctorPipVideo) || (typeof document !== 'undefined' && typeof document.getElementById === 'function' ? document.getElementById('proctorPipVideo') : null) || this._proctorVideo;
-        if (!video) {
-          video = document.createElement('video');
-          video.muted = true;
-          video.playsInline = true;
-          video.autoplay = true;
-          video.srcObject = this.cameraStream;
-          await video.play().catch(() => {});
-          this._proctorVideo = video;
+        const video=await this._cameraVideo();
+        const frame=window.QuizFaceVerifier.evaluateFrame(video);
+        if (!frame.ready) { this._blockCamera(frame.label,'absence'); return; }
+        const image=window.QuizFaceVerifier.captureSnapshot(video);
+        this.snapshots=(this.snapshots || []).concat(image).slice(-30);
+        if (Date.now()-this._lastServerVerified>=10000) {
+          const result=await this._verifyCamera(video);
+          if (this.phase !== 'playing') return;
+          if (result.status === 'BUSY' || result.status === 'CANCELLED') return;
+          if (result.verified !== true || result.status !== 'VERIFIED') { this._blockCamera(result.message); return; }
         }
-
-        // Pastikan video sudah memiliki frame aktual
-        if (video.videoWidth === 0 || video.readyState < 2) {
-          await new Promise(r => {
-            const onReady = () => { video.removeEventListener('loadeddata', onReady); r(); };
-            video.addEventListener('loadeddata', onReady);
-            setTimeout(r, 400);
-          });
+        if (this._lastServerVerified && Date.now()-this._lastServerVerified<20000) {
+          this.showFaceWarning=false; this.faceWarningType=''; this.faceAbsenceCounter=0; this.stopFastFaceCheck();
         }
-
-        const width = video.videoWidth || 640;
-        const height = video.videoHeight || 480;
-        if (width <= 0 || height <= 0) return;
-
-        // Ambil frame snapshot
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 640;
-        const targetWidth = Math.min(width, MAX_WIDTH);
-        const targetHeight = Math.round((targetWidth / width) * height);
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
-        const imgBase64 = canvas.toDataURL('image/jpeg', 0.65);
-
-        // 1. Evaluasi Wajah Setiap 5 Detik dengan QuizFaceVerifier
-        if (window.QuizFaceVerifier) {
-          const evalRes = window.QuizFaceVerifier.evaluateFrame(video);
-          if (!evalRes.ready) {
-            // Wajah TIDAK menghadap kamera / tidak terdeteksi!
-            this.showFaceWarning = true;
-            this.faceWarningType = 'absence';
-            this.faceWarningText = evalRes.label;
-            this.faceAbsenceCounter++;
-
-            // Hubungkan kamera ke preview di dalam freeze overlay
-            ((this.$nextTick || (cb => setTimeout(cb, 20))).bind(this))(() => {
-              const freezeVideo = (this.$refs && this.$refs.proctorFreezeVideo) || (typeof document !== 'undefined' && typeof document.getElementById === 'function' ? document.getElementById('proctorFreezeVideo') : null);
-              if (freezeVideo && this.cameraStream && freezeVideo.srcObject !== this.cameraStream) {
-                freezeVideo.srcObject = this.cameraStream;
-                freezeVideo.play().catch(() => {});
-              }
-            });
-
-            // Mulai pengecekan cepat (setiap 600ms) agar layar langsung terbuka kembali saat wajah kembali
-            this.startFastFaceCheck();
-
-            if (imgBase64 && imgBase64.length > 50) {
-              this.snapshots.push(imgBase64);
-              if (this.snapshots.length > 30) this.snapshots = this.snapshots.slice(-30);
-            }
-
-            // Catat log pelanggaran ke server
-            api.post('proctoring.log_event', {
-              assignment_id: this.assignmentId || 0,
-              attempt_id: this.attemptId || null,
-              event_type: 'periodic_face',
-              status: 'NO_FACE',
-              snapshot: imgBase64,
-              notes: evalRes.label
-            }).catch(() => {});
-
-            return;
-          } else {
-            // Wajah terdeteksi! Lakukan evaluasi identitas biometrik terhadap foto acuan peserta
-            let isMatch = true;
-            let simScore = 100;
-            if (typeof window.QuizFaceVerifier.extractFaceDescriptor === 'function') {
-              const liveDesc = window.QuizFaceVerifier.extractFaceDescriptor(video, evalRes.box);
-              const comp = window.QuizFaceVerifier.compareWithReference(liveDesc);
-              if (comp) {
-                isMatch = comp.match;
-                simScore = comp.similarity;
-              }
-            }
-
-            if (!isMatch) {
-              // Terdeteksi wajah orang lain (MISMATCH) - misal istri, teman, atau joki!
-              this.showFaceWarning = true;
-              this.faceWarningType = 'mismatch';
-              this.faceWarningText = '⚠️ Wajah Tidak Cocok dengan Foto Acuan Peserta! (Kemiripan ' + simScore + '% - Terdeteksi orang lain)';
-              this.faceAbsenceCounter++;
-
-              ((this.$nextTick || (cb => setTimeout(cb, 20))).bind(this))(() => {
-                const freezeVideo = (this.$refs && this.$refs.proctorFreezeVideo) || (typeof document !== 'undefined' && typeof document.getElementById === 'function' ? document.getElementById('proctorFreezeVideo') : null);
-                if (freezeVideo && this.cameraStream && freezeVideo.srcObject !== this.cameraStream) {
-                  freezeVideo.srcObject = this.cameraStream;
-                  freezeVideo.play().catch(() => {});
-                }
-              });
-
-              this.startFastFaceCheck();
-
-              if (imgBase64 && imgBase64.length > 50) {
-                this.snapshots.push(imgBase64);
-                if (this.snapshots.length > 30) this.snapshots = this.snapshots.slice(-30);
-              }
-
-              // Catat log pelanggaran MISMATCH ke server
-              api.post('proctoring.log_event', {
-                assignment_id: this.assignmentId || 0,
-                attempt_id: this.attemptId || null,
-                event_type: 'periodic_face',
-                similarity_score: simScore,
-                status: 'MISMATCH',
-                snapshot: imgBase64,
-                notes: 'Wajah berbeda dari foto acuan peserta (' + simScore + '% kemiripan)'
-              }).catch(() => {});
-
-              return;
-            }
-
-            // Wajah cocok dan sesuai foto acuan peserta!
-            this.showFaceWarning = false;
-            this.faceWarningType = '';
-            this.faceAbsenceCounter = 0;
-            this.stopFastFaceCheck();
-          }
-        }
-
-        // 2. Simpan snapshot normal ke riwayat
-        if (imgBase64 && imgBase64.length > 50) {
-          this.snapshots.push(imgBase64);
-          if (this.snapshots.length > 30) {
-            this.snapshots = this.snapshots.slice(-30);
-          }
-        }
-      } catch (err) {
-        console.error('Proctoring snapshot error:', err);
-      }
+      } catch (error) { if (this.phase==='playing') this._blockCamera(error.message,'camera'); }
     },
 
     startFastFaceCheck() {
       if (this._fastFaceCheckInterval) return;
-      this._fastFaceCheckInterval = setInterval(() => {
-        if (!this.showFaceWarning || this.phase !== 'playing') {
-          this.stopFastFaceCheck();
-          return;
-        }
-        const video = (this.$refs && this.$refs.proctorPipVideo) || (this.$refs && this.$refs.proctorFreezeVideo) || (typeof document !== 'undefined' && typeof document.getElementById === 'function' ? document.getElementById('proctorPipVideo') || document.getElementById('proctorFreezeVideo') : null) || this._proctorVideo;
-        if (!video || !window.QuizFaceVerifier) return;
-        const evalRes = window.QuizFaceVerifier.evaluateFrame(video);
-        if (evalRes && evalRes.ready) {
-          let isMatch = true;
-          let simScore = 100;
-          if (typeof window.QuizFaceVerifier.extractFaceDescriptor === 'function') {
-            const liveDesc = window.QuizFaceVerifier.extractFaceDescriptor(video, evalRes.box);
-            const comp = window.QuizFaceVerifier.compareWithReference(liveDesc);
-            if (comp) {
-              isMatch = comp.match;
-              simScore = comp.similarity;
-            }
-          }
-
-          if (isMatch) {
-            // Wajah peserta asli kembali di depan kamera! Buka kunci layar otomatis
-            this.showFaceWarning = false;
-            this.faceWarningType = '';
-            this.faceAbsenceCounter = 0;
-            this.stopFastFaceCheck();
-          } else {
-            this.faceWarningType = 'mismatch';
-            this.faceWarningText = '⚠️ Wajah Tidak Cocok dengan Foto Acuan Peserta! (Kemiripan ' + simScore + '%). Hadapkan wajah peserta asli.';
-          }
-        } else if (evalRes) {
-          this.faceWarningType = 'absence';
-          this.faceWarningText = evalRes.label;
-        }
-      }, 600);
+      let checking=false;
+      this._fastFaceCheckInterval=setInterval(async () => {
+        if (!this.showFaceWarning || this.phase!=='playing') { this.stopFastFaceCheck(); return; }
+        if (checking || this._proctorBusy || this._finalizingSubmit) return;
+        checking=true;
+        try {
+          const video=await this._cameraVideo();
+          const frame=window.QuizFaceVerifier.evaluateFrame(video);
+          if (!frame.ready) { this.faceWarningText=frame.label; return; }
+          const result=await this._verifyCamera(video);
+          if (this.phase!=='playing') return;
+          this.faceWarningText=result.message;
+          if (result.verified === true && result.status === 'VERIFIED') { this.showFaceWarning=false; this.faceWarningType=''; this.stopFastFaceCheck(); if (this._pendingCameraSubmit) { this._pendingCameraSubmit=false; await this.submitAnswers(); } }
+        } catch (error) { this.faceWarningText=error.message; }
+        finally { checking=false; }
+      },1500);
     },
 
     stopFastFaceCheck() {
@@ -966,6 +797,12 @@ function QuizEngine() {
     },
     
     stopCamera() {
+      this._stoppingCamera=true; this._cameraGeneration++;
+      for (const {track,stop} of this._cameraTrackListeners || []) { track.removeEventListener('ended',stop); track.removeEventListener('mute',stop); }
+      this._cameraTrackListeners=[];
+      const scanVideo=this.$refs?.faceScanVideo;
+      if (scanVideo) { scanVideo.pause(); scanVideo.srcObject=null; }
+
       if (this.snapshotInterval) clearInterval(this.snapshotInterval);
       this.stopFastFaceCheck();
       const pipVideo = (this.$refs && this.$refs.proctorPipVideo) || (typeof document !== 'undefined' && typeof document.getElementById === 'function' ? document.getElementById('proctorPipVideo') : null);
@@ -995,13 +832,14 @@ function QuizEngine() {
         this.cameraStream.getTracks().forEach(t => t.stop());
         this.cameraStream = null;
       }
+      this._stoppingCamera=false;
     },
 
     // ---- Timer ----
     startTimer() {
       clearInterval(this.timerInterval);
       this.timerInterval = setInterval(() => {
-        if (this.isNoiseFrozen || this.showFaceWarning) return; // Waktu dijeda saat layar dibekukan (keramaian / wajah tidak terdeteksi)
+        if (this.isNoiseFrozen || this.showFaceWarning || this._finalizingSubmit || this.loading) return; // Waktu dijeda saat layar dibekukan (keramaian / wajah tidak terdeteksi)
         if (this.timeLeft > 0) {
           this.timeLeft--;
         } else {
@@ -1016,11 +854,11 @@ function QuizEngine() {
     },
 
     // ---- Per-question timer (instant / end review) ----
-    startQuestionTimer() {
+    startQuestionTimer(resuming = false) {
       clearInterval(this.questionTimerInterval);
-      this.questionTimeLeft = this.questionTimerDefault;
+      if (!resuming) this.questionTimeLeft = this.questionTimerDefault;
       this.questionTimerInterval = setInterval(() => {
-        if (this.isNoiseFrozen || this.showFaceWarning) return; // Waktu dijeda saat layar dibekukan (keramaian / wajah tidak terdeteksi)
+        if (this.isNoiseFrozen || this.showFaceWarning || this._finalizingSubmit || this.loading) return; // Waktu dijeda saat layar dibekukan (keramaian / wajah tidak terdeteksi)
         if (this.questionTimeLeft > 0) {
           this.questionTimeLeft--;
         } else {
@@ -1247,19 +1085,22 @@ function QuizEngine() {
         const ok = confirm(`Masih ada ${unanswered} soal belum dijawab. Yakin ingin submit?`);
         if (!ok) return;
       }
-      this.stopTimer();
       await this.submitAnswers();
     },
 
     async submitAnswers() {
-      this._stopHeartbeat();
-      this.stopBgMusic();            // 🔇 hentikan musik saat submit
-      this.stopCamera();
-      this.stopTimer();
-      this.stopQuestionTimer();
-      if (this.syncInterval) {
-        clearInterval(this.syncInterval);
-        this.syncInterval = null;
+      if (this._finalizingSubmit || this.loading) return;
+      if (this.quiz?.require_camera == 1) {
+        this._finalizingSubmit=true;
+        try {
+          if (this._proctorBusy) throw Error('Tunggu pemeriksaan kamera selesai, lalu kumpulkan kembali.');
+          const video=await this._cameraVideo();
+          const frame=window.QuizFaceVerifier.evaluateFrame(video);
+          if (!frame.ready) throw Error(frame.label);
+          const proof=await this._verifyCamera(video,true);
+          if (proof.verified !== true || proof.status !== 'VERIFIED') throw Error(proof.message);
+        } catch (error) { this._pendingCameraSubmit=true; this._blockCamera(error.message); this._finalizingSubmit=false; return; }
+        this._finalizingSubmit=false;
       }
       this.loading = true;
       try {
@@ -1286,6 +1127,8 @@ function QuizEngine() {
 
         const payload = {
           quiz_id:              this.quiz.id,
+          assignment_id:        Number(this.assignmentId) || 0,
+          proctoring_session:   this._proctorSession || undefined,
           mode:                 this.mode || 'exam',
           tournament_id:        this.tournamentId ? parseInt(this.tournamentId) : undefined,
           player_name:          this.playerName || undefined,
@@ -1300,6 +1143,15 @@ function QuizEngine() {
         };
         const result = await api.post('attempt.submit', payload);
         this.result  = result;
+      this._stopHeartbeat();
+      this.stopBgMusic();            // 🔇 hentikan musik saat submit
+      this.stopTimer();
+      this.stopQuestionTimer();
+      if (this.syncInterval) {
+        clearInterval(this.syncInterval);
+        this.syncInterval = null;
+      }
+        this.stopCamera();
         this.phase   = 'submitted';
 
         // Jika dari tugas: auto-submit ke assignment
@@ -1309,7 +1161,10 @@ function QuizEngine() {
               assignment_id: parseInt(this.assignmentId),
               attempt_id:    result.attempt_id,
             });
-          } catch (_) {}
+          } catch (error) {
+            this.error='Hasil tersimpan, tetapi pengumpulan ke tugas belum berhasil: '+error.message;
+            this.phase='submission_error'; this.loading=false; return;
+          }
         }
 
         // Jika dari challenge: submit hasil ke challenge
@@ -1360,6 +1215,17 @@ function QuizEngine() {
         }
         this.loading = false;
       }
+    },
+
+    async retryAssignmentSubmission() {
+      if (this.loading || !this.result?.attempt_id || !this.assignmentId) return;
+      this.loading=true;
+      try {
+        await api.post('assignment.submit',{assignment_id:Number(this.assignmentId),attempt_id:this.result.attempt_id});
+        this.phase='submitted';
+        window.location.hash=`#/result/${this.result.attempt_id}?assign=${this.assignmentId}&mode=${this.mode}`;
+      } catch (error) { this.error='Hasil tetap tersimpan. Pengumpulan tugas belum berhasil: '+error.message; }
+      finally { this.loading=false; }
     },
 
     // ---- Review mode (post-submit, from result page) ----
@@ -1590,6 +1456,8 @@ function QuizEngine() {
     },
 
     destroy() {
+      this.stopCamera();
+      if (this.syncInterval) clearInterval(this.syncInterval);
       this.stopTimer();
       this.stopQuestionTimer();
       this._stopHeartbeat();

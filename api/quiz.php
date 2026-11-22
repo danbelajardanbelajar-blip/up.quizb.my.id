@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/proctoring.php';
 // ============================================
 // api/quiz.php — Quiz Endpoints
 // ============================================
@@ -326,6 +327,13 @@ function quiz_questions(): void {
              FROM questions WHERE quiz_id = ? ORDER BY order_num',
             [$quizId]
         );
+    }
+
+    if (!empty($quiz['require_camera'])) {
+        $cameraUser=requireAuth();
+        if (!proctoringReleaseQuestions($cameraUser,$quizId,$assignmentId,($_GET['camera_preview']??'')==='1')) {
+            jsonSuccess(['quiz'=>$quiz,'questions'=>[],'camera_verification_required'=>true,'question_count'=>$limit>0?min($limit,count($allQuestions)):count($allQuestions)]);
+        }
     }
 
     // ---- Acak urutan soal (jika aktif) lalu potong sesuai limit ----

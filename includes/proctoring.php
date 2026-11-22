@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/proctoring-verification.php';
 // ============================================
 // includes/proctoring.php — AI Proctoring Helpers & Database Management
 // ============================================
@@ -164,17 +165,11 @@ function saveExamReferencePhoto(int $userId, string $photoData, bool $isResetOrA
         return ['success' => false, 'message' => 'Gagal memproses gambar foto.'];
     }
 
-    // Standarisasi crop ke rasio 3:4 portrait (480x640)
-    $targetW = 480;
-    $targetH = 640;
-    $cropW = min($origW, (int)floor($origH * 3 / 4));
-    $cropH = min($origH, (int)floor($origW * 4 / 3));
-    $srcX  = (int)(($origW - $cropW) / 2);
-    $srcY  = (int)(($origH - $cropH) / 2);
-
-    $canvas = imagecreatetruecolor($targetW, $targetH);
-    imagefill($canvas, 0, 0, imagecolorallocate($canvas, 255, 255, 255));
-    imagecopyresampled($canvas, $src, 0, 0, $srcX, $srcY, $targetW, $targetH, $cropW, $cropH);
+    // Preserve the full frame. YuNet detects and SFace aligns both photos identically.
+    $scale=min(1.0,640/max($origW,$origH));
+    $targetW=(int)round($origW*$scale);$targetH=(int)round($origH*$scale);
+    $canvas=imagecreatetruecolor($targetW,$targetH);
+    imagecopyresampled($canvas,$src,0,0,0,0,$targetW,$targetH,$origW,$origH);
 
     $refDir = __DIR__ . '/../uploads/references';
     ensureProctoringProtectedDirectories();

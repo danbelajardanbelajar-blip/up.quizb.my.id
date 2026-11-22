@@ -206,3 +206,17 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
   - `node -c assets/js/quiz-face-verifier.js` -> Lolos verifikasi sintaks.
   - `node -c assets/js/quiz-engine.v6.js` -> Lolos verifikasi sintaks.
   - `node tests/test-proctoring-suite.cjs` -> 15/15 pengujian otomatis lolos (100% PASS).
+
+
+### [2026-11-22 07:55:47 WIB] — Verifikasi kamera server v2
+- Bagian: enrollment, deteksi/matching, nonce/receipt, akses soal, pengumpulan atomik, recovery dan tinjauan guru.
+- Validasi: 16 skenario Node; 37 assertion PHP; 7 inferensi model nyata; 4 integrasi PHP–Python; template Alpine di Edge; API lintas akun. Lint PHP/JS dan diff check lulus.
+- Keterbatasan: tes poller notifikasi lama gagal pada app.v5.js yang tidak diubah. MySQL/kamera nyata online belum diuji; proc_open dinonaktifkan hosting. Jangan pull gate sebelum runtime siap.
+- Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-075547.json](docs/change-audit/proctoring-20261122-075547.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.
+
+
+### [2026-11-22 07:56:11 WIB] — Verifikasi kamera server v2
+- Bagian: enrollment, deteksi/matching, nonce/receipt, akses soal, pengumpulan atomik, recovery dan tinjauan guru.
+- Validasi: 16 skenario Node; 37 assertion PHP; 7 inferensi model nyata; 4 integrasi PHP–Python; template Alpine di Edge; API lintas akun. Lint PHP/JS dan diff check lulus.
+- Keterbatasan: tes poller notifikasi lama gagal pada app.v5.js yang tidak diubah. MySQL/kamera nyata online belum diuji; proc_open dinonaktifkan hosting. Jangan pull gate sebelum runtime siap.
+- Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-075611.json](docs/change-audit/proctoring-20261122-075611.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.

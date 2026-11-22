@@ -1,0 +1,882 @@
+{
+  "recorded_at_wib": "2026-11-22T07:56:11+07:00",
+  "baseline": "4cb929083955f32379f50b2bfcf83afa824d7a96",
+  "timestamp_note": "last_write_wib is the final filesystem write time, not a reconstruction of every prior edit",
+  "files": [
+    {
+      "file": ".gitignore",
+      "last_write_wib": "2026-11-22T07:49:01+07:00",
+      "sha256": "289838999b6787c73ccd1300c410ba0a8dd0c88df9ec6991ecfab3cd6f576755",
+      "hunks": [
+        {
+          "old_start": 71,
+          "old_count": 0,
+          "new_start": 72,
+          "new_count": 5,
+          "section": "build/"
+        }
+      ]
+    },
+    {
+      "file": "api.php",
+      "last_write_wib": "2026-11-22T06:29:19+07:00",
+      "sha256": "531351d2b7b581c70c026bb965e541b5b0b06a6a229c4da0201e4f3edb61f93c",
+      "hunks": [
+        {
+          "old_start": 116,
+          "old_count": 1,
+          "new_start": 115,
+          "new_count": 0,
+          "section": "if (in_array($method, ['POST', 'PUT', 'DELETE'])) {"
+        }
+      ]
+    },
+    {
+      "file": "api/assignment.php",
+      "last_write_wib": "2026-11-22T06:30:58+07:00",
+      "sha256": "3c451290d0d8a131a478e9273d5ef6e404813fb1890289819d8a881b785f5682",
+      "hunks": [
+        {
+          "old_start": 1,
+          "old_count": 0,
+          "new_start": 2,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 423,
+          "old_count": 0,
+          "new_start": 425,
+          "new_count": 6,
+          "section": "function assignment_submit(): void {"
+        },
+        {
+          "old_start": 525,
+          "old_count": 0,
+          "new_start": 533,
+          "new_count": 2,
+          "section": "function assignment_results(): void {"
+        },
+        {
+          "old_start": 537,
+          "old_count": 1,
+          "new_start": 546,
+          "new_count": 2,
+          "section": "function assignment_results(): void {"
+        }
+      ]
+    },
+    {
+      "file": "api/attempt.php",
+      "last_write_wib": "2026-11-22T07:50:53+07:00",
+      "sha256": "5264cdc102531782841b96c7a056e5c55494611e2a3f806ca4af92cab0931873",
+      "hunks": [
+        {
+          "old_start": 1,
+          "old_count": 0,
+          "new_start": 2,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 40,
+          "old_count": 2,
+          "new_start": 41,
+          "new_count": 2,
+          "section": "function attempt_submit(): void {"
+        },
+        {
+          "old_start": 42,
+          "old_count": 0,
+          "new_start": 44,
+          "new_count": 5,
+          "section": "function attempt_submit(): void {"
+        },
+        {
+          "old_start": 158,
+          "old_count": 0,
+          "new_start": 165,
+          "new_count": 1,
+          "section": "function attempt_submit(): void {"
+        },
+        {
+          "old_start": 172,
+          "old_count": 64,
+          "new_start": 179,
+          "new_count": 2,
+          "section": "function attempt_submit(): void {"
+        },
+        {
+          "old_start": 302,
+          "old_count": 1,
+          "new_start": 247,
+          "new_count": 68,
+          "section": "function attempt_submit(): void {"
+        },
+        {
+          "old_start": 314,
+          "old_count": 1,
+          "new_start": 326,
+          "new_count": 6,
+          "section": "function attempt_submit(): void {"
+        },
+        {
+          "old_start": 316,
+          "old_count": 1,
+          "new_start": 333,
+          "new_count": 1,
+          "section": "function attempt_submit(): void {"
+        }
+      ]
+    },
+    {
+      "file": "api/proctoring.php",
+      "last_write_wib": "2026-11-22T06:32:32+07:00",
+      "sha256": "6927cbe528223cbcad52d2af3685065b6e95e708727d810368047a4c0a828068",
+      "hunks": [
+        {
+          "old_start": 17,
+          "old_count": 9,
+          "new_start": 17,
+          "new_count": 1,
+          "section": "function proctoring_check_reference(): void {"
+        },
+        {
+          "old_start": 28,
+          "old_count": 2,
+          "new_start": 20,
+          "new_count": 2,
+          "section": "function proctoring_check_reference(): void {"
+        },
+        {
+          "old_start": 46,
+          "old_count": 0,
+          "new_start": 39,
+          "new_count": 6,
+          "section": "function proctoring_save_reference(): void {"
+        },
+        {
+          "old_start": 52,
+          "old_count": 1,
+          "new_start": 50,
+          "new_count": 1,
+          "section": "function proctoring_save_reference(): void {"
+        },
+        {
+          "old_start": 94,
+          "old_count": 1,
+          "new_start": 92,
+          "new_count": 1,
+          "section": "function proctoring_reset_reference(): void {"
+        },
+        {
+          "old_start": 117,
+          "old_count": 0,
+          "new_start": 116,
+          "new_count": 6,
+          "section": "function proctoring_log_event(): void {"
+        },
+        {
+          "old_start": 146,
+          "old_count": 1,
+          "new_start": 150,
+          "new_count": 1,
+          "section": "function proctoring_log_event(): void {"
+        },
+        {
+          "old_start": 172,
+          "old_count": 0,
+          "new_start": 177,
+          "new_count": 2,
+          "section": "function proctoring_swap_question(): void {"
+        },
+        {
+          "old_start": 256,
+          "old_count": 1,
+          "new_start": 262,
+          "new_count": 1,
+          "section": "function proctoring_swap_question(): void {"
+        },
+        {
+          "old_start": 262,
+          "old_count": 1,
+          "new_start": 268,
+          "new_count": 1,
+          "section": "function proctoring_swap_question(): void {"
+        },
+        {
+          "old_start": 291,
+          "old_count": 0,
+          "new_start": 298,
+          "new_count": 4,
+          "section": "function proctoring_get_logs(): void {"
+        },
+        {
+          "old_start": 313,
+          "old_count": 1,
+          "new_start": 323,
+          "new_count": 1,
+          "section": "function proctoring_get_logs(): void {"
+        },
+        {
+          "old_start": 318,
+          "old_count": 0,
+          "new_start": 329,
+          "new_count": 52,
+          "section": "function proctoring_get_logs(): void {"
+        }
+      ]
+    },
+    {
+      "file": "api/quiz.php",
+      "last_write_wib": "2026-11-22T06:29:19+07:00",
+      "sha256": "5e043aec15fd636afde8b907110d80d674acce2f671964ef08fa082613879a75",
+      "hunks": [
+        {
+          "old_start": 1,
+          "old_count": 0,
+          "new_start": 2,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 330,
+          "old_count": 0,
+          "new_start": 332,
+          "new_count": 7,
+          "section": "function quiz_questions(): void {"
+        }
+      ]
+    },
+    {
+      "file": "assets/js/quiz-engine.v6.js",
+      "last_write_wib": "2026-11-22T07:49:01+07:00",
+      "sha256": "15b122636c8633b78af0b1281484124c302b93a6efe6abf639fefc7c8409ce65",
+      "hunks": [
+        {
+          "old_start": 145,
+          "old_count": 0,
+          "new_start": 146,
+          "new_count": 3,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 153,
+          "old_count": 1,
+          "new_start": 156,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 157,
+          "old_count": 0,
+          "new_start": 161,
+          "new_count": 2,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 159,
+          "old_count": 1,
+          "new_start": 164,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 169,
+          "old_count": 1,
+          "new_start": 174,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 263,
+          "old_count": 1,
+          "new_start": 267,
+          "new_count": 0,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 264,
+          "old_count": 0,
+          "new_start": 269,
+          "new_count": 4,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 266,
+          "old_count": 49,
+          "new_start": 274,
+          "new_count": 21,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 323,
+          "old_count": 1,
+          "new_start": 303,
+          "new_count": 2,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 326,
+          "old_count": 1,
+          "new_start": 307,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 348,
+          "old_count": 7,
+          "new_start": 329,
+          "new_count": 24,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 356,
+          "old_count": 6,
+          "new_start": 354,
+          "new_count": 17,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 363,
+          "old_count": 2,
+          "new_start": 372,
+          "new_count": 10,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 365,
+          "old_count": 0,
+          "new_start": 383,
+          "new_count": 13,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 367,
+          "old_count": 2,
+          "new_start": 397,
+          "new_count": 10,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 369,
+          "old_count": 0,
+          "new_start": 408,
+          "new_count": 10,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 372,
+          "old_count": 43,
+          "new_start": 420,
+          "new_count": 25,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 415,
+          "old_count": 0,
+          "new_start": 446,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 417,
+          "old_count": 5,
+          "new_start": 448,
+          "new_count": 5,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 425,
+          "old_count": 22,
+          "new_start": 455,
+          "new_count": 0,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 448,
+          "old_count": 37,
+          "new_start": 457,
+          "new_count": 2,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 513,
+          "old_count": 0,
+          "new_start": 488,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 531,
+          "old_count": 0,
+          "new_start": 507,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 776,
+          "old_count": 3,
+          "new_start": 752,
+          "new_count": 2,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 780,
+          "old_count": 128,
+          "new_start": 755,
+          "new_count": 10,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 909,
+          "old_count": 7,
+          "new_start": 766,
+          "new_count": 2,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 917,
+          "old_count": 3,
+          "new_start": 769,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 924,
+          "old_count": 35,
+          "new_start": 774,
+          "new_count": 16,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 968,
+          "old_count": 0,
+          "new_start": 800,
+          "new_count": 6,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 997,
+          "old_count": 0,
+          "new_start": 835,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 1004,
+          "old_count": 1,
+          "new_start": 842,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 1019,
+          "old_count": 1,
+          "new_start": 857,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 1021,
+          "old_count": 1,
+          "new_start": 859,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 1023,
+          "old_count": 1,
+          "new_start": 861,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 1250,
+          "old_count": 1,
+          "new_start": 1087,
+          "new_count": 0,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 1255,
+          "old_count": 8,
+          "new_start": 1092,
+          "new_count": 12,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 1288,
+          "old_count": 0,
+          "new_start": 1130,
+          "new_count": 2,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 1302,
+          "old_count": 0,
+          "new_start": 1146,
+          "new_count": 9,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 1312,
+          "old_count": 1,
+          "new_start": 1164,
+          "new_count": 4,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 1364,
+          "old_count": 0,
+          "new_start": 1220,
+          "new_count": 11,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 1592,
+          "old_count": 0,
+          "new_start": 1459,
+          "new_count": 2,
+          "section": "function QuizEngine() {"
+        }
+      ]
+    },
+    {
+      "file": "assets/js/quiz-face-verifier.js",
+      "last_write_wib": "2026-11-22T06:23:50+07:00",
+      "sha256": "39185bf022651fa3b20a6aaccf1e921ae742cecf9bbf53d0ff0ae790eed8b553",
+      "hunks": [
+        {
+          "old_start": 131,
+          "old_count": 21,
+          "new_start": 131,
+          "new_count": 8,
+          "section": ""
+        },
+        {
+          "old_start": 329,
+          "old_count": 22,
+          "new_start": 316,
+          "new_count": 2,
+          "section": ""
+        },
+        {
+          "old_start": 366,
+          "old_count": 320,
+          "new_start": 333,
+          "new_count": 3,
+          "section": ""
+        },
+        {
+          "old_start": 694,
+          "old_count": 14,
+          "new_start": 343,
+          "new_count": 0,
+          "section": ""
+        },
+        {
+          "old_start": 709,
+          "old_count": 2,
+          "new_start": 345,
+          "new_count": 2,
+          "section": ""
+        },
+        {
+          "old_start": 712,
+          "old_count": 1,
+          "new_start": 348,
+          "new_count": 1,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "assets/js/utils.v5.js",
+      "last_write_wib": "2026-11-22T06:39:28+07:00",
+      "sha256": "827619c7655e6d4075d22504d88b244664fd938a5d817add7b200cc6e5b01a19",
+      "hunks": [
+        {
+          "old_start": 57,
+          "old_count": 1,
+          "new_start": 57,
+          "new_count": 1,
+          "section": "const api = {"
+        },
+        {
+          "old_start": 60,
+          "old_count": 1,
+          "new_start": 60,
+          "new_count": 1,
+          "section": "const api = {"
+        },
+        {
+          "old_start": 84,
+          "old_count": 1,
+          "new_start": 84,
+          "new_count": 1,
+          "section": "const api = {"
+        },
+        {
+          "old_start": 92,
+          "old_count": 0,
+          "new_start": 93,
+          "new_count": 1,
+          "section": "const api = {"
+        }
+      ]
+    },
+    {
+      "file": "bin/face-verify.py",
+      "last_write_wib": "2026-11-22T06:17:37+07:00",
+      "sha256": "1bfa41bedd95ea1796deaa4a97579b1d77512803ec0f96732b94f670947336dd",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 84,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "bin/record-change-audit.py",
+      "last_write_wib": "2026-11-22T07:55:46+07:00",
+      "sha256": "bfb992f3541213725b932659377355d3d0761ef39b00f7acc7028343806b7f45",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 25,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "bin/setup-proctoring.py",
+      "last_write_wib": "2026-11-22T06:17:37+07:00",
+      "sha256": "237506da19cf6004e7ce0ef84db851a1068371f391a7823d263e6d1be914bf27",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 33,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "config/proctoring.example.php",
+      "last_write_wib": "2026-11-22T06:19:11+07:00",
+      "sha256": "59de8147bd0f06fb3f1bd74bb8a964e840563262f8986d5c32e090bbf533b9e0",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 6,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "docs/proctoring-v2.md",
+      "last_write_wib": "2026-11-22T07:55:46+07:00",
+      "sha256": "1214df5eefb394e14bff12e9d2bd4ca6073e77062f78c17fdfeb182a882658cf",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 35,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "includes/proctoring-verification.php",
+      "last_write_wib": "2026-11-22T06:32:32+07:00",
+      "sha256": "653270fba070aec420232e687f80aa95b831c750a05b75de86f09ea668447aed",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 181,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "includes/proctoring.php",
+      "last_write_wib": "2026-11-22T06:24:36+07:00",
+      "sha256": "26b456b671196999c72ce0a2629cdc08dd778ebde2525a845562109a3031c6f1",
+      "hunks": [
+        {
+          "old_start": 1,
+          "old_count": 0,
+          "new_start": 2,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 167,
+          "old_count": 11,
+          "new_start": 168,
+          "new_count": 5,
+          "section": "function saveExamReferencePhoto(int $userId, string $photoData, bool $isResetOrA"
+        }
+      ]
+    },
+    {
+      "file": "pages/assignment-results.html",
+      "last_write_wib": "2026-11-22T06:30:58+07:00",
+      "sha256": "14d455dd5692eb7cdea7908e3a8337879f7a0166d182cb9fe8ab1a3c2abb9290",
+      "hunks": [
+        {
+          "old_start": 178,
+          "old_count": 0,
+          "new_start": 179,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 301,
+          "old_count": 1,
+          "new_start": 302,
+          "new_count": 2,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "pages/quiz-engine.html",
+      "last_write_wib": "2026-11-22T06:32:33+07:00",
+      "sha256": "48a1a61a8fc695aa1fcbe9fddbd572996e97119288002183a5f8c689929a24e6",
+      "hunks": [
+        {
+          "old_start": 53,
+          "old_count": 0,
+          "new_start": 54,
+          "new_count": 18,
+          "section": ""
+        },
+        {
+          "old_start": 85,
+          "old_count": 1,
+          "new_start": 103,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 136,
+          "old_count": 0,
+          "new_start": 155,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 386,
+          "old_count": 2,
+          "new_start": 405,
+          "new_count": 2,
+          "section": ""
+        },
+        {
+          "old_start": 390,
+          "old_count": 2,
+          "new_start": 409,
+          "new_count": 2,
+          "section": ""
+        },
+        {
+          "old_start": 433,
+          "old_count": 1,
+          "new_start": 452,
+          "new_count": 1,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/proctoring-browser.cjs",
+      "last_write_wib": "2026-11-22T07:56:09+07:00",
+      "sha256": "7def3102b748ab5d776d092c971cb73dcbc7f03cd00ad62bfefb7caf6d47002c",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 3,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/proctoring-model.py",
+      "last_write_wib": "2026-11-22T06:35:05+07:00",
+      "sha256": "2fbe9142fbf142a4d82df2c96674bc03742ca4c80ef5bf7407aa67da1663809b",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 53,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/proctoring-runtime.php",
+      "last_write_wib": "2026-11-22T07:54:17+07:00",
+      "sha256": "cff53ad22bb5395c1e2b9040b9535d9c9d90b792f5c3a3c1703d1de597d9b561",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 14,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/proctoring-state.php",
+      "last_write_wib": "2026-11-22T06:35:58+07:00",
+      "sha256": "798d45c0edcf4941ccf46a131e0f5b604174a37374c84114335a5d2860b9770b",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 79,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/test-proctoring-suite.cjs",
+      "last_write_wib": "2026-11-22T07:49:01+07:00",
+      "sha256": "f5303a8165315d11279a5f1c7f259117bbab0f1cf27132e8e40653b7dfee9457",
+      "hunks": [
+        {
+          "old_start": 1,
+          "old_count": 28,
+          "new_start": 1,
+          "new_count": 18,
+          "section": ""
+        },
+        {
+          "old_start": 30,
+          "old_count": 595,
+          "new_start": 20,
+          "new_count": 74,
+          "section": "async function runTest(description, fn) {"
+        }
+      ]
+    }
+  ]
+}
