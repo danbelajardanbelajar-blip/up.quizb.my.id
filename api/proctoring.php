@@ -59,29 +59,25 @@ function proctoring_save_reference(): void {
  * POST /api.php?action=proctoring.reset_reference
  */
 function proctoring_reset_reference(): void {
-    $user = requireAuth();
-    if (!in_array($user['role'] ?? '', ['admin', 'teacher'], true)) {
-        jsonError('Hanya Admin atau Pengajar yang berhak mereset foto acuan ujian.', 403);
-    }
-
+    $user = requirePengajar();
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed',405);
     $body = getJsonBody();
     $targetUserId = (int)($body['user_id'] ?? 0);
-    if ($targetUserId <= 0) {
-        jsonError('ID mahasiswa tidak valid', 400);
-    }
+    $classId = (int)($body['class_id'] ?? 0);
+    if ($targetUserId <= 0) jsonError('ID mahasiswa tidak valid',400);
 
-    // Jika pengajar, pastikan mahasiswa tergabung di salah satu kelas pengajar tersebut
-    if (($user['role'] ?? '') === 'teacher') {
+    if (($user['role'] ?? '') === 'pengajar') {
+        if ($classId <= 0) jsonError('Pilih kelas mahasiswa yang akan direset.',400);
         $isMyStudent = DB::one(
             "SELECT cm.id FROM class_members cm
              JOIN classes c ON c.id = cm.class_id
-             WHERE cm.user_id = ? AND c.teacher_id = ? AND c.is_active = 1
+             JOIN users u ON u.id = cm.user_id
+             WHERE cm.user_id = ? AND c.id = ? AND c.teacher_id = ? AND c.is_active = 1
+               AND u.role IN ('user','pelajar')
              LIMIT 1",
-            [$targetUserId, $user['id']]
+            [$targetUserId,$classId,$user['id']]
         );
-        if (!$isMyStudent) {
-            jsonError('Mahasiswa ini tidak terdaftar di kelas Anda', 403);
-        }
+        if (!$isMyStudent) jsonError('Mahasiswa ini bukan siswa di kelas aktif yang Anda kelola.',403);
     }
 
     $resetOk = resetExamReferencePhoto($targetUserId);

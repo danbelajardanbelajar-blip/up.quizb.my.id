@@ -1119,13 +1119,20 @@ function QuizBApp() {
       }
     },
 
-    async resetStudentExamPhoto(targetUser) {
-      if (!confirm(`Reset foto acuan wajah untuk "${targetUser.name}"? Mahasiswa ini akan diminta memindai wajah kembali saat ujian berikutnya.`)) return;
+    resetExamPhotoUserId: null,
+    async resetStudentExamPhoto(targetUser, classId = null) {
+      if (this.resetExamPhotoUserId !== null) return;
+      if (!confirm(`Reset foto acuan wajah untuk "${targetUser.name}"? Foto ini digunakan di semua tugas akun tersebut. Mahasiswa akan diminta mendaftarkan wajah kembali saat membuka tugas berkamera.`)) return;
+      this.resetExamPhotoUserId = targetUser.id;
       try {
-        const res = await api.post('proctoring.reset_reference', { user_id: targetUser.id });
+        const payload = { user_id: targetUser.id };
+        if (Number(classId) > 0) payload.class_id = Number(classId);
+        const res = await api.post('proctoring.reset_reference', payload);
         this.showToast(res.message || 'Foto acuan ujian berhasil direset.', 'success', '✅');
       } catch (e) {
         this.showToast(e.message || 'Gagal mereset foto acuan.', 'error', '❌');
+      } finally {
+        this.resetExamPhotoUserId = null;
       }
     },
 

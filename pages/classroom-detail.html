@@ -394,6 +394,15 @@
                     <p class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate" x-text="member.name"></p>
                     <p class="text-xs text-gray-400 truncate" x-text="member.email"></p>
                   </div>
+                  <template x-if="(classroom.isTeacher && user?.role === 'pengajar') || user?.role === 'admin'">
+                    <button type="button" @click="resetStudentExamPhoto(member, classroom.detail.id)"
+                            :disabled="resetExamPhotoUserId !== null"
+                            :aria-label="'Reset foto acuan wajah ' + member.name"
+                            class="text-xs text-amber-600 dark:text-amber-400 hover:underline disabled:opacity-50 disabled:cursor-wait flex-shrink-0"
+                            title="Reset foto acuan wajah ujian siswa">
+                      <span x-text="resetExamPhotoUserId === member.id ? 'Mereset…' : 'Reset Wajah'"></span>
+                    </button>
+                  </template>
                   <!-- Kick button (teacher only) -->
                   <template x-if="classroom.isTeacher">
                     <button @click="kickMember(classroom.detail.id, member.id)"

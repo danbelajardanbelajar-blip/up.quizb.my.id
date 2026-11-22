@@ -1,0 +1,140 @@
+{
+  "recorded_at_wib": "2026-11-22T13:58:44+07:00",
+  "baseline": "48ce7167b5594e8ea3dd9b96c74b62f198273e92",
+  "timestamp_note": "last_write_wib is the final filesystem write time, not a reconstruction of every prior edit",
+  "files": [
+    {
+      "file": "api/proctoring.php",
+      "last_write_wib": "2026-11-22T13:54:12+07:00",
+      "sha256": "ca3f98387d8bbe309844ace6e75ec7cfb5e603638e2242683b5a69c5ba1f8ddb",
+      "hunks": [
+        {
+          "old_start": 62,
+          "old_count": 5,
+          "new_start": 62,
+          "new_count": 2,
+          "section": "function proctoring_reset_reference(): void {"
+        },
+        {
+          "old_start": 69,
+          "old_count": 3,
+          "new_start": 66,
+          "new_count": 2,
+          "section": "function proctoring_reset_reference(): void {"
+        },
+        {
+          "old_start": 73,
+          "old_count": 2,
+          "new_start": 69,
+          "new_count": 2,
+          "section": "function proctoring_reset_reference(): void {"
+        },
+        {
+          "old_start": 78,
+          "old_count": 1,
+          "new_start": 74,
+          "new_count": 3,
+          "section": "function proctoring_reset_reference(): void {"
+        },
+        {
+          "old_start": 80,
+          "old_count": 1,
+          "new_start": 78,
+          "new_count": 1,
+          "section": "function proctoring_reset_reference(): void {"
+        },
+        {
+          "old_start": 82,
+          "old_count": 3,
+          "new_start": 80,
+          "new_count": 1,
+          "section": "function proctoring_reset_reference(): void {"
+        }
+      ]
+    },
+    {
+      "file": "assets/js/app.v5.js",
+      "last_write_wib": "2026-11-22T13:54:12+07:00",
+      "sha256": "49256e83cc1900836a43d4e72c20da823584c47ae42b08e1021da9e14aa0264d",
+      "hunks": [
+        {
+          "old_start": 1122,
+          "old_count": 2,
+          "new_start": 1122,
+          "new_count": 5,
+          "section": "function QuizBApp() {"
+        },
+        {
+          "old_start": 1125,
+          "old_count": 1,
+          "new_start": 1128,
+          "new_count": 3,
+          "section": "function QuizBApp() {"
+        },
+        {
+          "old_start": 1128,
+          "old_count": 0,
+          "new_start": 1134,
+          "new_count": 2,
+          "section": "function QuizBApp() {"
+        }
+      ]
+    },
+    {
+      "file": "pages/classroom-detail.html",
+      "last_write_wib": "2026-11-22T13:54:12+07:00",
+      "sha256": "db8b3e06e93ab64739ccea480f9bc7099f7833b32bd8a569eda705e307a796db",
+      "hunks": [
+        {
+          "old_start": 396,
+          "old_count": 0,
+          "new_start": 397,
+          "new_count": 9,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/reset-photo-access.php",
+      "last_write_wib": "2026-11-22T13:56:43+07:00",
+      "sha256": "c10593e7c5e204839c30a90948907e449dd298780fb68a169f98345c366ca5ad",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 54,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/reset-photo-browser.cjs",
+      "last_write_wib": "2026-11-22T13:58:08+07:00",
+      "sha256": "10d5340f7193d751ad34235f739b8055d79a43f90c07c871e0011d8fb0c39fca",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 19,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/reset-photo-frontend.cjs",
+      "last_write_wib": "2026-11-22T13:56:43+07:00",
+      "sha256": "6d945ea8f88888aec6804b21882ac963ef92b6a865e28c7e10394ab95fb607a0",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 12,
+          "section": ""
+        }
+      ]
+    }
+  ]
+}
