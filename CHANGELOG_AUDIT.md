@@ -306,3 +306,8 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 ### [2026-11-22 15:27:42 WIB] — Label asal Aktivitas Publik
 - Paket: Label asal Aktivitas Publik berdasarkan relasi attempt: Tugas Kelas, Kuis Umum, Tantangan, Turnamen; fallback asal belum diketahui saat lookup gagal. Tanpa migrasi DB dan tanpa mengekspos nama kelas/tugas. Verifikasi: PHP lint dua file, 18 pengujian API SQLite in-memory, browser Playwright template produksi pada viewport mobile tanpa error Alpine dan navigasi riwayat tetap berfungsi. Deployment hosting menunggu git pull oleh pengelola.
 - Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-152742.json](docs/change-audit/proctoring-20261122-152742.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.
+
+
+### [2026-11-22 15:48:23 WIB] — Privasi skor Aktivitas Publik
+- Paket: Privasi skor Aktivitas Publik: skor hanya dikirim kepada pemilik terautentikasi tanpa pengecualian role; skor, benar, persen, kelulusan, badge dihapus untuk orang lain/tamu pada feed dan tiga endpoint riwayat publik. Cache private no-store. UI owner-only dan ikon netral pada riwayat. Uji: 139 assertion API SQLite, PHP lint, Playwright template produksi (semua role, tamu, perpindahan akun, navigasi dan label), diff check lulus. Hosting menunggu pull manual.
+- Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-154823.json](docs/change-audit/proctoring-20261122-154823.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.

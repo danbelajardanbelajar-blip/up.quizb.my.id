@@ -1,5 +1,8 @@
 <?php
+ob_start(); // Endpoint headers remain testable across multiple captured responses.
 // Actual activity endpoints + in-memory SQLite. No production data or schema changes.
+$viewer=['id'=>1,'role'=>'pelajar'];
+function getCurrentUser(): ?array {return $GLOBALS['viewer'];}
 class FeedReply extends RuntimeException {public function __construct(public array $data) {parent::__construct('response');}}
 function jsonPaginated($rows,$total,$page,$limit) {throw new FeedReply(['data'=>$rows,'meta'=>['total'=>$total,'page'=>$page,'limit'=>$limit]]);}
 function jsonSuccess($data) {throw new FeedReply($data);}
@@ -58,4 +61,16 @@ $_GET=['mode'=>'challenge'];$mode=reply(fn()=>activity_mode_history());checkSour
 DB::$fail='tournament_participants';$degraded=reply(fn()=>activity_feed());$degraded=array_column($degraded['data'],null,'id');checkSource($degraded[1]['source_type']==='unknown' && $degraded[2]['source_type']==='assignment','lookup outage does not break feed or fabricate search labels');
 DB::$missing=true;$missing=reply(fn()=>activity_feed());$missing=array_column($missing['data'],null,'id');checkSource($missing[1]['source_type']==='independent','uninstalled optional MySQL table handled without migration');
 $rows=[];$before=DB::$lookups;_activityEnrich($rows);checkSource($rows===[] && DB::$lookups===$before,'empty feed does not issue source queries');
+DB::$fail=null;DB::$missing=false;
+foreach ([null, ['id'=>2,'role'=>'pelajar'], ['id'=>2,'role'=>'pengajar'], ['id'=>2,'role'=>'admin']] as $visitor) {
+    $viewer=$visitor;
+    foreach (['feed'=>[], 'user_history'=>['user_id'=>1], 'quiz_history'=>['quiz_id'=>1], 'mode_history'=>['mode'=>'exam']] as $endpoint=>$params) {
+        $_GET=$params;$response=reply(('activity_'.$endpoint)(...));
+        foreach ($response['data'] as $row) {
+            checkSource($row['can_view_score']===false && count(array_intersect(['score','correct_answers','percent','passed','badge'],array_keys($row)))===0,'non-owner '.($visitor['role']??'guest').' cannot obtain results via '.$endpoint.' attempt '.$row['id']);
+        }
+    }
+}
+$viewer=['id'=>1,'role'=>'pelajar'];$_GET=[];$owned=reply(fn()=>activity_feed());
+checkSource($owned['data'][0]['can_view_score']===true && $owned['data'][0]['score']===80,'authenticated owner retains own score');
 echo 'TOTAL '.$count.' PASS'.PHP_EOL;

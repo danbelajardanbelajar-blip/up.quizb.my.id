@@ -45,6 +45,10 @@ function _activityAttachSources(array &$rows): void {
 // Helper: hitung persen & badge, cast tipe
 // -------------------------------------------------------
 function _activityEnrich(array &$rows): void {
+    // Personalized scores must never be cached for another visitor.
+    header('Cache-Control: private, no-store');
+    $viewer = getCurrentUser();
+    $viewerId = (int)($viewer['id'] ?? 0);
     _activityAttachSources($rows);
     foreach ($rows as &$row) {
         $row['score']           = (int)$row['score'];
@@ -62,6 +66,13 @@ function _activityEnrich(array &$rows): void {
         $row['badge']   = $pct >= 90 ? 'perfect'
                         : ($pct >= 70 ? 'good'
                         : ($pct >= 50 ? 'ok' : 'low'));
+        $row['can_view_score'] = $viewerId > 0 && $viewerId === $row['user_id'];
+        if (!$row['can_view_score']) {
+            // Also remove derived results so a hidden score cannot be reconstructed.
+            foreach (['score', 'correct_answers', 'percent', 'passed', 'badge'] as $field) {
+                unset($row[$field]);
+            }
+        }
     }
     unset($row);
 }

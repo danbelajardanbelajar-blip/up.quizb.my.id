@@ -121,7 +121,8 @@
           </div>
         </div>
 
-        <!-- Score badge -->
+        <!-- Score badge: only the authenticated owner -->
+        <template x-if="user && Number(user.id) === Number(item.user_id) && item.can_view_score">
         <div class="flex-shrink-0 text-center">
           <div class="w-14 h-14 rounded-xl flex flex-col items-center justify-center shadow-sm border"
                :class="{
@@ -147,6 +148,7 @@
             <span class="text-[10px] text-primary-400 dark:text-primary-500 mt-0.5 block">🔍 review</span>
           </template>
         </div>
+        </template>
 
       </div>
     </template>

@@ -107,8 +107,8 @@
     <template x-for="item in publicHistory.list" :key="item.id">
       <div class="card p-4 sm:p-5 flex items-start gap-4 hover:shadow-md transition-shadow duration-200">
 
-        <!-- Score circle — tampil selalu kecuali mode 'user' untuk pelajar/tamu biasa -->
-        <template x-if="publicHistory.filterType !== 'user' || user?.role === 'admin' || user?.role === 'pengajar'">
+        <!-- Score is private to the authenticated owner -->
+        <template x-if="user && Number(user.id) === Number(item.user_id) && item.can_view_score">
           <div class="w-12 h-12 rounded-xl flex flex-col items-center justify-center font-bold text-sm flex-shrink-0 border"
                :class="{
                  'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400': item.badge === 'perfect',
@@ -121,8 +121,8 @@
           </div>
         </template>
 
-        <!-- Ikon quiz (mode 'user' untuk pelajar/tamu biasa) -->
-        <template x-if="publicHistory.filterType === 'user' && user?.role !== 'admin' && user?.role !== 'pengajar'">
+        <!-- Neutral quiz icon when the score is private -->
+        <template x-if="!user || Number(user.id) !== Number(item.user_id) || !item.can_view_score">
           <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 bg-primary-50 dark:bg-primary-900/20">
             <span x-text="item.category_icon || '📝'"></span>
           </div>
@@ -211,7 +211,7 @@
           <!-- Row 3: detail skor + tombol review (admin/pengajar saat lihat user lain) -->
           <template x-if="publicHistory.filterType === 'user' && (user?.role === 'admin' || user?.role === 'pengajar')">
             <div class="flex flex-wrap items-center justify-between gap-2 mt-2.5">
-              <div class="flex flex-wrap items-center gap-3 text-xs text-gray-400">
+              <div x-show="user && Number(user.id) === Number(item.user_id) && item.can_view_score" class="flex flex-wrap items-center gap-3 text-xs text-gray-400">
                 <span class="inline-flex items-center gap-1">
                   <span class="text-green-500 font-semibold" x-text="item.correct_answers"></span>
                   <span>/ <span x-text="item.total_questions"></span> benar</span>

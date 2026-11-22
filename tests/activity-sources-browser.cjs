@@ -9,7 +9,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE_DIR || 'playwright');
     page.on('pageerror', error => errors.push(error.message));
     const types = ['assignment', 'independent', 'challenge', 'tournament', undefined];
     const labels = ['Tugas Kelas', 'Kuis Umum', 'Tantangan', 'Turnamen', 'Asal belum diketahui'];
-    const rows = types.map((type, i) => ({id: i+1, user_id: i+1, user_name: 'Peserta '+(i+1), quiz_id: 10, quiz_title: 'Kuis Contoh', mode: 'exam', score: 80, badge: 'good', time_taken: 30, completed_at: '2026-11-22T10:00:00', source_type: type, source_label: type ? labels[i] : undefined, source_detail: type ? 'Keterangan '+labels[i] : undefined}));
+    const rows = types.map((type, i) => ({id: i+1, user_id: i+1, user_name: 'Peserta '+(i+1), quiz_id: 10, quiz_title: 'Kuis Contoh', mode: 'exam', score: 80, badge: 'good', time_taken: 30, completed_at: '2026-11-22T10:00:00', can_view_score: true, source_type: type, source_label: type ? labels[i] : undefined, source_detail: type ? 'Keterangan '+labels[i] : undefined}));
     await page.setContent('<main x-data="fixture()">'+fs.readFileSync('pages/activity.html', 'utf8')+'</main>');
     await page.addScriptTag({content: `window.store={get:(key,fallback)=>fallback};window.debounce=fn=>fn;window.formatRelative=()=> 'baru saja';window.formatDayLabel=()=> 'Minggu';window.formatTime=()=> '10:00';window.opened=[];`});
     await page.addScriptTag({path: require('node:path').resolve('assets/js/app.v5.js')});
@@ -28,7 +28,18 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE_DIR || 'playwright');
     await page.getByRole('button', {name:'Kuis Contoh',exact:true}).first().click();
     await page.getByRole('button', {name:'Ujian'}).first().click();
     assert.deepEqual((await page.evaluate(()=>window.opened)).map(call=>call[0]), ['user','quiz','mode']);
+    // Deliberately retain score data to verify the client also rejects stale other-user rows.
+    assert.equal(await page.getByText('pts', {exact:true}).count(), 0);
+    for (const role of ['pelajar','pengajar','admin']) {
+      await page.evaluate(role=>{Alpine.$data(document.querySelector('main')).user={id:1,role};},role);
+      await page.waitForFunction(()=>document.querySelectorAll('[x-text="item.score"]').length===1);
+      assert.equal(await page.getByText('pts', {exact:true}).count(), 1);
+    }
+    await page.evaluate(()=>{const app=Alpine.$data(document.querySelector('main'));app.user={id:99,role:'admin'};});
+    await page.waitForFunction(()=>document.querySelectorAll('[x-text="item.score"]').length===0);
+    await page.evaluate(()=>{Alpine.$data(document.querySelector('main')).user=null;});
+    assert.equal(await page.getByText('pts', {exact:true}).count(), 0);
     assert.deepEqual(errors, []);
-    console.log('PASS activity production template: five source labels, accessible descriptions, badge styles, existing history actions and no Alpine errors at mobile viewport');
+    console.log('PASS activity production template: five source labels, accessible descriptions, badge styles, existing history actions, owner-only score for every role, guest/other-user hiding and no Alpine errors at mobile viewport');
   } finally { await browser.close(); }
 })().catch(error=>{console.error(error);process.exitCode=1;});

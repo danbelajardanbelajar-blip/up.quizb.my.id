@@ -1,0 +1,133 @@
+{
+  "recorded_at_wib": "2026-11-22T15:48:23+07:00",
+  "baseline": "722d7c3dcda2dd4c1b12ca2b691bf89dff4932a7",
+  "timestamp_note": "last_write_wib is the final filesystem write time, not a reconstruction of every prior edit",
+  "files": [
+    {
+      "file": "api/activity.php",
+      "last_write_wib": "2026-11-22T15:47:07+07:00",
+      "sha256": "e866f2331c8b48c4215a4664b92d34f5cc9d1009cf97433a36e95ddb2f641d07",
+      "hunks": [
+        {
+          "old_start": 47,
+          "old_count": 0,
+          "new_start": 48,
+          "new_count": 4,
+          "section": "function _activityEnrich(array &$rows): void {"
+        },
+        {
+          "old_start": 64,
+          "old_count": 0,
+          "new_start": 69,
+          "new_count": 7,
+          "section": "function _activityEnrich(array &$rows): void {"
+        }
+      ]
+    },
+    {
+      "file": "pages/activity.html",
+      "last_write_wib": "2026-11-22T15:47:07+07:00",
+      "sha256": "3db1a0dc1748ec0c26bef45a3a8cde6d7907966456395d2ee675600b66675c66",
+      "hunks": [
+        {
+          "old_start": 124,
+          "old_count": 1,
+          "new_start": 124,
+          "new_count": 2,
+          "section": ""
+        },
+        {
+          "old_start": 149,
+          "old_count": 0,
+          "new_start": 151,
+          "new_count": 1,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "pages/public-history.html",
+      "last_write_wib": "2026-11-22T15:48:22+07:00",
+      "sha256": "4379cb6c9d6d4f5f330a7db8f705ff0afa8eeee42f0da5a9afb7ff0062fe3660",
+      "hunks": [
+        {
+          "old_start": 110,
+          "old_count": 2,
+          "new_start": 110,
+          "new_count": 2,
+          "section": ""
+        },
+        {
+          "old_start": 124,
+          "old_count": 2,
+          "new_start": 124,
+          "new_count": 2,
+          "section": ""
+        },
+        {
+          "old_start": 214,
+          "old_count": 1,
+          "new_start": 214,
+          "new_count": 1,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/activity-sources-browser.cjs",
+      "last_write_wib": "2026-11-22T15:47:44+07:00",
+      "sha256": "5d7f770a10388da1331c77c3fd0cd6f53c45722b516d1fbb9eb2ffad4a26f50a",
+      "hunks": [
+        {
+          "old_start": 12,
+          "old_count": 1,
+          "new_start": 12,
+          "new_count": 1,
+          "section": "const { chromium } = require(process.env.PLAYWRIGHT_MODULE_DIR || 'playwright');"
+        },
+        {
+          "old_start": 30,
+          "old_count": 0,
+          "new_start": 31,
+          "new_count": 11,
+          "section": "const { chromium } = require(process.env.PLAYWRIGHT_MODULE_DIR || 'playwright');"
+        },
+        {
+          "old_start": 32,
+          "old_count": 1,
+          "new_start": 43,
+          "new_count": 1,
+          "section": "const { chromium } = require(process.env.PLAYWRIGHT_MODULE_DIR || 'playwright');"
+        }
+      ]
+    },
+    {
+      "file": "tests/activity-sources.php",
+      "last_write_wib": "2026-11-22T15:47:44+07:00",
+      "sha256": "672ab3dc8dd5a95272f6feac6a9e8d149f81e053dd1941624e850e39c592716d",
+      "hunks": [
+        {
+          "old_start": 1,
+          "old_count": 0,
+          "new_start": 2,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 2,
+          "old_count": 0,
+          "new_start": 4,
+          "new_count": 2,
+          "section": ""
+        },
+        {
+          "old_start": 60,
+          "old_count": 0,
+          "new_start": 64,
+          "new_count": 12,
+          "section": "$rows=[];$before=DB::$lookups;_activityEnrich($rows);checkSource($rows===[] && D"
+        }
+      ]
+    }
+  ]
+}
