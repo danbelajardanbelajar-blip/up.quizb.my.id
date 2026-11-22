@@ -128,11 +128,11 @@
         </div>
 
         <!-- Flash Effect on Capture -->
-        <div x-show="scanCaptured"
-             x-transition:enter="transition-opacity duration-150"
-             x-transition:enter-start="opacity-100"
-             x-transition:enter-end="opacity-0"
-             class="absolute inset-0 bg-white pointer-events-none z-20"></div>
+        <template x-if="scanCaptured">
+          <div aria-hidden="true" data-camera-capture-flash
+               style="opacity: 0"
+               class="camera-capture-flash absolute inset-0 bg-white pointer-events-none z-20"></div>
+        </template>
       </div>
 
       <!-- Dynamic Guidance Status Badge (No clicks required!) -->

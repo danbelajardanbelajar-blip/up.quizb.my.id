@@ -458,3 +458,16 @@ html { scroll-behavior: smooth; }
   .duration-200    { transition-duration: 100ms !important; }
   .duration-300    { transition-duration: 150ms !important; }
 }
+
+/* A capture flash must finish transparent even while scanCaptured stays true.
+   The inline opacity on the element also keeps the preview visible if CSS fails to load. */
+.camera-capture-flash {
+  animation: cameraCaptureFlash 150ms ease-out forwards;
+}
+@keyframes cameraCaptureFlash {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .camera-capture-flash { animation: none; }
+}

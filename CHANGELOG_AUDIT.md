@@ -311,3 +311,8 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 ### [2026-11-22 15:48:23 WIB] — Privasi skor Aktivitas Publik
 - Paket: Privasi skor Aktivitas Publik: skor hanya dikirim kepada pemilik terautentikasi tanpa pengecualian role; skor, benar, persen, kelulusan, badge dihapus untuk orang lain/tamu pada feed dan tiga endpoint riwayat publik. Cache private no-store. UI owner-only dan ikon netral pada riwayat. Uji: 139 assertion API SQLite, PHP lint, Playwright template produksi (semua role, tamu, perpindahan akun, navigasi dan label), diff check lulus. Hosting menunggu pull manual.
 - Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-154823.json](docs/change-audit/proctoring-20261122-154823.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.
+
+
+### [2026-11-22 20:17:44 WIB] — Perbaikan preview kamera foto acuan
+- Paket: Perbaikan preview foto acuan: ganti x-show/transisi Alpine yang menyisakan lapisan putih dengan x-if dan animasi CSS 150 ms berakhir transparan; opacity inline nol menjadi fallback saat animasi/CSS tidak tersedia, dukung reduced-motion. Tidak mengubah mekanisme penyimpanan/verifikasi VPS atau LPPAI. Uji: syntax JS, 24 proctoring regression tests, browser existing template, browser preview baru dengan stream canvas sintetis (enrollment, 3 tahap gerakan, 9 snapshot JPEG, retry, gagal simpan, reduced-motion, animasi tidak tersedia, teardown), diff check lulus. Hosting menunggu pull manual oleh pengelola.
+- Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-201744.json](docs/change-audit/proctoring-20261122-201744.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.

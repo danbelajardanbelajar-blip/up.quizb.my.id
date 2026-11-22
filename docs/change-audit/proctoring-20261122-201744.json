@@ -1,0 +1,49 @@
+{
+  "recorded_at_wib": "2026-11-22T20:17:44+07:00",
+  "baseline": "1b0e33b71d98f77564a853973cabf73f1f254a6a",
+  "timestamp_note": "last_write_wib is the final filesystem write time, not a reconstruction of every prior edit",
+  "files": [
+    {
+      "file": "assets/css/app.css",
+      "last_write_wib": "2026-11-22T20:16:19+07:00",
+      "sha256": "8a99c5e84caac8ab73174e6323b62ccbf06bfe0ceedc53a628f3c68f8ea961f2",
+      "hunks": [
+        {
+          "old_start": 460,
+          "old_count": 0,
+          "new_start": 461,
+          "new_count": 13,
+          "section": "html { scroll-behavior: smooth; }"
+        }
+      ]
+    },
+    {
+      "file": "pages/quiz-engine.html",
+      "last_write_wib": "2026-11-22T20:16:19+07:00",
+      "sha256": "a1ae396c3408130543ddb98758ec21d924d13eb0f73d85775741248cf32fdb2f",
+      "hunks": [
+        {
+          "old_start": 131,
+          "old_count": 5,
+          "new_start": 131,
+          "new_count": 5,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/camera-preview-browser.cjs",
+      "last_write_wib": "2026-11-22T20:17:00+07:00",
+      "sha256": "914cb9932d497f6176574a329b6e9510da9d5a6cc81965ce1094c94c360f2bd5",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 67,
+          "section": ""
+        }
+      ]
+    }
+  ]
+}
