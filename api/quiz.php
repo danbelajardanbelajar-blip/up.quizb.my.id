@@ -329,7 +329,7 @@ function quiz_questions(): void {
         );
     }
 
-    if (!empty($quiz['require_camera'])) {
+    if (!empty($quiz['require_camera']) && proctoringUsesVps()) {
         $cameraUser=requireAuth();
         if (!proctoringReleaseQuestions($cameraUser,$quizId,$assignmentId,($_GET['camera_preview']??'')==='1')) {
             jsonSuccess(['quiz'=>$quiz,'questions'=>[],'camera_verification_required'=>true,'question_count'=>$limit>0?min($limit,count($allQuestions)):count($allQuestions)]);

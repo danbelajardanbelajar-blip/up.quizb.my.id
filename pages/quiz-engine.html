@@ -95,7 +95,7 @@
       
       <!-- Camera scan instructions -->
       <div class="mb-5 p-3.5 bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/60 rounded-2xl text-sm font-semibold leading-relaxed text-blue-900 dark:text-blue-200">
-        Ikuti Instruksi dengan baik dan jangan tergesa-gesa
+        Posisikan wajah Anda di tengah lingkaran hijau dan tahan selama 2 detik untuk verifikasi otomatis (tanpa klik).
       </div>
 
       <!-- Live Camera Container with Oval Guide -->
@@ -399,12 +399,12 @@
         ⚠️
       </div>
       <h2 class="text-xl font-black text-red-400 mb-1 tracking-wide"
-          x-text="faceWarningType === 'mismatch' ? 'Verifikasi kamera perlu diulang' : 'Kamera perlu diperiksa'">
-        Kamera perlu diperiksa
+          x-text="faceWarningType === 'mismatch' ? 'Wajah Tidak Sesuai Foto Acuan!' : 'Wajah Tidak Terdeteksi di Kamera!'">
+        Wajah Tidak Terdeteksi di Kamera!
       </h2>
       <p class="text-xs text-gray-300 leading-relaxed mb-4"
-         x-text="faceWarningType === 'mismatch' ? 'Kemiripan dengan foto acuan belum cukup. Coba posisi dan pencahayaan yang sama, atau hubungi pengajar. Ini bukan keputusan bahwa peserta melakukan kecurangan.' : 'Pemeriksaan kamera belum berhasil. Jawaban tetap tersimpan dan waktu dijeda. Ikuti petunjuk kamera untuk melanjutkan, atau hubungi pengajar jika masalah berulang.'">
-        Pemeriksaan kamera belum berhasil. Jawaban tetap tersimpan dan waktu dijeda. Ikuti petunjuk kamera untuk melanjutkan, atau hubungi pengajar jika masalah berulang.
+         x-text="faceWarningType === 'mismatch' ? 'Wajah di depan kamera tidak cocok dengan foto acuan peserta terdaftar. Harap peserta asli menghadap ke kamera untuk melanjutkan kuis.' : 'Wajah tidak terdeteksi atau layar dipalingkan. Waktu dijeda dan interaksi dikunci sampai wajah kembali menghadap ke kamera.'">
+        Wajah tidak terdeteksi atau layar dipalingkan. Waktu dijeda dan interaksi dikunci sampai wajah kembali menghadap ke kamera.
       </p>
 
       <!-- Live Camera Guide inside Freeze Overlay -->
@@ -423,15 +423,11 @@
 
       <!-- Dynamic Guidance Box -->
       <div class="py-2.5 px-3 bg-red-950/80 border border-red-500/50 rounded-xl mb-3 flex items-center justify-center gap-3">
-        <span x-show="scanDirection" x-text="scanDirection === 'left' ? '←' : '→'"
-              data-camera-direction aria-hidden="true" dir="ltr"
-              class="text-5xl leading-none font-black shrink-0"></span>
-
         <p class="text-xs font-bold text-red-200" x-text="faceWarningText || 'Harap hadapkan wajah Anda tepat di depan kamera'"></p>
       </div>
 
       <p class="text-[11px] text-gray-400">
-        🔒 <em>Layar terbuka kembali setelah pemeriksaan server berhasil. Ikuti arahan gerakan bila diminta.</em>
+        🔒 <em>Layar akan terbuka kembali secara otomatis begitu wajah peserta terdeteksi dan sesuai foto acuan.</em>
       </p>
     </div>
   </div>
@@ -450,7 +446,7 @@
              class="w-full h-full object-cover transform scale-x-[-1]"></video>
       <div class="absolute top-1 left-1 flex items-center gap-1 bg-black/70 px-1.5 py-0.5 rounded-full text-[9px] font-bold text-white pointer-events-none">
         <span class="w-1.5 h-1.5 rounded-full" :class="showFaceWarning ? 'bg-red-500 animate-ping' : 'bg-emerald-400'"></span>
-        <span x-text="showFaceWarning ? 'PERIKSA' : (_lastServerVerified ? 'TERVERIFIKASI' : 'MEMERIKSA')"></span>
+        <span x-text="showFaceWarning ? (faceWarningType === 'mismatch' ? 'BEDA ORANG' : 'HILANG') : 'AI AKTIF'"></span>
       </div>
     </div>
   </div>

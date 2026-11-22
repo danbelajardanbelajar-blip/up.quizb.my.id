@@ -257,3 +257,17 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 ### [2026-11-22 10:05:21 WIB] — Verifikasi kamera server v2
 - Paket: Ganti seluruh banner Pernyataan Privasi dan Keamanan Data Wajah di halaman scan menjadi instruksi pengguna: Ikuti Instruksi dengan baik dan jangan tergesa-gesa. Koreksi salah ketik tergea-gesa. Tidak mengubah alur penyimpanan/verifikasi. Verifikasi template Alpine di Edge dan git diff --check lulus. Hosting menunggu pull manual pengguna.
 - Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-100521.json](docs/change-audit/proctoring-20261122-100521.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.
+
+
+### [2026-11-22 11:05:00 WIB] — Restorasi & Penyempurnaan Sistem Pengawasan Kamera (Hands-Free Zero-Click 2s & Biometric Match 5s)
+* **Nomor Temuan / Laporan Pengguna**: Verifikasi awal berkali-kali gagal karena loop tantangan gerakan 9 frame dan dependensi runtime VPS; deteksi wajah orang lain (istri/teman/joki) saat ujian berlangsung.
+* **Berkas yang Diubah**:
+  - [`assets/js/quiz-face-verifier.js`](file:///D:/all_project/up.quizb.my.id/assets/js/quiz-face-verifier.js): Mengaktifkan kembali ekstraksi biometrik Multi-Block LBP histogram (1024 bins), 4-band vertical gradients, skin-tone Cb/Cr profiling, dan perbandingan biometrik `compareWithReference()`.
+  - [`assets/js/quiz-engine.v6.js`](file:///D:/all_project/up.quizb.my.id/assets/js/quiz-engine.v6.js): Menyederhanakan inisialisasi awal ke zero-click 2 detik tahan posisi frontal (green circle auto-capture); menangani check-in mulus bagi mahasiswa yang sudah memiliki foto acuan; mengaktifkan pengecekan berkala setiap 5 detik dengan freeze overlay interaktif jika wajah hilang atau tidak cocok (mismatch); mengunci tombol pilihan jawaban dan timer selama layar dibekukan.
+  - [`api/proctoring.php`](file:///D:/all_project/up.quizb.my.id/api/proctoring.php): Memulihkan pengembalian data acuan `reference_photo` pada `check_reference`; menambahkan fallback validasi GD lokal jika engine VPS eksternal belum dikonfigurasi agar tidak crash 503; mendaftarkan aksi pengawasan ke pengecualian CSRF di `api.php`.
+  - [`api/quiz.php`](file:///D:/all_project/up.quizb.my.id/api/quiz.php) & [`api/attempt.php`](file:///D:/all_project/up.quizb.my.id/api/attempt.php): Menjamin kuis dan submit berjalan tanpa terblokir lease kedaluwarsa jika berjalan dalam mode mandiri/lokal.
+  - [`pages/quiz-engine.html`](file:///D:/all_project/up.quizb.my.id/pages/quiz-engine.html): Memperbarui pesan instruksi dan teks freeze overlay (`Wajah Tidak Sesuai Foto Acuan!` / `Wajah Tidak Terdeteksi di Kamera!`).
+  - [`tests/test-proctoring-suite.cjs`](file:///D:/all_project/up.quizb.my.id/tests/test-proctoring-suite.cjs): Menyesuaikan dan memverifikasi seluruh 15 pengujian otomatis lulus (15/15 PASS).
+* **Hasil Verifikasi**:
+  - `node tests/test-proctoring-suite.cjs` -> 15/15 tests passed (100% PASS).
+  - `node -c assets/js/quiz-engine.v6.js` & `node -c assets/js/quiz-face-verifier.js` -> 0 syntax errors.
