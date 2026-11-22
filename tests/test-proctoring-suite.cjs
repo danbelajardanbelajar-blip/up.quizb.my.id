@@ -43,12 +43,12 @@ test('new reference requires two seconds of actual stable time rather than callb
 
 test('face absence freezes selection and timer; local presence alone cannot unlock it',async()=>{
  const h=harness();h.q.cameraStream=h.stream;h.q.phase='playing';h.q.startTimer();h.Q.frame={ready:false,label:'NO_FACE'};
- await h.q.takeAndUploadSnapshot();assert.equal(h.q.showFaceWarning,true);h.q.selectOption(1,2);assert.equal(h.q.answers[1],undefined);h.timers.get(h.q.timerInterval).fn();assert.equal(h.q.timeLeft,100);
+ await h.q.checkFaceIdentity();assert.equal(h.q.showFaceWarning,true);h.q.selectOption(1,2);assert.equal(h.q.answers[1],undefined);h.timers.get(h.q.timerInterval).fn();assert.equal(h.q.timeLeft,100);
  h.Q.frame={ready:true};h.setSequence([verdict('RECHECK'),verdict('VERIFIED',true)]);await h.timers.get(h.q._fastFaceCheckInterval).fn();assert.equal(h.q.showFaceWarning,true);await h.timers.get(h.q._fastFaceCheckInterval).fn();assert.equal(h.q.showFaceWarning,false);h.timers.get(h.q.timerInterval).fn();assert.equal(h.q.timeLeft,99);
 });
 
 test('invalid or truthy string verdict never unlocks the exam',async()=>{
- const h=harness();h.q.cameraStream=h.stream;h.q.phase='playing';h.setSequence([verdict('VERIFIED','true')]);await h.q.takeAndUploadSnapshot();assert.equal(h.q.showFaceWarning,true);assert.equal(h.q._lastServerVerified,0);
+ const h=harness();h.q.cameraStream=h.stream;h.q.phase='playing';h.setSequence([verdict('VERIFIED','true')]);await h.q.checkFaceIdentity();assert.equal(h.q.showFaceWarning,true);assert.equal(h.q._lastServerVerified,0);
 });
 
 test('camera ended event stops the stream and preserves answers/time for recovery',async()=>{
@@ -56,7 +56,7 @@ test('camera ended event stops the stream and preserves answers/time for recover
 });
 
 test('unready or stopped camera never yields fabricated image data',async()=>{
- const h=harness();h.q.cameraStream=h.stream;h.track.readyState='ended';await assert.rejects(h.q.captureCurrentSnapshot(),/Kamera/);assert(!h.events.some(e=>e.action==='proctoring.verify'));
+ const h=harness();h.q.cameraStream=h.stream;h.track.readyState='ended';await assert.rejects(h.q._cameraVideo(),/Kamera/);assert(!h.events.some(e=>e.action==='proctoring.verify'));
 });
 
 test('late camera permission result is stopped after navigation or cancellation',async()=>{
@@ -108,7 +108,7 @@ test('LPPAI VPS protocol captures nine guided frames and uses single frames only
 
 test('rightward motion guide clears on cancellation',async()=>{const h=harness();h.q.cameraStream=h.stream;h.q._vpsDirection='right';const pending=h.q._captureVpsMotion(h.video,h.q._cameraGeneration);await settle();for(let i=0;i<3;i++){const entry=[...h.delayed].find(([,t])=>t.ms===1000);h.delayed.delete(entry[0]);entry[1].fn();await settle();}assert.equal(h.q.scanDirection,'left');h.q.stopCamera();assert.equal(h.q.scanDirection,'');const entry=[...h.delayed].find(([,t])=>t.ms===1000);entry[1].fn();await assert.rejects(pending,/dibatalkan/);});
 
-function noiseHarness(){const h=harness();let volume=0;h.q.phase='playing';h.q.cameraStream=h.stream;h.q._audioData=new Uint8Array(256);h.q._audioAnalyser={getByteFrequencyData:data=>data.fill(volume)};h.q.questions=[{id:1,options:[{id:2},{id:3}]},{id:9,options:[{id:10}]}];h.q.answers={1:2,9:10};h.q.captureCurrentSnapshot=async()=>null;h.volume=v=>volume=v;return h;}
+function noiseHarness(){const h=harness();let volume=0;h.q.phase='playing';h.q.cameraStream=h.stream;h.q._audioData=new Uint8Array(256);h.q._audioAnalyser={getByteFrequencyData:data=>data.fill(volume)};h.q.questions=[{id:1,options:[{id:2},{id:3}]},{id:9,options:[{id:10}]}];h.q.answers={1:2,9:10};h.volume=v=>volume=v;return h;}
 test('noise threshold is strictly above 80; continuous loud sound stays blocked and quiet resumes immediately',async()=>{
  const h=noiseHarness();h.volume(80);for(let i=0;i<30;i++)h.q.checkAmbientNoise();assert.equal(h.q.isNoiseFrozen,false);
  h.volume(81);for(let i=0;i<10;i++)h.q.checkAmbientNoise();assert.equal(h.q.isNoiseFrozen,false);h.q.checkAmbientNoise();assert.equal(h.q.isNoiseFrozen,true);await settle();
@@ -120,8 +120,8 @@ test('quiet recovery waits only for pending replacement, then unlocks without a 
  const h=noiseHarness();let release;h.api.post=()=>new Promise(resolve=>release=resolve);h.volume(90);for(let i=0;i<11;i++)h.q.checkAmbientNoise();await settle();h.volume(10);h.q.checkAmbientNoise();assert.equal(h.q.isNoiseFrozen,true);assert.equal(h.q._noiseSwapPending,true);
  release({swapped:true,new_question:{id:7,options:[{id:8}]}});await settle();assert.equal(h.q.isNoiseFrozen,false);assert.equal(h.q._noiseSwapPending,false);assert.equal(h.q.questions[0].id,7);assert.equal(h.q.answers[9],10);
 });
-test('snapshot and network failure reshuffle options locally and cannot leave quiet participants locked',async()=>{
- const h=noiseHarness();h.q.captureCurrentSnapshot=async()=>{throw Error('snapshot failed')};h.api.post=async()=>{throw Error('offline')};h.volume(90);for(let i=0;i<11;i++)h.q.checkAmbientNoise();await settle();assert.equal(h.q.isNoiseFrozen,true);assert.equal(h.q._noiseSwapPending,false);assert.equal(h.q.questions[0].id,1);assert.notEqual(h.q.questions[0].options[0].id,2);
+test('network failure reshuffles options locally and cannot leave quiet participants locked',async()=>{
+ const h=noiseHarness();h.api.post=async()=>{throw Error('offline')};h.volume(90);for(let i=0;i<11;i++)h.q.checkAmbientNoise();await settle();assert.equal(h.q.isNoiseFrozen,true);assert.equal(h.q._noiseSwapPending,false);assert.equal(h.q.questions[0].id,1);assert.notEqual(h.q.questions[0].options[0].id,2);
  h.volume(0);h.q.checkAmbientNoise();assert.equal(h.q.isNoiseFrozen,false);
 });
 test('late noise replacement cannot change another camera session or duplicate an active question id',async()=>{
@@ -135,4 +135,32 @@ test('first-time enrollment still uses the server motion challenge before starti
  await h.q.startQuiz();await settle();assert.equal(h.q.phase,'face_scan');const tick=h.timers.get(h.q._scanInterval).fn;await tick();clock+=2100;const scan=tick();await settle();assert.equal(mode,'motion');assert.equal(h.q.phase,'face_scan');
  for(let i=0;i<9;i++){const entry=[...h.delayed].find(([,t])=>t.ms===1000);assert(entry);h.delayed.delete(entry[0]);entry[1].fn();await settle();}
  await scan;assert.equal(h.q.phase,'playing');assert.equal(h.events.filter(e=>e.action==='proctoring.save_reference').length,1);
+});
+
+
+test('periodic identity checks never accumulate images or submit a snapshot archive',async()=>{
+ const h=harness();h.q.cameraStream=h.stream;h.q.phase='playing';h.q._lastServerVerified=Date.now();
+ for(let i=0;i<40;i++)await h.q.checkFaceIdentity();
+ assert.equal(h.q.snapshots,undefined);assert(!h.events.some(e=>e.action==='attempt.upload_snapshot'));
+ h.q.answers={1:2};await h.q.submitAnswers();const payload=h.events.find(e=>e.action==='attempt.submit').body;
+ assert.equal(Object.hasOwn(payload,'snapshots'),false);assert(h.events.some(e=>e.action==='proctoring.verify'));
+});
+
+test('noise and browser-event reports contain metadata only, without camera images',async()=>{
+ const h=noiseHarness();h.q.initFullscreenListeners=undefined;
+ // Use actual listener registration rather than the harness no-op.
+ const original=vm.runInContext('QuizEngine()',h.ctx);original.quiz={id:19};original.phase='playing';
+ original.cameraStream=h.stream;original.initFullscreenListeners();original._fullscreenListener();
+ h.ctx.document.hidden=true;original._visibilityListener();
+ h.api.post=async(action,body)=>{h.events.push({action,body});return {swapped:false};};
+ await h.q.triggerNoisePenalty();
+ for(const event of h.events.filter(e=>['proctoring.log_event','proctoring.swap_question'].includes(e.action))) assert.equal(Object.hasOwn(event.body,'snapshot'),false);
+ assert.equal(h.events.filter(e=>e.action==='proctoring.log_event').length,2);
+});
+
+test('stopping camera cancels periodic verification interval and startup timeout',()=>{
+ const h=harness();h.q.cameraStream=h.stream;h.q.startFaceVerificationLoop();
+ const interval=h.q.faceVerificationInterval,timeout=h.q.faceVerificationTimeout;
+ assert(h.timers.has(interval));assert(h.delayed.has(timeout));h.q.stopCamera();
+ assert(!h.timers.has(interval));assert(!h.delayed.has(timeout));
 });

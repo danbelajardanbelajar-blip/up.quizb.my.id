@@ -718,8 +718,7 @@ function admin_user_history(): void {
 
     $rows = DB::all(
         "SELECT a.id, a.score, a.correct_count, a.time_taken, a.completed_at, a.mode,
-                q.title AS quiz_title,
-                (SELECT 1 FROM attempt_snapshots WHERE attempt_id = a.id LIMIT 1) AS has_snapshots
+                q.title AS quiz_title
          FROM attempts a
          JOIN quizzes q ON a.quiz_id = q.id
          WHERE a.user_id = ?
@@ -732,7 +731,6 @@ function admin_user_history(): void {
         $r['score']         = (int)$r['score'];
         $r['correct_count'] = (int)$r['correct_count'];
         $r['time_taken']    = (int)$r['time_taken'];
-        $r['has_snapshots'] = (bool)$r['has_snapshots'];
     }
     unset($r);
 
@@ -919,26 +917,6 @@ function admin_question_stats(): void {
 // ============================================
 // PROCTORING
 // ============================================
-
-function admin_attempt_snapshots(): void {
-    requireAdmin();
-    $attemptId = (int)($_GET['attempt_id'] ?? 0);
-    if ($attemptId <= 0) jsonError('ID tidak valid');
-
-    $snapshots = DB::all("SELECT id, image_path, created_at FROM attempt_snapshots WHERE attempt_id = ? ORDER BY created_at ASC", [$attemptId]);
-    $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'quizb.my.id';
-    $baseUrl = $scheme . '://' . $host;
-    foreach ($snapshots as &$s) {
-        $cleanPath = ltrim($s['image_path'], '/');
-        if (!str_starts_with($cleanPath, 'uploads/snapshots/')) {
-            $cleanPath = 'uploads/snapshots/' . basename($cleanPath);
-        }
-        $s['image_path'] = $baseUrl . '/' . $cleanPath;
-    }
-    unset($s);
-    jsonSuccess(['snapshots' => $snapshots]);
-}
 
 function admin_quiz_duplicate(): void {
     requirePengajar();

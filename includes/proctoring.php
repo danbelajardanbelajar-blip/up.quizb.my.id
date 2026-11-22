@@ -37,7 +37,6 @@ function ensureProctoringTables(): void {
             event_type VARCHAR(50) NOT NULL,
             similarity_score FLOAT NULL DEFAULT NULL,
             status VARCHAR(50) NOT NULL,
-            snapshot_path VARCHAR(255) NULL DEFAULT NULL,
             notes TEXT NULL DEFAULT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_assign_user (assignment_id, user_id),
@@ -56,12 +55,11 @@ function ensureProctoringTables(): void {
 }
 
 /**
- * Memastikan direktori penyimpanan acuan dan snapshot aman dari unduhan publik langsung
+ * Memastikan direktori penyimpanan acuan aman dari unduhan publik langsung
  */
 function ensureProctoringProtectedDirectories(): void {
     $dirs = [
-        __DIR__ . '/../uploads/references' => "Require all denied\nOptions -Indexes -ExecCGI\n",
-        __DIR__ . '/../uploads/snapshots'  => "Require all denied\nOptions -Indexes -ExecCGI\n"
+        __DIR__ . '/../uploads/references' => "Require all denied\nOptions -Indexes -ExecCGI\n"
     ];
 
     foreach ($dirs as $dir => $htaccessContent) {

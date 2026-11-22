@@ -37,7 +37,8 @@ function QuizEngine() {
     
     // Proctoring & Face Verification
     cameraStream: null,
-    snapshotInterval: null,
+    faceVerificationInterval: null,
+    faceVerificationTimeout: null,
     scanStatusMessage: '',
     scanDirection: '',
     scanGuideColor: '',
@@ -298,7 +299,7 @@ function QuizEngine() {
             this.showFaceWarning=false;this.faceWarningType='';
             this.startActualQuiz();
             // Display the questions now; the server checks identity immediately in the background.
-            void this.takeAndUploadSnapshot();
+            void this.checkFaceIdentity();
           } else this.startHandsFreeFaceScan(true);
         } catch (error) {
           if (generation!==this._cameraGeneration) return;
@@ -335,7 +336,7 @@ function QuizEngine() {
             pipVideo.play().catch(() => {});
           }
         });
-        this.startSnapshotLoop();
+        this.startFaceVerificationLoop();
         this.startProctoringAudio();
         this.initFullscreenListeners();
       }
@@ -507,11 +508,6 @@ function QuizEngine() {
       });
     },
 
-    async captureCurrentSnapshot() {
-      const video=await this._cameraVideo();
-      return window.QuizFaceVerifier.captureSnapshot(video);
-    },
-
     // ---- Fullscreen Enforcement & Listeners ----
     requestFullscreenMode() {
       try {
@@ -537,17 +533,14 @@ function QuizEngine() {
         const isFull = !!(document.fullscreenElement || document.webkitFullscreenElement);
         if (!isFull) {
           this.isFullscreenExited = true;
-          this.captureCurrentSnapshot().then(snap => {
-            api.post('proctoring.log_event', {
-              quiz_id: this.quiz.id,
-              assignment_id: this.assignmentId || 0,
-              attempt_id: this.attemptId || null,
-              event_type: 'fullscreen_violation',
-              status: 'VIOLATION',
-              snapshot: snap,
-              notes: 'Keluar dari mode layar penuh (Full Screen)'
-            }).catch(() => {});
-          });
+          api.post('proctoring.log_event', {
+            quiz_id: this.quiz.id,
+            assignment_id: this.assignmentId || 0,
+            attempt_id: this.attemptId || null,
+            event_type: 'fullscreen_violation',
+            status: 'VIOLATION',
+            notes: 'Keluar dari mode layar penuh (Full Screen)'
+          }).catch(() => {});
         } else {
           this.isFullscreenExited = false;
         }
@@ -556,17 +549,14 @@ function QuizEngine() {
       this._visibilityListener = () => {
         if (this.phase !== 'playing') return;
         if (document.hidden) {
-          this.captureCurrentSnapshot().then(snap => {
-            api.post('proctoring.log_event', {
-              quiz_id: this.quiz.id,
-              assignment_id: this.assignmentId || 0,
-              attempt_id: this.attemptId || null,
-              event_type: 'tab_switch_violation',
-              status: 'VIOLATION',
-              snapshot: snap,
-              notes: 'Berpindah tab atau aplikasi lain saat ujian berlangsung'
-            }).catch(() => {});
-          });
+          api.post('proctoring.log_event', {
+            quiz_id: this.quiz.id,
+            assignment_id: this.assignmentId || 0,
+            attempt_id: this.attemptId || null,
+            event_type: 'tab_switch_violation',
+            status: 'VIOLATION',
+            notes: 'Berpindah tab atau aplikasi lain saat ujian berlangsung'
+          }).catch(() => {});
         }
       };
 
@@ -669,15 +659,12 @@ function QuizEngine() {
       const currentQId=this.current?.id;
       if (currentQId && currentQId in this.answers) delete this.answers[currentQId];
       try {
-        let snapshot=null;
-        try { snapshot=await this.captureCurrentSnapshot(); } catch (_) {}
         if (generation!==this._cameraGeneration || this.phase!=='playing') return;
         const swapRes=await api.post('proctoring.swap_question', {
           quiz_id:this.quiz?.id || 0,
           assignment_id:Number(this.assignmentId) || 0,
           current_question_id:currentQId,
           exclude_question_ids:this.questions.map(q=>q.id),
-          snapshot,
           notes:'Suara melewati ambang spektrum 80 selama akumulasi 1,65 detik; soal diacak ulang.'
         },{signal:AbortSignal.timeout(10000)});
         if (generation!==this._cameraGeneration || this.phase!=='playing') return;
@@ -727,15 +714,17 @@ function QuizEngine() {
       }
     },
 
-    // ---- Snapshot Loop ----
-    startSnapshotLoop() {
+    // ---- Periodic face identity verification (no image archive) ----
+    startFaceVerificationLoop() {
       if (!this.cameraStream) return;
-      this.snapshotInterval = setInterval(() => {
+      clearInterval(this.faceVerificationInterval);
+      clearTimeout(this.faceVerificationTimeout);
+      this.faceVerificationInterval = setInterval(() => {
         if (this.phase !== 'playing') return;
-        this.takeAndUploadSnapshot();
-      }, 5000); // 5 detik (turun dari 5 menit sesuai permintaan)
-      // Take first snapshot immediately
-      setTimeout(() => this.takeAndUploadSnapshot(), 2000);
+        this.checkFaceIdentity();
+      }, 5000); // Check presence every five seconds; identity remains verified by VPS.
+      // Start the first presence/identity check after the preview is attached.
+      this.faceVerificationTimeout = setTimeout(() => this.checkFaceIdentity(), 2000);
     },
     
     // ---- Challenge Sync ----
@@ -815,15 +804,13 @@ function QuizEngine() {
       this.syncInterval = setInterval(doSync, 1500);
     },
     
-    async takeAndUploadSnapshot() {
+    async checkFaceIdentity() {
       if (this.phase !== 'playing' || this._finalizingSubmit) return;
       if (this._proctorBusy && (!this._lastServerVerified || Date.now()-this._lastServerVerified>=20000)) this._blockCamera('Menunggu pemeriksaan server. Waktu dijeda sementara.');
       try {
         const video=await this._cameraVideo();
         const frame=window.QuizFaceVerifier.evaluateFrame(video);
         if (!frame.ready) { this._blockCamera(frame.label,'absence'); return; }
-        const image=window.QuizFaceVerifier.captureSnapshot(video);
-        this.snapshots=(this.snapshots || []).concat(image).slice(-30);
         if (Date.now()-this._lastServerVerified>=10000) {
           const result=await this._verifyCamera(video);
           if (this.phase !== 'playing') return;
@@ -870,7 +857,9 @@ function QuizEngine() {
       const scanVideo=this.$refs?.faceScanVideo;
       if (scanVideo) { scanVideo.pause(); scanVideo.srcObject=null; }
 
-      if (this.snapshotInterval) clearInterval(this.snapshotInterval);
+      if (this.faceVerificationInterval) clearInterval(this.faceVerificationInterval);
+      clearTimeout(this.faceVerificationTimeout);
+      this.faceVerificationInterval=null; this.faceVerificationTimeout=null;
       this.stopFastFaceCheck();
       const pipVideo = (this.$refs && this.$refs.proctorPipVideo) || (typeof document !== 'undefined' && typeof document.getElementById === 'function' ? document.getElementById('proctorPipVideo') : null);
       if (pipVideo) {
@@ -1208,7 +1197,6 @@ function QuizEngine() {
             option_id:   option_id ? parseInt(option_id) : null,
           })),
           time_taken: timeTaken,
-          snapshots:  this.snapshots || []
         };
         const result = await api.post('attempt.submit', payload);
         this.result  = result;

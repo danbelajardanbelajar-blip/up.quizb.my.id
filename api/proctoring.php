@@ -4,7 +4,6 @@
 // ============================================
 
 require_once __DIR__ . '/../includes/proctoring.php';
-require_once __DIR__ . '/attempt.php';
 
 /**
  * Cek status foto acuan ujian pengguna
@@ -107,7 +106,6 @@ function proctoring_log_event(): void {
     $status       = sanitizeString($body['status'] ?? 'OK');
     $simScore     = isset($body['similarity_score']) ? (float)$body['similarity_score'] : null;
     $notes        = sanitizeString($body['notes'] ?? '');
-    $snapshotB64  = $body['snapshot'] ?? '';
 
     // Browser reports are not server identity verdicts and never create a receipt.
     $scope=proctoringScope($user,(int)($body['quiz_id']??0),$assignmentId);
@@ -115,30 +113,11 @@ function proctoring_log_event(): void {
     $status='CLIENT_REPORTED'; $simScore=null;
     if (!in_array($eventType,['initial_checkin','periodic_face','fullscreen_violation','tab_switch_violation','camera_error'],true)) jsonError('Jenis laporan tidak valid.',400);
 
-    $snapshotRelPath = null;
-    if (!empty($snapshotB64)) {
-        if (strpos($snapshotB64, ',') !== false) {
-            @list(, $snapshotB64) = explode(',', $snapshotB64, 2);
-        }
-        $imgData = base64_decode($snapshotB64, true);
-        if ($imgData && strlen($imgData) > 500) {
-            $snapDir = __DIR__ . '/../uploads/snapshots';
-            ensureProctoringProtectedDirectories();
-
-            $snapName = 'snap_proc_' . $assignmentId . '_' . $user['id'] . '_' . time() . '_' . rand(100, 999) . '.jpg';
-            $snapPath = $snapDir . '/' . $snapName;
-
-            if (attempt_save_optimized_snapshot($imgData, $snapPath, 640, 70)) {
-                $snapshotRelPath = 'uploads/snapshots/' . $snapName;
-            }
-        }
-    }
-
     DB::execute(
         "INSERT INTO assignment_proctoring_logs 
-         (assignment_id, attempt_id, user_id, event_type, similarity_score, status, snapshot_path, notes, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())",
-        [$assignmentId, $attemptId, $user['id'], $eventType, $simScore, $status, $snapshotRelPath, $notes]
+         (assignment_id, attempt_id, user_id, event_type, similarity_score, status, notes, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())",
+        [$assignmentId, $attemptId, $user['id'], $eventType, $simScore, $status, $notes]
     );
 
     $logId = (int)DB::lastId();
@@ -161,7 +140,6 @@ function proctoring_swap_question(): void {
     $assignmentId      = (int)($body['assignment_id'] ?? 0);
     $currentQId        = (int)($body['current_question_id'] ?? 0);
     $excludeIds        = array_map('intval', (array)($body['exclude_question_ids'] ?? []));
-    $snapshotB64       = $body['snapshot'] ?? '';
     $notes             = sanitizeString($body['notes'] ?? 'Suara keramaian / percakapan terdeteksi');
 
     if ($quizId <= 0 && $assignmentId <= 0) {
@@ -172,31 +150,11 @@ function proctoring_swap_question(): void {
 
     proctoringScope($user,$quizId,$assignmentId);
 
-    // Catat log pelanggaran audio secara otomatis
-    $snapshotRelPath = null;
-    if (!empty($snapshotB64)) {
-        if (strpos($snapshotB64, ',') !== false) {
-            @list(, $snapshotB64) = explode(',', $snapshotB64, 2);
-        }
-        $imgData = base64_decode($snapshotB64, true);
-        if ($imgData && strlen($imgData) > 500) {
-            $snapDir = __DIR__ . '/../uploads/snapshots';
-            ensureProctoringProtectedDirectories();
-
-            $snapName = 'snap_noise_' . $assignmentId . '_' . $user['id'] . '_' . time() . '_' . rand(100, 999) . '.jpg';
-            $snapPath = $snapDir . '/' . $snapName;
-
-            if (attempt_save_optimized_snapshot($imgData, $snapPath, 640, 70)) {
-                $snapshotRelPath = 'uploads/snapshots/' . $snapName;
-            }
-        }
-    }
-
     DB::execute(
         "INSERT INTO assignment_proctoring_logs 
-         (assignment_id, attempt_id, user_id, event_type, similarity_score, status, snapshot_path, notes, created_at)
-         VALUES (?, NULL, ?, 'audio_violation', NULL, 'VIOLATION', ?, ?, NOW())",
-        [$assignmentId, $user['id'], $snapshotRelPath, $notes]
+         (assignment_id, attempt_id, user_id, event_type, similarity_score, status, notes, created_at)
+         VALUES (?, NULL, ?, 'audio_violation', NULL, 'VIOLATION', ?, NOW())",
+        [$assignmentId, $user['id'], $notes]
     );
 
     // Kumpulkan semua pool soal dari kuis atau paket tugas

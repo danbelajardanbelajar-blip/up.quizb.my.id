@@ -52,3 +52,18 @@ Atas permintaan pengguna, akun yang sudah memiliki foto acuan kanonis tidak lagi
 Browser langsung menampilkan soal dan memulai pemeriksaan satu frame terhadap acuan di latar belakang, tanpa tantangan menoleh. NO_FACE, MISMATCH, gangguan kamera atau kegagalan VPS menjeda pengerjaan dan waktu; pemulihan memerlukan hasil server yang sah. Pengumpulan tetap mensyaratkan sedikitnya dua pemeriksaan server (awal dan akhir), final lease <=15 detik dan scope/versi acuan yang sesuai. Status pending tidak dapat mengumpulkan jawaban. Akun tanpa acuan tetap melakukan enrollment dan tantangan gerakan sebelumnya.
 
 Uji server mencakup pembukaan background tanpa memalsukan lease, larangan submit pending, kedaluwarsa pembukaan awal, penolakan mismatch, dan syarat pemeriksaan akhir. Uji browser/state mencakup soal tampil saat respons VPS masih pending, pemblokiran saat mismatch, pemulihan dan enrollment baru tetap melakukan gerakan. Alur baru perlu pull hosting dan uji kamera nyata sebelum dinyatakan aktif online.
+
+
+## Penghapusan arsip snapshot ujian
+
+Fitur arsip foto saat pengerjaan telah dihapus: tidak ada buffer foto ujian, payload foto pada pengumpulan jawaban/laporan pelanggaran, endpoint upload/galeri, maupun tombol galeri di hasil dan riwayat. Klien lama yang mengirim foto lewat laporan atau submission tidak akan menyimpannya. Pemeriksaan berkala tetap berjalan; frame hanya dikirim ke endpoint verifikasi VPS, tidak diarsipkan. Foto acuan, tantangan gerakan pendaftaran, receipt verifikasi, dan pengecekan akhir tetap dipakai.
+
+Setelah pull kode di setiap instalasi, hapus arsip lama sesuai otorisasi pengelola:
+
+```bash
+php bin/purge-legacy-snapshots.php --execute
+```
+
+Tanpa `--execute`, perintah hanya menghitung sasaran. Perintah ini hanya dapat dijalankan lewat CLI. Pembersihan menghapus berkas gambar dalam direktori `uploads/snapshots`, seluruh baris `attempt_snapshots`, dan tautan foto `snapshot_path` pada log lama. Tabel kosong dipertahankan untuk kompatibilitas skema; kode aplikasi tidak lagi menggunakannya. Foto acuan, nilai, jawaban, catatan kejadian tanpa foto, dan receipt verifikasi dipertahankan. Sasaran di luar direktori, symlink/junction, atau entri tak dikenal ditolak sebelum penghapusan. Tidak ada penghapusan berdasarkan path arbitrer dari database. Perintah aman dijalankan ulang. Jika penghapusan berkas gagal, proses berhenti dengan exit nonzero; berkas yang sudah terhapus tidak dapat dipulihkan lewat rollback database, sehingga perintah harus dijalankan ulang setelah kendala diatasi.
+
+Status penerapan paket ini harus dibedakan dari pengujian fixture: workspace tidak memiliki `config/db.php`, sehingga pembersihan database lokal/hosting belum dibuktikan. Jalankan perintah pada instalasi hosting setelah pull dan periksa keluaran `DONE`. Prosedur ini tidak menghapus foto dari backup terpisah atau salinan yang sebelumnya sudah diunduh.

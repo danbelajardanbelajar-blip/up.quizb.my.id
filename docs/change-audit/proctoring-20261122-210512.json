@@ -1,0 +1,602 @@
+{
+  "recorded_at_wib": "2026-11-22T21:05:12+07:00",
+  "baseline": "fb1ad4a9e76594aed123fc4b7c317ce3b3372242",
+  "timestamp_note": "last_write_wib is the final filesystem write time, not a reconstruction of every prior edit",
+  "files": [
+    {
+      "file": "api/admin.php",
+      "last_write_wib": "2026-11-22T20:59:57+07:00",
+      "sha256": "d6122e97e50dc0db5d88d12e9abc4fa05c93d051377a08cc94698264566c19d6",
+      "hunks": [
+        {
+          "old_start": 721,
+          "old_count": 2,
+          "new_start": 721,
+          "new_count": 1,
+          "section": "function admin_user_history(): void {"
+        },
+        {
+          "old_start": 735,
+          "old_count": 1,
+          "new_start": 733,
+          "new_count": 0,
+          "section": "function admin_user_history(): void {"
+        },
+        {
+          "old_start": 923,
+          "old_count": 20,
+          "new_start": 920,
+          "new_count": 0,
+          "section": "function admin_question_stats(): void {"
+        }
+      ]
+    },
+    {
+      "file": "api/assignment.php",
+      "last_write_wib": "2026-11-22T21:04:21+07:00",
+      "sha256": "5a7ca74b0e78e076b74b813593cd8896797ea885ba3b13a730b1557005326a8f",
+      "hunks": [
+        {
+          "old_start": 475,
+          "old_count": 28,
+          "new_start": 474,
+          "new_count": 0,
+          "section": "function assignment_submit(): void {"
+        },
+        {
+          "old_start": 546,
+          "old_count": 1,
+          "new_start": 517,
+          "new_count": 0,
+          "section": "function assignment_results(): void {"
+        },
+        {
+          "old_start": 594,
+          "old_count": 2,
+          "new_start": 565,
+          "new_count": 1,
+          "section": "function assignment_student_history(): void {"
+        },
+        {
+          "old_start": 987,
+          "old_count": 41,
+          "new_start": 956,
+          "new_count": 0,
+          "section": "function assignment_attempts(): void {"
+        },
+        {
+          "old_start": 1078,
+          "old_count": 1,
+          "new_start": 1007,
+          "new_count": 1,
+          "section": "function assignment_reset_student(): void {"
+        },
+        {
+          "old_start": 1080,
+          "old_count": 11,
+          "new_start": 1008,
+          "new_count": 0,
+          "section": "function assignment_reset_student(): void {"
+        },
+        {
+          "old_start": 1137,
+          "old_count": 12,
+          "new_start": 1054,
+          "new_count": 0,
+          "section": "function assignment_delete_attempt(): void {"
+        }
+      ]
+    },
+    {
+      "file": "api/attempt.php",
+      "last_write_wib": "2026-11-22T20:57:24+07:00",
+      "sha256": "ef242e2f415ba03c1bc08c1f14de7f8cda9f734fdb10784f0ed32f10937719e3",
+      "hunks": [
+        {
+          "old_start": 206,
+          "old_count": 19,
+          "new_start": 205,
+          "new_count": 0,
+          "section": "function attempt_submit(): void {"
+        },
+        {
+          "old_start": 662,
+          "old_count": 78,
+          "new_start": 642,
+          "new_count": 0,
+          "section": "function quiz_global_history(): void {"
+        }
+      ]
+    },
+    {
+      "file": "api/proctoring.php",
+      "last_write_wib": "2026-11-22T20:57:24+07:00",
+      "sha256": "75b0bf87cec5eab4ba8fcf39965fabf5e3f87714aed9d049178ca6b745c45051",
+      "hunks": [
+        {
+          "old_start": 7,
+          "old_count": 1,
+          "new_start": 6,
+          "new_count": 0,
+          "section": "require_once __DIR__ . '/../includes/proctoring.php';"
+        },
+        {
+          "old_start": 110,
+          "old_count": 1,
+          "new_start": 108,
+          "new_count": 0,
+          "section": "function proctoring_log_event(): void {"
+        },
+        {
+          "old_start": 118,
+          "old_count": 19,
+          "new_start": 115,
+          "new_count": 0,
+          "section": "function proctoring_log_event(): void {"
+        },
+        {
+          "old_start": 139,
+          "old_count": 3,
+          "new_start": 118,
+          "new_count": 3,
+          "section": "function proctoring_log_event(): void {"
+        },
+        {
+          "old_start": 164,
+          "old_count": 1,
+          "new_start": 142,
+          "new_count": 0,
+          "section": "function proctoring_swap_question(): void {"
+        },
+        {
+          "old_start": 175,
+          "old_count": 20,
+          "new_start": 152,
+          "new_count": 0,
+          "section": "function proctoring_swap_question(): void {"
+        },
+        {
+          "old_start": 197,
+          "old_count": 3,
+          "new_start": 155,
+          "new_count": 3,
+          "section": "function proctoring_swap_question(): void {"
+        }
+      ]
+    },
+    {
+      "file": "assets/js/app.v5.js",
+      "last_write_wib": "2026-11-22T20:57:24+07:00",
+      "sha256": "320ec8a6606d5566d77ec00ae83fbb25116c9b3471cc2ebcbe69673dffd1f063",
+      "hunks": [
+        {
+          "old_start": 135,
+          "old_count": 1,
+          "new_start": 135,
+          "new_count": 1,
+          "section": "function QuizBApp() {"
+        },
+        {
+          "old_start": 165,
+          "old_count": 1,
+          "new_start": 165,
+          "new_count": 1,
+          "section": "function QuizBApp() {"
+        },
+        {
+          "old_start": 2973,
+          "old_count": 13,
+          "new_start": 2973,
+          "new_count": 1,
+          "section": "function QuizBApp() {"
+        },
+        {
+          "old_start": 3600,
+          "old_count": 14,
+          "new_start": 3588,
+          "new_count": 1,
+          "section": "function QuizBApp() {"
+        },
+        {
+          "old_start": 3696,
+          "old_count": 1,
+          "new_start": 3671,
+          "new_count": 1,
+          "section": "function QuizBApp() {"
+        },
+        {
+          "old_start": 3712,
+          "old_count": 1,
+          "new_start": 3687,
+          "new_count": 1,
+          "section": "function QuizBApp() {"
+        }
+      ]
+    },
+    {
+      "file": "assets/js/quiz-engine.v6.js",
+      "last_write_wib": "2026-11-22T21:04:21+07:00",
+      "sha256": "aca12fca8ad76880245820cf1978bf903b77656404880f4d65d51a6457ae2d24",
+      "hunks": [
+        {
+          "old_start": 40,
+          "old_count": 1,
+          "new_start": 40,
+          "new_count": 2,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 301,
+          "old_count": 1,
+          "new_start": 302,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 338,
+          "old_count": 1,
+          "new_start": 339,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 510,
+          "old_count": 5,
+          "new_start": 510,
+          "new_count": 0,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 540,
+          "old_count": 11,
+          "new_start": 536,
+          "new_count": 8,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 559,
+          "old_count": 11,
+          "new_start": 552,
+          "new_count": 8,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 672,
+          "old_count": 2,
+          "new_start": 661,
+          "new_count": 0,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 680,
+          "old_count": 1,
+          "new_start": 667,
+          "new_count": 0,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 730,
+          "old_count": 2,
+          "new_start": 717,
+          "new_count": 2,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 733,
+          "old_count": 1,
+          "new_start": 720,
+          "new_count": 3,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 735,
+          "old_count": 4,
+          "new_start": 724,
+          "new_count": 4,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 818,
+          "old_count": 1,
+          "new_start": 807,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 825,
+          "old_count": 2,
+          "new_start": 813,
+          "new_count": 0,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 873,
+          "old_count": 1,
+          "new_start": 860,
+          "new_count": 3,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 1211,
+          "old_count": 1,
+          "new_start": 1199,
+          "new_count": 0,
+          "section": "function QuizEngine() {"
+        }
+      ]
+    },
+    {
+      "file": "bin/purge-legacy-snapshots.php",
+      "last_write_wib": "2026-11-22T20:59:07+07:00",
+      "sha256": "f4bfabe76ab7e0a5d18396e0113911dbcfb93fd8e4a2b85d2d33b53175079d6f",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 18,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "docs/proctoring-v2.md",
+      "last_write_wib": "2026-11-22T21:03:13+07:00",
+      "sha256": "0605914db2e2e19e3a82fad3a15270453de88a3a3a4886c8a219b55677de918c",
+      "hunks": [
+        {
+          "old_start": 54,
+          "old_count": 0,
+          "new_start": 55,
+          "new_count": 15,
+          "section": "Uji server mencakup pembukaan background tanpa memalsukan lease, larangan submit"
+        }
+      ]
+    },
+    {
+      "file": "includes/legacy-snapshot-cleanup.php",
+      "last_write_wib": "2026-11-22T20:59:07+07:00",
+      "sha256": "d950bee433911f5e5e1d4f40e17f3525d915899605932c159dc03629b0540cd6",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 73,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "includes/proctoring.php",
+      "last_write_wib": "2026-11-22T20:57:24+07:00",
+      "sha256": "80912b8fabbf8fa078826402831c7fccf5f62f369b45acde1b8ba02ba40d0df3",
+      "hunks": [
+        {
+          "old_start": 40,
+          "old_count": 1,
+          "new_start": 39,
+          "new_count": 0,
+          "section": "function ensureProctoringTables(): void {"
+        },
+        {
+          "old_start": 59,
+          "old_count": 1,
+          "new_start": 58,
+          "new_count": 1,
+          "section": "function ensureProctoringTables(): void {"
+        },
+        {
+          "old_start": 63,
+          "old_count": 2,
+          "new_start": 62,
+          "new_count": 1,
+          "section": "function ensureProctoringProtectedDirectories(): void {"
+        }
+      ]
+    },
+    {
+      "file": "pages/admin-modals.html",
+      "last_write_wib": "2026-11-22T20:57:24+07:00",
+      "sha256": "bf5e22110b7e8720a383aaddc98055722df4c05be567473661e17a3e3fbd4b5d",
+      "hunks": [
+        {
+          "old_start": 750,
+          "old_count": 1,
+          "new_start": 749,
+          "new_count": 0,
+          "section": ""
+        },
+        {
+          "old_start": 783,
+          "old_count": 57,
+          "new_start": 781,
+          "new_count": 0,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "pages/assignment-history.html",
+      "last_write_wib": "2026-11-22T20:58:04+07:00",
+      "sha256": "fcd713ba7e2b1395ac0cc0b7c22b23674be8b1d57064972bc063d2eb158effb8",
+      "hunks": [
+        {
+          "old_start": 57,
+          "old_count": 6,
+          "new_start": 56,
+          "new_count": 0,
+          "section": ""
+        },
+        {
+          "old_start": 113,
+          "old_count": 7,
+          "new_start": 106,
+          "new_count": 0,
+          "section": ""
+        },
+        {
+          "old_start": 143,
+          "old_count": 1,
+          "new_start": 130,
+          "new_count": 1,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "pages/assignment-results.html",
+      "last_write_wib": "2026-11-22T21:02:34+07:00",
+      "sha256": "c1d057facc977c7b81b9f8c6a61b80334cb4b573f3d2c02f2f1d9d82fe80ae02",
+      "hunks": [
+        {
+          "old_start": 165,
+          "old_count": 1,
+          "new_start": 165,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 180,
+          "old_count": 6,
+          "new_start": 179,
+          "new_count": 0,
+          "section": ""
+        },
+        {
+          "old_start": 303,
+          "old_count": 6,
+          "new_start": 296,
+          "new_count": 0,
+          "section": ""
+        },
+        {
+          "old_start": 347,
+          "old_count": 57,
+          "new_start": 334,
+          "new_count": 0,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "pages/home.html",
+      "last_write_wib": "2026-11-22T20:58:04+07:00",
+      "sha256": "b7ced3be06b31074d0121310185cb7c6d65abe45517863707b9190eabc606050",
+      "hunks": [
+        {
+          "old_start": 136,
+          "old_count": 1,
+          "new_start": 136,
+          "new_count": 1,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "test_dir.php",
+      "last_write_wib": "2026-11-22T20:57:24+07:00",
+      "sha256": "55fab2ef9ce651accb74a962f167cdf40b99f3bc8163e0a4df045f04e6f1784b",
+      "hunks": [
+        {
+          "old_start": 2,
+          "old_count": 13,
+          "new_start": 2,
+          "new_count": 2,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "test_upload.php",
+      "last_write_wib": "2026-11-22T20:57:24+07:00",
+      "sha256": "55fab2ef9ce651accb74a962f167cdf40b99f3bc8163e0a4df045f04e6f1784b",
+      "hunks": [
+        {
+          "old_start": 2,
+          "old_count": 9,
+          "new_start": 2,
+          "new_count": 2,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/legacy-snapshot-cleanup.php",
+      "last_write_wib": "2026-11-22T21:00:32+07:00",
+      "sha256": "d87122064f9324b3f9bc7bd6edd571a5669f618e879e4814dfa10690b5a463a8",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 42,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/no-snapshot-archive.php",
+      "last_write_wib": "2026-11-22T21:04:21+07:00",
+      "sha256": "fa8dbe5ba567c80f2eaa75f2dad1d85f50546683b087c584613e822d0953f7f6",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 54,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/test-proctoring-suite.cjs",
+      "last_write_wib": "2026-11-22T21:01:38+07:00",
+      "sha256": "21eac074635e726339bd44a5b62cdc6c0a1b00c1b91347bd8919307940b308a3",
+      "hunks": [
+        {
+          "old_start": 46,
+          "old_count": 1,
+          "new_start": 46,
+          "new_count": 1,
+          "section": "test('face absence freezes selection and timer; local presence alone cannot unlo"
+        },
+        {
+          "old_start": 51,
+          "old_count": 1,
+          "new_start": 51,
+          "new_count": 1,
+          "section": "test('invalid or truthy string verdict never unlocks the exam',async()=>{"
+        },
+        {
+          "old_start": 59,
+          "old_count": 1,
+          "new_start": 59,
+          "new_count": 1,
+          "section": "test('unready or stopped camera never yields fabricated image data',async()=>{"
+        },
+        {
+          "old_start": 111,
+          "old_count": 1,
+          "new_start": 111,
+          "new_count": 1,
+          "section": "test('rightward motion guide clears on cancellation',async()=>{const h=harness()"
+        },
+        {
+          "old_start": 123,
+          "old_count": 2,
+          "new_start": 123,
+          "new_count": 2,
+          "section": "test('quiet recovery waits only for pending replacement, then unlocks without a"
+        },
+        {
+          "old_start": 138,
+          "old_count": 0,
+          "new_start": 139,
+          "new_count": 28,
+          "section": "test('first-time enrollment still uses the server motion challenge before starti"
+        }
+      ]
+    }
+  ]
+}

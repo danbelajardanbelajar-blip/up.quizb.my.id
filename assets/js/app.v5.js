@@ -132,7 +132,7 @@ function QuizBApp() {
       monitor:  null,
       monitorInterval: null,
       studentHistory: null,
-      snapshotModal: { show: false, loading: false, snapshots: [] },
+
       sort: { key: 'rank', dir: 'asc' }
     },
 
@@ -162,7 +162,7 @@ function QuizBApp() {
       analysisQuizId: '',
       // User history modal
       userHistory: { show: false, user: null, allAttempts: [], page: 1, perPage: 15, loading: false, sort: { key: '', dir: 'asc' }, exporting: false },
-      snapshotModal: { show: false, snapshots: [], loading: false },
+
       // Sort state per tab (client-side sort current page)
       sort: {
         quizzes:    { key: '', dir: 'asc' },
@@ -2970,19 +2970,7 @@ function QuizBApp() {
       const from = (uh.page - 1) * uh.perPage;
       return data.slice(from, from + uh.perPage);
     },
-    async viewSnapshots(attemptId) {
-      this.admin.snapshotModal.show = true;
-      this.admin.snapshotModal.loading = true;
-      this.admin.snapshotModal.snapshots = [];
-      try {
-        const res = await api.get('admin.attempt_snapshots', { attempt_id: attemptId });
-        this.admin.snapshotModal.snapshots = res.snapshots || [];
-      } catch (e) {
-        this.showToast('Gagal memuat snapshot', 'error');
-      } finally {
-        this.admin.snapshotModal.loading = false;
-      }
-    },
+
 
     async exportUserHistoryExcel(u) {
       this.admin.userHistory.exporting = true;
@@ -3597,20 +3585,7 @@ function QuizBApp() {
       }
     },
 
-    async viewAssignmentSnapshots(attemptId, assignmentId) {
-      this.assignmentView.snapshotModal.show = true;
-      this.assignmentView.snapshotModal.loading = true;
-      this.assignmentView.snapshotModal.snapshots = [];
-      try {
-        const res = await api.get('assignment.attempt_snapshots', { attempt_id: attemptId, assignment_id: assignmentId });
-        this.assignmentView.snapshotModal.snapshots = res.snapshots || [];
-      } catch (e) {
-        this.showToast(e.message, 'error', '❌');
-        this.assignmentView.snapshotModal.show = false;
-      } finally {
-        this.assignmentView.snapshotModal.loading = false;
-      }
-    },
+
 
     async loadAssignmentMonitor(id) {
       this.assignmentView.loading = true;
@@ -3693,7 +3668,7 @@ function QuizBApp() {
     },
 
     async resetStudentSubmission(assignmentId, userId, studentName) {
-      if (!confirm(`Hapus hasil tugas siswa "${studentName}"?\n\nSeluruh skor, jawaban, dan rekaman pengawasan (snapshots) pengerjaan ini akan dihapus permanen agar siswa dapat mengulang mengerjakan dari awal.`)) {
+      if (!confirm(`Hapus hasil tugas siswa "${studentName}"?\n\nSeluruh skor dan jawaban pengerjaan ini akan dihapus permanen agar siswa dapat mengulang mengerjakan dari awal.`)) {
         return;
       }
       try {
@@ -3709,7 +3684,7 @@ function QuizBApp() {
     },
 
     async deleteAssignmentAttempt(assignmentId, attemptId, studentName) {
-      if (!confirm(`Hapus data percobaan ini untuk "${studentName}"?\n\nPercobaan ini dan rekaman snapshot terkait akan dihapus permanen.`)) {
+      if (!confirm(`Hapus data percobaan ini untuk "${studentName}"?\n\nPercobaan ini akan dihapus permanen.`)) {
         return;
       }
       try {
