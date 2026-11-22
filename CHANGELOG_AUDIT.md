@@ -271,3 +271,8 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 * **Hasil Verifikasi**:
   - `node tests/test-proctoring-suite.cjs` -> 15/15 tests passed (100% PASS).
   - `node -c assets/js/quiz-engine.v6.js` & `node -c assets/js/quiz-face-verifier.js` -> 0 syntax errors.
+
+
+### [2026-11-22 11:26:57 WIB] — Verifikasi kamera server v2
+- Paket: Pulihkan alur verifikasi VPS 1972cd3 setelah regresi 4d23db9. Tambah worker QuizB terpisah: turn ratio .08 vs .12, return tolerance .14 vs .10, identity threshold tetap .45. Balik panah sesuai mirror preview; pertahankan instruksi singkat. Validasi 18 Node, 41 state PHP, 12 bridge, 9 geometri, 4 smoke model aktual, template Edge/Alpine, lint PHP/JS/bash dan diff check lulus. Deployment worker serta hosting dicatat terpisah setelah hasil nyata.
+- Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-112657.json](docs/change-audit/proctoring-20261122-112657.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.

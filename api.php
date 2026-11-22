@@ -113,7 +113,6 @@ if (in_array($method, ['POST', 'PUT', 'DELETE'])) {
         'challenge.create', 'challenge.accept', 'challenge.decline', 'challenge.sync', 'challenge.submit',
         'tournament.create', 'tournament.accept', 'tournament.decline', 'tournament.start', 'tournament.stop', 'tournament.delete', 'tournament.reinvite', 'tournament.sync', 'tournament.submit',
         'message.send', 'message.delete',
-        'proctoring.log_event', 'proctoring.swap_question',
     ];
 
     if (!$isMobileApp && !in_array($action, $csrfExemptActions, true)) {

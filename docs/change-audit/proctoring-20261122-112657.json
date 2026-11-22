@@ -1,0 +1,546 @@
+{
+  "recorded_at_wib": "2026-11-22T11:26:57+07:00",
+  "baseline": "4d23db9f2380d1d8e3693320e2447c40eb00ff9d",
+  "timestamp_note": "last_write_wib is the final filesystem write time, not a reconstruction of every prior edit",
+  "files": [
+    {
+      "file": "api.php",
+      "last_write_wib": "2026-11-22T11:22:36+07:00",
+      "sha256": "531351d2b7b581c70c026bb965e541b5b0b06a6a229c4da0201e4f3edb61f93c",
+      "hunks": [
+        {
+          "old_start": 116,
+          "old_count": 1,
+          "new_start": 115,
+          "new_count": 0,
+          "section": "if (in_array($method, ['POST', 'PUT', 'DELETE'])) {"
+        }
+      ]
+    },
+    {
+      "file": "api/attempt.php",
+      "last_write_wib": "2026-11-22T11:22:36+07:00",
+      "sha256": "5264cdc102531782841b96c7a056e5c55494611e2a3f806ca4af92cab0931873",
+      "hunks": [
+        {
+          "old_start": 47,
+          "old_count": 1,
+          "new_start": 47,
+          "new_count": 1,
+          "section": "function attempt_submit(): void {"
+        }
+      ]
+    },
+    {
+      "file": "api/proctoring.php",
+      "last_write_wib": "2026-11-22T11:22:36+07:00",
+      "sha256": "53c08f34fa0d46e0d7c89c44c94b358ddaa02441a821a8461eb46ce9f4bda0c1",
+      "hunks": [
+        {
+          "old_start": 17,
+          "old_count": 8,
+          "new_start": 16,
+          "new_count": 0,
+          "section": "function proctoring_check_reference(): void {"
+        },
+        {
+          "old_start": 28,
+          "old_count": 3,
+          "new_start": 20,
+          "new_count": 2,
+          "section": "function proctoring_check_reference(): void {"
+        },
+        {
+          "old_start": 50,
+          "old_count": 15,
+          "new_start": 41,
+          "new_count": 3,
+          "section": "function proctoring_save_reference(): void {"
+        },
+        {
+          "old_start": 360,
+          "old_count": 1,
+          "new_start": 339,
+          "new_count": 1,
+          "section": "function proctoring_begin(): void {"
+        }
+      ]
+    },
+    {
+      "file": "api/quiz.php",
+      "last_write_wib": "2026-11-22T11:22:36+07:00",
+      "sha256": "5e043aec15fd636afde8b907110d80d674acce2f671964ef08fa082613879a75",
+      "hunks": [
+        {
+          "old_start": 332,
+          "old_count": 1,
+          "new_start": 332,
+          "new_count": 1,
+          "section": "function quiz_questions(): void {"
+        }
+      ]
+    },
+    {
+      "file": "assets/js/quiz-engine.v6.js",
+      "last_write_wib": "2026-11-22T11:23:27+07:00",
+      "sha256": "512085190fe8e559109e83284cc9b7680ffe5dd6f91d864c27447fd2208e7fc0",
+      "hunks": [
+        {
+          "old_start": 275,
+          "old_count": 3,
+          "new_start": 275,
+          "new_count": 2,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 286,
+          "old_count": 2,
+          "new_start": 285,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 289,
+          "old_count": 12,
+          "new_start": 287,
+          "new_count": 2,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 313,
+          "old_count": 22,
+          "new_start": 300,
+          "new_count": 0,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 386,
+          "old_count": 1,
+          "new_start": 352,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 393,
+          "old_count": 1,
+          "new_start": 359,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 396,
+          "old_count": 6,
+          "new_start": 362,
+          "new_count": 6,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 403,
+          "old_count": 0,
+          "new_start": 370,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 439,
+          "old_count": 1,
+          "new_start": 406,
+          "new_count": 3,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 443,
+          "old_count": 1,
+          "new_start": 412,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 474,
+          "old_count": 1,
+          "new_start": 443,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 488,
+          "old_count": 19,
+          "new_start": 457,
+          "new_count": 2,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 508,
+          "old_count": 2,
+          "new_start": 460,
+          "new_count": 4,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 512,
+          "old_count": 28,
+          "new_start": 466,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 541,
+          "old_count": 20,
+          "new_start": 468,
+          "new_count": 10,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 561,
+          "old_count": 0,
+          "new_start": 479,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 563,
+          "old_count": 7,
+          "new_start": 480,
+          "new_count": 0,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 572,
+          "old_count": 7,
+          "new_start": 483,
+          "new_count": 3,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 583,
+          "old_count": 10,
+          "new_start": 490,
+          "new_count": 2,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 886,
+          "old_count": 0,
+          "new_start": 786,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 888,
+          "old_count": 30,
+          "new_start": 788,
+          "new_count": 10,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 919,
+          "old_count": 21,
+          "new_start": 799,
+          "new_count": 2,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 941,
+          "old_count": 9,
+          "new_start": 802,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 954,
+          "old_count": 8,
+          "new_start": 807,
+          "new_count": 5,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 963,
+          "old_count": 35,
+          "new_start": 813,
+          "new_count": 10,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 1302,
+          "old_count": 1,
+          "new_start": 1127,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 1304,
+          "old_count": 25,
+          "new_start": 1129,
+          "new_count": 8,
+          "section": "function QuizEngine() {"
+        }
+      ]
+    },
+    {
+      "file": "assets/js/quiz-face-verifier.js",
+      "last_write_wib": "2026-11-22T11:22:36+07:00",
+      "sha256": "39185bf022651fa3b20a6aaccf1e921ae742cecf9bbf53d0ff0ae790eed8b553",
+      "hunks": [
+        {
+          "old_start": 316,
+          "old_count": 1,
+          "new_start": 316,
+          "new_count": 2,
+          "section": ""
+        },
+        {
+          "old_start": 332,
+          "old_count": 246,
+          "new_start": 333,
+          "new_count": 3,
+          "section": ""
+        },
+        {
+          "old_start": 583,
+          "old_count": 16,
+          "new_start": 341,
+          "new_count": 2,
+          "section": ""
+        },
+        {
+          "old_start": 601,
+          "old_count": 2,
+          "new_start": 345,
+          "new_count": 2,
+          "section": ""
+        },
+        {
+          "old_start": 604,
+          "old_count": 1,
+          "new_start": 348,
+          "new_count": 1,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "bin/configure-proctoring-vps.php",
+      "last_write_wib": "2026-11-22T11:23:27+07:00",
+      "sha256": "bade946f55848a87fc5bd6a512eb7492fb1f06dee9862d8619192c3c7918d437",
+      "hunks": [
+        {
+          "old_start": 11,
+          "old_count": 1,
+          "new_start": 11,
+          "new_count": 1,
+          "section": "$mask=umask(0077);"
+        }
+      ]
+    },
+    {
+      "file": "bin/install-quizb-face-vps.sh",
+      "last_write_wib": "2026-11-22T11:25:27+07:00",
+      "sha256": "7916b0aac0fd5566688ca0603efc145802fa6d8c1e5eabc5d06f141a9f299b90",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 91,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "config/proctoring.example.php",
+      "last_write_wib": "2026-11-22T11:23:27+07:00",
+      "sha256": "23fc5e5cbdc2b9b54a4a2fff763f7c033acf31239182b78f02c9573c29306dc5",
+      "hunks": [
+        {
+          "old_start": 5,
+          "old_count": 1,
+          "new_start": 5,
+          "new_count": 1,
+          "section": "return ["
+        }
+      ]
+    },
+    {
+      "file": "docs/proctoring-v2.md",
+      "last_write_wib": "2026-11-22T11:26:57+07:00",
+      "sha256": "7c5ea5d49a26f8ed0fa8cc6c5631eb597f95444e4368ac10787d5e85ffe27586",
+      "hunks": [
+        {
+          "old_start": 36,
+          "old_count": 0,
+          "new_start": 37,
+          "new_count": 6,
+          "section": "Pada 22 November 2026 pengguna menjalankan staging privat di akun Rumahweb quic1"
+        }
+      ]
+    },
+    {
+      "file": "pages/quiz-engine.html",
+      "last_write_wib": "2026-11-22T11:22:36+07:00",
+      "sha256": "ec85cf1a841e1d8338918f2c42d3c0476d52e926f970978194db647df1ff5dd5",
+      "hunks": [
+        {
+          "old_start": 98,
+          "old_count": 1,
+          "new_start": 98,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 402,
+          "old_count": 2,
+          "new_start": 402,
+          "new_count": 2,
+          "section": ""
+        },
+        {
+          "old_start": 406,
+          "old_count": 2,
+          "new_start": 406,
+          "new_count": 2,
+          "section": ""
+        },
+        {
+          "old_start": 425,
+          "old_count": 0,
+          "new_start": 426,
+          "new_count": 4,
+          "section": ""
+        },
+        {
+          "old_start": 430,
+          "old_count": 1,
+          "new_start": 434,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 449,
+          "old_count": 1,
+          "new_start": 453,
+          "new_count": 1,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "services/quizb-face-engine/README.md",
+      "last_write_wib": "2026-11-22T11:25:27+07:00",
+      "sha256": "d5b90ae95600848bc65bddc38b340a85500278e444c920177a23fbd11a412f32",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 11,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "services/quizb-face-engine/app.py",
+      "last_write_wib": "2026-11-22T11:23:27+07:00",
+      "sha256": "ce1874f3d9e94988736913817497e28f6aa44cfc349a6443ea9fe0ba38e0a1ca",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 55,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "services/quizb-face-engine/engine.py",
+      "last_write_wib": "2026-11-22T11:23:27+07:00",
+      "sha256": "a4103c916936d8691ad46e7dd53a4fef924cadd00986f5b8865246948f2e935b",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 155,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "services/quizb-face-engine/licenses/face_detection_yunet.txt",
+      "last_write_wib": "2026-11-13T11:53:09+07:00",
+      "sha256": "c83b8120c50ccbd4c4f96edf53141bdd566ebb8f8e9227e415326aa1b1aba958",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 21,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "services/quizb-face-engine/licenses/face_recognition_sface.txt",
+      "last_write_wib": "2026-11-13T11:53:09+07:00",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 202,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "services/quizb-face-engine/requirements.txt",
+      "last_write_wib": "2026-11-22T11:23:27+07:00",
+      "sha256": "3d522fa80a281d6c30e1ecb2903c8dc264d57f10f42ce7d2715f7db4711753cd",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 5,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/quizb-motion.py",
+      "last_write_wib": "2026-11-22T11:23:27+07:00",
+      "sha256": "a73c1aa3175919528e3fd12687808164fadd943ec688f26acdbe494795b3c223",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 25,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/test-proctoring-suite.cjs",
+      "last_write_wib": "2026-11-22T11:23:27+07:00",
+      "sha256": "171850a7025a13df88e3b5227e68df13f76eff7ae42a414e392252162be422f4",
+      "hunks": [
+        {
+          "old_start": 1,
+          "old_count": 28,
+          "new_start": 1,
+          "new_count": 18,
+          "section": ""
+        },
+        {
+          "old_start": 30,
+          "old_count": 595,
+          "new_start": 20,
+          "new_count": 85,
+          "section": "async function runTest(description, fn) {"
+        }
+      ]
+    }
+  ]
+}

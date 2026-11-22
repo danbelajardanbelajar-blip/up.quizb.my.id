@@ -44,7 +44,7 @@ function attempt_submit(): void {
     $retryToken=(string)($body['proctoring_session']??'');
     $retryState=$_SESSION['proctoring_v2'][hash('sha256',$retryToken)]??null;
     if ($retryState && (int)$retryState['user_id']===(int)$user['id'] && (int)$retryState['quiz_id']===$quizId && (int)$retryState['assignment_id']===(int)($body['assignment_id']??0) && !empty($retryState['response'])) jsonSuccess($retryState['response'],'Quiz sudah tersimpan');
-    $proctoringKey=proctoringUsesVps() ? proctoringRequireReceipt($user,$quiz,(int)($body['assignment_id']??0),$body) : null;
+    $proctoringKey=proctoringRequireReceipt($user,$quiz,(int)($body['assignment_id']??0),$body);
     if ($proctoringKey!==null) proctoringReceiptTable();
 
     // Normalisasi format answers: [{question_id, option_id}] atau {qid: oid}

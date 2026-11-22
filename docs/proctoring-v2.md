@@ -34,3 +34,9 @@ Tidak ada kredensial, model biner, venv atau foto peserta yang dimasukkan Git. I
 ## Hasil preflight hosting dari terminal pengguna
 
 Pada 22 November 2026 pengguna menjalankan staging privat di akun Rumahweb quic1934. Konfigurasi berhasil disalin dari LPPAI tanpa menampilkan token. Output: Engine health READY; Authenticated blank-frame probe NO_FACE; PASS model ready, credentials accepted, blank image rejected. Ini membuktikan PHP CLI hosting dapat memanggil VPS melalui cURL dengan konfigurasi yang benar. Proses berikutnya: salin konfigurasi privat ke QuizB, pull kode aplikasi dan uji kamera melalui PHP web. Tidak ada perubahan kode/database/konfigurasi asli LPPAI.
+
+## Pemulihan setelah regresi 4d23db9 dan kemudahan gerakan
+
+Atas permintaan pengguna, alur server-authoritative dari 1972cd3 dipulihkan: check-in VPS wajib sebelum soal, pemeriksaan berkala/akhir melalui VPS, receipt server untuk pengumpulan, penolakan acuan/descriptor kosong, CSRF, dan tidak ada fallback menyimpan acuan ketika mesin tidak tersedia. Instruksi singkat pada banner tetap dipertahankan. Panah kini membalik arah raw server untuk menyesuaikan preview bercermin seperti LPPAI.
+
+Endpoint khusus QuizB dirancang di https://face.lppai.quizb.my.id/quizb, worker loopback 8018. Batas gerakan menoleh 0,08 (sebelumnya 0,12); toleransi kembali lurus 0,14 (sebelumnya 0,10). Ambang kemiripan identitas seluruh sampel tetap default 0,45. LPPAI tetap menggunakan worker 8017, kode/parameter aslinya. Lihat services/quizb-face-engine/README.md untuk isolasi, pemasangan dan batas pengujian. Toleransi ini perlu diuji pada kamera nyata; tidak diklaim sebagai peningkatan akurasi biometrik atau PAD.

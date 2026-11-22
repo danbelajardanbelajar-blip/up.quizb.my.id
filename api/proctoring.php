@@ -14,20 +14,11 @@ function proctoring_check_reference(): void {
     $user = requireAuth();
     $status = getUserExamReference((int)$user['id']);
 
-    $refPhotoBase64 = null;
-    if ($status['has_reference'] && !empty($status['photo_path'])) {
-        $fullPath = __DIR__ . '/../' . ltrim(str_replace('\\', '/', $status['photo_path']), '/');
-        if (is_file($fullPath)) {
-            $refPhotoBase64 = 'data:image/jpeg;base64,' . base64_encode((string)file_get_contents($fullPath));
-        }
-    }
-
     jsonSuccess([
         'success'         => true,
         'user_id'         => (int)$user['id'],
-        'has_reference'   => $status['has_reference'] && ($refPhotoBase64 !== null),
-        'reference_photo' => $refPhotoBase64,
-        'protocol'        => 2,
+        'has_reference'   => $status['has_reference'],
+        'protocol'       => 2,
         'updated_at'      => $status['updated_at']
     ]);
 }
@@ -47,21 +38,9 @@ function proctoring_save_reference(): void {
 
     try { $binary=proctoringImage((string)$photo); }
     catch (RuntimeException $e) { jsonError($e->getMessage(),400); }
-
-    if (proctoringUsesVps()) {
-        $quality=proctoringRuntime(['frame'=>base64_encode($binary)]);
-        if (($quality['status']??'')==='UNAVAILABLE') {
-            error_log('[proctoring_save_reference] VPS unavailable, using local image validation fallback.');
-        } elseif (($quality['status']??'')!=='FACE_PRESENT') {
-            jsonError('Pastikan satu wajah terlihat jelas dan kepala tegak untuk foto acuan.',422);
-        }
-    } else {
-        $gdImg = @imagecreatefromstring($binary);
-        if (!$gdImg) jsonError('Format foto acuan tidak valid.', 400);
-        $w = imagesx($gdImg); $h = imagesy($gdImg);
-        imagedestroy($gdImg);
-        if ($w < 120 || $h < 120) jsonError('Resolusi foto terlalu kecil. Posisikan wajah lebih dekat ke kamera.', 422);
-    }
+    $quality=proctoringRuntime(['frame'=>base64_encode($binary)]);
+    if (($quality['status']??'')==='UNAVAILABLE') jsonError('Layanan verifikasi kamera belum siap. Hubungi pengajar; foto belum disimpan.',503);
+    if (($quality['status']??'')!=='FACE_PRESENT' || abs($quality['roll']??1)>0.12) jsonError('Pastikan satu wajah terlihat jelas dan kepala tegak untuk foto acuan.',422);
 
     $res = saveExamReferencePhoto((int)$user['id'], $photo);
     if (!$res['success']) {
@@ -357,7 +336,7 @@ function proctoring_begin(): void {
     if (!$scope['required']) jsonError('Kuis ini tidak memerlukan sesi kamera.',400);
     $reference=proctoringReference((int)$user['id']);
     if (!$reference['binary']) jsonError('Foto acuan belum tersedia. Lakukan pemindaian terlebih dahulu.',409);
-    if (proctoringUsesVps() && (proctoringRuntime([],true)['status']??'')!=='READY') jsonError('Layanan verifikasi kamera belum siap. Hubungi pengajar.',503);
+    if ((proctoringRuntime([],true)['status']??'')!=='READY') jsonError('Layanan verifikasi kamera belum siap. Hubungi pengajar.',503);
     jsonSuccess(array_merge(['success'=>true,'protocol'=>2],proctoringCreateSession($user,$scope,$reference['version'])));
 }
 
