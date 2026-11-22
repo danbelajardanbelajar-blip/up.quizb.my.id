@@ -91,3 +91,12 @@ test('real HTTP utility unwraps camera responses, sends CSRF and rejects stale a
 
  test('component destruction stops camera and invalidates pending work',async()=>{const h=harness();await h.q.startQuiz();h.q.destroy();assert.equal(h.q.cameraStream,null);assert(h.track.stops>0);assert.equal(h.listeners.size,0);});
  test('expired submission retries after successful server verification',async()=>{const h=harness();h.q.cameraStream=h.stream;h.q.phase='playing';h.setSequence([verdict('RECHECK'),verdict('VERIFIED',true),verdict('VERIFIED',true)]);await h.q.autoSubmit();assert.equal(h.q._pendingCameraSubmit,true);assert(!h.events.some(e=>e.action==='attempt.submit'));await h.timers.get(h.q._fastFaceCheckInterval).fn();assert.equal(h.events.filter(e=>e.action==='attempt.submit').length,1);assert.equal(h.q.phase,'submitted');});
+
+test('LPPAI VPS protocol captures nine guided frames and uses single frames only after verification',async()=>{
+ const h=harness();h.q.cameraStream=h.stream;h.q.phase='face_scan';const original=h.api.post;
+ h.api.post=async(action,body)=>action==='proctoring.begin'?{session:'a'.repeat(64),nonce:'b'.repeat(64),capture_protocol:'pose-burst-v2',direction:'left'}:original(action,body);
+ const pending=h.q._verifyCamera(h.video);await settle();
+ for(let i=0;i<9;i++){const entry=[...h.delayed].find(([,t])=>t.ms===1000);assert(entry);h.delayed.delete(entry[0]);entry[1].fn();await settle();}
+ assert.equal((await pending).verified,true);const request=h.events.find(e=>e.action==='proctoring.verify');assert.equal(request.body.frames.length,9);assert.equal(new Set(request.body.frames).size,9);assert.equal(h.q._vpsMotionRequired,false);
+ await h.q._verifyCamera(h.video);assert.equal(h.events.filter(e=>e.action==='proctoring.verify').at(-1).body.frames,undefined);
+});

@@ -1,6 +1,7 @@
 <?php
-// Copy to config/proctoring.php only when automatic home-directory detection is unsuitable.
+// Production: reuse the LPPAI HTTPS VPS service; token stays in this ignored server file.
 return [
-    'python' => '/home/YOUR_ACCOUNT/.local/share/quizb-proctoring/venv/bin/python',
-    'models' => '/home/YOUR_ACCOUNT/.local/share/quizb-proctoring/models',
+    'driver'=>'remote',
+    'url'=>'https://face.lppai.quizb.my.id',
+    'token'=>'REPLACE_WITH_SERVER_TOKEN_AT_LEAST_32_CHARACTERS',
 ];

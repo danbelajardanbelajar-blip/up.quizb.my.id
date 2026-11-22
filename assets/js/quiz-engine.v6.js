@@ -330,6 +330,8 @@ function QuizEngine() {
     _cameraGeneration: 0,
     _proctorSession: '',
     _proctorNonce: '',
+    _vpsMotionRequired: false,
+    _vpsDirection: '',
     _lastServerVerified: 0,
     _proctorBusy: false,
     _cameraStarting: false,
@@ -379,19 +381,44 @@ function QuizEngine() {
           if (generation !== this._cameraGeneration) return {verified:false,status:'CANCELLED'};
           if (!/^[a-f0-9]{64}$/.test(begin.session || '') || !/^[a-f0-9]{64}$/.test(begin.nonce || '')) throw Error('Sesi kamera tidak valid. Muat ulang layanan.');
           this._proctorSession = begin.session; this._proctorNonce = begin.nonce;
+          this._vpsMotionRequired=begin.capture_protocol==='pose-burst-v2';
+          this._vpsDirection=begin.direction;
+          if (this._vpsMotionRequired && !['left','right'].includes(begin.direction)) throw Error('Arah tantangan server tidak valid.');
         }
-        const snapshot = window.QuizFaceVerifier.captureSnapshot(video);
-        const result = await api.post('proctoring.verify',{session:this._proctorSession,nonce:this._proctorNonce,snapshot,purpose:final?'final':'periodic'},{signal:AbortSignal.timeout(18000)});
+        const frames=this._vpsMotionRequired ? await this._captureVpsMotion(video,generation) : undefined;
+        const snapshot = frames ? frames[frames.length-1] : window.QuizFaceVerifier.captureSnapshot(video);
+        const result = await api.post('proctoring.verify',{session:this._proctorSession,nonce:this._proctorNonce,snapshot,frames,purpose:final?'final':'periodic'},{signal:AbortSignal.timeout(18000)});
         if (generation !== this._cameraGeneration) return {verified:false,status:'CANCELLED'};
         if (!/^[a-f0-9]{64}$/.test(result.next_nonce || '')) throw Error('Respons verifikasi kamera tidak valid. Coba kembali.');
         this._proctorNonce = result.next_nonce;
-        if (result.verified === true && result.status === 'VERIFIED') this._lastServerVerified = Date.now();
+        if (result.verified === true && result.status === 'VERIFIED') { this._lastServerVerified = Date.now(); this._vpsMotionRequired=false; }
         else this._lastServerVerified = 0;
         return result;
       } catch (error) {
         if (generation === this._cameraGeneration) { this._proctorSession = ''; this._proctorNonce = ''; this._lastServerVerified = 0; }
         throw error;
       } finally { this._proctorBusy = false; }
+    },
+
+    async _captureVpsMotion(video,generation) {
+      const frames=[];
+      const side=this._vpsDirection==='left'?'kiri':'kanan';
+      const instructions=['Hadapkan wajah lurus ke kamera.',`Tolehkan kepala perlahan ke ${side} layar, lalu tahan.`, 'Kembali hadapkan wajah lurus seperti posisi awal.'];
+      for (let stage=0;stage<3;stage++) {
+        for (let sample=0;sample<3;sample++) {
+          if (generation!==this._cameraGeneration) throw Error('Pemeriksaan kamera dibatalkan.');
+          const message=`Langkah ${stage+1}/3: ${instructions[stage]} (${3-sample})`;
+          this.scanStatusMessage=message;this.faceWarningText=message;this.scanCountdown=3-sample;
+          await new Promise(resolve=>setTimeout(resolve,1000));
+          if (generation!==this._cameraGeneration) throw Error('Pemeriksaan kamera dibatalkan.');
+          await this._cameraVideo(video);
+          const state=window.QuizFaceVerifier.evaluateFrame(video);
+          if (!state.ready) throw Error(state.label || 'Wajah belum terlihat jelas. Ulangi gerakan.');
+          frames.push(window.QuizFaceVerifier.captureSnapshot(video));
+        }
+      }
+      this.scanCountdown=0;this.scanStatusMessage='Memeriksa sembilan foto tantangan di server…';
+      return frames;
     },
 
     _blockCamera(message, type = 'verification') {

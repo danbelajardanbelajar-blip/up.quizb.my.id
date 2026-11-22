@@ -1,11 +1,12 @@
 """Record staged changed hunks with timestamps and final content hashes; no file contents."""
 from datetime import datetime, timezone, timedelta
-import hashlib, json, re, subprocess
+import hashlib, json, re, subprocess, sys
 from pathlib import Path
 WIB=timezone(timedelta(hours=7))
 def git(*args): return subprocess.check_output(['git',*args],text=True,encoding='utf-8')
 root=Path(git('rev-parse','--show-toplevel').strip())
 now=datetime.now(WIB); records=[]
+package_note=sys.argv[1] if len(sys.argv)>1 else 'Verifikasi kamera server v2; lihat docs/proctoring-v2.md untuk rincian hasil uji dan status deployment.'
 for name in git('diff','--cached','--name-only','--diff-filter=ACM').splitlines():
     if name=='CHANGELOG_AUDIT.md' or name.startswith('docs/change-audit/'): continue
     p=root/name; diff=git('diff','--cached','--unified=0','--',name)
@@ -21,5 +22,6 @@ destination.write_text(json.dumps(dict(recorded_at_wib=now.isoformat(timespec='s
 log=root/'CHANGELOG_AUDIT.md'
 with log.open('a',encoding='utf-8') as out:
     out.write('\n\n### ['+now.strftime('%Y-%m-%d %H:%M:%S')+' WIB] — Verifikasi kamera server v2\n')
-    out.write('- Bagian: enrollment, deteksi/matching, nonce/receipt, akses soal, pengumpulan atomik, recovery dan tinjauan guru.\n- Validasi: 16 skenario Node; 37 assertion PHP; 7 inferensi model nyata; 4 integrasi PHP–Python; template Alpine di Edge; API lintas akun. Lint PHP/JS dan diff check lulus.\n- Keterbatasan: tes poller notifikasi lama gagal pada app.v5.js yang tidak diubah. MySQL/kamera nyata online belum diuji; proc_open dinonaktifkan hosting. Jangan pull gate sebelum runtime siap.\n- Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: ['+destination.name+']('+destination.relative_to(root).as_posix()+'). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.\n')
+    out.write('- Paket: '+package_note+'\n- Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: ['+destination.name+']('+destination.relative_to(root).as_posix()+'). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.\n')
+
 print(destination.relative_to(root).as_posix())

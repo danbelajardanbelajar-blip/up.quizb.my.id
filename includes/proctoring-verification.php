@@ -1,6 +1,8 @@
 <?php
+require_once __DIR__.'/proctoring-remote.php';
 // Server-authoritative camera receipts. Browser scores never authorize a submission.
 function proctoringRuntime(array $input = [], bool $health = false): array {
+    if (proctoringUsesVps()) return proctoringRemote($input,$health);
     $home = getenv('HOME') ?: (getenv('USERPROFILE') ?: dirname(__DIR__, 3));
     $configFile = __DIR__ . '/../config/proctoring.php';
     $config = is_file($configFile) ? require $configFile : [];
@@ -105,10 +107,11 @@ function proctoringCreateSession(array $user, array $scope, string $referenceVer
     $key=hash('sha256',$token);
     $_SESSION['proctoring_v2'][$key]=array_merge($scope,[
         'user_id'=>(int)$user['id'],'reference_version'=>$referenceVersion,'started_at'=>time(),
+        'engine_protocol'=>proctoringUsesVps()?'pose-burst-v2':'local-roll-v1','direction'=>random_int(0,1)?'left':'right',
         'stage'=>'tilt','nonce'=>$nonce,'verified_at'=>0,'final_verified_at'=>0,'sample_count'=>0,'frames'=>[],
     ],$carry);
     $_SESSION['proctoring_current'][$user['id'].':'.$scope['quiz_id'].':'.$scope['assignment_id']]=$key;
-    return ['session'=>$token,'nonce'=>$nonce,'status'=>'TILT_HEAD','message'=>'Miringkan kepala sedikit ke samping, lalu ikuti petunjuk kamera.'];
+    return ['session'=>$token,'nonce'=>$nonce,'capture_protocol'=>$_SESSION['proctoring_v2'][$key]['engine_protocol'],'direction'=>$_SESSION['proctoring_v2'][$key]['direction'],'status'=>'TILT_HEAD','message'=>'Miringkan kepala sedikit ke samping, lalu ikuti petunjuk kamera.'];
 }
 
 function proctoringAdvance(array &$session, array $result, string $frameHash, int $now, bool $final): string {
@@ -122,12 +125,18 @@ function proctoringAdvance(array &$session, array $result, string $frameHash, in
     $session['verified_at']=0;
     if (in_array($frameHash,$session['frames'],true)) return 'FRAME_REPLAY';
     $session['frames'][]=$frameHash;$session['frames']=array_slice($session['frames'],-12);
+    $vps=($session['engine_protocol']??'')==='pose-burst-v2';
     if (($result['status']??'')!=='MATCH') {
-        if (!in_array($result['status']??'',['UNAVAILABLE','SERVER_BUSY'],true)) $session['stage']='tilt';
+        if (!$vps && !in_array($result['status']??'',['UNAVAILABLE','SERVER_BUSY'],true)) $session['stage']='tilt';
         return $result['status']??'UNAVAILABLE';
     }
+    if ($vps && ($result['engine']??'')!=='opencv-sface-v1') return 'INVALID_FEATURE';
     $roll=$result['roll']??null;$score=$result['cosine']??null;
-    if (!is_numeric($roll) || !is_finite((float)$roll) || !is_numeric($score) || !is_finite((float)$score) || $score<0.50 || $score>1.001) return 'INVALID_FEATURE';
+    if (!is_numeric($roll) || !is_finite((float)$roll) || !is_numeric($score) || !is_finite((float)$score) || $score<($vps?0.45:0.50) || $score>1.001) return 'INVALID_FEATURE';
+    if ($vps && $session['stage']!=='ready') {
+        if (($result['engine']??'')!=='opencv-sface-v1' || ($result['motion_passed']??false)!==true || $now-$session['started_at']<3) return 'MOTION_REQUIRED';
+        $session['stage']='ready';
+    }
     if ($session['stage']==='tilt') {
         if (abs($roll)<0.12) return 'TILT_HEAD';
         $session['stage']='center';$session['tilted_at']=$now;
@@ -164,7 +173,7 @@ function proctoringReceiptTable(): void {
 
 function proctoringBindReceipt(string $key, int $attemptId): void {
     $s=$_SESSION['proctoring_v2'][$key];
-    DB::execute('INSERT INTO proctoring_receipts (attempt_id,user_id,quiz_id,assignment_id,verified_at,model_version,review_required,monitoring_gaps) VALUES (?,?,?,?,FROM_UNIXTIME(?),?,?,?)',[$attemptId,$s['user_id'],$s['quiz_id'],$s['assignment_id'],$s['final_verified_at'],'yunet-2023mar-sface-2021dec-v1',(int)($s['review_required']??false),(int)($s['monitoring_gaps']??0)]);
+    DB::execute('INSERT INTO proctoring_receipts (attempt_id,user_id,quiz_id,assignment_id,verified_at,model_version,review_required,monitoring_gaps) VALUES (?,?,?,?,FROM_UNIXTIME(?),?,?,?)',[$attemptId,$s['user_id'],$s['quiz_id'],$s['assignment_id'],$s['final_verified_at'],($s['engine_protocol']??'')==='pose-burst-v2'?'opencv-sface-v1':'yunet-2023mar-sface-2021dec-v1',(int)($s['review_required']??false),(int)($s['monitoring_gaps']??0)]);
     $_SESSION['proctoring_v2'][$key]['attempt_id']=$attemptId;
 }
 

@@ -75,5 +75,14 @@ try {
     check(proctoringReleaseQuestions($user,19,42,false),'verified cookie-bound lease releases protected questions');
     $_SESSION['proctoring_v2'][$next]['verified_at']=$now-21;
     check(!proctoringReleaseQuestions($user,19,42,false),'expired lease cannot release questions');
+    $s=fresh($now);$s['engine_protocol']='pose-burst-v2';$s['started_at']=$now-10;
+    $vps=['status'=>'MATCH','cosine'=>.65,'roll'=>0,'engine'=>'opencv-sface-v1','motion_passed'=>false];
+    check(proctoringAdvance($s,$vps,'vps-no-motion',$now,false)==='MOTION_REQUIRED','VPS single-frame identity cannot bypass initial motion');
+    $vps['motion_passed']=true;
+    check(proctoringAdvance($s,$vps,'vps-motion',$now,false)==='VERIFIED','VPS attested motion completes initial challenge');
+    $vps['motion_passed']=false;
+    check(proctoringAdvance($s,$vps,'vps-periodic',$now+2,true)==='VERIFIED','VPS periodic image can renew a previously verified session');
+    $vps['engine']='untrusted';
+    check(proctoringAdvance($s,$vps,'vps-bad-engine',$now+4,true)==='INVALID_FEATURE','VPS engine attestation checked on periodic verification');
     echo 'TOTAL '.$count.' PASS'.PHP_EOL;
 } finally { unlink($refPath); }

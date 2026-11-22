@@ -355,9 +355,22 @@ function proctoring_verify(): void {
     if (!$reference['binary'] || $reference['version']!==$session['reference_version']) jsonError('Foto acuan berubah atau tidak tersedia. Mulai verifikasi ulang.',409);
     try { $binary=proctoringImage((string)($body['snapshot']??'')); }
     catch (RuntimeException $e) { $session['verified_at']=0;$session['final_verified_at']=0;jsonError($e->getMessage(),400); }
-    $result=proctoringRuntime(['frame'=>base64_encode($binary),'reference'=>base64_encode($reference['binary'])]);
-    $status=proctoringAdvance($session,$result,hash('sha256',$binary),time(),($body['purpose']??'')==='final');
+    $input=['frame'=>base64_encode($binary),'reference'=>base64_encode($reference['binary'])];
+    $hash=hash('sha256',$binary);
+    if (($session['engine_protocol']??'')==='pose-burst-v2' && $session['stage']!=='ready') {
+        if (time()-$session['started_at']>90) jsonError('Tantangan gerakan kedaluwarsa. Sambungkan dan verifikasi ulang.',409);
+        $frames=$body['frames']??null;
+        if (!is_array($frames) || count($frames)!==9) jsonError('Ikuti tiga langkah gerakan kamera sebelum melanjutkan.',409);
+        $input['frames']=[];$hashes=[];
+        try { foreach ($frames as $frame) { if (!is_string($frame)) throw new RuntimeException('Foto tantangan tidak valid.'); $image=proctoringImage($frame); if (strlen($frame)>700000) throw new RuntimeException('Foto tantangan terlalu besar.');$input['frames'][]=base64_encode($image);$hashes[]=hash('sha256',$image); } }
+        catch (RuntimeException $e) { jsonError($e->getMessage(),400); }
+        if (count(array_unique($hashes))!==9) jsonError('Foto tantangan berulang. Ulangi dari kamera aktif.',400);
+        $input['direction']=$session['direction'];$hash=hash('sha256',implode(':',$hashes));
+    }
+    $result=proctoringRuntime($input);
+    $status=proctoringAdvance($session,$result,$hash,time(),($body['purpose']??'')==='final');
     $messages=[
+        'MOTION_REQUIRED'=>'Gerakan belum terbaca. Ulangi posisi lurus, menoleh sesuai petunjuk, lalu kembali lurus.',
         'TILT_HEAD'=>'Miringkan kepala sedikit ke samping untuk pemeriksaan gerakan.',
         'CENTER_HEAD'=>'Sekarang tegakkan kembali kepala dan lihat ke kamera.',
         'VERIFIED'=>'Kamera berhasil diverifikasi terhadap foto acuan.',

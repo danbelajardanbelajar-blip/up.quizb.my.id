@@ -1,37 +1,32 @@
-# Verifikasi kamera tugas — protokol v2
+# Verifikasi kamera QuizB — protokol v2
 
-## Perubahan dan batas kemampuan
+## Arsitektur produksi: mengikuti LPPAI
 
-Browser hanya memberi petunjuk keberadaan/posisi wajah. Server membandingkan foto referensi kanonis dengan frame terkini menggunakan YuNet + SFace dan alignment yang sama. Skor histogram buatan browser, descriptor kosong, boolean dari browser, dan kegagalan model tidak pernah menjadi MATCH. Referensi tidak dikirim kembali ke browser. Frame verifikasi diproses pada hosting yang sama dan tidak dikirim ke layanan AI eksternal.
+QuizB PHP hosting → cURL HTTPS → `https://face.lppai.quizb.my.id` → mesin YuNet/SFace di VPS pengguna 43.173.50.61. Implementasi ini mengikuti `includes/pretes-face-engine.php` serta layanan `services/face-engine` di proyek LPPAI lokal. Health endpoint yang diperiksa mengembalikan ready=true, engine opencv-sface-v1, capture_protocol pose-burst-v2 dan max_frames=9. Tidak perlu mengaktifkan proc_open/proc_close di shared hosting. Konfigurasi driver remote tidak pernah fallback ke proses PHP atau menganggap kegagalan mesin sebagai MATCH.
 
-Peserta harus memiringkan lalu meluruskan kepala pada frame terpisah. Nonce sekali pakai, hash frame, identitas akun, lingkup kuis/tugas, versi referensi, dan masa berlaku diverifikasi di server. Soal dilindungi sampai pemeriksaan awal berhasil. Pengumpulan memerlukan pemeriksaan akhir maksimal 15 detik sebelumnya. Pengulangan respons pengumpulan menggunakan hasil yang sama, tanpa membuat attempt kedua.
+Foto referensi kanonis dan frame kamera dikirim server-ke-server ke VPS milik pengguna yang sama seperti LPPAI, melalui HTTPS terverifikasi dan bearer token privat. Token tidak dikirim ke browser, URL, Git atau log. Layanan LPPAI existing tidak diubah dan tidak mempersistenkan foto/embedding. Konfigurasi di `config/proctoring.php` diabaikan Git dan dihalangi akses HTTP oleh aturan hosting existing. Script CLI `bin/configure-proctoring-vps.php` dapat mengambil URL/token dari konfigurasi privat LPPAI di hosting yang sama tanpa mencetak token.
 
-Gerakan kepala dan pencegahan replay sederhana **bukan jaminan anti foto/video palsu**. Pendaftaran wajah mandiri juga bukan verifikasi identitas resmi siswa. Ambang cosine 0,50 adalah parameter operasional konservatif, bukan persentase probabilitas identitas. Tujuh sampel smoke test tidak membuktikan akurasi populasi; lakukan uji terkontrol dengan persetujuan peserta sebelum penggunaan luas. Gangguan kamera tidak otomatis mengubah nilai atau menuduh kecurangan. Jeda pengawasan >30 detik ditandai untuk tinjauan manusia.
+Check-in menggunakan sembilan foto: tiga posisi lurus, tiga menoleh mengikuti arah acak server, tiga kembali lurus. Server memvalidasi kepemilikan kuis/tugas/referensi, nonce dan kedaluwarsa 90 detik. Hasil gerakan dipercaya hanya dari engine VPS. Skor/boolean browser tidak pernah membuka ujian. Setelah check-in, satu foto cukup untuk pemeriksaan berkala/akhir. Ambang cosine remote 0,45 mengikuti default LPPAI; ini indeks kemiripan, bukan persentase kepastian identitas.
 
-## Prasyarat dan urutan penerapan
+Gerakan dasar **bukan PAD/liveness bersertifikasi**, belum menjamin penolakan foto/video palsu, kamera virtual atau deepfake. Enrollment mandiri bukan pembuktian identitas resmi siswa. Gangguan kamera menjeda pengerjaan dan mempertahankan jawaban; tidak otomatis mengubah nilai atau menuduh kecurangan. Jeda pengawasan >30 detik ditandai untuk tinjauan manusia. Kuota inferensi LPPAI dibagi dengan QuizB; antrean penuh mendapat respons sibuk dan perlu retry.
 
-Jangan pull kode gate v2 pada produksi sebelum pemeriksa server siap. Tidak ada fallback MATCH jika runtime tidak tersedia.
+## Penerapan manual di hosting
 
-1. PHP >=8 dengan GD, PDO MySQL dan kemampuan menjalankan proses worker terbatas; Python >=3.9 dengan venv/pip. Instalasi membuat runtime dan model di `~/.local/share/quizb-proctoring`, di luar public_html. Model diverifikasi SHA-256 dari commit resmi OpenCV Zoo. Dua slot worker, satu thread CPU per proses, batas inferensi 12 detik.
-2. Fetch branch rilis. Ekstrak `bin/setup-proctoring.py` dan `bin/face-verify.py` dari ref rilis ke direktori privat sementara **tanpa mengganti checkout produksi**, lalu jalankan installer dengan Python yang tersedia. Pada Rumahweb tersedia `/opt/alt/python311/bin/python3`.
-3. Jika perlu, salin `config/proctoring.example.php` menjadi `config/proctoring.php` dan isi path absolut interpreter serta model. Konfigurasi privat diabaikan Git.
-4. Periksa `proctoringRuntime([], true)` lewat PHP yang digunakan aplikasi: harus mengembalikan READY. Periksa pula konfigurasi PHP web; hasil CLI saja tidak membuktikan PHP web siap.
-5. Setelah siap, pull fast-forward ref rilis pada `/home/quic1934/public_html/up.quizb.my.id`. Jangan menimpa modifikasi server `.htaccess` atau file SSO yang tidak dilacak. Tabel `proctoring_receipts` dibuat secara aditif ketika pertama diperlukan.
-6. Jalankan satu tugas uji dengan akun dan foto uji berizin: enrollment, tilt/center, soal muncul, kamera putus/pulih, akhir waktu, pengumpulan, tinjauan guru. Jangan mengubah nilai/data peserta nyata untuk smoke test.
+Branch rilis `codex/camera-server-verification`; produksi masih memakai commit lama sampai preflight berhasil. Pengguna memilih mengetik perintah terminal sendiri. Akses SSH otomatis ke VPS ditolak; tidak ada klaim telah mengganti layanan VPS atau deployment aplikasi online.
 
-Pemeriksaan hosting 22 November 2026: PHP CLI 8.4.28, Python 3.11.18 tersedia, tetapi `function_exists("proc_open")` menghasilkan false. Checkout produksi masih `4cb9290`. Aktivasi v2 menunggu penyelesaian batas runtime ini; jangan mengklaim sudah aktif online. Menyalakan fungsi proses PHP memerlukan persetujuan perubahan konfigurasi keamanan, atau gunakan worker lokal terisolasi yang dirancang dan diuji terpisah. Jangan mengaktifkan seluruh fungsi yang dibatasi.
+1. Fetch branch tanpa mengganti checkout produksi. Ekstrak `includes/proctoring-remote.php`, `includes/proctoring-verification.php`, `bin/configure-proctoring-vps.php` dan `bin/check-proctoring.php` ke folder privat staging dengan struktur yang sama dan subfolder config.
+2. Jalankan script configure staging dengan path konfigurasi privat LPPAI. Lokasi mengikuti deployment LPPAI: `~/public_html/lppai.quizb.my.id/web/config/pretes-face.local.php`. Script menolak path tidak ada, token pendek, URL lain, atau menimpa konfigurasi yang sudah ada. Jangan mengirim isi file/token ke chat.
+3. Jalankan `php bin/check-proctoring.php` dari staging. Harus health READY dan authenticated blank-frame probe NO_FACE. Probe memakai JPEG hitam buatan GD, bukan data peserta. Ini memeriksa token diterima dan gambar tanpa wajah ditolak; tidak membuktikan akurasi populasi.
+4. Sesudah PASS, salin konfigurasi privat ke config/proctoring.php produksi dan gunakan izin 600. Pull branch rilis fast-forward pada `~/public_html/up.quizb.my.id`. Pertahankan perubahan hosting .htaccess/SSO yang tidak terkait. Tabel proctoring_receipts dibuat aditif ketika pertama diperlukan.
+5. Ulangi preflight pada checkout aplikasi yang diperbarui. Lakukan tugas uji berizin: enrollment, sembilan foto gerakan, soal terbuka, putus/pulih kamera, akhir waktu dan pengumpulan, tinjauan guru. Pengujian melalui PHP web tetap diperlukan karena konfigurasinya bisa berbeda dari CLI. Jangan menyatakan selesai online sebelum langkah ini terbukti.
 
-## Pengujian
+## Verifikasi lokal
 
-- `node --test tests/test-proctoring-suite.cjs`: 16 skenario state UI/HTTP, termasuk format envelope API, CSRF, lintas sesi akun, kamera berakhir, callback terlambat, retry dan lifecycle.
-- `php tests/proctoring-state.php`: 37 assertion protokol server, nonce, replay, scope, receipt, umur bukti, withholding soal dan tinjauan manusia. Menggunakan DB mock; bukan pengujian MySQL produksi.
-- `QUIZB_FACE_FIXTURES=/path/private python tests/proctoring-model.py`: 7 inferensi nyata terhadap foto sampel OpenCV di luar repo; bukan foto siswa.
-- `node tests/notifications-api-session.cjs`: lulus, memastikan utilitas API tetap memisahkan sesi akun.
-- `node tests/notifications-frontend.cjs`: gagal pada assertion poller login di `app.v5.js` yang tidak berubah pada patch ini; dicatat sebagai kegagalan lama di luar scope kamera, bukan disembunyikan sebagai lulus.
+- 17 skenario Node mencakup lifecycle kamera, nonce/respons/CSRF, pemisahan sesi akun, retry dan pengambilan sembilan frame dengan arahan server.
+- 41 assertion PHP mencakup scope, replay, receipt, kedaluwarsa, withheld questions, tinjauan manusia dan attestation gerakan VPS.
+- 12 pemeriksaan parser/konfigurasi bridge VPS mencakup skor invalid, identitas engine, boolean/string, gerakan dan fail closed.
+- Template produksi dijalankan dengan Alpine 3.14.9 di Edge: pemulihan kamera, pengumpulan ulang dan teardown tanpa error JavaScript. API/kamera disimulasikan pada uji ini.
+- Pengujian sesi API notifikasi lulus. Tes frontend notifikasi existing gagal di assertion poller login pada app.v5.js yang tidak diubah patch ini; tidak diklaim lulus.
+- Driver lokal opsional lama: 7 inferensi model nyata dan 4 pemeriksaan PHP–Python lulus. Runtime privat yang sempat dipasang pada shared hosting tidak digunakan driver remote. Thread dibatasi sebelum import untuk mencegah OpenBLAS mencoba 80 thread. Tidak perlu mengaktifkan fungsi proses PHP.
 
-Tidak ada kredensial, model biner, venv, atau foto wajah uji yang dimasukkan Git. Pengujian integrasi MySQL dan kamera nyata di hosting tetap wajib sebelum menyatakan penerapan selesai.
-
-- `php tests/proctoring-runtime.php`: 4 pemeriksaan nyata PHP → Python → model, termasuk runtime hilang dan frame invalid.
-- `PLAYWRIGHT_MODULE_DIR=/path/playwright ALPINE_JS=/path/alpine.min.js node tests/proctoring-browser.cjs`: template produksi dijalankan dengan Alpine 3.14.9 di Edge; tombol pemulihan, pengumpulan ulang, teardown tanpa error JavaScript. API/kamera pada uji template ini disimulasikan.
-
-Pemeriksaan runtime hosting menemukan OpenBLAS mencoba membuat 80 thread, lalu proses health mengalami SIGSEGV meski sempat mencetak READY. Patch membatasi thread sebelum import NumPy/OpenCV dan memeriksa exit code proses, sehingga output READY/MATCH dari proses yang gagal tidak diterima.
+Tidak ada kredensial, model biner, venv atau foto peserta yang dimasukkan Git. Integrasi MySQL dan kamera nyata online belum diverifikasi.
