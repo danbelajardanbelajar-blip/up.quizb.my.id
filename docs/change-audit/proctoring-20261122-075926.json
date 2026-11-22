@@ -1,0 +1,56 @@
+{
+  "recorded_at_wib": "2026-11-22T07:59:26+07:00",
+  "baseline": "ccb004bff959f5f472818b7cc3f00dc6ac2c198c",
+  "timestamp_note": "last_write_wib is the final filesystem write time, not a reconstruction of every prior edit",
+  "files": [
+    {
+      "file": "bin/face-verify.py",
+      "last_write_wib": "2026-11-22T07:59:21+07:00",
+      "sha256": "d1acbe2a6edc0379466c3ebff11f16bcc68b876c31207009a3669a5f83063b51",
+      "hunks": [
+        {
+          "old_start": 8,
+          "old_count": 0,
+          "new_start": 9,
+          "new_count": 6,
+          "section": "import sys"
+        },
+        {
+          "old_start": 65,
+          "old_count": 0,
+          "new_start": 72,
+          "new_count": 1,
+          "section": "def main():"
+        }
+      ]
+    },
+    {
+      "file": "docs/proctoring-v2.md",
+      "last_write_wib": "2026-11-22T07:59:21+07:00",
+      "sha256": "fa9d7b84bd78ab742f090cfddc8cb6a829b5552a869a4bcc0509083f0c49fbc4",
+      "hunks": [
+        {
+          "old_start": 35,
+          "old_count": 0,
+          "new_start": 36,
+          "new_count": 2,
+          "section": "Tidak ada kredensial, model biner, venv, atau foto wajah uji yang dimasukkan Git"
+        }
+      ]
+    },
+    {
+      "file": "includes/proctoring-verification.php",
+      "last_write_wib": "2026-11-22T07:59:21+07:00",
+      "sha256": "fa07ac5589681bfb3de43564d739e569506fbc4b95fafc7d69543d4a2ee95cba",
+      "hunks": [
+        {
+          "old_start": 43,
+          "old_count": 1,
+          "new_start": 43,
+          "new_count": 2,
+          "section": "function proctoringRuntime(array $input = [], bool $health = false): array {"
+        }
+      ]
+    }
+  ]
+}

@@ -40,7 +40,8 @@ function proctoringRuntime(array $input = [], bool $health = false): array {
         usleep(20000);
     } while (true);
     $output .= stream_get_contents($pipes[1]);
-    fclose($pipes[1]); fclose($pipes[2]); proc_close($process);fclose($lock);
+    fclose($pipes[1]); fclose($pipes[2]); $exitCode=proc_close($process);fclose($lock);
+    if (($state['exitcode']??-1)!==0 && $exitCode!==0) return ['status'=>'UNAVAILABLE'];
     $result=json_decode($output,true);
     return is_array($result) && isset($result['status']) ? $result : ['status'=>'UNAVAILABLE'];
 }

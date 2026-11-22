@@ -6,6 +6,12 @@ import os
 from pathlib import Path
 import sys
 
+# Set limits before importing NumPy/OpenCV; shared hosting may expose many CPUs.
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['OPENCV_IO_MAX_IMAGE_PIXELS'] = '4000000'
+
 MODEL_VERSION = 'yunet-2023mar-sface-2021dec-v1'
 
 def check(payload, model_dir):
@@ -63,6 +69,7 @@ def main():
     directory = Path(os.environ.get('QUIZB_FACE_MODELS', str(Path.home() / '.local/share/quizb-proctoring/models')))
     if '--health' in sys.argv:
         import cv2
+        cv2.setNumThreads(1)
         assert (directory / 'yunet.onnx').is_file() and (directory / 'sface.onnx').is_file()
         cv2.FaceDetectorYN.create(str(directory / 'yunet.onnx'), '', (640,480))
         cv2.FaceRecognizerSF.create(str(directory / 'sface.onnx'), '')

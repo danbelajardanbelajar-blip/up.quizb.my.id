@@ -33,3 +33,5 @@ Tidak ada kredensial, model biner, venv, atau foto wajah uji yang dimasukkan Git
 
 - `php tests/proctoring-runtime.php`: 4 pemeriksaan nyata PHP → Python → model, termasuk runtime hilang dan frame invalid.
 - `PLAYWRIGHT_MODULE_DIR=/path/playwright ALPINE_JS=/path/alpine.min.js node tests/proctoring-browser.cjs`: template produksi dijalankan dengan Alpine 3.14.9 di Edge; tombol pemulihan, pengumpulan ulang, teardown tanpa error JavaScript. API/kamera pada uji template ini disimulasikan.
+
+Pemeriksaan runtime hosting menemukan OpenBLAS mencoba membuat 80 thread, lalu proses health mengalami SIGSEGV meski sempat mencetak READY. Patch membatasi thread sebelum import NumPy/OpenCV dan memeriksa exit code proses, sehingga output READY/MATCH dari proses yang gagal tidak diterima.
