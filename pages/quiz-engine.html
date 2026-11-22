@@ -149,6 +149,9 @@
              'bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300 ring-2 ring-red-500/30': scanGuideColor === 'red',
              'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300': !scanGuideColor
            }">
+        <span x-show="scanDirection" x-text="scanDirection === 'left' ? '←' : '→'"
+              data-camera-direction aria-hidden="true" dir="ltr"
+              class="text-5xl leading-none font-black shrink-0"></span>
         <span x-text="scanStatusMessage || 'Mengarahkan kamera ke wajah Anda...'"></span>
       </div>
 
@@ -425,7 +428,11 @@
       </div>
 
       <!-- Dynamic Guidance Box -->
-      <div class="py-2.5 px-3 bg-red-950/80 border border-red-500/50 rounded-xl mb-3">
+      <div class="py-2.5 px-3 bg-red-950/80 border border-red-500/50 rounded-xl mb-3 flex items-center justify-center gap-3">
+        <span x-show="scanDirection" x-text="scanDirection === 'left' ? '←' : '→'"
+              data-camera-direction aria-hidden="true" dir="ltr"
+              class="text-5xl leading-none font-black shrink-0"></span>
+
         <p class="text-xs font-bold text-red-200" x-text="faceWarningText || 'Harap hadapkan wajah Anda tepat di depan kamera'"></p>
       </div>
 

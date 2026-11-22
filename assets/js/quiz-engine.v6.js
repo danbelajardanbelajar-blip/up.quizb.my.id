@@ -39,6 +39,7 @@ function QuizEngine() {
     cameraStream: null,
     snapshotInterval: null,
     scanStatusMessage: '',
+    scanDirection: '',
     scanGuideColor: '',
     scanCountdown: 0,
     scanCaptured: false,
@@ -404,7 +405,9 @@ function QuizEngine() {
       const frames=[];
       const side=this._vpsDirection==='left'?'kiri':'kanan';
       const instructions=['Hadapkan wajah lurus ke kamera.',`Tolehkan kepala perlahan ke ${side} layar, lalu tahan.`, 'Kembali hadapkan wajah lurus seperti posisi awal.'];
+      try {
       for (let stage=0;stage<3;stage++) {
+        this.scanDirection=stage===1 ? this._vpsDirection : '';
         for (let sample=0;sample<3;sample++) {
           if (generation!==this._cameraGeneration) throw Error('Pemeriksaan kamera dibatalkan.');
           const message=`Langkah ${stage+1}/3: ${instructions[stage]} (${3-sample})`;
@@ -419,6 +422,7 @@ function QuizEngine() {
       }
       this.scanCountdown=0;this.scanStatusMessage='Memeriksa sembilan foto tantangan di server…';
       return frames;
+      } finally { if (generation===this._cameraGeneration) this.scanDirection=''; }
     },
 
     _blockCamera(message, type = 'verification') {
@@ -824,7 +828,7 @@ function QuizEngine() {
     },
     
     stopCamera() {
-      this._stoppingCamera=true; this._cameraGeneration++;
+      this._stoppingCamera=true; this._cameraGeneration++; this.scanDirection='';
       for (const {track,stop} of this._cameraTrackListeners || []) { track.removeEventListener('ended',stop); track.removeEventListener('mute',stop); }
       this._cameraTrackListeners=[];
       const scanVideo=this.$refs?.faceScanVideo;

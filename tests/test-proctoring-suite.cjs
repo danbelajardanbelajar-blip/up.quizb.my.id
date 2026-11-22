@@ -96,7 +96,9 @@ test('LPPAI VPS protocol captures nine guided frames and uses single frames only
  const h=harness();h.q.cameraStream=h.stream;h.q.phase='face_scan';const original=h.api.post;
  h.api.post=async(action,body)=>action==='proctoring.begin'?{session:'a'.repeat(64),nonce:'b'.repeat(64),capture_protocol:'pose-burst-v2',direction:'left'}:original(action,body);
  const pending=h.q._verifyCamera(h.video);await settle();
- for(let i=0;i<9;i++){const entry=[...h.delayed].find(([,t])=>t.ms===1000);assert(entry);h.delayed.delete(entry[0]);entry[1].fn();await settle();}
- assert.equal((await pending).verified,true);const request=h.events.find(e=>e.action==='proctoring.verify');assert.equal(request.body.frames.length,9);assert.equal(new Set(request.body.frames).size,9);assert.equal(h.q._vpsMotionRequired,false);
+ for(let i=0;i<9;i++){assert.equal(h.q.scanDirection,i>=3&&i<6?'left':'');const entry=[...h.delayed].find(([,t])=>t.ms===1000);assert(entry);h.delayed.delete(entry[0]);entry[1].fn();await settle();}
+ assert.equal((await pending).verified,true);const request=h.events.find(e=>e.action==='proctoring.verify');assert.equal(request.body.frames.length,9);assert.equal(new Set(request.body.frames).size,9);assert.equal(h.q._vpsMotionRequired,false);assert.equal(h.q.scanDirection,'');
  await h.q._verifyCamera(h.video);assert.equal(h.events.filter(e=>e.action==='proctoring.verify').at(-1).body.frames,undefined);
 });
+
+test('rightward motion guide clears on cancellation',async()=>{const h=harness();h.q.cameraStream=h.stream;h.q._vpsDirection='right';const pending=h.q._captureVpsMotion(h.video,h.q._cameraGeneration);await settle();for(let i=0;i<3;i++){const entry=[...h.delayed].find(([,t])=>t.ms===1000);h.delayed.delete(entry[0]);entry[1].fn();await settle();}assert.equal(h.q.scanDirection,'right');h.q.stopCamera();assert.equal(h.q.scanDirection,'');const entry=[...h.delayed].find(([,t])=>t.ms===1000);entry[1].fn();await assert.rejects(pending,/dibatalkan/);});

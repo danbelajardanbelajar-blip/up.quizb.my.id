@@ -247,3 +247,8 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 ### [2026-11-22 08:26:12 WIB] — Verifikasi kamera server v2
 - Paket: Preflight hosting oleh pengguna lulus: konfigurasi privat QuizB tersimpan, health READY, probe JPEG hitam terautentikasi NO_FACE. Catat bukti kesiapan PHP CLI hosting ke VPS; alur PHP web dan kamera online belum diuji. Menyiapkan fast-forward main untuk deployment manual QuizB.
 - Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-082612.json](docs/change-audit/proctoring-20261122-082612.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.
+
+
+### [2026-11-22 08:33:32 WIB] — Verifikasi kamera server v2
+- Paket: Tambahkan panah besar kiri/kanan mengikuti arah tantangan VPS pada panduan scan dan overlay verifikasi ulang. Panah hanya muncul saat langkah menoleh, hilang saat kembali lurus, selesai, gagal atau kamera dihentikan. Validasi 18 skenario Node, panah kiri/kanan serta visibilitas pada template Alpine di Edge, node syntax check dan git diff --check lulus. Hosting menunggu pull manual pengguna.
+- Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-083332.json](docs/change-audit/proctoring-20261122-083332.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.

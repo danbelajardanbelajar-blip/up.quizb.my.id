@@ -1,0 +1,105 @@
+{
+  "recorded_at_wib": "2026-11-22T08:33:32+07:00",
+  "baseline": "86ff2e9c3a21c52829a84e51e095ba49994de10d",
+  "timestamp_note": "last_write_wib is the final filesystem write time, not a reconstruction of every prior edit",
+  "files": [
+    {
+      "file": "assets/js/quiz-engine.v6.js",
+      "last_write_wib": "2026-11-22T08:33:12+07:00",
+      "sha256": "a9ba0dda828b3a0eec1b1e78fb3759257552347056bc2dcc5967810e61fc7501",
+      "hunks": [
+        {
+          "old_start": 41,
+          "old_count": 0,
+          "new_start": 42,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 406,
+          "old_count": 0,
+          "new_start": 408,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 407,
+          "old_count": 0,
+          "new_start": 410,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 421,
+          "old_count": 0,
+          "new_start": 425,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 827,
+          "old_count": 1,
+          "new_start": 831,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        }
+      ]
+    },
+    {
+      "file": "pages/quiz-engine.html",
+      "last_write_wib": "2026-11-22T08:33:12+07:00",
+      "sha256": "d0042ea1c7e491d2be4de3b4f3b613b454b0e1c70d3a249b281344cb86be5789",
+      "hunks": [
+        {
+          "old_start": 151,
+          "old_count": 0,
+          "new_start": 152,
+          "new_count": 3,
+          "section": ""
+        },
+        {
+          "old_start": 428,
+          "old_count": 1,
+          "new_start": 431,
+          "new_count": 5,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/proctoring-browser.cjs",
+      "last_write_wib": "2026-11-22T08:33:12+07:00",
+      "sha256": "40923dd44af13e2a3de2394f4684baf6216ac4479b2aa9c51e2b0f59395632b6",
+      "hunks": [
+        {
+          "old_start": 3,
+          "old_count": 1,
+          "new_start": 3,
+          "new_count": 1,
+          "section": "const {chromium}=require(process.env.PLAYWRIGHT_MODULE_DIR||'playwright');"
+        }
+      ]
+    },
+    {
+      "file": "tests/test-proctoring-suite.cjs",
+      "last_write_wib": "2026-11-22T08:33:12+07:00",
+      "sha256": "7963642d596837dedb814fec0965cb1f36540f1227879dc9d260ccd8e098d1d9",
+      "hunks": [
+        {
+          "old_start": 99,
+          "old_count": 2,
+          "new_start": 99,
+          "new_count": 2,
+          "section": "test('LPPAI VPS protocol captures nine guided frames and uses single frames only"
+        },
+        {
+          "old_start": 102,
+          "old_count": 0,
+          "new_start": 103,
+          "new_count": 2,
+          "section": "test('LPPAI VPS protocol captures nine guided frames and uses single frames only"
+        }
+      ]
+    }
+  ]
+}
