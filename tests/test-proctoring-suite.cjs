@@ -102,3 +102,24 @@ test('LPPAI VPS protocol captures nine guided frames and uses single frames only
 });
 
 test('rightward motion guide clears on cancellation',async()=>{const h=harness();h.q.cameraStream=h.stream;h.q._vpsDirection='right';const pending=h.q._captureVpsMotion(h.video,h.q._cameraGeneration);await settle();for(let i=0;i<3;i++){const entry=[...h.delayed].find(([,t])=>t.ms===1000);h.delayed.delete(entry[0]);entry[1].fn();await settle();}assert.equal(h.q.scanDirection,'left');h.q.stopCamera();assert.equal(h.q.scanDirection,'');const entry=[...h.delayed].find(([,t])=>t.ms===1000);entry[1].fn();await assert.rejects(pending,/dibatalkan/);});
+
+function noiseHarness(){const h=harness();let volume=0;h.q.phase='playing';h.q.cameraStream=h.stream;h.q._audioData=new Uint8Array(256);h.q._audioAnalyser={getByteFrequencyData:data=>data.fill(volume)};h.q.questions=[{id:1,options:[{id:2},{id:3}]},{id:9,options:[{id:10}]}];h.q.answers={1:2,9:10};h.q.captureCurrentSnapshot=async()=>null;h.volume=v=>volume=v;return h;}
+test('noise threshold is strictly above 80; continuous loud sound stays blocked and quiet resumes immediately',async()=>{
+ const h=noiseHarness();h.volume(80);for(let i=0;i<30;i++)h.q.checkAmbientNoise();assert.equal(h.q.isNoiseFrozen,false);
+ h.volume(81);for(let i=0;i<10;i++)h.q.checkAmbientNoise();assert.equal(h.q.isNoiseFrozen,false);h.q.checkAmbientNoise();assert.equal(h.q.isNoiseFrozen,true);await settle();
+ assert.equal(h.events.filter(e=>e.action==='proctoring.swap_question').length,1);assert.equal(h.q.answers[1],undefined);assert.equal(h.q.answers[9],10);assert.equal(h.q.questions[0].options.length,2);
+ h.q.startTimer();h.timers.get(h.q.timerInterval).fn();assert.equal(h.q.timeLeft,100);for(let i=0;i<200;i++)h.q.checkAmbientNoise();assert.equal(h.q.isNoiseFrozen,true);assert.equal(h.events.filter(e=>e.action==='proctoring.swap_question').length,1);
+ h.volume(80);h.q.checkAmbientNoise();assert.equal(h.q.isNoiseFrozen,false);h.timers.get(h.q.timerInterval).fn();assert.equal(h.q.timeLeft,99);
+});
+test('quiet recovery waits only for pending replacement, then unlocks without a countdown',async()=>{
+ const h=noiseHarness();let release;h.api.post=()=>new Promise(resolve=>release=resolve);h.volume(90);for(let i=0;i<11;i++)h.q.checkAmbientNoise();await settle();h.volume(10);h.q.checkAmbientNoise();assert.equal(h.q.isNoiseFrozen,true);assert.equal(h.q._noiseSwapPending,true);
+ release({swapped:true,new_question:{id:7,options:[{id:8}]}});await settle();assert.equal(h.q.isNoiseFrozen,false);assert.equal(h.q._noiseSwapPending,false);assert.equal(h.q.questions[0].id,7);assert.equal(h.q.answers[9],10);
+});
+test('snapshot and network failure reshuffle options locally and cannot leave quiet participants locked',async()=>{
+ const h=noiseHarness();h.q.captureCurrentSnapshot=async()=>{throw Error('snapshot failed')};h.api.post=async()=>{throw Error('offline')};h.volume(90);for(let i=0;i<11;i++)h.q.checkAmbientNoise();await settle();assert.equal(h.q.isNoiseFrozen,true);assert.equal(h.q._noiseSwapPending,false);assert.equal(h.q.questions[0].id,1);assert.notEqual(h.q.questions[0].options[0].id,2);
+ h.volume(0);h.q.checkAmbientNoise();assert.equal(h.q.isNoiseFrozen,false);
+});
+test('late noise replacement cannot change another camera session or duplicate an active question id',async()=>{
+ const h=noiseHarness();h.api.post=async()=>({swapped:true,new_question:{id:9,options:[{id:11}]}});h.volume(90);for(let i=0;i<11;i++)h.q.checkAmbientNoise();await settle();assert.equal(h.q.questions[0].id,1);assert.equal(new Set(h.q.questions.map(q=>q.id)).size,2);
+ const other=noiseHarness();let release;other.api.post=()=>new Promise(resolve=>release=resolve);other.volume(90);for(let i=0;i<11;i++)other.q.checkAmbientNoise();await settle();other.q.stopCamera();release({swapped:true,new_question:{id:77,options:[]}});await settle();assert.equal(other.q.questions[0].id,1);assert.equal(other.q.isNoiseFrozen,false);
+});

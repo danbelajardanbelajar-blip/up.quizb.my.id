@@ -286,3 +286,8 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 ### [2026-11-22 11:31:50 WIB] — Verifikasi kamera server v2
 - Paket: Worker QuizB VPS aktif dengan profil quizb-easy-v1 (.08 turn/.14 return); probe HTTPS terautentikasi /verify dan /quizb/verify NO_FACE, match=false. LPPAI PID903 tetap berjalan sejak 17 November tanpa restart. Tambah aktivasi endpoint hosting dengan preflight, backup privat dan rename atomik; instruksi menoleh sedikit; retry health proxy setelah reload. Validasi 18 Node, 9 geometri, template Edge/Alpine, PHP/JS/bash syntax dan diff check lulus. Aktivasi serta kamera nyata hosting menunggu terminal pengguna.
 - Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-113150.json](docs/change-audit/proctoring-20261122-113150.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.
+
+
+### [2026-11-22 11:39:51 WIB] — Verifikasi kamera server v2
+- Paket: Naikkan ambang kebisingan dari >75 menjadi >80 (skala spektrum, bukan dB); hapus timer blokir 15 detik. Audio tetap disampel saat diblokir; pulihkan pada sampel tenang setelah pengacakan selesai. Satu permintaan pengacakan per kejadian; timeout jaringan, fallback acak opsi, cegah ID soal duplikat dan respons sesi lama. Jawaban soal aktif direset mengikuti alur pengacakan existing, jawaban lainnya tetap. UI memakai status tenang/menyiapkan soal tanpa countdown. Validasi 22 Node, template Alpine di Edge, syntax JS dan diff check lulus; hosting menunggu pull manual.
+- Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-113951.json](docs/change-audit/proctoring-20261122-113951.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.

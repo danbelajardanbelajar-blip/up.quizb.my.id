@@ -468,12 +468,12 @@
       </h2>
       <p class="text-sm text-gray-300 leading-relaxed mb-5">
         Sistem pengawasan mendeteksi adanya suara keramaian atau percakapan di sekitar Anda.
-        Layar dibekukan sementara, timer pengerjaan dijeda, dan <strong>soal Anda saat ini telah dialihkan</strong>.
+        Pengerjaan dijeda sementara dan <strong>soal saat ini diacak ulang</strong>.
       </p>
 
       <div class="p-4 bg-gray-800/80 border border-gray-700 rounded-2xl mb-5">
-        <p class="text-xs text-gray-400 mb-1">Layar akan terbuka otomatis dalam:</p>
-        <div class="text-4xl font-black text-amber-400" x-text="noiseFreezeCountdown + 's'"></div>
+        <p class="text-sm font-semibold text-amber-300" role="status"
+           x-text="_noiseLoud ? 'Layar terbuka otomatis setelah suasana kembali tenang.' : (_noiseSwapPending ? 'Suasana sudah tenang. Menyiapkan soal…' : 'Suasana sudah tenang. Silakan lanjutkan.')"></p>
       </div>
 
       <p class="text-xs text-gray-400">

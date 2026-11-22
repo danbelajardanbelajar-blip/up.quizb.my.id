@@ -1,0 +1,133 @@
+{
+  "recorded_at_wib": "2026-11-22T11:39:51+07:00",
+  "baseline": "28357b42108e50d0a1d919efb6da3407c604efbb",
+  "timestamp_note": "last_write_wib is the final filesystem write time, not a reconstruction of every prior edit",
+  "files": [
+    {
+      "file": "assets/js/quiz-engine.v6.js",
+      "last_write_wib": "2026-11-22T11:38:03+07:00",
+      "sha256": "329fa262f679474f35692199179876689c592c3618f0249bc10e7426c905a78e",
+      "hunks": [
+        {
+          "old_start": 56,
+          "old_count": 2,
+          "new_start": 56,
+          "new_count": 2,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 596,
+          "old_count": 1,
+          "new_start": 596,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 608,
+          "old_count": 2,
+          "new_start": 608,
+          "new_count": 9,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 621,
+          "old_count": 13,
+          "new_start": 628,
+          "new_count": 7,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 634,
+          "old_count": 0,
+          "new_start": 636,
+          "new_count": 6,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 636,
+          "old_count": 1,
+          "new_start": 643,
+          "new_count": 7,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 638,
+          "old_count": 12,
+          "new_start": 651,
+          "new_count": 22,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 651,
+          "old_count": 14,
+          "new_start": 674,
+          "new_count": 4,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 666,
+          "old_count": 1,
+          "new_start": 679,
+          "new_count": 1,
+          "section": "function QuizEngine() {"
+        },
+        {
+          "old_start": 851,
+          "old_count": 1,
+          "new_start": 864,
+          "new_count": 3,
+          "section": "function QuizEngine() {"
+        }
+      ]
+    },
+    {
+      "file": "pages/quiz-engine.html",
+      "last_write_wib": "2026-11-22T11:38:03+07:00",
+      "sha256": "2fb0b87a4011f64c2d677894ed9d32cfd4b927325daf4ee501566c3a51ac73b1",
+      "hunks": [
+        {
+          "old_start": 471,
+          "old_count": 1,
+          "new_start": 471,
+          "new_count": 1,
+          "section": ""
+        },
+        {
+          "old_start": 475,
+          "old_count": 2,
+          "new_start": 475,
+          "new_count": 2,
+          "section": ""
+        }
+      ]
+    },
+    {
+      "file": "tests/proctoring-browser.cjs",
+      "last_write_wib": "2026-11-22T11:39:04+07:00",
+      "sha256": "357769e7ab258ffa7f2a852abc53861b326e4dc4b3217514174eee06a2c3abbb",
+      "hunks": [
+        {
+          "old_start": 3,
+          "old_count": 1,
+          "new_start": 3,
+          "new_count": 1,
+          "section": "const {chromium}=require(process.env.PLAYWRIGHT_MODULE_DIR||'playwright');"
+        }
+      ]
+    },
+    {
+      "file": "tests/test-proctoring-suite.cjs",
+      "last_write_wib": "2026-11-22T11:39:04+07:00",
+      "sha256": "e54d80327ee9bc2d5f2d782e89a703b367c09873d04b9c61acd3a713192e52da",
+      "hunks": [
+        {
+          "old_start": 104,
+          "old_count": 0,
+          "new_start": 105,
+          "new_count": 21,
+          "section": "test('rightward motion guide clears on cancellation',async()=>{const h=harness()"
+        }
+      ]
+    }
+  ]
+}

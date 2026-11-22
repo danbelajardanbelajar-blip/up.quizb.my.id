@@ -53,8 +53,8 @@ function QuizEngine() {
     _audioInterval: null,
     _sustainedNoiseDuration: 0,
     isNoiseFrozen: false,
-    noiseFreezeCountdown: 0,
-    _noiseFreezeTimer: null,
+    _noiseSwapPending: false,
+    _noiseLoud: false,
 
     // Fullscreen Monitoring
     isFullscreenExited: false,
@@ -593,7 +593,7 @@ function QuizEngine() {
     },
 
     checkAmbientNoise() {
-      if (this.phase !== 'playing' || this.isNoiseFrozen || !this._audioAnalyser) return;
+      if (this.phase !== 'playing' || !this._audioAnalyser) return;
 
       this._audioAnalyser.getByteFrequencyData(this._audioData);
 
@@ -605,8 +605,15 @@ function QuizEngine() {
       }
       const avgVoiceVolume = count > 0 ? (sum / count) : 0;
 
-      // Ambang batas percakapan / keramaian: rata-rata volume spektrum vokal > 75
-      if (avgVoiceVolume > 75) {
+      // Continue sampling while blocked; resume on the first quiet sample after reshuffling.
+      this._noiseLoud = avgVoiceVolume > 80;
+      if (this.isNoiseFrozen) {
+        this._sustainedNoiseDuration = 0;
+        if (!this._noiseLoud && !this._noiseSwapPending) this.isNoiseFrozen = false;
+        return;
+      }
+      // Spectrum magnitude threshold, not calibrated sound pressure in dB.
+      if (this._noiseLoud) {
         this._sustainedNoiseDuration += 150;
         if (this._sustainedNoiseDuration >= 1650) {
           // Terdeteksi suara obrolan / keramaian berlanjut > 1.6 detik -> Hukuman Layar Dibekukan & Soal Ditukar!
@@ -618,52 +625,58 @@ function QuizEngine() {
       }
     },
 
+    _shuffleNoiseOptions(index, questionId) {
+      const question = this.questions[index];
+      if (!question || question.id !== questionId || !Array.isArray(question.options)) return;
+      const options = [...question.options];
+      for (let i=options.length-1;i>0;i--) {
+        const j=Math.floor(Math.random()*(i+1));
+        [options[i],options[j]]=[options[j],options[i]];
+      }
+      // Ensure a visible change when the random shuffle happens to preserve the old order.
+      if (options.length>1 && options.every((option,i)=>option.id===question.options[i].id)) {
+        [options[0],options[1]]=[options[1],options[0]];
+      }
+      question.options=options;
+    },
+
     async triggerNoisePenalty() {
-      if (this.isNoiseFrozen) return;
-
-      this.isNoiseFrozen = true;
-      this.noiseFreezeCountdown = 15;
-
-      // Ambil snapshot bukti pelanggaran
-      const snapB64 = await this.captureCurrentSnapshot();
-
-      // Reset jawaban soal saat ini
-      const currentQId = this.current?.id;
-      if (currentQId && this.answers[currentQId] !== undefined) {
-        delete this.answers[currentQId];
-      }
-
-      // Tukar soal melalui backend API
+      if (this.isNoiseFrozen || this._noiseSwapPending) return;
+      this.isNoiseFrozen=true; this._noiseSwapPending=true;
+      const generation=this._cameraGeneration;
+      const index=this.currentIndex;
+      const currentQId=this.current?.id;
+      if (currentQId && currentQId in this.answers) delete this.answers[currentQId];
       try {
-        const swapRes = await api.post('proctoring.swap_question', {
-          quiz_id: this.quiz?.id || 0,
-          assignment_id: this.assignmentId || 0,
-          current_question_id: currentQId,
-          exclude_question_ids: this.questions.map(q => q.id),
-          snapshot: snapB64,
-          notes: 'Pelanggaran suara keramaian / obrolan terdeteksi (> 1.6s)'
-        });
-
-        if (swapRes && swapRes.swapped && swapRes.new_question) {
-          // Ganti soal pada indeks saat ini dengan soal baru
-          this.questions[this.currentIndex] = swapRes.new_question;
+        let snapshot=null;
+        try { snapshot=await this.captureCurrentSnapshot(); } catch (_) {}
+        if (generation!==this._cameraGeneration || this.phase!=='playing') return;
+        const swapRes=await api.post('proctoring.swap_question', {
+          quiz_id:this.quiz?.id || 0,
+          assignment_id:Number(this.assignmentId) || 0,
+          current_question_id:currentQId,
+          exclude_question_ids:this.questions.map(q=>q.id),
+          snapshot,
+          notes:'Suara melewati ambang spektrum 80 selama akumulasi 1,65 detik; soal diacak ulang.'
+        },{signal:AbortSignal.timeout(10000)});
+        if (generation!==this._cameraGeneration || this.phase!=='playing') return;
+        const replacement=swapRes?.swapped && swapRes.new_question;
+        // Do not duplicate an existing question/answer id if the server pool is exhausted.
+        if (replacement && replacement.id && Array.isArray(replacement.options)
+            && !this.questions.some((q,i)=>i!==index && q.id===replacement.id)) {
+          this.questions[index]=replacement;
+        } else this._shuffleNoiseOptions(index,currentQId);
+      } catch (error) {
+        if (generation===this._cameraGeneration && this.phase==='playing') {
+          this._shuffleNoiseOptions(index,currentQId);
+          console.warn('Question replacement unavailable; current options reshuffled.');
         }
-      } catch (swapErr) {
-        console.warn('Swap question API warning:', swapErr);
+      } finally {
+        if (generation===this._cameraGeneration) {
+          this._noiseSwapPending=false;
+          if (!this._noiseLoud) this.isNoiseFrozen=false;
+        }
       }
-
-      // Countdown pembekuan layar (15 detik)
-      if (this._noiseFreezeTimer) clearInterval(this._noiseFreezeTimer);
-      this._noiseFreezeTimer = setInterval(() => {
-        if (this.noiseFreezeCountdown > 1) {
-          this.noiseFreezeCountdown--;
-        } else {
-          clearInterval(this._noiseFreezeTimer);
-          this._noiseFreezeTimer = null;
-          this.noiseFreezeCountdown = 0;
-          this.isNoiseFrozen = false;
-        }
-      }, 1000);
     },
 
     // ---- Navigasi Kembali ke Halaman Sebelumnya ----
@@ -848,7 +861,9 @@ function QuizEngine() {
       }
       if (this._scanInterval) clearInterval(this._scanInterval);
       if (this._audioInterval) clearInterval(this._audioInterval);
-      if (this._noiseFreezeTimer) clearInterval(this._noiseFreezeTimer);
+      this._audioInterval=null; this._audioAnalyser=null; this._audioData=null;
+      this._noiseSwapPending=false; this._noiseLoud=false; this.isNoiseFrozen=false;
+      this._sustainedNoiseDuration=0;
       if (this._audioCtx) {
         try { this._audioCtx.close(); } catch(e) {}
         this._audioCtx = null;
