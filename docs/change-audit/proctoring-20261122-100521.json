@@ -1,0 +1,21 @@
+{
+  "recorded_at_wib": "2026-11-22T10:05:21+07:00",
+  "baseline": "e0a02319d7bd652d11209a8bba3fbf21f3f4b82a",
+  "timestamp_note": "last_write_wib is the final filesystem write time, not a reconstruction of every prior edit",
+  "files": [
+    {
+      "file": "pages/quiz-engine.html",
+      "last_write_wib": "2026-11-22T10:05:17+07:00",
+      "sha256": "ec85cf1a841e1d8338918f2c42d3c0476d52e926f970978194db647df1ff5dd5",
+      "hunks": [
+        {
+          "old_start": 96,
+          "old_count": 9,
+          "new_start": 96,
+          "new_count": 3,
+          "section": ""
+        }
+      ]
+    }
+  ]
+}

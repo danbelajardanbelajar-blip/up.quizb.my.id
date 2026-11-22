@@ -252,3 +252,8 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 ### [2026-11-22 08:33:32 WIB] — Verifikasi kamera server v2
 - Paket: Tambahkan panah besar kiri/kanan mengikuti arah tantangan VPS pada panduan scan dan overlay verifikasi ulang. Panah hanya muncul saat langkah menoleh, hilang saat kembali lurus, selesai, gagal atau kamera dihentikan. Validasi 18 skenario Node, panah kiri/kanan serta visibilitas pada template Alpine di Edge, node syntax check dan git diff --check lulus. Hosting menunggu pull manual pengguna.
 - Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-083332.json](docs/change-audit/proctoring-20261122-083332.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.
+
+
+### [2026-11-22 10:05:21 WIB] — Verifikasi kamera server v2
+- Paket: Ganti seluruh banner Pernyataan Privasi dan Keamanan Data Wajah di halaman scan menjadi instruksi pengguna: Ikuti Instruksi dengan baik dan jangan tergesa-gesa. Koreksi salah ketik tergea-gesa. Tidak mengubah alur penyimpanan/verifikasi. Verifikasi template Alpine di Edge dan git diff --check lulus. Hosting menunggu pull manual pengguna.
+- Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261122-100521.json](docs/change-audit/proctoring-20261122-100521.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.
