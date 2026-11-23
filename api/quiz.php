@@ -319,6 +319,17 @@ function quiz_questions(): void {
                     $allQuestions[] = $q;
                 }
             }
+        } else {
+            // Fallback: jika assignment tidak memiliki entri di assignment_quiz_packages,
+            // ambil soal dari quiz_id utama assignment atau quizId yang di-resolve
+            $targetQuizId = !empty($assignmentData['quiz_id']) ? (int)$assignmentData['quiz_id'] : $quizId;
+            if ($targetQuizId > 0) {
+                $allQuestions = DB::all(
+                    'SELECT id, question_text, type, points, order_num
+                     FROM questions WHERE quiz_id = ? ORDER BY order_num',
+                    [$targetQuizId]
+                );
+            }
         }
     } else {
         // Single quiz — ambil soal seperti biasa
@@ -329,7 +340,14 @@ function quiz_questions(): void {
         );
     }
 
-    if (!empty($quiz['require_camera'])) {
+    // Periksa apakah request berasal dari aplikasi Android Native
+    $isAndroidClient = (isset($_SERVER['HTTP_X_APP_PLATFORM']) && strtolower($_SERVER['HTTP_X_APP_PLATFORM']) === 'android')
+        || (isset($_SERVER['HTTP_USER_AGENT']) && stripos($_SERVER['HTTP_USER_AGENT'], 'QuizB-Android') !== false)
+        || (isset($_GET['platform']) && strtolower($_GET['platform']) === 'android');
+
+    // Untuk client web, lakukan penahanan soal jika proctoring kamera browser belum diverifikasi.
+    // Untuk aplikasi Android, ProctoringCameraView berjalan native di latar belakang sehingga soal langsung disajikan.
+    if (!empty($quiz['require_camera']) && !$isAndroidClient) {
         $cameraUser=requireAuth();
         if (!proctoringReleaseQuestions($cameraUser,$quizId,$assignmentId,($_GET['camera_preview']??'')==='1')) {
             jsonSuccess(['quiz'=>$quiz,'questions'=>[],'camera_verification_required'=>true,'question_count'=>$limit>0?min($limit,count($allQuestions)):count($allQuestions)]);
