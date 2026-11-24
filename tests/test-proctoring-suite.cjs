@@ -164,3 +164,69 @@ test('stopping camera cancels periodic verification interval and startup timeout
  assert(h.timers.has(interval));assert(h.delayed.has(timeout));h.q.stopCamera();
  assert(!h.timers.has(interval));assert(!h.delayed.has(timeout));
 });
+
+test('in-task face checks accept all four corners while guided capture still requires the center', () => {
+ const video = {videoWidth:640, videoHeight:480, readyState:4};
+ let faces = [], brightness = 128, sourceDrawn;
+ const canvasContext = {
+  drawImage: (...args) => { sourceDrawn = args; },
+  getImageData: (_x, _y, width, height) => ({data:new Uint8ClampedArray(width * height * 4).fill(brightness)}),
+ };
+ const context = {window:{}, document:{createElement:() => ({getContext:() => canvasContext})}};
+ vm.createContext(context);
+ vm.runInContext(verifierCode, context);
+ const verifier = context.window.QuizFaceVerifier;
+ verifier.cascadeClassifier = (row, col, scale) => faces.some(
+  ([y, x, size = 60]) => row === y && col === x && Math.abs(scale - size) < 1
+ ) ? 5 : -1;
+ const inTask = {requireCentered:false};
+
+ for (const face of [[37,37], [37,199], [139,37], [139,199]]) {
+  faces = [face];
+  assert.match(verifier.evaluateFrame(video).label, /Posisikan Wajah/);
+  assert.equal(verifier.evaluateFrame(video, inTask).ready, true);
+ }
+ assert.deepEqual(sourceDrawn, [video, 0, 0, 240, 180]);
+
+ faces = [];
+ assert.match(verifier.evaluateFrame(video, inTask).label, /Tidak Terdeteksi/);
+ faces = [[37,37], [139,199]];
+ assert.match(verifier.evaluateFrame(video, inTask).label, /Lebih dari 1 Orang/);
+ faces = [[40,40,30]];
+ assert.match(verifier.evaluateFrame(video, inTask).label, /Terlalu Jauh/);
+ brightness = 20;
+ assert.match(verifier.evaluateFrame(video, inTask).label, /Kurang Terang/);
+});
+
+test('monitoring, warning recovery and final submission accept an off-center face with server verification', async () => {
+ const h = harness();
+ h.q.cameraStream = h.stream;
+ h.q.phase = 'playing';
+ h.q.answers = {1:2};
+ let faceVisible = true;
+ h.Q.evaluateFrame = (_video, {requireCentered = true} = {}) => ({
+  ready: faceVisible && !requireCentered,
+  label: faceVisible ? 'OFF_CENTER' : 'NO_FACE',
+ });
+
+ await h.q.checkFaceIdentity();
+ assert.equal(h.q.showFaceWarning, false);
+
+ faceVisible = false;
+ await h.q.checkFaceIdentity();
+ assert.equal(h.q.showFaceWarning, true);
+
+ faceVisible = true;
+ h.setSequence([verdict('RECHECK'), verdict('VERIFIED', true)]);
+ const recover = h.timers.get(h.q._fastFaceCheckInterval).fn;
+ await recover();
+ assert.equal(h.q.showFaceWarning, true);
+ await recover();
+ assert.equal(h.q.showFaceWarning, false);
+
+ await h.q.submitAnswers();
+ assert.equal(h.q.phase, 'submitted');
+ const requests = h.events.filter(event => event.action === 'proctoring.verify');
+ assert.deepEqual(requests.map(event => event.body.purpose), ['periodic', 'periodic', 'periodic', 'final']);
+ assert.equal(h.events.filter(event => event.action === 'attempt.submit').length, 1);
+});

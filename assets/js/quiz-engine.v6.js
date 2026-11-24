@@ -809,7 +809,7 @@ function QuizEngine() {
       if (this._proctorBusy && (!this._lastServerVerified || Date.now()-this._lastServerVerified>=20000)) this._blockCamera('Menunggu pemeriksaan server. Waktu dijeda sementara.');
       try {
         const video=await this._cameraVideo();
-        const frame=window.QuizFaceVerifier.evaluateFrame(video);
+        const frame=window.QuizFaceVerifier.evaluateFrame(video, { requireCentered: false });
         if (!frame.ready) { this._blockCamera(frame.label,'absence'); return; }
         if (Date.now()-this._lastServerVerified>=10000) {
           const result=await this._verifyCamera(video);
@@ -832,7 +832,7 @@ function QuizEngine() {
         checking=true;
         try {
           const video=await this._cameraVideo();
-          const frame=window.QuizFaceVerifier.evaluateFrame(video);
+          const frame=window.QuizFaceVerifier.evaluateFrame(video, { requireCentered: false });
           if (!frame.ready) { this.faceWarningText=frame.label; return; }
           const result=await this._verifyCamera(video);
           if (this.phase!=='playing') return;
@@ -1153,7 +1153,7 @@ function QuizEngine() {
         try {
           if (this._proctorBusy) throw Error('Tunggu pemeriksaan kamera selesai, lalu kumpulkan kembali.');
           const video=await this._cameraVideo();
-          const frame=window.QuizFaceVerifier.evaluateFrame(video);
+          const frame=window.QuizFaceVerifier.evaluateFrame(video, { requireCentered: false });
           if (!frame.ready) throw Error(frame.label);
           const proof=await this._verifyCamera(video,true);
           if (proof.verified !== true || proof.status !== 'VERIFIED') throw Error(proof.message);

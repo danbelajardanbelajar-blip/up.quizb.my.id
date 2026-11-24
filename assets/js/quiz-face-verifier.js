@@ -141,9 +141,11 @@
         /**
          * Analisis satu frame video secara langsung
          * @param {HTMLVideoElement} videoEl
-         * @returns {Object} result: { ready, label, alertType, progress, score, faceBox }
+         * @param {Object} [options]
+         * @param {boolean} [options.requireCentered=true] Terapkan panduan posisi tengah
+         * @returns {Object} result: { ready, label, alertType, color, score, box }
          */
-        evaluateFrame: function(videoEl) {
+        evaluateFrame: function(videoEl, { requireCentered = true } = {}) {
             var self = this;
             if (!videoEl || videoEl.videoWidth === 0 || videoEl.readyState < 2) {
                 return { ready: false, label: 'Menyiapkan kamera...', alertType: 'info' };
@@ -255,47 +257,49 @@
             var bs = best[2]; // size
             var score = best[3];
 
-            // Koordinat relatif 0.0 - 1.0 terhadap frame
-            var normCenterX = bc / sampleW;
-            var normCenterY = br / sampleH;
+            if (requireCentered) {
+                // Koordinat relatif 0.0 - 1.0 terhadap frame
+                var normCenterX = bc / sampleW;
+                var normCenterY = br / sampleH;
+
+                // Catatan: Kamera selfie biasanya di-mirror secara horizontal di UI
+                // normCenterX < 0.36 artinya di kiri kamera (kanan user saat mirror)
+                if (normCenterX < 0.36) {
+                    return {
+                        ready: false,
+                        label: '👉 Posisikan Wajah: Geser sedikit ke Kanan',
+                        alertType: 'warning',
+                        color: 'amber'
+                    };
+                }
+                if (normCenterX > 0.64) {
+                    return {
+                        ready: false,
+                        label: '👈 Posisikan Wajah: Geser sedikit ke Kiri',
+                        alertType: 'warning',
+                        color: 'amber'
+                    };
+                }
+
+                if (normCenterY < 0.28) {
+                    return {
+                        ready: false,
+                        label: '👇 Posisikan Wajah: Geser sedikit ke Bawah',
+                        alertType: 'warning',
+                        color: 'amber'
+                    };
+                }
+                if (normCenterY > 0.72) {
+                    return {
+                        ready: false,
+                        label: '👆 Posisikan Wajah: Geser sedikit ke Atas',
+                        alertType: 'warning',
+                        color: 'amber'
+                    };
+                }
+            }
+
             var normSize = bs / sampleW;
-
-            // Catatan: Kamera selfie biasanya di-mirror secara horizontal di UI
-            // normCenterX < 0.38 artinya di kiri kamera (kanan user saat mirror)
-            if (normCenterX < 0.36) {
-                return {
-                    ready: false,
-                    label: '👉 Posisikan Wajah: Geser sedikit ke Kanan',
-                    alertType: 'warning',
-                    color: 'amber'
-                };
-            }
-            if (normCenterX > 0.64) {
-                return {
-                    ready: false,
-                    label: '👈 Posisikan Wajah: Geser sedikit ke Kiri',
-                    alertType: 'warning',
-                    color: 'amber'
-                };
-            }
-
-            if (normCenterY < 0.28) {
-                return {
-                    ready: false,
-                    label: '👇 Posisikan Wajah: Geser sedikit ke Bawah',
-                    alertType: 'warning',
-                    color: 'amber'
-                };
-            }
-            if (normCenterY > 0.72) {
-                return {
-                    ready: false,
-                    label: '👆 Posisikan Wajah: Geser sedikit ke Atas',
-                    alertType: 'warning',
-                    color: 'amber'
-                };
-            }
-
             if (normSize < 0.22) {
                 return {
                     ready: false,
@@ -315,10 +319,10 @@
 
             // Presence/position feedback only. Identity and aligned face comparison
             // are performed by the server; skin colour/eye contrast do not decide access.
-            // Semua kriteria terpenuhi: HIJAU & SIAP AUTO-CAPTURE!
+            // Semua kriteria untuk pemeriksaan ini terpenuhi.
             return {
                 ready: true,
-                label: '✅ Posisi Sempurna! Tahan posisi Anda...',
+                label: requireCentered ? '✅ Posisi Sempurna! Tahan posisi Anda...' : 'Wajah terdeteksi',
                 alertType: 'success',
                 color: 'green',
                 score: score,

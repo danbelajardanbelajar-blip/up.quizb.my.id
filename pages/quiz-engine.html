@@ -414,9 +414,9 @@
                playsinline
                autoplay
                muted
-               class="w-full h-full object-cover transform scale-x-[-1]"></video>
-        <!-- Face Oval Guide Target -->
-        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+               class="w-full h-full object-contain transform scale-x-[-1]"></video>
+        <!-- Face position guide during the motion challenge -->
+        <div x-show="_vpsMotionRequired && _proctorBusy" class="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div class="w-28 h-36 border-2 border-dashed border-red-400/80 rounded-full animate-pulse"></div>
         </div>
       </div>
@@ -427,7 +427,7 @@
               data-camera-direction aria-hidden="true" dir="ltr"
               class="text-5xl leading-none font-black shrink-0"></span>
 
-        <p class="text-xs font-bold text-red-200" x-text="faceWarningText || 'Harap hadapkan wajah Anda tepat di depan kamera'"></p>
+        <p class="text-xs font-bold text-red-200" x-text="faceWarningText || 'Pastikan wajah Anda terlihat jelas di dalam bingkai kamera.'"></p>
       </div>
 
       <p class="text-[11px] text-gray-400">
@@ -447,7 +447,7 @@
              playsinline
              autoplay
              muted
-             class="w-full h-full object-cover transform scale-x-[-1]"></video>
+             class="w-full h-full object-contain transform scale-x-[-1]"></video>
       <div class="absolute top-1 left-1 flex items-center gap-1 bg-black/70 px-1.5 py-0.5 rounded-full text-[9px] font-bold text-white pointer-events-none">
         <span class="w-1.5 h-1.5 rounded-full" :class="showFaceWarning ? 'bg-red-500 animate-ping' : 'bg-emerald-400'"></span>
         <span x-text="showFaceWarning ? 'PERIKSA' : (_lastServerVerified ? 'TERVERIFIKASI' : 'MEMERIKSA')"></span>
