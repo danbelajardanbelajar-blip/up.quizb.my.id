@@ -41,9 +41,35 @@ if (!$isAuthorized) {
     exit;
 }
 
-$email = 'reviewer@quizb.my.id';
-$password = 'QuizBReviewer2026!';
+$cliOpts = $isCli ? (getopt('', ['email::', 'password::']) ?: []) : [];
+$email = trim((string)($cliOpts['email'] ?? (getenv('REVIEWER_EMAIL') ?: ($_POST['email'] ?? 'reviewer@quizb.my.id'))));
+$password = (string)($cliOpts['password'] ?? (getenv('REVIEWER_PASSWORD') ?: ($_POST['password'] ?? '')));
 $name = 'Google Play Reviewer';
+
+if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    $errMsg = 'Email reviewer tidak valid.';
+    if ($isCli) {
+        fwrite(STDERR, $errMsg . PHP_EOL);
+        exit(1);
+    }
+    http_response_code(400);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['success' => false, 'error' => $errMsg, 'code' => 400], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if (strlen($password) < 12) {
+    $errMsg = 'Password reviewer wajib diisi (minimal 12 karakter) melalui env REVIEWER_PASSWORD, opsi CLI --password=..., atau POST field password.';
+    if ($isCli) {
+        fwrite(STDERR, $errMsg . PHP_EOL);
+        exit(1);
+    }
+    http_response_code(400);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['success' => false, 'error' => $errMsg, 'code' => 400], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $hash = password_hash($password, PASSWORD_BCRYPT);
 
 $existing = DB::one('SELECT id FROM users WHERE email = ?', [$email]);

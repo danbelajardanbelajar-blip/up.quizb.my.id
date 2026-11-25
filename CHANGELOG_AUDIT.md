@@ -374,3 +374,18 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 * **Hasil Verifikasi**:
   - `node tests/test-proctoring-suite.cjs` -> 29/29 PASS (termasuk pengecekan pengecualian CSRF pada router `api.php` dan pengiriman `X-CSRF-Token` di `utils.v5.js`).
   - `git diff --check` -> bersih tanpa error whitespace/conflict.
+
+
+---
+
+### [2026-11-25 17:34:00 WIB] — Menghapus Password Hardcoded pada Skrip Seeder `create_reviewer.php`
+* **Berkas yang Diubah**: [`create_reviewer.php`](file:///D:/all_project/up.quizb.my.id/create_reviewer.php)
+* **Baris yang Diubah**: Baris 44 - 73 (Pengambilan & validasi kredensial reviewer)
+* **Bagian / Fitur**: Seeder Akun Reviewer Google Play
+* **Deskripsi Perubahan**:
+  - Menghapus password plaintext hardcoded dari source code.
+  - Mengubah pengambilan `$email` dan `$password` agar membaca dari opsi CLI (`--email=...`, `--password=...`), environment variable (`REVIEWER_EMAIL`, `REVIEWER_PASSWORD`), atau `$_POST` saat dipanggil oleh admin terautentikasi.
+  - Menambahkan validasi format email (`FILTER_VALIDATE_EMAIL`) dan panjang password minimal 12 karakter, serta menolak eksekusi (`exit(1)` di CLI / HTTP `400` JSON di HTTP) jika kredensial tidak diberikan.
+* **Hasil Verifikasi**:
+  - Review manual struktur sintaks & percabangan CLI/HTTP pada baris 44 - 73 -> valid.
+  - `git diff --check` -> bersih tanpa error whitespace/conflict. *(Catatan: `php -l` lokal tidak tersedia karena `php` CLI belum terpasang di PATH mesin ini; jalankan `php -l create_reviewer.php` di server setelah `git pull` untuk memastikan).*
