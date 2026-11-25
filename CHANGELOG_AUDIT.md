@@ -404,3 +404,18 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 * **Hasil Verifikasi**:
   - Pengecekan seluruh kemunculan `new_user` lintas repo -> hanya tersisa di `verify-email.php`, `api/auth.php`, dan handler UI `app.v5.js`.
   - `git diff --check` -> bersih tanpa error whitespace/conflict.
+
+
+---
+
+### [2026-11-25 17:41:35 WIB] — Perbaikan Koneksi DB & Pengamanan Mode Dry-Run pada `admin_fix_correct_answers()`
+* **Berkas yang Diubah**: [`api/admin.php`](file:///D:/all_project/up.quizb.my.id/api/admin.php)
+* **Baris yang Diubah**: Baris 6 - 82 (Fungsi `admin_fix_correct_answers`)
+* **Bagian / Fitur**: Endpoint Admin — Audit & Perbaikan Kunci Jawaban Soal
+* **Deskripsi Perubahan**:
+  - Mengganti `$config = include __DIR__ . '/../config/db.php'` dan `new PDO(...)` (yang tidak kompatibel dengan struktur `config/db.php`) menjadi `DB::conn()`.
+  - Menjadikan endpoint berjalan dalam mode `dry_run` secara default (hanya mengembalikan daftar `affected_questions` dan statistik tanpa mengubah database). Perubahan opsi pertama menjadi `is_correct = 1` hanya dieksekusi jika `{"apply": true}` dikirim secara eksplisit, dan dijalankan di dalam transaksi DB (`beginTransaction` / `commit` / `rollBack`) dengan prepared statement yang di-reuse.
+  - Menyembunyikan detail error PDO di mode non-development (`error_log` ke server log) agar pesan error database internal tidak bocor ke respons API.
+* **Hasil Verifikasi**:
+  - Pengecekan referensi `fix_correct_answers` lintas repo -> tidak dipanggil oleh kode frontend/test lain.
+  - `git diff --check` -> bersih tanpa error whitespace/conflict. *(Jalankan `php -l api/admin.php` di server setelah `git pull` untuk memastikan).*

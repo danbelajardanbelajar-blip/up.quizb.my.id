@@ -7,10 +7,11 @@ function admin_fix_correct_answers(): void {
     requireAdmin();
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
 
-    $config = include __DIR__ . '/../config/db.php';
+    $body = getBody();
+    $apply = !empty($body['apply']) && $body['apply'] === true;
+
     try {
-        $pdo = new PDO('mysql:host='.$config['host'].';dbname='.$config['database'], $config['username'], $config['password']);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo = DB::conn();
 
         // Cari questions yang tidak punya correct option
         $stmt = $pdo->prepare("
@@ -27,25 +28,30 @@ function admin_fix_correct_answers(): void {
         $questionsWithoutCorrect = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $fixed = 0;
-        foreach ($questionsWithoutCorrect as $q) {
-            // Ambil semua opsi untuk question ini
-            $stmt = $pdo->prepare("SELECT id, option_text FROM options WHERE question_id = ? ORDER BY order_num");
-            $stmt->execute([$q['question_id']]);
-            $options = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if ($apply && count($questionsWithoutCorrect) > 0) {
+            $pdo->beginTransaction();
+            try {
+                $optStmt = $pdo->prepare("SELECT id FROM options WHERE question_id = ? ORDER BY order_num LIMIT 1");
+                $updStmt = $pdo->prepare("UPDATE options SET is_correct = 1 WHERE id = ?");
 
-            if (count($options) > 0) {
-                // Pilih opsi pertama sebagai correct
-                $correctOptionId = $options[0]['id'];
-
-                // Set sebagai correct
-                $stmt = $pdo->prepare("UPDATE options SET is_correct = 1 WHERE id = ?");
-                $stmt->execute([$correctOptionId]);
-
-                $fixed++;
+                foreach ($questionsWithoutCorrect as $q) {
+                    $optStmt->execute([$q['question_id']]);
+                    $firstOptionId = $optStmt->fetchColumn();
+                    if ($firstOptionId) {
+                        $updStmt->execute([(int)$firstOptionId]);
+                        $fixed++;
+                    }
+                }
+                $pdo->commit();
+            } catch (Throwable $txErr) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                throw $txErr;
             }
         }
 
-        // Verifikasi perbaikan
+        // Verifikasi statistik
         $stmt = $pdo->prepare("
             SELECT COUNT(DISTINCT q.id) as total_questions,
                    COUNT(DISTINCT CASE WHEN EXISTS(SELECT 1 FROM options o WHERE o.question_id = q.id AND o.is_correct = 1) THEN q.id END) as questions_with_correct
@@ -55,15 +61,23 @@ function admin_fix_correct_answers(): void {
         $stats = $stmt->fetch(PDO::FETCH_ASSOC);
 
         jsonSuccess([
-            'message' => 'Correct answers fixed successfully',
+            'message' => $apply
+                ? 'Correct answers fixed successfully'
+                : 'Audit selesai (dry-run). Kirim {"apply": true} jika benar-benar ingin menetapkan opsi pertama sebagai jawaban benar.',
+            'dry_run' => !$apply,
             'fixed_questions' => $fixed,
+            'affected_questions' => $apply ? [] : $questionsWithoutCorrect,
             'total_questions' => (int)$stats['total_questions'],
             'questions_with_correct' => (int)$stats['questions_with_correct'],
             'percentage' => $stats['total_questions'] > 0 ? round(($stats['questions_with_correct'] / $stats['total_questions']) * 100, 1) : 0
         ]);
 
-    } catch (Exception $e) {
-        jsonError('Database error: ' . $e->getMessage(), 500);
+    } catch (Throwable $e) {
+        error_log('[admin_fix_correct_answers] ' . $e->getMessage());
+        $msg = (defined('APP_ENV') && APP_ENV === 'development')
+            ? ('Database error: ' . $e->getMessage())
+            : 'Terjadi kesalahan database';
+        jsonError($msg, 500);
     }
 }
 
