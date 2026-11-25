@@ -340,14 +340,8 @@ function quiz_questions(): void {
         );
     }
 
-    // Periksa apakah request berasal dari aplikasi Android Native
-    $isAndroidClient = (isset($_SERVER['HTTP_X_APP_PLATFORM']) && strtolower($_SERVER['HTTP_X_APP_PLATFORM']) === 'android')
-        || (isset($_SERVER['HTTP_USER_AGENT']) && stripos($_SERVER['HTTP_USER_AGENT'], 'QuizB-Android') !== false)
-        || (isset($_GET['platform']) && strtolower($_GET['platform']) === 'android');
-
-    // Untuk client web, lakukan penahanan soal jika proctoring kamera browser belum diverifikasi.
-    // Untuk aplikasi Android, ProctoringCameraView berjalan native di latar belakang sehingga soal langsung disajikan.
-    if (!empty($quiz['require_camera']) && !$isAndroidClient) {
+    // Lakukan penahanan soal untuk semua client (web & Android) jika proctoring kamera belum diverifikasi.
+    if (!empty($quiz['require_camera'])) {
         $cameraUser=requireAuth();
         if (!proctoringReleaseQuestions($cameraUser,$quizId,$assignmentId,($_GET['camera_preview']??'')==='1')) {
             jsonSuccess(['quiz'=>$quiz,'questions'=>[],'camera_verification_required'=>true,'question_count'=>$limit>0?min($limit,count($allQuestions)):count($allQuestions)]);

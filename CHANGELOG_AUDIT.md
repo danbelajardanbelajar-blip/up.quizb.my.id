@@ -4,6 +4,18 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 
 ---
 
+### [2026-11-25 18:16:53 WIB] — Penegakan Verifikasi Wajah Pra-Ujian/Tugas untuk Client Android
+* **Berkas yang Diubah**: [`api/quiz.php`](file:///D:/all_project/up.quizb.my.id/api/quiz.php)
+* **Baris yang Diubah**: Baris 343 - 349 (sebelumnya Baris 343 - 355)
+* **Bagian / Fitur**: Fungsi `quiz_questions()` — Gerbang Verifikasi Kamera (`proctoringReleaseQuestions`)
+* **Deskripsi Perubahan**:
+  - Menghapus pengecualian `!$isAndroidClient` pada blok pemeriksaan `if (!empty($quiz['require_camera']))` agar aplikasi Android juga melewati gerbang `proctoringReleaseQuestions()` dan menerima `camera_verification_required: true` sebelum soal dibuka.
+  - Memastikan sesi `proctoring_v2` memiliki `questions_released_at` yang valid sehingga `attempt.submit` dapat memverifikasi tanda terima proctoring (`proctoringRequireReceipt`) untuk client Android.
+* **Hasil Verifikasi**:
+  - `node tests/test-proctoring-suite.cjs` -> 29/29 pengujian lolos (100% PASS).
+
+---
+
 ### [2026-11-17 16:02:22 WIB] — Pengamanan Skrip Seeder Akun Reviewer Google Play
 * **Nomor Temuan Audit**: 1 (P0 - Kritis)
 * **Berkas yang Diubah**: [`create_reviewer.php`](file:///D:/all_project/up.quizb.my.id/create_reviewer.php)
