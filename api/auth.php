@@ -550,13 +550,17 @@ function auth_verify_email(): void {
     $verified = DB::one('SELECT id, name, email, role, has_onboarded FROM users WHERE id = ?', [(int)$user['id']]);
     loginUser($verified);
     $newUserId = (int)$verified['id'];
-    $others = DB::all("SELECT id FROM users WHERE id != ? AND is_active = 1", [$newUserId]);
-    foreach ($others as $o) {
-        pushNotification((int)$o['id'], 'new_user',
-            '👤 ' . $verified['name'] . ' bergabung',
-            $verified['name'] . ' baru saja mendaftar di ' . APP_NAME . '.',
-            '/public-history?user_id=' . $newUserId
-        );
+    try {
+        $admins = DB::all("SELECT id FROM users WHERE id != ? AND is_active = 1 AND role = 'admin'", [$newUserId]);
+        foreach ($admins as $a) {
+            pushNotification((int)$a['id'], 'new_user',
+                '👤 ' . $verified['name'] . ' bergabung',
+                $verified['name'] . ' baru saja mendaftar di ' . APP_NAME . '.',
+                '/public-history?user_id=' . $newUserId
+            );
+        }
+    } catch (\Throwable $e) {
+        error_log('[auth_verify_email] notif error: ' . $e->getMessage());
     }
     jsonSuccess([
         'id'          => (int)$verified['id'],

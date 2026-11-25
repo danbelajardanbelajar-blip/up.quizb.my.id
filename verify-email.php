@@ -67,18 +67,18 @@ $verified = DB::one('SELECT id, name, email, role FROM users WHERE id = ?', [(in
 // ── Auto-login ───────────────────────────────────────────────────────
 loginUser($verified);
 
-// ── Broadcast notifikasi pengguna baru ──────────────────────────────
+// ── Notifikasi pengguna baru hanya ke admin (hindari broadcast O(N) ke semua user) ──
 $newUserId = (int)$verified['id'];
 try {
     require_once __DIR__ . '/includes/helpers.php';
-    $others = DB::all(
-        "SELECT id FROM users WHERE id != ? AND is_active = 1",
+    $admins = DB::all(
+        "SELECT id FROM users WHERE id != ? AND is_active = 1 AND role = 'admin'",
         [$newUserId]
     );
-    foreach ($others as $other) {
+    foreach ($admins as $admin) {
         if (function_exists('pushNotification')) {
             pushNotification(
-                (int)$other['id'],
+                (int)$admin['id'],
                 'new_user',
                 '👤 ' . $verified['name'] . ' bergabung',
                 $verified['name'] . ' baru saja mendaftar di ' . APP_NAME . '.',

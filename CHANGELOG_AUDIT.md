@@ -389,3 +389,18 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 * **Hasil Verifikasi**:
   - Review manual struktur sintaks & percabangan CLI/HTTP pada baris 44 - 73 -> valid.
   - `git diff --check` -> bersih tanpa error whitespace/conflict. *(Catatan: `php -l` lokal tidak tersedia karena `php` CLI belum terpasang di PATH mesin ini; jalankan `php -l create_reviewer.php` di server setelah `git pull` untuk memastikan).*
+
+
+---
+
+### [2026-11-25 17:38:55 WIB] — Membatasi Notifikasi Pengguna Baru (`new_user`) Hanya ke Admin
+* **Berkas yang Diubah**:
+  - [`verify-email.php`](file:///D:/all_project/up.quizb.my.id/verify-email.php) (Baris 70 - 91)
+  - [`api/auth.php`](file:///D:/all_project/up.quizb.my.id/api/auth.php) (Baris 552 - 564, fungsi `auth_verify_email`)
+* **Bagian / Fitur**: Verifikasi Email & Pengiriman Notifikasi `new_user`
+* **Deskripsi Perubahan**:
+  - Mengubah query penerima notifikasi `new_user` pada kedua alur verifikasi email (`verify-email.php` dan `auth_verify_email()` di `api/auth.php`) dari seluruh pengguna aktif (`WHERE id != ? AND is_active = 1`) menjadi khusus admin aktif (`WHERE id != ? AND is_active = 1 AND role = 'admin'`) untuk menghilangkan broadcast O(N) dan spam notifikasi ke seluruh pengguna.
+  - Membungkus pengiriman notifikasi di `api/auth.php` dengan `try/catch (\Throwable $e)` (konsisten dengan `verify-email.php`) agar kegagalan push notification tidak menggagalkan proses verifikasi email.
+* **Hasil Verifikasi**:
+  - Pengecekan seluruh kemunculan `new_user` lintas repo -> hanya tersisa di `verify-email.php`, `api/auth.php`, dan handler UI `app.v5.js`.
+  - `git diff --check` -> bersih tanpa error whitespace/conflict.
