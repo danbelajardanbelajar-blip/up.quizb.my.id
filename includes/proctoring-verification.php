@@ -105,13 +105,16 @@ function proctoringCreateSession(array $user, array $scope, string $referenceVer
     if (count($_SESSION['proctoring_v2']??[])>=8) jsonError('Terlalu banyak sesi ujian terbuka. Tutup sesi lama atau masuk ulang.',409);
     $token=bin2hex(random_bytes(32));$nonce=bin2hex(random_bytes(32));
     $key=hash('sha256',$token);
+    $vps = proctoringUsesVps();
+    $protocol = ($background || $vps) ? 'vps-single-v1' : 'local-roll-v1';
+    $stage = ($background || $vps) ? 'pending' : 'ready';
     $_SESSION['proctoring_v2'][$key]=array_merge($scope,[
         'user_id'=>(int)$user['id'],'reference_version'=>$referenceVersion,'started_at'=>time(),
-        'entry_mode'=>$background?'background':'motion','engine_protocol'=>$background?'vps-single-v1':(proctoringUsesVps()?'pose-burst-v2':'local-roll-v1'),'direction'=>random_int(0,1)?'left':'right',
-        'stage'=>$background?'pending':'tilt','nonce'=>$nonce,'verified_at'=>0,'final_verified_at'=>0,'sample_count'=>0,'frames'=>[],
+        'entry_mode'=>$background?'background':'motion','engine_protocol'=>$protocol,'direction'=>random_int(0,1)?'left':'right',
+        'stage'=>$stage,'nonce'=>$nonce,'verified_at'=>0,'final_verified_at'=>0,'sample_count'=>0,'frames'=>[],
     ],$carry);
     $_SESSION['proctoring_current'][$user['id'].':'.$scope['quiz_id'].':'.$scope['assignment_id']]=$key;
-    return ['session'=>$token,'nonce'=>$nonce,'capture_protocol'=>$_SESSION['proctoring_v2'][$key]['engine_protocol'],'direction'=>$_SESSION['proctoring_v2'][$key]['direction'],'status'=>$background?'PENDING':'TILT_HEAD','message'=>$background?'Pemeriksaan wajah berjalan di latar belakang.':'Miringkan kepala sedikit ke samping, lalu ikuti petunjuk kamera.'];
+    return ['session'=>$token,'nonce'=>$nonce,'capture_protocol'=>$protocol,'direction'=>$_SESSION['proctoring_v2'][$key]['direction'],'status'=>($background||$vps)?'PENDING':'READY','message'=>$background?'Pemeriksaan wajah berjalan di latar belakang.':'Memeriksa kesesuaian wajah dengan foto acuan…'];
 }
 
 function proctoringAdvance(array &$session, array $result, string $frameHash, int $now, bool $final): string {
@@ -127,7 +130,6 @@ function proctoringAdvance(array &$session, array $result, string $frameHash, in
     $session['frames'][]=$frameHash;$session['frames']=array_slice($session['frames'],-12);
     $vps=in_array($session['engine_protocol']??'',['pose-burst-v2','vps-single-v1'],true);
     if (($result['status']??'')!=='MATCH') {
-        if (!$vps && !in_array($result['status']??'',['UNAVAILABLE','SERVER_BUSY'],true)) $session['stage']='tilt';
         return $result['status']??'UNAVAILABLE';
     }
     if ($vps && ($result['engine']??'')!=='opencv-sface-v1') return 'INVALID_FEATURE';

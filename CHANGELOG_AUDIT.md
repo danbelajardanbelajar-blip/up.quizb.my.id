@@ -326,3 +326,22 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 ### [2026-11-24 19:12:00 WIB] — Verifikasi kamera server v2
 - Paket: Seluruh bingkai untuk pemantauan, pemulihan, dan pengumpulan tugas. Pencocokan identitas di server dan panduan pengambilan acuan tetap berlaku. Pratinjau saat tugas menampilkan bingkai utuh. Verifikasi lokal: sintaks JavaScript, 29 tes regresi, dua tes browser Edge, dan uji model Pico produksi dengan foto sampel di empat sudut; verifikasi server pada tes alur disimulasikan.
 - Manifest waktu penulisan akhir, SHA-256, file dan hunk baris: [proctoring-20261124-191200.json](docs/change-audit/proctoring-20261124-191200.json). Timestamp tidak mengklaim merekonstruksi riwayat edit yang tidak direkam.
+
+
+---
+
+### [2026-11-25 15:08:35 WIB] — Menghilangkan Kewajiban Menoleh pada Verifikasi Wajah Pertama
+* **Berkas yang Diubah**: [`includes/proctoring-verification.php`](file:///D:/all_project/up.quizb.my.id/includes/proctoring-verification.php)
+* **Baris yang Diubah**:
+  - Baris 108 - 117 (`proctoringCreateSession`)
+  - Baris 132 - 134 (`proctoringAdvance`)
+* **Bagian / Fitur**: Protokol Verifikasi Kamera Awal (`proctoring.begin` & `proctoring.verify`)
+* **Deskripsi Perubahan**:
+  - Pada `proctoringCreateSession()`: sesi non-background pada mode VPS kini menggunakan protokol single-frame (`vps-single-v1`, `stage: 'pending'`) menggantikan `pose-burst-v2`, sedangkan mode lokal (`local-roll-v1`) langsung memulai `stage` di `'ready'` (menggantikan `'tilt'`).
+  - Pada `proctoringAdvance()`: menghapus reset `$session['stage'] = 'tilt'` saat status bukan `MATCH` pada mode lokal agar retry setelah kegagalan sementara (misal `NO_FACE` atau `RECHECK`) tidak memaksa peserta memiringkan/menolehkan kepala.
+  - Seluruh struktur keamanan lain (token sesi, rotasi nonce, anti-replay SHA-256, pencocokan identitas YuNet/SFace, *receipt* `proctoring_receipts`, pemantauan berkala, audio/fullscreen/tab-switch) tetap utuh dan tidak diubah.
+* **Hasil Verifikasi**:
+  - `php -l includes/proctoring-verification.php` -> `No syntax errors detected`
+  - `php tests/proctoring-state.php` -> `TOTAL 52 PASS`
+  - `php tests/proctoring-remote.php` -> 12/12 PASS
+  - Simulasi sesi pertama mode lokal tanpa menoleh (`FIRST_CHECK_NO_TILT_OK`) -> PASS
