@@ -345,3 +345,18 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
   - `php tests/proctoring-state.php` -> `TOTAL 52 PASS`
   - `php tests/proctoring-remote.php` -> 12/12 PASS
   - Simulasi sesi pertama mode lokal tanpa menoleh (`FIRST_CHECK_NO_TILT_OK`) -> PASS
+
+
+---
+
+### [2026-11-25 17:29:25 WIB] — Pembersihan File Sisa/Debug & Penguatan Blokir HTTP di `.htaccess`
+* **Berkas yang Diubah / Dihapus**:
+  - Diubah: [`.htaccess`](file:///D:/all_project/up.quizb.my.id/.htaccess) (Baris 3 - 5)
+  - Dihapus (13 file di web root): `check_db.php`, `migrate_multiplayer.php`, `migrate_sync.php`, `test.php`, `test2.php`, `test3.php`, `test_dir.php`, `test_upload.php`, `temp_challenge.php`, `temp_sync.php`, `output.txt`, `extracted_text.txt`, `q16.json`
+* **Bagian / Fitur**: Access Control HTTP & Kebersihan Web Root
+* **Deskripsi Perubahan**:
+  - Memverifikasi bahwa ke-13 file sisa/debug/migrasi di web root tidak direferensikan di mana pun dalam kode aplikasi maupun `tests/`, lalu menghapusnya agar tidak dapat diakses publik lewat HTTP (termasuk skrip migrasi/query DB tanpa autentikasi).
+  - Menambahkan direktori `docs` dan `services` ke aturan `RewriteRule` `403 Forbidden` pada [`.htaccess`](file:///D:/all_project/up.quizb.my.id/.htaccess#L3-L5), serta memblokir akses HTTP langsung ke seluruh file `*.md` (termasuk `CHANGELOG_AUDIT.md`).
+* **Hasil Verifikasi**:
+  - Pengecekan referensi lintas repo (`Select-String` di `*.php`, `api/`, `includes/`, `pages/`, `assets/js/`, `tests/`) -> 0 referensi ditemukan.
+  - Verifikasi sintaks & struktur aturan `RewriteRule` di `.htaccess` -> valid (`git diff --check` bersih).
