@@ -101,18 +101,20 @@ $method = $_SERVER['REQUEST_METHOD'];
 if (in_array($method, ['POST', 'PUT', 'DELETE'])) {
     $action = $_GET['action'] ?? '';
 
-    // Check if request is from Android native app
-    $isMobileApp = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'id.my.quizb.android')
-                || (!empty($_SERVER['HTTP_X_APP_PLATFORM']) && strtolower($_SERVER['HTTP_X_APP_PLATFORM']) === 'android')
-                || (isset($_SERVER['HTTP_USER_AGENT']) && strpos($_SERVER['HTTP_USER_AGENT'], 'QuizB-Android') !== false);
+    // Check if request is genuinely from Android native HTTP client (no browser Origin/Referer)
+    // and without an explicit CSRF token header (if CSRF token is sent, always validate it).
+    $hasBrowserContext = !empty($_SERVER['HTTP_ORIGIN']) || !empty($_SERVER['HTTP_REFERER']);
+    $hasCsrfHeader     = !empty($_SERVER['HTTP_X_CSRF_TOKEN']) || !empty($_POST['_csrf']);
+    $isMobileApp = !$hasBrowserContext && !$hasCsrfHeader && (
+        (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'id.my.quizb.android')
+        || (!empty($_SERVER['HTTP_X_APP_PLATFORM']) && strtolower($_SERVER['HTTP_X_APP_PLATFORM']) === 'android')
+        || (isset($_SERVER['HTTP_USER_AGENT']) && strpos($_SERVER['HTTP_USER_AGENT'], 'QuizB-Android') !== false)
+    );
 
-    // Endpoints exempted from CSRF (Auth & Mobile/Realtime Duel state changes)
+    // Endpoints exempted from CSRF (Pre-auth / Auth session endpoints only)
     $csrfExemptActions = [
-        'auth.login', 'auth.register', 'auth.logout', 'auth.google', 'auth.google_native', 
-        'auth.resend_verification', 'auth.update_fcm_token', 'auth.unregister_fcm_token',
-        'challenge.create', 'challenge.accept', 'challenge.decline', 'challenge.sync', 'challenge.submit',
-        'tournament.create', 'tournament.accept', 'tournament.decline', 'tournament.start', 'tournament.stop', 'tournament.delete', 'tournament.reinvite', 'tournament.sync', 'tournament.submit',
-        'message.send', 'message.delete',
+        'auth.login', 'auth.register', 'auth.logout', 'auth.google', 'auth.google_native',
+        'auth.resend_verification',
     ];
 
     if (!$isMobileApp && !in_array($action, $csrfExemptActions, true)) {

@@ -360,3 +360,17 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 * **Hasil Verifikasi**:
   - Pengecekan referensi lintas repo (`Select-String` di `*.php`, `api/`, `includes/`, `pages/`, `assets/js/`, `tests/`) -> 0 referensi ditemukan.
   - Verifikasi sintaks & struktur aturan `RewriteRule` di `.htaccess` -> valid (`git diff --check` bersih).
+
+
+---
+
+### [2026-11-25 17:32:25 WIB] — Penguatan Validasi CSRF & Pembatasan Pengecualian Mobile/Aksi di `api.php`
+* **Berkas yang Diubah**: [`api.php`](file:///D:/all_project/up.quizb.my.id/api.php)
+* **Baris yang Diubah**: Baris 104 - 122 (Blok validasi CSRF untuk `POST`, `PUT`, `DELETE`)
+* **Bagian / Fitur**: Router API & Proteksi CSRF (`validateCsrfToken`)
+* **Deskripsi Perubahan**:
+  - Memperketat deteksi `$isMobileApp` agar hanya berlaku jika tidak ada konteks browser (`HTTP_ORIGIN` dan `HTTP_REFERER` kosong) dan tidak ada token CSRF eksplisit yang dikirim; jika request berasal dari browser atau menyertakan `X-CSRF-Token`/`_csrf`, validasi CSRF tetap wajib dijalankan.
+  - Mempersempit `$csrfExemptActions` agar hanya mencakup endpoint pra-autentikasi/sesi auth (`auth.login`, `auth.register`, `auth.logout`, `auth.google`, `auth.google_native`, `auth.resend_verification`). Endpoint `auth.update_fcm_token`, `auth.unregister_fcm_token`, `challenge.*`, `tournament.*`, `message.send`, dan `message.delete` kini wajib melewati validasi CSRF untuk request web (klien web di `utils.v5.js` sudah otomatis mengirimkan `X-CSRF-Token`).
+* **Hasil Verifikasi**:
+  - `node tests/test-proctoring-suite.cjs` -> 29/29 PASS (termasuk pengecekan pengecualian CSRF pada router `api.php` dan pengiriman `X-CSRF-Token` di `utils.v5.js`).
+  - `git diff --check` -> bersih tanpa error whitespace/conflict.
