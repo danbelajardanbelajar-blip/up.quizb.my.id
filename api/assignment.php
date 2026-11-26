@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/proctoring.php';
+require_once __DIR__ . '/../includes/assignment-submission.php';
 // ============================================
 // api/assignment.php — Assignment (Tugas) Endpoints
 // ============================================
@@ -388,103 +389,38 @@ function assignment_delete(): void {
 function assignment_submit(): void {
     $user = requireAuth();
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
-
-    $body         = getJsonBody();
+    $body = getJsonBody();
     $assignmentId = (int)($body['assignment_id'] ?? 0);
-    $attemptId    = (int)($body['attempt_id']    ?? 0);
+    $attemptId = (int)($body['attempt_id'] ?? 0);
     if ($assignmentId <= 0 || $attemptId <= 0) jsonError('Data tidak lengkap');
-
-    // Verifikasi assignment
-    $assignment = DB::one("SELECT * FROM assignments WHERE id = ? AND is_active = 1", [$assignmentId]);
-    if (!$assignment) jsonError('Tugas tidak ditemukan atau tidak aktif', 404);
-
-    // Verifikasi anggota kelas (atau pengajar / admin yang sedang menguji pengerjaan tugas)
-    $member = DB::one(
-        "SELECT id FROM class_members WHERE class_id = ? AND user_id = ?",
-        [$assignment['class_id'], $user['id']]
-    );
-    $isTeacherOrAdmin = ($user['role'] === 'admin') || ((int)$assignment['teacher_id'] === (int)$user['id']);
-    if (!$member && !$isTeacherOrAdmin) {
-        jsonError('Anda bukan anggota kelas ini', 403);
-    }
-
-    // Verifikasi attempt milik user dan quiz-nya ada dalam packages assignment ini
-    // (mendukung single maupun multiple quiz packages)
-    $attempt = DB::one(
-        "SELECT att.* FROM attempts att
-         WHERE att.id = ? AND att.user_id = ?
-           AND (
-             att.quiz_id = ?
-             OR att.quiz_id IN (
-               SELECT quiz_id FROM assignment_quiz_packages WHERE assignment_id = ?
-             )
-           )",
-        [$attemptId, $user['id'], $assignment['quiz_id'], $assignmentId]
-    );
-    if (!$attempt) jsonError('Attempt tidak valid — quiz tidak terkait dengan tugas ini', 404);
-    $cameraQuiz=DB::one('SELECT require_camera FROM quizzes WHERE id = ?',[$attempt['quiz_id']]);
-    if (!empty($assignment['require_camera']) || !empty($cameraQuiz['require_camera'])) {
-        proctoringReceiptTable();
-        $proof=DB::one('SELECT attempt_id FROM proctoring_receipts WHERE attempt_id = ? AND user_id = ? AND assignment_id = ? AND quiz_id = ?',[$attemptId,$user['id'],$assignmentId,$attempt['quiz_id']]);
-        if (!$proof) jsonError('Pengerjaan ini belum memiliki bukti verifikasi kamera untuk tugas ini. Verifikasi dan kerjakan ulang, atau hubungi pengajar.',409);
-    }
-
-    // Cek deadline
-    if ($assignment['deadline'] && strtotime($assignment['deadline']) < time()) {
-        jsonError('Batas waktu tugas sudah berakhir');
-    }
-
-    // Membuat tabel log percobaan tugas jika belum ada
+    $pdo = DB::conn();
     try {
-        DB::execute("CREATE TABLE IF NOT EXISTS assignment_attempts (
-            id INT AUTO_INCREMENT PRIMARY KEY, 
-            assignment_id INT, 
-            user_id INT, 
-            attempt_id INT, 
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )");
-    } catch(Exception $e) {}
-
-    // Catat attempt ini ke riwayat tugas JIKA belum ada
-    $alreadyLogged = DB::one(
-        "SELECT id FROM assignment_attempts WHERE assignment_id = ? AND user_id = ? AND attempt_id = ?", 
-        [$assignmentId, $user['id'], $attemptId]
-    );
-    if (!$alreadyLogged) {
-        DB::execute(
-            "INSERT INTO assignment_attempts (assignment_id, user_id, attempt_id) VALUES (?, ?, ?)", 
-            [$assignmentId, $user['id'], $attemptId]
-        );
+        assignmentSubmissionTables();
+        $pdo->beginTransaction();
+        $attempt = DB::one('SELECT * FROM attempts WHERE id = ? AND user_id = ?', [$attemptId, $user['id']]);
+        if (!$attempt) throw new AssignmentSubmissionException('Hasil pengerjaan tidak ditemukan', 404);
+        $assignment = assignmentSubmissionScope($user, $assignmentId, (int)$attempt['quiz_id']);
+        $result = assignmentPersistSubmission($user, $assignment, $attempt);
+        $pdo->commit();
+        jsonSuccess($result, 'Tugas berhasil dikumpulkan');
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        if ($e instanceof AssignmentSubmissionException) jsonError($e->getMessage(), $e->getCode());
+        error_log('[assignment.submit] '.$e->getMessage());
+        jsonError('Pengumpulan belum berhasil. Hasil pengerjaan tetap tersimpan.', 500);
     }
+}
 
-    // Cek sudah submit? (untuk update record utamanya)
-    $existing = DB::one(
-        "SELECT id, attempt_id FROM assignment_submissions WHERE assignment_id = ? AND user_id = ?",
-        [$assignmentId, $user['id']]
-    );
-
-    if ($existing) {
-        if (!empty($assignment['require_full_score'])) {
-            $oldAttempt = DB::one("SELECT score FROM attempts WHERE id = ?", [$existing['attempt_id']]);
-            $oldScore = $oldAttempt && isset($oldAttempt['score']) ? (int)$oldAttempt['score'] : null;
-            if ($oldScore !== null && $oldScore === 100) {
-                jsonError('Anda sudah mengumpulkan tugas ini dan mendapatkan nilai sempurna (100).');
-            }
-        }
-
-        // Update existing submission record ke attempt baru yang memegang skor terbaru/terakhir
-        DB::conn()->prepare(
-            "UPDATE assignment_submissions SET attempt_id = ?, submitted_at = NOW() WHERE id = ?"
-        )->execute([$attemptId, $existing['id']]);
-        
-        jsonSuccess(['message' => 'Tugas berhasil diperbarui', 'score' => $attempt['score']]);
-    }
-
-    DB::conn()->prepare(
-        "INSERT INTO assignment_submissions (assignment_id, user_id, attempt_id) VALUES (?, ?, ?)"
-    )->execute([$assignmentId, $user['id'], $attemptId]);
-
-    jsonSuccess(['message' => 'Tugas berhasil dikumpulkan', 'score' => $attempt['score']]);
+// Public, read-only compatibility check; no account data or credentials are exposed.
+function assignment_capabilities(): void {
+    $identity = DB::one('SELECT DATABASE() AS database_name, @@hostname AS server_name');
+    $transactional = assignmentSubmissionTransactional();
+    jsonSuccess([
+        'submission_contract' => $transactional ? 2 : 0,
+        'atomic_assignment_submission' => $transactional,
+        'durable_idempotency' => $transactional,
+        'backend_id' => hash('sha256', getenv('QUIZB_BACKEND_ID') ?: (($identity['server_name'] ?? '').':'.($identity['database_name'] ?? ''))),
+    ]);
 }
 
 // ============================================

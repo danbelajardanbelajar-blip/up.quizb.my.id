@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/proctoring.php';
+require_once __DIR__ . '/../includes/assignment-submission.php';
 // ============================================
 // api/attempt.php — Attempt & History Endpoints
 // ============================================
@@ -11,6 +12,29 @@ function attempt_submit(): void {
         // Siapapun bisa submit — login atau anonim
         $user = getCurrentUserOrAnon();
         $body = getBody();
+        $atomicAssignment = (int)($body['submission_contract'] ?? 0) === 2 && (int)($body['assignment_id'] ?? 0) > 0;
+        $submissionId = (string)($body['submission_id'] ?? '');
+        if ($atomicAssignment) {
+            if (!empty($user['is_anon'])) jsonError('Silakan login untuk mengumpulkan tugas', 401);
+            if (!preg_match('/^[a-zA-Z0-9-]{16,64}$/D', $submissionId)) jsonError('ID pengumpulan tidak valid', 400);
+            // DDL must precede the transaction (MySQL DDL implicitly commits).
+            assignmentSubmissionTables();
+            $pdo = DB::conn();
+            $pdo->beginTransaction();
+            $payloadHash = submissionPayloadHash($body);
+            DB::execute('INSERT INTO submission_requests (user_id, submission_id, payload_hash) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE submission_id = VALUES(submission_id)', [$user['id'], $submissionId, $payloadHash]);
+            $saved = DB::one('SELECT payload_hash, response_json FROM submission_requests WHERE user_id = ? AND submission_id = ? FOR UPDATE', [$user['id'], $submissionId]);
+            if (!hash_equals($saved['payload_hash'], $payloadHash)) throw new AssignmentSubmissionException('ID pengumpulan sudah digunakan untuk jawaban berbeda', 409);
+            if ($saved['response_json'] !== null) {
+                $savedResponse = json_decode($saved['response_json'], true, 512, JSON_THROW_ON_ERROR);
+                if (!DB::one('SELECT id FROM attempts WHERE id = ? AND user_id = ?', [(int)$savedResponse['attempt_id'], $user['id']])) {
+                    throw new AssignmentSubmissionException('Hasil pengumpulan sebelumnya telah dihapus atau direset oleh pengajar. Silakan kerjakan ulang tugas.', 410);
+                }
+                $pdo->commit();
+                jsonSuccess($savedResponse, 'Tugas sudah tersimpan');
+            }
+            $assignmentScope = assignmentSubmissionScope($user, (int)$body['assignment_id'], (int)($body['quiz_id'] ?? 0));
+        }
 
         $quizId        = (int)($body['quiz_id']    ?? 0);
         $answers       = $body['answers']          ?? [];
@@ -43,9 +67,9 @@ function attempt_submit(): void {
     if (!$quiz) jsonError('Quiz tidak ditemukan', 404);
     $retryToken=(string)($body['proctoring_session']??'');
     $retryState=$_SESSION['proctoring_v2'][hash('sha256',$retryToken)]??null;
-    if ($retryState && (int)$retryState['user_id']===(int)$user['id'] && (int)$retryState['quiz_id']===$quizId && (int)$retryState['assignment_id']===(int)($body['assignment_id']??0) && !empty($retryState['response'])) jsonSuccess($retryState['response'],'Quiz sudah tersimpan');
+    if (!$atomicAssignment && $retryState && (int)$retryState['user_id']===(int)$user['id'] && (int)$retryState['quiz_id']===$quizId && (int)$retryState['assignment_id']===(int)($body['assignment_id']??0) && !empty($retryState['response'])) jsonSuccess($retryState['response'],'Quiz sudah tersimpan');
     $proctoringKey=proctoringRequireReceipt($user,$quiz,(int)($body['assignment_id']??0),$body);
-    if ($proctoringKey!==null) proctoringReceiptTable();
+    if ($proctoringKey!==null && !$atomicAssignment) proctoringReceiptTable();
 
     // Normalisasi format answers: [{question_id, option_id}] atau {qid: oid}
     $answerMap = [];
@@ -162,7 +186,7 @@ function attempt_submit(): void {
     $passed       = $score >= $passingScore ? 1 : 0;
 
     // Insert attempt dengan snapshot player_name
-    if ($proctoringKey!==null) { $pdo=DB::conn(); $pdo->beginTransaction(); }
+    if ($proctoringKey!==null && !$atomicAssignment) { $pdo=DB::conn(); $pdo->beginTransaction(); }
     try {
         DB::execute(
             'INSERT INTO attempts (user_id, player_name, quiz_id, mode, score, total_points, correct_count, time_taken, completed_at) VALUES (?,?,?,?,?,?,?,?,NOW())',
@@ -179,11 +203,6 @@ function attempt_submit(): void {
     if ($proctoringKey!==null) {
         proctoringBindReceipt($proctoringKey,$attemptId);
     }
-
-    // Simpan attempt_id di session untuk akses result tanpa login
-    startSecureSession();
-    if (!isset($_SESSION['my_attempts'])) $_SESSION['my_attempts'] = [];
-    $_SESSION['my_attempts'][$attemptId] = $user['id'];
 
     // Bulk insert answers
     foreach ($answerRows as [$qid, $oid, $correct]) {
@@ -225,7 +244,27 @@ function attempt_submit(): void {
     // Update difficulty otomatis berdasarkan performa quiz
     updateQuizDifficultyFromStats($quizId);
 
-    if ($proctoringKey!==null) $pdo->commit();
+    $attemptResponse=[
+        'attempt_id'=>$attemptId, 'score'=>$score, 'correct_count'=>$correctCount,
+        'wrong_count'=>$wrongCount, 'total_questions'=>count($questions),
+        'total_points'=>$totalPoints, 'earned_points'=>$earnedPoints, 'time_taken'=>$timeTaken,
+        'passed'=>(bool)$passed, 'user_name'=>$resolvedPlayerName ?: $user['name'],
+        'is_anon'=>$user['is_anon'] ?? false,
+    ];
+    if ($proctoringKey!==null) $attemptResponse['camera_review_required']=!empty($_SESSION['proctoring_v2'][$proctoringKey]['review_required']);
+    if ($atomicAssignment) {
+        assignmentPersistSubmission($user, $assignmentScope, ['id'=>$attemptId, 'quiz_id'=>$quizId, 'score'=>$score]);
+        $attemptResponse['assignment_submitted'] = true;
+        DB::execute('UPDATE submission_requests SET response_json = ? WHERE user_id = ? AND submission_id = ?', [json_encode($attemptResponse, JSON_THROW_ON_ERROR), $user['id'], $submissionId]);
+    }
+    if (isset($pdo) && $pdo->inTransaction()) $pdo->commit();
+
+    // Simpan attempt_id di session untuk akses result tanpa login
+    startSecureSession();
+    if (!isset($_SESSION['my_attempts'])) $_SESSION['my_attempts'] = [];
+    $_SESSION['my_attempts'][$attemptId] = $user['id'];
+
+    if ($proctoringKey!==null) $_SESSION['proctoring_v2'][$proctoringKey]['response']=$attemptResponse;
 
     // [REALTIME NOTIFIKASI] Tembak sinyal ke Tahajjud API secara asinkron
     $quizTitle = $quiz['title'] ?? 'Quiz';
@@ -292,27 +331,11 @@ function attempt_submit(): void {
         }
     }
 
-    $attemptResponse=[
-        'attempt_id'      => $attemptId,
-        'score'           => $score,
-        'correct_count'   => $correctCount,
-        'wrong_count'     => $wrongCount,
-        'total_questions' => count($questions),
-        'total_points'    => $totalPoints,
-        'earned_points'   => $earnedPoints,
-        'time_taken'      => $timeTaken,
-        'passed'          => (bool)$passed,
-        'user_name'       => $resolvedPlayerName ?: $user['name'],
-        'is_anon'         => $user['is_anon'] ?? false,
-    ];
-    if ($proctoringKey!==null) {
-        $attemptResponse['camera_review_required']=!empty($_SESSION['proctoring_v2'][$proctoringKey]['review_required']);
-        $_SESSION['proctoring_v2'][$proctoringKey]['response']=$attemptResponse;
-    }
     jsonSuccess($attemptResponse, 'Quiz berhasil diselesaikan');
     } catch (Throwable $e) {
         if (isset($pdo) && $pdo->inTransaction()) { $pdo->rollBack(); if (isset($proctoringKey)) unset($_SESSION['proctoring_v2'][$proctoringKey]['attempt_id']); }
         error_log("[attempt.submit] " . $e->__toString());
+        if ($e instanceof AssignmentSubmissionException) jsonError($e->getMessage(), $e->getCode());
         jsonError('Terjadi kesalahan server', 500);
     }
 }

@@ -1,0 +1,522 @@
+{
+  "recordedAt": "2026-11-27T04:43:33+07:00",
+  "timezone": "Asia/Jakarta",
+  "comparisonBase": "91c0ee9a41e7214824760917e39e62978134882d",
+  "purpose": "Sinkronisasi Perbaikan Pengumpulan Tugas v2",
+  "timestampMeaning": "recordedAt is audit creation time; lastModifiedAt is observed filesystem metadata, not a reconstructed history of earlier edits.",
+  "verification": {
+    "phpSyntaxFiles": 8,
+    "transactionChecks": 18,
+    "proctoringChecks": 52,
+    "pythonCompile": "passed"
+  },
+  "files": [
+    {
+      "path": "CHANGELOG_AUDIT.md",
+      "change": "modified",
+      "lastModifiedAt": "2026-11-27T04:43:33+07:00",
+      "sha256": "632b60c0b2768463b5ae3883ee7cfe71b8684c975ac17d75fab3556145dd46d5",
+      "lineCount": 441,
+      "hunks": [
+        {
+          "oldStart": 4,
+          "oldCount": 0,
+          "newStart": 5,
+          "newCount": 8,
+          "section": "Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan"
+        }
+      ],
+      "declarations": []
+    },
+    {
+      "path": "api/assignment.php",
+      "change": "modified",
+      "lastModifiedAt": "2026-11-27T04:19:39+07:00",
+      "sha256": "759346a9a828f86bce0b9553455054237d2843556f877ee4353e1be8ab4ada31",
+      "lineCount": 1029,
+      "hunks": [
+        {
+          "oldStart": 2,
+          "oldCount": 0,
+          "newStart": 3,
+          "newCount": 1,
+          "section": "require_once __DIR__ . '/../includes/proctoring.php';"
+        },
+        {
+          "oldStart": 391,
+          "oldCount": 2,
+          "newStart": 392,
+          "newCount": 1,
+          "section": "function assignment_submit(): void {"
+        },
+        {
+          "oldStart": 394,
+          "oldCount": 1,
+          "newStart": 394,
+          "newCount": 1,
+          "section": "function assignment_submit(): void {"
+        },
+        {
+          "oldStart": 396,
+          "oldCount": 42,
+          "newStart": 396,
+          "newCount": 1,
+          "section": "function assignment_submit(): void {"
+        },
+        {
+          "oldStart": 439,
+          "oldCount": 42,
+          "newStart": 398,
+          "newCount": 13,
+          "section": "function assignment_submit(): void {"
+        },
+        {
+          "oldStart": 481,
+          "oldCount": 0,
+          "newStart": 412,
+          "newCount": 1,
+          "section": "function assignment_submit(): void {"
+        },
+        {
+          "oldStart": 483,
+          "oldCount": 5,
+          "newStart": 414,
+          "newCount": 10,
+          "section": "function assignment_submit(): void {"
+        }
+      ],
+      "declarations": [
+        {
+          "line": 12,
+          "text": "function assignment_create(): void {"
+        },
+        {
+          "line": 119,
+          "text": "function assignment_list(): void {"
+        },
+        {
+          "line": 189,
+          "text": "function assignment_get(): void {"
+        },
+        {
+          "line": 265,
+          "text": "function assignment_update(): void {"
+        },
+        {
+          "line": 368,
+          "text": "function assignment_delete(): void {"
+        },
+        {
+          "line": 389,
+          "text": "function assignment_submit(): void {"
+        },
+        {
+          "line": 415,
+          "text": "function assignment_capabilities(): void {"
+        },
+        {
+          "line": 430,
+          "text": "function assignment_results(): void {"
+        },
+        {
+          "line": 482,
+          "text": "function assignment_student_history(): void {"
+        },
+        {
+          "line": 523,
+          "text": "function assignment_progress_update(): void {"
+        },
+        {
+          "line": 559,
+          "text": "function assignment_monitor(): void {"
+        },
+        {
+          "line": 626,
+          "text": "function assignment_force_stop(): void {"
+        },
+        {
+          "line": 654,
+          "text": "function assignment_my_dashboard(): void {"
+        },
+        {
+          "line": 782,
+          "text": "function assignment_class_report(): void {"
+        },
+        {
+          "line": 861,
+          "text": "function assignment_attempts(): void {"
+        },
+        {
+          "line": 898,
+          "text": "function assignment_reset_student(): void {"
+        },
+        {
+          "line": 970,
+          "text": "function assignment_delete_attempt(): void {"
+        }
+      ]
+    },
+    {
+      "path": "api/attempt.php",
+      "change": "modified",
+      "lastModifiedAt": "2026-11-27T04:20:43+07:00",
+      "sha256": "cbaf8ac6439dc9d43e067c02cc59e3418084dd59d3f250586ca526f175f4d7cb",
+      "lineCount": 665,
+      "hunks": [
+        {
+          "oldStart": 2,
+          "oldCount": 0,
+          "newStart": 3,
+          "newCount": 1,
+          "section": "require_once __DIR__ . '/../includes/proctoring.php';"
+        },
+        {
+          "oldStart": 13,
+          "oldCount": 0,
+          "newStart": 15,
+          "newCount": 23,
+          "section": "function attempt_submit(): void {"
+        },
+        {
+          "oldStart": 46,
+          "oldCount": 1,
+          "newStart": 70,
+          "newCount": 1,
+          "section": "function attempt_submit(): void {"
+        },
+        {
+          "oldStart": 48,
+          "oldCount": 1,
+          "newStart": 72,
+          "newCount": 1,
+          "section": "function attempt_submit(): void {"
+        },
+        {
+          "oldStart": 165,
+          "oldCount": 1,
+          "newStart": 189,
+          "newCount": 1,
+          "section": "function attempt_submit(): void {"
+        },
+        {
+          "oldStart": 183,
+          "oldCount": 5,
+          "newStart": 206,
+          "newCount": 0,
+          "section": "function attempt_submit(): void {"
+        },
+        {
+          "oldStart": 228,
+          "oldCount": 1,
+          "newStart": 247,
+          "newCount": 21,
+          "section": "function attempt_submit(): void {"
+        },
+        {
+          "oldStart": 295,
+          "oldCount": 17,
+          "newStart": 333,
+          "newCount": 0,
+          "section": "function attempt_submit(): void {"
+        },
+        {
+          "oldStart": 315,
+          "oldCount": 0,
+          "newStart": 338,
+          "newCount": 1,
+          "section": "function attempt_submit(): void {"
+        }
+      ],
+      "declarations": [
+        {
+          "line": 8,
+          "text": "function attempt_submit(): void {"
+        },
+        {
+          "line": 343,
+          "text": "function updateQuizDifficultyFromStats(int $quizId): void {"
+        },
+        {
+          "line": 370,
+          "text": "function attempt_result(): void {"
+        },
+        {
+          "line": 526,
+          "text": "function attempt_history(): void {"
+        },
+        {
+          "line": 571,
+          "text": "function attempt_dashboard(): void {"
+        },
+        {
+          "line": 629,
+          "text": "function attempt_quiz_global_history(): void {"
+        },
+        {
+          "line": 663,
+          "text": "function quiz_global_history(): void {"
+        }
+      ]
+    },
+    {
+      "path": "bin/check-assignment-backends.py",
+      "change": "added",
+      "lastModifiedAt": "2026-11-27T04:15:48+07:00",
+      "sha256": "a34fd2bb937dd844d2c7b7e2c1f77894ac006091e3105e56e294daa25ee2ecec",
+      "lineCount": 33,
+      "hunks": [
+        {
+          "newStart": 1,
+          "newCount": 33,
+          "section": "new file"
+        }
+      ],
+      "declarations": [
+        {
+          "line": 9,
+          "text": "def inspect(base):"
+        }
+      ]
+    },
+    {
+      "path": "bin/migrate-assignment-submission.php",
+      "change": "added",
+      "lastModifiedAt": "2026-11-27T04:19:40+07:00",
+      "sha256": "557c199200af3bcb9fcc7d4b472feb81068c1703e5148fd6f97d109103d189a5",
+      "lineCount": 13,
+      "hunks": [
+        {
+          "newStart": 1,
+          "newCount": 13,
+          "section": "new file"
+        }
+      ],
+      "declarations": []
+    },
+    {
+      "path": "docs/assignment-submission-v2.md",
+      "change": "added",
+      "lastModifiedAt": "2026-11-27T04:27:50+07:00",
+      "sha256": "7e2bccacefcd5e37496eed49e90b7d91e22c75df848d13c610221e1aa30dceff",
+      "lineCount": 66,
+      "hunks": [
+        {
+          "newStart": 1,
+          "newCount": 66,
+          "section": "new file"
+        }
+      ],
+      "declarations": []
+    },
+    {
+      "path": "includes/assignment-submission.php",
+      "change": "added",
+      "lastModifiedAt": "2026-11-27T04:19:39+07:00",
+      "sha256": "c26b5bee6bdbecf7db2b7c2b20e59b9e5fe055660478d69529377ef7c2ada48e",
+      "lineCount": 80,
+      "hunks": [
+        {
+          "newStart": 1,
+          "newCount": 80,
+          "section": "new file"
+        }
+      ],
+      "declarations": [
+        {
+          "line": 3,
+          "text": "class AssignmentSubmissionException extends RuntimeException {}"
+        },
+        {
+          "line": 5,
+          "text": "function assignmentSubmissionTables(): void {"
+        },
+        {
+          "line": 20,
+          "text": "function assignmentSubmissionTransactional(): bool {"
+        },
+        {
+          "line": 29,
+          "text": "function submissionPayloadHash(array $body): string {"
+        },
+        {
+          "line": 43,
+          "text": "function assignmentSubmissionScope(array $user, int $assignmentId, int $quizId): array {"
+        },
+        {
+          "line": 55,
+          "text": "function assignmentPersistSubmission(array $user, array $assignment, array $attempt): array {"
+        }
+      ]
+    },
+    {
+      "path": "includes/proctoring.php",
+      "change": "modified",
+      "lastModifiedAt": "2026-11-27T04:27:50+07:00",
+      "sha256": "c0d50cd52bfbc6ad12ddece202eb64bf459b1414a5e472978c9aaf217f3e74a2",
+      "lineCount": 233,
+      "hunks": [
+        {
+          "oldStart": 84,
+          "oldCount": 1,
+          "newStart": 84,
+          "newCount": 3,
+          "section": "function getUserExamReference(int $userId): array {"
+        }
+      ],
+      "declarations": [
+        {
+          "line": 15,
+          "text": "function ensureProctoringTables(): void {"
+        },
+        {
+          "line": 60,
+          "text": "function ensureProctoringProtectedDirectories(): void {"
+        },
+        {
+          "line": 79,
+          "text": "function getUserExamReference(int $userId): array {"
+        },
+        {
+          "line": 115,
+          "text": "function saveExamReferencePhoto(int $userId, string $photoData, bool $isResetOrAdmin = false): array {"
+        },
+        {
+          "line": 214,
+          "text": "function resetExamReferencePhoto(int $userId): bool {"
+        }
+      ]
+    },
+    {
+      "path": "tests/assignment-request-fixture.php",
+      "change": "added",
+      "lastModifiedAt": "2026-11-27T04:27:50+07:00",
+      "sha256": "1f460ca4d32a517e363b9434ef82e8a48c690b44795863202cbe80a5695f5c0d",
+      "lineCount": 34,
+      "hunks": [
+        {
+          "newStart": 1,
+          "newCount": 34,
+          "section": "new file"
+        }
+      ],
+      "declarations": [
+        {
+          "line": 18,
+          "text": "function getCurrentUserOrAnon() { return ['id'=>7,'name'=>'Student','role'=>'user','is_anon'=>false]; }"
+        },
+        {
+          "line": 19,
+          "text": "function requireAuth() { return getCurrentUserOrAnon(); }"
+        },
+        {
+          "line": 20,
+          "text": "function getBody() { return $GLOBALS['body']; }"
+        },
+        {
+          "line": 21,
+          "text": "function getJsonBody() { return getBody(); }"
+        },
+        {
+          "line": 22,
+          "text": "function sanitizeString($value) { return trim(strip_tags($value)); }"
+        },
+        {
+          "line": 23,
+          "text": "function startSecureSession() {}"
+        },
+        {
+          "line": 24,
+          "text": "function jsonSuccess($data=null,$message='OK') { echo json_encode(['success'=>true,'data'=>$data]); exit; }"
+        },
+        {
+          "line": 25,
+          "text": "function jsonError($message,$status=400) { echo json_encode(['success'=>false,'message'=>$message,'code'=>$status]); exit; }"
+        },
+        {
+          "line": 28,
+          "text": "function curl_init($url) { return null; }"
+        },
+        {
+          "line": 29,
+          "text": "function curl_setopt(...$args) { return true; }"
+        },
+        {
+          "line": 30,
+          "text": "function curl_exec(...$args) { return ''; }"
+        },
+        {
+          "line": 31,
+          "text": "function curl_close(...$args) {}"
+        }
+      ]
+    },
+    {
+      "path": "tests/assignment-submission.php",
+      "change": "added",
+      "lastModifiedAt": "2026-11-27T04:27:50+07:00",
+      "sha256": "3155e520aa256c807ffdb0fd0491254bc240fce071df26f5df0485e0fc20c33c",
+      "lineCount": 81,
+      "hunks": [
+        {
+          "newStart": 1,
+          "newCount": 81,
+          "section": "new file"
+        }
+      ],
+      "declarations": [
+        {
+          "line": 27,
+          "text": "function check($ok,$name) { if (!$ok) throw new RuntimeException('FAIL '.$name); $GLOBALS['count']++; echo 'PASS '.$name.PHP_EOL; }"
+        },
+        {
+          "line": 28,
+          "text": "function request($body, $handler='attempt_submit', $failure='', $engine=''): array {"
+        }
+      ]
+    },
+    {
+      "path": "tests/assignment-test-db.php",
+      "change": "added",
+      "lastModifiedAt": "2026-11-27T04:27:50+07:00",
+      "sha256": "359740f6619221cdd745b8937e81411e7ddbfac44acfefb12a4cca99d5745094",
+      "lineCount": 32,
+      "hunks": [
+        {
+          "newStart": 1,
+          "newCount": 32,
+          "section": "new file"
+        }
+      ],
+      "declarations": [
+        {
+          "line": 3,
+          "text": "class DB {"
+        },
+        {
+          "line": 7,
+          "text": "static function conn(): PDO { return self::$pdo; }"
+        },
+        {
+          "line": 8,
+          "text": "static function lastId(): string { return self::$pdo->lastInsertId(); }"
+        },
+        {
+          "line": 9,
+          "text": "static function sql(string $sql): string {"
+        },
+        {
+          "line": 17,
+          "text": "static function execute($sql, $params = []) {"
+        },
+        {
+          "line": 23,
+          "text": "static function one($sql, $params = []) {"
+        },
+        {
+          "line": 28,
+          "text": "static function all($sql, $params = []) {"
+        }
+      ]
+    }
+  ]
+}

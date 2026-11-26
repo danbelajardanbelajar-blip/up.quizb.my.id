@@ -81,7 +81,9 @@ function getUserExamReference(int $userId): array {
         return ['has_reference' => false, 'photo_path' => null, 'updated_at' => null];
     }
 
-    ensureProctoringTables();
+    // Schema setup can issue CREATE/ALTER, which implicitly commits MySQL transactions.
+    // During submission the reference already exists; only read it inside the transaction.
+    if (!DB::conn()->inTransaction()) ensureProctoringTables();
 
     $row = DB::one(
         "SELECT id, exam_reference_photo, exam_reference_updated_at FROM users WHERE id = ?",

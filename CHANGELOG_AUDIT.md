@@ -2,6 +2,14 @@
 
 Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yang dilakukan secara bertahap dan sistematis.
 
+### [2026-11-27 04:43:33 WIB] — Sinkronisasi Perbaikan Pengumpulan Tugas v2
+
+- Backend: transaksi atomik, idempotensi persisten, endpoint kompatibilitas, migrasi, dan pencegahan implicit commit saat membaca foto acuan. Verifikasi: 8 berkas PHP lolos syntax check, 18 pemeriksaan transaksi, 52 pemeriksaan proctoring, Python compile, dan git diff --check.
+- Rincian setiap berkas, rentang baris sebelum/sesudah, bagian fungsi, SHA-256, dan waktu modifikasi terakhir: [assignment-sync-20261127-044333.json](docs/change-audit/assignment-sync-20261127-044333.json).
+- Waktu pencatatan diverifikasi hingga detik. Waktu modifikasi berasal dari metadata filesystem; histori detik setiap edit sebelum pencatatan ini tidak dapat direkonstruksi dan tidak diperkirakan.
+- Perubahan ini tidak menjalankan deployment server atau migrasi database produksi.
+
+
 ---
 
 ### [2026-11-25 18:16:53 WIB] — Penegakan Verifikasi Wajah Pra-Ujian/Tugas untuk Client Android
