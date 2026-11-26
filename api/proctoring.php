@@ -5,6 +5,30 @@
 
 require_once __DIR__ . '/../includes/proctoring.php';
 
+/** POST: return only the authenticated user's canonical reference for an already verified session.
+ * The protected upload path is never exposed and another user's ID is never accepted. */
+function proctoring_local_reference(): void {
+    $user = requireAuth();
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonError('Method not allowed', 405);
+    $body = getJsonBody();
+    $key = proctoringSessionKey((string)($body['session'] ?? ''), $user);
+    $session = $_SESSION['proctoring_v2'][$key];
+    proctoringScope($user, (int)$session['quiz_id'], (int)$session['assignment_id']);
+    if ($session['stage'] !== 'ready' || empty($session['verified_at']) || time() - $session['verified_at'] > 60) {
+        jsonError('Selesaikan verifikasi wajah awal sebelum memuat pemeriksaan lokal.', 409);
+    }
+    $reference = proctoringReference((int)$user['id']);
+    if (!$reference['binary'] || $reference['version'] !== $session['reference_version']) {
+        jsonError('Foto acuan berubah. Mulai verifikasi wajah ulang.', 409);
+    }
+    jsonSuccess([
+        'user_id' => (int)$user['id'],
+        'reference_version' => $reference['version'],
+        'photo' => 'data:image/jpeg;base64,'.base64_encode($reference['binary']),
+        'model' => 'opencv-yunet-sface-v1',
+    ]);
+}
+
 /**
  * Cek status foto acuan ujian pengguna
  * GET /api.php?action=proctoring.check_reference

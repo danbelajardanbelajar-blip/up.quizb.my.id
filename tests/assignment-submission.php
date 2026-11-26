@@ -77,5 +77,13 @@ try {
     check(!request($camera,'attempt_submit','UPDATE assignment_submissions')['success'] && DB::one('SELECT COUNT(*) AS n FROM attempts')['n']===$before,'camera reference read cannot implicitly commit a failed assignment');
     $cameraResult=request($camera);
     check($cameraResult['success'] && DB::one('SELECT attempt_id FROM proctoring_receipts')['attempt_id']===$cameraResult['data']['attempt_id'],'camera receipt and assignment commit together');
+    $local = $camera; $local['session']=$camera['proctoring_session']; $local['user_id']=999;
+    $localResult=request($local,'proctoring_local_reference');
+    check($localResult['success'] && $localResult['data']['user_id']===7 && $localResult['data']['reference_version']===hash_file('sha256',$reference),'local reference is bound to the authenticated account, not a requested user ID');
+    check(base64_decode(explode(',',$localResult['data']['photo'],2)[1])===file_get_contents($reference),'local reference contains canonical bytes without exposing a file path');
+    $local['session']=str_repeat('b',64);
+    check(request($local,'proctoring_local_reference')['code']===409,'another session cannot download reference');
+    $local['session']=$camera['proctoring_session'];$local['_test_unverified']=true;
+    check(request($local,'proctoring_local_reference')['code']===409,'unverified session cannot download reference');
     echo $count.' checks passed'.PHP_EOL;
 } finally { DB::$pdo=null; @unlink($path); if ($reference) @unlink($reference); }

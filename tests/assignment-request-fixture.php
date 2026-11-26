@@ -14,6 +14,7 @@ if (!empty($body['_test_reference'])) {
         'stage'=>'ready','verified_at'=>time(),'final_verified_at'=>time(),
         'sample_count'=>2,'questions_released_at'=>time()-20,'engine_protocol'=>'vps-single-v1',
     ];
+    if (!empty($body['_test_unverified'])) $_SESSION['proctoring_v2'][hash('sha256',$token)]['stage']='tilt';
 }
 function getCurrentUserOrAnon() { return ['id'=>7,'name'=>'Student','role'=>'user','is_anon'=>false]; }
 function requireAuth() { return getCurrentUserOrAnon(); }
@@ -31,4 +32,5 @@ function curl_exec(...$args) { return ''; }
 function curl_close(...$args) {}
 require __DIR__.'/../api/attempt.php';
 require __DIR__.'/../api/assignment.php';
+require __DIR__.'/../api/proctoring.php';
 ($argv[3] ?? 'attempt_submit')();

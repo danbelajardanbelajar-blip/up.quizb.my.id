@@ -1,0 +1,187 @@
+{
+  "recordedAt": "2026-11-27T05:16:47+07:00",
+  "timezone": "Asia/Jakarta",
+  "comparisonBase": "31af0f0bcc805e98d67e244c444ac2032205b161",
+  "verification": {
+    "backendChecks": 22,
+    "proctoringChecks": 52,
+    "desktopModelChecks": 7
+  },
+  "files": [
+    {
+      "path": "CHANGELOG_AUDIT.md",
+      "lastModifiedAt": "2026-11-27T05:16:47+07:00",
+      "sha256": "a9026904aa6a87eca9d9401c2b156bdddbd0962ed48aa1ec6af586ebb392d66b",
+      "hunks": [
+        {
+          "oldStart": 12,
+          "oldCount": 0,
+          "newStart": 13,
+          "newCount": 8,
+          "section": "Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan"
+        }
+      ],
+      "declarations": []
+    },
+    {
+      "path": "api/proctoring.php",
+      "lastModifiedAt": "2026-11-27T05:01:11+07:00",
+      "sha256": "fcc869f1292b7d0a387be6c2aa6766eab5e31aa38276757baf3db495a6284c6e",
+      "hunks": [
+        {
+          "oldStart": 7,
+          "oldCount": 0,
+          "newStart": 8,
+          "newCount": 24,
+          "section": "require_once __DIR__ . '/../includes/proctoring.php';"
+        }
+      ],
+      "declarations": [
+        {
+          "line": 10,
+          "text": "function proctoring_local_reference(): void {"
+        },
+        {
+          "line": 36,
+          "text": "function proctoring_check_reference(): void {"
+        },
+        {
+          "line": 53,
+          "text": "function proctoring_save_reference(): void {"
+        },
+        {
+          "line": 84,
+          "text": "function proctoring_reset_reference(): void {"
+        },
+        {
+          "line": 121,
+          "text": "function proctoring_log_event(): void {"
+        },
+        {
+          "line": 159,
+          "text": "function proctoring_swap_question(): void {"
+        },
+        {
+          "line": 259,
+          "text": "function proctoring_get_logs(): void {"
+        },
+        {
+          "line": 309,
+          "text": "function proctoring_begin(): void {"
+        },
+        {
+          "line": 324,
+          "text": "function proctoring_verify(): void {"
+        }
+      ]
+    },
+    {
+      "path": "docs/android-local-face.md",
+      "lastModifiedAt": "2026-11-27T05:10:33+07:00",
+      "sha256": "5d86bac12944f939fe0f9bf0b412524fa2795421ae0de12e05a7443926d15cb5",
+      "hunks": [
+        {
+          "newStart": 1,
+          "newCount": 26,
+          "section": "new file"
+        }
+      ],
+      "declarations": []
+    },
+    {
+      "path": "tests/assignment-request-fixture.php",
+      "lastModifiedAt": "2026-11-27T05:01:11+07:00",
+      "sha256": "1f0f38558fd66de69b29facf69f8cdcf8bed2679bdf55365f51bd59a7b05a1d2",
+      "hunks": [
+        {
+          "oldStart": 16,
+          "oldCount": 0,
+          "newStart": 17,
+          "newCount": 1,
+          "section": "if (!empty($body['_test_reference'])) {"
+        },
+        {
+          "oldStart": 33,
+          "oldCount": 0,
+          "newStart": 35,
+          "newCount": 1,
+          "section": "require __DIR__.'/../api/assignment.php';"
+        }
+      ],
+      "declarations": [
+        {
+          "line": 19,
+          "text": "function getCurrentUserOrAnon() { return ['id'=>7,'name'=>'Student','role'=>'user','is_anon'=>false]; }"
+        },
+        {
+          "line": 20,
+          "text": "function requireAuth() { return getCurrentUserOrAnon(); }"
+        },
+        {
+          "line": 21,
+          "text": "function getBody() { return $GLOBALS['body']; }"
+        },
+        {
+          "line": 22,
+          "text": "function getJsonBody() { return getBody(); }"
+        },
+        {
+          "line": 23,
+          "text": "function sanitizeString($value) { return trim(strip_tags($value)); }"
+        },
+        {
+          "line": 24,
+          "text": "function startSecureSession() {}"
+        },
+        {
+          "line": 25,
+          "text": "function jsonSuccess($data=null,$message='OK') { echo json_encode(['success'=>true,'data'=>$data]); exit; }"
+        },
+        {
+          "line": 26,
+          "text": "function jsonError($message,$status=400) { echo json_encode(['success'=>false,'message'=>$message,'code'=>$status]); exit; }"
+        },
+        {
+          "line": 29,
+          "text": "function curl_init($url) { return null; }"
+        },
+        {
+          "line": 30,
+          "text": "function curl_setopt(...$args) { return true; }"
+        },
+        {
+          "line": 31,
+          "text": "function curl_exec(...$args) { return ''; }"
+        },
+        {
+          "line": 32,
+          "text": "function curl_close(...$args) {}"
+        }
+      ]
+    },
+    {
+      "path": "tests/assignment-submission.php",
+      "lastModifiedAt": "2026-11-27T05:01:11+07:00",
+      "sha256": "40bd1d9b76eacf592d2bcb202ac62927c85fd369545bf821213a36371f42b2a5",
+      "hunks": [
+        {
+          "oldStart": 79,
+          "oldCount": 0,
+          "newStart": 80,
+          "newCount": 8,
+          "section": "try {"
+        }
+      ],
+      "declarations": [
+        {
+          "line": 27,
+          "text": "function check($ok,$name) { if (!$ok) throw new RuntimeException('FAIL '.$name); $GLOBALS['count']++; echo 'PASS '.$name.PHP_EOL; }"
+        },
+        {
+          "line": 28,
+          "text": "function request($body, $handler='attempt_submit', $failure='', $engine=''): array {"
+        }
+      ]
+    }
+  ]
+}

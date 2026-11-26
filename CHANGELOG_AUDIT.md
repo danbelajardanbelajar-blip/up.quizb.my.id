@@ -10,6 +10,14 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, dan penguatan keamanan yan
 - Perubahan ini tidak menjalankan deployment server atau migrasi database produksi.
 
 
+### [2026-11-27 05:16:47 WIB] — Foto Acuan untuk Pemeriksaan Lokal Android
+
+- Menambahkan POST `proctoring.local_reference`: hanya foto acuan milik akun login, sesi yang telah diverifikasi maksimal 60 detik, akses tugas aktif, dan versi acuan yang sama. Path foto tidak diekspos.
+- Android dapat mengambil acuan sekali lalu mencocokkan wajah di perangkat; verifikasi server awal/akhir dan kebijakan receipt tetap berlaku. Tidak ada perubahan JavaScript web atau migrasi tabel tambahan.
+- Verifikasi sebelum push: PHP syntax valid, 22 pemeriksaan integrasi/otorisasi backend dan 52 pemeriksaan protokol proctoring lolos. Tujuh pemeriksaan model desktop memakai bobot resmi dan foto contoh publik juga lolos.
+- Rincian waktu modifikasi, fungsi, rentang baris, dan SHA-256: [android-local-face-20261127-051647.json](docs/change-audit/android-local-face-20261127-051647.json). Waktu modifikasi adalah metadata filesystem, bukan rekonstruksi setiap edit sebelumnya.
+
+
 ---
 
 ### [2026-11-25 18:16:53 WIB] — Penegakan Verifikasi Wajah Pra-Ujian/Tugas untuk Client Android
